@@ -2,14 +2,66 @@
 
 ## Status
 
-**Specification intentionally pending.**
+**Dedicated UI specification accepted.**
 
-The Tokenizer Explorer has already been the subject of dedicated design work outside this general architecture discussion. Its detailed behavior, layout, controls, interaction, and reusable UI components must be specified from that dedicated work rather than reconstructed here.
+This document owns the Tokenizer Explorer's UI behavior, layout, and presentation. Cross-cutting product scope, session/model ownership, tokenizer result semantics, and API schemas remain owned by their existing specifications and are not repeated here.
 
-This document currently inherits only the cross-cutting constraints defined by the product, API, backend, and UI architecture specifications.
+## Purpose and boundary
 
-## General boundary
+The Tokenizer Explorer is an editable text-inspection surface for the tokenizer associated with the current session model. Its purpose is to make the relationship between user-entered text and the tokenizer's actual output immediately visible.
 
-The proof of concept executes the real Hugging Face tokenizer associated with the session's model. The contract exposes the resulting tokens, IDs, offsets when available, decoded/text representation, and special-token information. Reconstructing or teaching the internal BPE/SentencePiece algorithm step by step is outside the current proof-of-concept scope.
+The UI consumes the tokenizer result defined by the API contract. It does not reimplement tokenizer logic in the browser, and it does not attempt to reconstruct or teach BPE, SentencePiece, or another tokenizer algorithm step by step.
 
-Further requirements belong in the dedicated Tokenizer Explorer specification.
+The prompt/tokenization surface defined here is a reusable UI component. The standalone Tokenizer Explorer uses it directly, and later inference-oriented views may embed the same component above downstream stages without creating a second tokenizer presentation.
+
+## Visual reference
+
+The current wireframe is the `Inference Explorer` frame in the Miro dashboard:
+
+https://miro.com/app/board/uXjVHnoDEYY=/?moveToWidget=3458764683523016635
+
+The Miro board is a visual reference for the combined prompt/tokenization area. This document is normative if the board and specification diverge. Downstream content visible in that wider inference wireframe, such as an embedding matrix, is outside the Tokenizer Explorer's ownership and is not specified here.
+
+## Live editing and tokenization
+
+The explorer has one primary editable text surface. Tokenization updates in real time as the user types; there is no separate prompt view followed by a second token view that repeats the same text.
+
+Each edit retokenizes the current text and updates the visible token boundaries and token metadata in place. Token boundaries are allowed to change anywhere in the text after an edit; the UI must not assume that previously rendered token boundaries remain stable.
+
+The rendered tokenizer state must correspond to the latest text currently in the editor. A result for an older input must not replace the presentation for a newer input if responses complete out of order.
+
+## Inline token presentation
+
+Ordinary tokens are presented inline as annotations of the prompt itself. The prompt text is not duplicated on another line merely to show tokenization.
+
+For each ordinary token:
+
+- the opening and closing token brackets are gray;
+- the text between those brackets is black and represents the token's corresponding user-entered text;
+- whitespace belonging to the token is preserved, so a token whose source span begins with a space visually includes that space inside its brackets;
+- the token ID is shown in gray as secondary metadata visually associated with that same token, normally aligned beneath it.
+
+Conceptually, a token is therefore rendered as a gray `[` + black source text + gray `]`, with its gray token ID associated with that span. The text itself must not be repeated in a separate token-only row.
+
+When source offsets are available from the tokenizer result, they are used to associate ordinary tokens with the exact input substring. When they are not available, the UI uses the tokenizer-provided textual/decoded representation rather than inventing character boundaries.
+
+## Special tokens
+
+Special tokens are part of the tokenizer sequence but are not user-entered prompt text. Their textual representation and token ID are therefore rendered in gray.
+
+Special tokens are placed at the sequence position reported by the tokenizer, for example before or after ordinary prompt tokens when the tokenizer inserts beginning/end markers. They must remain visually distinguishable from black user-entered text without introducing a separate color scheme per token.
+
+## Visual semantics
+
+The Tokenizer Explorer intentionally uses a minimal monochrome distinction:
+
+- black: user-entered text represented by ordinary token spans;
+- gray: token brackets, token IDs, special tokens, and supporting tokenizer annotations.
+
+Token identity is not encoded by assigning a different color to every token. The important visual relationship is the exact segmentation of the editable text and its associated metadata.
+
+## Reuse in later inference views
+
+Later inference exploration may place the tokenizer component directly above embeddings or other model stages. That composition must reuse this same live prompt/tokenization component rather than introducing a parallel tokenizer UI with different interaction or visual semantics.
+
+This document does not define those downstream stages. Tensor rendering rules remain in `rendering.md`, and inference/embedding behavior belongs to the future specification that owns those computations and views.
