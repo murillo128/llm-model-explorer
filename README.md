@@ -55,4 +55,6 @@ Tensor Explorer and Tokenizer Explorer behavior is owned by `docs/spec/ui/tensor
 
 This repository uses the Skillforge issue-driven development workflow. Durable accepted design belongs in repository documentation, bounded implementation work belongs in GitHub issues, and non-trivial implementation follows the repository agent and review workflow defined in [`AGENTS.md`](AGENTS.md).
 
-The product architecture specification is established; the application implementation has not yet been scaffolded.
+The [backend foundation](backend/README.md) is installable and separately runnable,
+with validated CLI settings, application lifecycle/dependency seams, and repeatable
+CPU checks. Product endpoints and explorer implementations are subsequent work.

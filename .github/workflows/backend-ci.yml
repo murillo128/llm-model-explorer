@@ -1,0 +1,48 @@
+name: Backend checks
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  push:
+    branches: [main, 'codex/epic-issue-*']
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.12', '3.14']
+    env:
+      UV_PYTHON: ${{ matrix.python }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.13'
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --python '${{ matrix.python }}'
+      - run: uv run --locked ruff check .
+      - run: uv run --locked ruff format --check .
+      - run: uv run --locked mypy
+      - run: uv run --locked pytest
+      - name: Build and validate the installed wheel outside the source tree
+        run: |
+          uv build
+          uv pip install --python .venv/bin/python --reinstall --no-deps dist/*.whl
+          backend_python="$PWD/.venv/bin/python"
+          cd "$RUNNER_TEMP"
+          "$backend_python" -c 'import torch; assert torch.version.cuda is None'
+          "$backend_python" -m pytest "$GITHUB_WORKSPACE/backend/tests"
