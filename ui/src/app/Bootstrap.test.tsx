@@ -15,7 +15,7 @@ it('gates backend requests on validated configuration', async () => {
   expect(await screen.findByRole('heading', { level: 1, name: 'Tensor Explorer' })).toBeInTheDocument();
   expect(screen.getByTestId('backend-url')).toHaveTextContent('https://models.example/api');
   expect(screen.getByText('Loading models…')).toBeInTheDocument();
-  expect(fetchMock).toHaveBeenCalledTimes(2);
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   expect(fetchMock.mock.calls[1]?.[0]).toBe('https://models.example/api/models');
 
   await userEvent.click(screen.getByRole('button', { name: 'Tokenizer Explorer' }));

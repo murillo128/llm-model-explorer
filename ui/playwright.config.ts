@@ -17,8 +17,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
-    { name: 'narrow', use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } } },
+    { name: 'desktop', testIgnore: '**/tensor-explorer-scrollbars.spec.ts', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
+    { name: 'narrow', testIgnore: '**/tensor-explorer-scrollbars.spec.ts', use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } } },
+    { name: 'native-scrollbars', testMatch: '**/tensor-explorer-scrollbars.spec.ts', use: { ...devices['Desktop Chrome'], headless: false, viewport: { width: 390, height: 844 } } },
   ],
   webServer: [{
     command: `npm run preview -- --port ${port} --strictPort`,

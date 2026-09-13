@@ -1,6 +1,6 @@
 import { hitTest, tensorGeometry, viewGeometry } from './geometry';
 import type { TensorDescriptor, ViewGeometry } from './geometry';
-import { fragmentShader, vertexShader } from './shaders';
+import { distributionFragmentShader, fragmentShader, vertexShader } from './shaders';
 import { transferUniforms } from './transfer';
 import type { TransferParameters } from './transfer';
 
@@ -23,7 +23,7 @@ interface Band {
 }
 
 /** Owns an exclusive WebGL2 canvas. No transport, React, or model dependencies. */
-export class TensorRenderer {
+export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | Uint32Array> {
   readonly geometry;
   readonly limits;
   private readonly gl: WebGL2RenderingContext;
@@ -35,7 +35,7 @@ export class TensorRenderer {
   private program: WebGLProgram | null = null;
   private vao: WebGLVertexArrayObject | null = null;
   private uniforms: Record<string, WebGLUniformLocation> = {};
-  private values: Float32Array | null = null;
+  private values: T | null = null;
   private transfer = transferUniforms();
   private _state: RendererState = 'needs-reconstruction';
   private _populated = 0;
@@ -44,9 +44,12 @@ export class TensorRenderer {
   private generations = 0;
   private _view: ViewGeometry | null = null;
 
-  constructor(readonly canvas: HTMLCanvasElement, descriptor: TensorDescriptor, options: RendererOptions = {}) {
+  protected constructor(readonly canvas: HTMLCanvasElement, descriptor: TensorDescriptor, options: RendererOptions = {}, private readonly densityAxisLength?: number) {
     this.geometry = tensorGeometry(descriptor);
     this.options = options;
+    if (densityAxisLength !== undefined && (!Number.isSafeInteger(densityAxisLength) || densityAxisLength < 0)) {
+      throw new Error('Density axis length must be a nonnegative integer.');
+    }
     const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false });
     if (!gl) throw new Error('WebGL2 is unavailable. Enable WebGL2 or retry with a supported browser.');
     this.gl = gl;
@@ -63,7 +66,7 @@ export class TensorRenderer {
     canvas.addEventListener('webglcontextlost', this.contextLost);
     canvas.addEventListener('webglcontextrestored', this.contextRestored);
     try {
-      if (options.retainValues !== false && this.geometry.count > 0) this.values = new Float32Array(this.geometry.count);
+      if (options.retainValues !== false && this.geometry.count > 0) this.values = (densityAxisLength === undefined ? new Float32Array(this.geometry.count) : new Uint32Array(this.geometry.count)) as T;
       this.allocate();
     } catch (error) {
       this.dispose();
@@ -124,7 +127,7 @@ export class TensorRenderer {
       const shaders: WebGLShader[] = [];
       try {
         shaders.push(this.compile(gl.VERTEX_SHADER, vertexShader));
-        shaders.push(this.compile(gl.FRAGMENT_SHADER, fragmentShader));
+        shaders.push(this.compile(gl.FRAGMENT_SHADER, this.densityAxisLength === undefined ? fragmentShader : distributionFragmentShader));
         this.program = gl.createProgram();
         if (!this.program) throw new Error('WebGL2 program allocation failed.');
         for (const shader of shaders) gl.attachShader(this.program, shader);
@@ -138,7 +141,7 @@ export class TensorRenderer {
       }
       this.vao = gl.createVertexArray();
       if (!this.vao) throw new Error('WebGL2 vertex array allocation failed.');
-      for (const name of ['weights', 'bandOffset', 'viewHeight', 'prefix', 'mode', 'slope', 'anchors', 'scale', 'span', 'correction']) {
+      for (const name of ['weights', 'bandOffset', 'viewHeight', 'prefix', ...(this.densityAxisLength === undefined ? ['mode', 'slope', 'anchors', 'scale', 'span', 'correction'] : ['densityDenominator'])]) {
         const location = gl.getUniformLocation(this.program!, name);
         if (location === null) throw new Error(`Missing renderer uniform: ${name}`);
         this.uniforms[name] = location;
@@ -156,7 +159,7 @@ export class TensorRenderer {
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-          gl.texStorage2D(gl.TEXTURE_2D, 1, gl.R32F, width, height);
+          gl.texStorage2D(gl.TEXTURE_2D, 1, this.densityAxisLength === undefined ? gl.R32F : gl.R32UI, width, height);
           this.checkGL('scalar allocation');
           this.allocations++;
         }
@@ -171,8 +174,11 @@ export class TensorRenderer {
   }
 
   /** Consecutive row-major chunks only. The input view is never retained. */
-  upload(chunk: Float32Array, offset = this._populated) {
+  upload(chunk: T, offset = this._populated) {
     this.assertReady();
+    if (this.densityAxisLength === undefined ? !(chunk instanceof Float32Array) : !(chunk instanceof Uint32Array)) {
+      throw new Error('Chunk scalar type does not match the GPU storage.');
+    }
     if (offset !== this._populated || offset + chunk.length > this.geometry.count) {
       throw new Error('Tensor chunks must form a consecutive prefix within the declared element count.');
     }
@@ -187,7 +193,7 @@ export class TensorRenderer {
     }
   }
 
-  private uploadGPU(chunk: Float32Array, offset: number) {
+  private uploadGPU(chunk: T, offset: number) {
     const gl = this.gl;
     const { columns } = this.geometry;
     const end = offset + chunk.length;
@@ -207,7 +213,8 @@ export class TensorRenderer {
           Math.floor((end - stop) / columns) + 1) : 1;
         gl.pixelStorei(gl.UNPACK_ROW_LENGTH, height > 1 ? columns : 0);
         gl.texSubImage2D(gl.TEXTURE_2D, 0, start - row * columns - band.x, row - band.y,
-          stop - start, height, gl.RED, gl.FLOAT, chunk, start - offset);
+          stop - start, height, this.densityAxisLength === undefined ? gl.RED : gl.RED_INTEGER,
+          this.densityAxisLength === undefined ? gl.FLOAT : gl.UNSIGNED_INT, chunk, start - offset);
         this.uploads++;
         row += height;
       }
@@ -263,12 +270,14 @@ export class TensorRenderer {
     const u = this.uniforms;
     gl.uniform1i(u.weights!, 0);
     gl.uniform1i(u.viewHeight!, view.height);
-    gl.uniform1i(u.mode!, this.transfer.mode);
-    gl.uniform1f(u.slope!, this.transfer.slope);
-    gl.uniform2f(u.anchors!, this.transfer.low, this.transfer.high);
-    gl.uniform1f(u.scale!, this.transfer.scale);
-    gl.uniform1f(u.span!, this.transfer.span);
-    gl.uniform1f(u.correction!, this.transfer.correction);
+    if (this.densityAxisLength === undefined) {
+      gl.uniform1i(u.mode!, this.transfer.mode);
+      gl.uniform1f(u.slope!, this.transfer.slope);
+      gl.uniform2f(u.anchors!, this.transfer.low, this.transfer.high);
+      gl.uniform1f(u.scale!, this.transfer.scale);
+      gl.uniform1f(u.span!, this.transfer.span);
+      gl.uniform1f(u.correction!, this.transfer.correction);
+    } else gl.uniform1f(u.densityDenominator!, Math.log1p(this.densityAxisLength));
     const prefixRow = Math.floor(this._populated / this.geometry.columns);
     const prefixColumn = this._populated % this.geometry.columns;
     for (const band of this.bands) {
@@ -328,7 +337,7 @@ export class TensorRenderer {
     this.releaseGPU();
     this.allocate();
     try {
-      if (this.values) this.uploadGPU(this.values.subarray(0, this._populated), 0);
+      if (this.values) this.uploadGPU(this.values.subarray(0, this._populated) as T, 0);
       else this._populated = 0;
     } catch (error) {
       this.releaseGPU();
@@ -359,5 +368,19 @@ export class TensorRenderer {
     this.canvas.width = 1;
     this.canvas.height = 1;
     this.setState('disposed');
+  }
+}
+
+/** Float32 logical tensor storage; keeps the original scalar API reusable. */
+export class TensorRenderer extends GridRenderer<Float32Array> {
+  constructor(canvas: HTMLCanvasElement, descriptor: TensorDescriptor, options: RendererOptions = {}) {
+    super(canvas, descriptor, options);
+  }
+}
+
+/** Exact uint32 counts. Conversion to visual density happens only in the shader. */
+export class DistributionRenderer extends GridRenderer<Uint32Array> {
+  constructor(canvas: HTMLCanvasElement, shape: readonly [number, number], axisLength: number, options: RendererOptions = {}) {
+    super(canvas, { shape, rank: 2, numel: shape[0] * shape[1], logical_dtype: 'float32' }, options, axisLength);
   }
 }

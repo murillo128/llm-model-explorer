@@ -9,8 +9,8 @@ See its [interaction evidence](evidence/tokenizer.md). Tensor rendering is conne
 separately through its slot.
 
 The independent [exact-pixel WebGL2 renderer](src/rendering/README.md) is available
-separately at `/renderer-demo.html` in both dev and production builds. It is not yet
-connected to the explorer slots.
+separately at `/renderer-demo.html` in both dev and production builds. The default
+Tensor Explorer slot also composes it with progressive API streams and distributions.
 
 ## Develop
 
@@ -79,13 +79,15 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
-npx playwright install chromium
-npm run test:browser
+npx playwright install --with-deps chromium
+xvfb-run -a npm run test:browser
 ```
 
 `npm run check` combines type-checking, lint, unit/component tests, and production
 build. On a fresh Linux host, `npx playwright install --with-deps chromium` also
-installs Chromium's required system libraries. Playwright starts its own Vite
+installs Chromium's required system libraries and Xvfb. The `native-scrollbars`
+project uses headed Chromium to verify non-overlay scrollbars; on Linux without
+a display run the suite with `xvfb-run -a` as above. Playwright starts its own Vite
 preview server on port 4173; run it after building and with that port free.
 Renderer browser fixtures also use a Vite dev server on port 4174. They exercise
 the source renderer; set `UI_TEST_PORT` to move both servers (preview uses that
@@ -161,3 +163,26 @@ backend errors/details. Logical hierarchy comes from `TensorDescriptor.path`;
 full supplied names distinguish duplicate leaf labels. Native HTML disclosure
 controls and buttons provide keyboard navigation, visible focus and nested-list
 semantics without introducing a partial ARIA tree keyboard model.
+
+## Progressive Tensor Explorer
+
+The default Tensor Explorer slot now composes the typed incremental API client
+with the independent exact renderer. Select a rank-1 or rank-2 tensor to start
+its complete tensor and statistics streams; nonempty rank-2 also starts the
+independent distribution stream. Each operation has its own visible completion,
+failure and cancellation state. Received prefixes remain inspectable and visibly
+incomplete after failure/cancellation. `Cancel loading` releases only this view's
+consumers. Selecting another tensor or explorer disposes its owned resources.
+
+Rank-2 has three data surfaces: matrix, row profiles to the right and column
+profiles below. Native matrix scrolling keeps both profiles aligned. Counts stay
+uint32 and are converted to density only by the shader; statistics change small
+transfer uniforms without reuploading tensor values. Empty/unsupported tensors
+and unavailable WebGL2 resources have explicit shell states. Hover, magnifier and
+selection chroma are reserved for separate interaction work.
+
+`tests/tensor-explorer.html` is a development-only browser fixture exercising the
+real React composition, client/decoder and GPU renderer with manually paced,
+contract-valid streams. Its tests capture screenshots and assert values, pixel
+geometry, independent outcomes and resource accounting. See
+[evidence/tensor-explorer.md](evidence/tensor-explorer.md).
