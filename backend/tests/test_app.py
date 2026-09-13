@@ -21,14 +21,16 @@ from llm_model_explorer.dependencies import (
     get_settings,
 )
 from llm_model_explorer.execution import BlockingWork
+from llm_model_explorer.models import ModelCatalogue
 from llm_model_explorer.services import Services, open_services
 from llm_model_explorer.settings import Settings
 
 
-def test_foundation_has_no_product_or_generated_contract_endpoints(settings: Settings) -> None:
+def test_only_implemented_product_endpoints_are_available(settings: Settings) -> None:
     app = create_app(settings)
     with TestClient(app) as client:
-        for path in ["/models", "/sessions", "/openapi.json", "/docs", "/redoc"]:
+        assert client.get("/models").json() == {"models": []}
+        for path in ["/sessions", "/openapi.json", "/docs", "/redoc"]:
             assert client.get(path).status_code == 404
         assert isinstance(app.state.services, Services)
     assert not hasattr(app.state, "services")
@@ -45,14 +47,15 @@ def test_app_creation_and_lifespan_do_not_touch_models_or_tensors(
     for name in ["load", "tensor", "empty", "zeros", "ones"]:
         monkeypatch.setattr(torch, name, forbidden)
     monkeypatch.setattr(torch.cuda, "init", forbidden)
-    with TestClient(create_app(settings)) as client:
-        assert client.get("/models").status_code == 404
+    app = create_app(settings)
+    with TestClient(app):
+        assert isinstance(app.state.services.catalogue, ModelCatalogue)
     forbidden.assert_not_called()
 
 
 def test_lifecycle_and_injected_domain_services(settings: Settings) -> None:
     events: list[str] = []
-    sentinel = object()
+    sentinel = ModelCatalogue(settings.model_root)
     work = BlockingWork()
 
     @asynccontextmanager
@@ -83,9 +86,7 @@ def test_lifecycle_and_injected_domain_services(settings: Settings) -> None:
     assert not hasattr(app.state, "services")
 
 
-@pytest.mark.parametrize(
-    "dependency", [get_catalogue, get_sessions, get_artifacts, get_operation_delivery]
-)
+@pytest.mark.parametrize("dependency", [get_sessions, get_artifacts, get_operation_delivery])
 def test_unconfigured_domain_fails_and_supports_override(
     settings: Settings, dependency: Callable[[Request], object]
 ) -> None:
