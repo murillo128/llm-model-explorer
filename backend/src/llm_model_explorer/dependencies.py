@@ -7,7 +7,9 @@ from fastapi import Request
 from .artifacts import ArtifactStore
 from .execution import BlockingWork
 from .models import ModelCatalogue
+from .operations import OperationRuntime
 from .services import Services
+from .sessions import SessionRegistry
 from .settings import Settings
 
 
@@ -33,7 +35,7 @@ def get_catalogue(request: Request) -> ModelCatalogue:
     return service
 
 
-def get_sessions(request: Request) -> object:
+def get_sessions(request: Request) -> SessionRegistry:
     service = get_services(request).sessions
     if service is None:
         raise RuntimeError("session service is not configured")
@@ -47,7 +49,7 @@ def get_artifacts(request: Request) -> ArtifactStore:
     return service
 
 
-def get_operation_delivery(request: Request) -> object:
+def get_operation_delivery(request: Request) -> OperationRuntime:
     service = get_services(request).operation_delivery
     if service is None:
         raise RuntimeError("operation delivery service is not configured")
