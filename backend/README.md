@@ -413,3 +413,33 @@ read guards also reject changed session snapshots on cache hits. F32 dependencie
 own direct source cursors and use the same cancellation/session teardown.
 The service does not compute statistics, distributions, or rendering transforms.
 See [tensor data evidence](evidence/tensor-data.md) for validation and limits.
+
+## Tensor statistics and distributions
+
+`GET /sessions/{session_id}/tensors/{tensor_id}/statistics` and `/distributions`
+use `tensor_analysis.py` and the same operation, logical materialization, cache,
+and LMEX services as tensor delivery. Statistics work for arbitrary rank;
+distributions reject non-matrices before streaming. Their numeric semantics and
+wire layout are defined in [the API contract](../docs/spec/api/contract.md).
+
+Each derived producer loads only its requested logical float32 tensor, exhausts
+its internal materialization dependency, and then enters the common device
+queue. The tensor-data endpoint never waits for a derived artifact. F16/BF16
+conversion can be shared by all three requests; no HTTP self-request is used.
+Native PyTorch sort provides exact percentiles without `torch.quantile`'s input
+size restriction. Population variance uses float64; native bounded integer
+exponent reductions preserve cancellation-sensitive means. Histogram binning
+uses bounded float64 blocks and checked int64 accumulators before uint32 output.
+
+The two kinds have separate fingerprint/recipe keys. The internal statistics
+payload is 96 bytes (`<3Q9d`: counts, minimum, maximum, mean, stddev, percentiles).
+The distribution payload has a 16-byte `<2d` domain prefix followed by row and
+column counts. Internal NaNs encode absent finite fields. The response adapter
+consumes these prefixes into schema-validated metadata, emits JSON nulls for
+absent fields, and streams only the declared numeric DATA sections. Statistics
+have no DATA frames. Prefixes are cache representation details, not LMEX bytes.
+Warm reads decode the disk prefix without numerical recomputation. Source
+checks, independent consumer cancellation, and atomic publication apply to both.
+
+See [analysis evidence](evidence/tensor-analysis.md) for numerical tolerances,
+edge cases, cancellation/queue tests, synthetic timing, and workspace limits.
