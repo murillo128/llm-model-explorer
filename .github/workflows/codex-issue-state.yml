@@ -1,0 +1,127 @@
+name: Route Codex issue state
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Controlling issue number
+        required: true
+        type: string
+      operation:
+        description: Operation to launch
+        required: true
+        type: choice
+        options:
+          - execute
+          - audit
+          - schedule
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    outputs:
+      operation: ${{ steps.route.outputs.operation }}
+      issue_number: ${{ steps.route.outputs.issue_number }}
+      issue_title: ${{ steps.route.outputs.issue_title }}
+      wait_for_existing_turn: ${{ steps.route.outputs.wait_for_existing_turn }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve label transition
+        id: route
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
+          EVENT_ISSUE_TITLE: ${{ github.event.issue.title }}
+          EVENT_LABEL: ${{ github.event.label.name }}
+          INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
+          INPUT_OPERATION: ${{ inputs.operation }}
+        run: |
+          set -euo pipefail
+
+          operation=""
+          issue_number=""
+          issue_title=""
+          wait_for_existing_turn=false
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if ! [[ "$INPUT_ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+              echo "issue_number must be a positive decimal integer" >&2
+              exit 1
+            fi
+            issue_number="$INPUT_ISSUE_NUMBER"
+            issue_title="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${issue_number}" --jq '.title')"
+            case "$INPUT_OPERATION" in
+              execute) operation=execute ;;
+              audit) operation=audit ;;
+              schedule) operation=execute; wait_for_existing_turn=true ;;
+              *) echo "Unsupported operation: $INPUT_OPERATION" >&2; exit 1 ;;
+            esac
+          else
+            case "$EVENT_LABEL" in
+              execution-ready)
+                operation=execute
+                issue_number="$EVENT_ISSUE_NUMBER"
+                issue_title="$EVENT_ISSUE_TITLE"
+                ;;
+              review-ready)
+                operation=audit
+                issue_number="$EVENT_ISSUE_NUMBER"
+                issue_title="$EVENT_ISSUE_TITLE"
+                ;;
+              completed|queued)
+                issues_json="$RUNNER_TEMP/in-progress-epics.json"
+                comments_dir="$RUNNER_TEMP/epic-comments"
+                mkdir -p "$comments_dir"
+                gh api --method GET --paginate --slurp \
+                  "repos/${GITHUB_REPOSITORY}/issues?state=open&labels=in-progress&per_page=100" \
+                  > "$issues_json"
+                jq -r 'if (length > 0 and (.[0] | type) == "array") then .[][] else .[] end | .number // empty' "$issues_json" | \
+                  while IFS= read -r parent_number; do
+                  gh api --method GET --paginate --slurp \
+                    "repos/${GITHUB_REPOSITORY}/issues/${parent_number}/comments?per_page=100" \
+                    > "$comments_dir/${parent_number}.json"
+                done
+                result="$(python3 .github/scripts/find_epic_parent.py \
+                  --changed-issue "$EVENT_ISSUE_NUMBER" \
+                  --issues-json "$issues_json" \
+                  --comments-dir "$comments_dir")"
+                issue_number="$(jq -r '.parent.number // empty' <<< "$result")"
+                issue_title="$(jq -r '.parent.title // empty' <<< "$result")"
+                if [ -n "$issue_number" ]; then
+                  operation=execute
+                  wait_for_existing_turn=true
+                fi
+                ;;
+            esac
+          fi
+
+          echo "operation=$operation" >> "$GITHUB_OUTPUT"
+          echo "issue_number=$issue_number" >> "$GITHUB_OUTPUT"
+          echo "issue_title=$issue_title" >> "$GITHUB_OUTPUT"
+          echo "wait_for_existing_turn=$wait_for_existing_turn" >> "$GITHUB_OUTPUT"
+
+  execute:
+    needs: route
+    if: needs.route.outputs.operation == 'execute' && needs.route.outputs.issue_number != ''
+    uses: ./.github/workflows/codex-execute-ready.yml
+    with:
+      issue_number: ${{ needs.route.outputs.issue_number }}
+      issue_title: ${{ needs.route.outputs.issue_title }}
+      wait_for_existing_turn: ${{ needs.route.outputs.wait_for_existing_turn == 'true' }}
+
+  audit:
+    needs: route
+    if: needs.route.outputs.operation == 'audit' && needs.route.outputs.issue_number != ''
+    uses: ./.github/workflows/codex-review-ready.yml
+    with:
+      issue_number: ${{ needs.route.outputs.issue_number }}
