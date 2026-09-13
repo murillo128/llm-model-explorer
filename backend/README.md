@@ -101,9 +101,10 @@ and 3.14, and installs the built wheel before testing it outside the source tree
   the normative HTTP contract. Generated OpenAPI/docs routes are disabled so an
   incomplete runtime schema does not compete with it.
 - `dependencies.py` exposes `get_settings`, `get_blocking_work`, `get_catalogue`,
-  `get_sessions`, `get_artifacts`, and `get_operation_delivery`. The catalogue
-  slot is a concrete `ModelCatalogue`; other domain slots begin unset and fail
-  loudly if accessed. Replace their `object` annotations as each module lands; no
+  `get_sessions`, `get_artifacts`, and `get_operation_delivery`. The catalogue and
+  artifact slots provide concrete `ModelCatalogue` and `ArtifactStore` services.
+  Sessions and operation delivery begin unset and fail loudly if accessed.
+  Replace their `object` annotations as each module lands; no
   speculative business methods or provider interface is prescribed here.
 - Supply an async context manager through `service_lifespan` to initialize domain
   resources, yield `Services`, and release resources in `finally`. Compose with
@@ -182,3 +183,54 @@ and rank-3 shapes, F16/BF16 conversions, malformed headers, identity collisions,
 path escapes, and concurrent readers. They verify bounded header/content reads,
 path-independent fingerprints, and mutation detection before/during work.
 No real SmolLM2 checkpoint or CUDA smoke is required or claimed by these tests.
+
+## Artifact store seam
+
+`get_artifacts` now supplies the concrete `ArtifactStore` during the default app
+lifespan. It uses the configured cache directory, persists across lifespans, and
+requires POSIX filesystem primitives. See the owning
+[cache specification](../docs/spec/backend/artifact-cache.md) for disk layout,
+validation, failure semantics and platform requirements.
+
+A synchronous operation-runtime producer can use the following lifecycle inside
+`blocking_work.run(...)`. Every reader owns its cursor and must be closed; the
+runtime decides how independent consumers are notified when more bytes arrive.
+
+```python
+from llm_model_explorer.artifacts import ArtifactSpec, ArtifactStore
+
+
+def produce(store: ArtifactStore, model_fingerprint: str) -> None:
+    spec = ArtifactSpec(
+        model_fingerprint=model_fingerprint,
+        source="example.weight",
+        operation="materialize",
+        parameters={},
+        dtype="float32",
+        layout="row-major-little-endian",
+        shape=(2,),
+        expected_bytes=8,
+        producer="example-materialize:1",
+    )
+    cached = store.lookup(spec)
+    if cached is not None:
+        with cached:
+            consume(cached.read_available(8))  # operation-owned transport
+        return
+
+    with store.begin_write(spec) as writer, writer.open_reader() as reader:
+        writer.append(b"\x00\x00\x80\x3f")  # first synthetic float32
+        consume(reader.read_available(4))  # usable before commit
+        writer.append(b"\x00\x00\x00\x40")
+        writer.commit()
+        consume(reader.read_available(4))  # same handle survives publication
+        assert reader.complete
+```
+
+`consume` above stands for operation-owned delivery. Exceptions or cancellation
+must unwind the writer context; completed artifacts survive consumer/session
+closure. No sessions, tensor computation, framing or singleflight scheduling are
+implemented by this module. Cache tests use small controlled producers and real
+temporary directories, including concurrent process publication, injected disk
+failures, corruption, crash leftovers, and an 8 MiB stream whose traced Python
+allocation peak stays below 1 MiB.

@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from fastapi.testclient import TestClient
 
 from llm_model_explorer.app import create_app
+from llm_model_explorer.artifacts import ArtifactStore
 from llm_model_explorer.dependencies import (
     get_artifacts,
     get_catalogue,
@@ -56,6 +57,7 @@ def test_app_creation_and_lifespan_do_not_touch_models_or_tensors(
 def test_lifecycle_and_injected_domain_services(settings: Settings) -> None:
     events: list[str] = []
     sentinel = ModelCatalogue(settings.model_root)
+    artifacts = ArtifactStore(settings.cache_dir, model_root=settings.model_root)
     work = BlockingWork()
 
     @asynccontextmanager
@@ -63,7 +65,7 @@ def test_lifecycle_and_injected_domain_services(settings: Settings) -> None:
         assert config is settings
         events.append("start")
         try:
-            yield Services(work, sentinel, sentinel, sentinel, sentinel)
+            yield Services(work, sentinel, sentinel, artifacts, sentinel)
         finally:
             await work.aclose()
             events.append("stop")
@@ -73,8 +75,9 @@ def test_lifecycle_and_injected_domain_services(settings: Settings) -> None:
     @router.get("/test-only")
     def inspect(request: Request) -> dict[str, bool]:
         assert get_settings(request) is settings
-        for dependency in [get_catalogue, get_sessions, get_artifacts, get_operation_delivery]:
+        for dependency in [get_catalogue, get_sessions, get_operation_delivery]:
             assert dependency(request) is sentinel
+        assert get_artifacts(request) is artifacts
         return {"injected": True}
 
     app = create_app(settings, routers=[router], service_lifespan=services)
@@ -86,7 +89,7 @@ def test_lifecycle_and_injected_domain_services(settings: Settings) -> None:
     assert not hasattr(app.state, "services")
 
 
-@pytest.mark.parametrize("dependency", [get_sessions, get_artifacts, get_operation_delivery])
+@pytest.mark.parametrize("dependency", [get_sessions, get_operation_delivery])
 def test_unconfigured_domain_fails_and_supports_override(
     settings: Settings, dependency: Callable[[Request], object]
 ) -> None:
