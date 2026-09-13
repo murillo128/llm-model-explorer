@@ -214,3 +214,14 @@ test('matrix context loss clears active text and inspection resources', async ({
   await expect.poll(() => page.evaluate(() => window.explorerFixture.metrics.liveDisplays.size)).toBe(0);
   await expect(page.getByRole('alert')).toContainText('Exact rendering is unavailable');
 });
+
+
+test('shell typography preserves hit-testing at the final tensor pixel across font stacks', async ({ page }) => {
+  await open(page);
+  for (const font of ['Arial, sans-serif', 'DejaVu Sans, sans-serif', 'monospace']) {
+    await page.locator('.app-shell').evaluate((shell: HTMLElement, font) => { shell.style.fontFamily = font; }, font);
+    await page.locator('.matrix-scroll').scrollIntoViewIfNeeded();
+    await hover(page, 16, 18);
+    expect(await page.evaluate(() => document.documentElement.scrollHeight === innerHeight)).toBe(true);
+  }
+});

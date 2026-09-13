@@ -56,7 +56,7 @@ Use these roles consistently:
 - product identity and global navigation: `13 px`, semibold for identity and the active explorer;
 - status bar: `12 px` text with `11 px` technical metadata;
 - model/path metadata: `13 px` monospace with `20 px` line height, muted;
-- section label: `11 px`, bold, uppercase, approximately `0.1em` tracking;
+- section label: `11 px` with `16 px` line height, bold, uppercase, approximately `0.1em` tracking;
 - ordinary body/control text: `14–16 px`;
 - compact coordinates, IDs, and helper text: `10–12 px` monospace.
 
@@ -68,6 +68,9 @@ The application occupies the browser viewport (`100dvh`). Its grid reserves exac
 `--ui-app-bar-height: 52px` for the top bar and `--ui-status-bar-height: 28px` for
 the bottom status bar; the workspace frame receives all remaining height. These
 80 px leave about 90.5–91.1% of an 840–900 px desktop viewport for the workspace.
+Result rows and workspace notices use integer `20 px` line height;
+smaller inline labels retain their `16 px` leading so mixed font metrics do not
+enlarge the row and displace exact scientific surfaces by a fractional pixel.
 Normal application states must not produce document/body scrolling. Scrollable
 workspace panels have explicit shrinkable bounds; large scientific surfaces use
 ordinary panel scrolling without scaling, resampling, or changing exact pixels.
