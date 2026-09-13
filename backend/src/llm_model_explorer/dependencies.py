@@ -4,6 +4,7 @@ from typing import cast
 
 from fastapi import Request
 
+from .artifacts import ArtifactStore
 from .execution import BlockingWork
 from .models import ModelCatalogue
 from .services import Services
@@ -39,7 +40,7 @@ def get_sessions(request: Request) -> object:
     return service
 
 
-def get_artifacts(request: Request) -> object:
+def get_artifacts(request: Request) -> ArtifactStore:
     service = get_services(request).artifacts
     if service is None:
         raise RuntimeError("artifact service is not configured")
