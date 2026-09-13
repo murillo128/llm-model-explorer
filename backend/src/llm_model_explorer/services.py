@@ -10,6 +10,7 @@ from .models import ModelCatalogue
 from .operations import OperationRuntime
 from .sessions import SessionRegistry
 from .settings import Settings
+from .tokenization import TokenizerService
 
 
 @dataclass
@@ -21,6 +22,7 @@ class Services:
     sessions: SessionRegistry | None = None
     artifacts: ArtifactStore | None = None
     operation_delivery: OperationRuntime | None = None
+    tokenizers: TokenizerService | None = None
 
 
 @asynccontextmanager
@@ -41,6 +43,7 @@ async def open_services(settings: Settings) -> AsyncIterator[Services]:
             artifacts=artifacts,
             sessions=sessions,
             operation_delivery=operations,
+            tokenizers=TokenizerService(settings.model_root),
         )
     finally:
         try:
