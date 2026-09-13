@@ -11,13 +11,13 @@ Reproduce from `ui/` with `npm ci`, `npm run check`, then
 The focused suite is `npm run test:browser -- tensor-explorer.spec.ts`.
 Local execution used `UI_TEST_PORT=4314` and an already installed matching browser
 via `PLAYWRIGHT_BROWSERS_PATH=/tmp/issue-3-playwright`. Due to host disk exhaustion,
-this issue’s installed dependencies and browser temporary files were held under
+this issue’s installed dependencies, generated caches/build output and browser temporary files were held under
 `/dev/shm/issue-14-browser`; these local paths do not change the tests.
 
 | Evidence | Observed result |
 | --- | --- |
-| API generation, strict types, lint, unit tests, production build | Passed; 175 unit/component cases |
-| Complete browser suite | 80 passed, including 18 Tensor Explorer desktop/narrow cases and 4 headed native-scrollbar cases |
+| API generation, strict types, lint, unit tests, production build | Passed; 178 unit/component cases |
+| Complete browser suite | 100 passed, including 18 Tensor Explorer desktop/narrow cases and 4 headed native-scrollbar cases |
 | Asymmetric `[2,3]` matrix | Values and framebuffer pixels preserve native C order; split words decode progressively |
 | Distribution sections | Cross-section chunks preserve `[rows,100]` and `[100,columns]`; pending suffix differs from zero |
 | Delayed statistics | Matrix displays first; successful statistics update without additional scalar allocation/upload |
