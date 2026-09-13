@@ -17,22 +17,24 @@ permissions:
 
 jobs:
   backend:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: [self-hosted, codex]
     strategy:
       matrix:
         python: ['3.12', '3.14']
     env:
       UV_PYTHON: ${{ matrix.python }}
+      UV_PROJECT_ENVIRONMENT: ${{ runner.tool_cache }}/llm-model-explorer/backend/python-${{ matrix.python }}-${{ hashFiles('backend/uv.lock') }}
     defaults:
       run:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: astral-sh/setup-uv@v6
         with:
           version: '0.12.13'
-          enable-cache: true
-          cache-dependency-glob: backend/uv.lock
       - run: uv sync --locked --python '${{ matrix.python }}'
       - run: uv run --locked ruff check .
       - run: uv run --locked ruff format --check .
@@ -41,8 +43,8 @@ jobs:
       - name: Build and validate the installed wheel outside the source tree
         run: |
           uv build
-          uv pip install --python .venv/bin/python --reinstall --no-deps dist/*.whl
-          backend_python="$PWD/.venv/bin/python"
+          backend_python="${UV_PROJECT_ENVIRONMENT}/bin/python"
+          uv pip install --python "$backend_python" --reinstall --no-deps dist/*.whl
           cd "$RUNNER_TEMP"
           "$backend_python" -c 'import torch; assert torch.version.cuda is None'
           "$backend_python" -m pytest "$GITHUB_WORKSPACE/backend/tests"
