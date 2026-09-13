@@ -347,3 +347,37 @@ Progress emission is optional: the common writer supports it, while this respons
 currently emits metadata, data and terminal frames only. No tensor, statistics or
 distribution product endpoint is introduced by this adapter. See
 [`evidence/lmex-streaming.md`](evidence/lmex-streaming.md) for transport evidence.
+
+## Local tokenization
+
+`POST /sessions/{session_id}/tokenize` accepts `{"text":"A😀é<special>"}`
+and optional `add_special_tokens` (default `true`). It returns the exact text
+and option, with ordered token indices, IDs, native strings, individual decoded
+strings and special-ID flags. Valid offsets use Unicode code points in the
+original text. Overlaps and literal special-token spans are preserved; inserted
+`(0,0)` sentinels and unavailable/invalid offset pairs are omitted. Individual
+decodings retain special tokens and disable cleanup; concatenation is not an
+input reconstruction guarantee.
+
+The lifespan-owned `TokenizerService` loads the session's actual Hugging Face
+tokenizer with local files only and remote code disabled. It stages conventional
+snapshot assets in a temporary directory for loading, excluding weights, Python
+code and unrelated chat templates. File overrides must refer to these staged
+assets. Model files remain read-only. A missing, malformed or unsupported
+local tokenizer returns HTTP 422 `unsupported_representation`, with no fallback
+to another model or download. Tokenizers needing uninstalled optional libraries
+are unsupported in this environment.
+
+Instances are reused by content fingerprint, with source checks before and after
+loading/use. Changes require a new session (HTTP 409 `model_content_changed`).
+The worker pool runs loading, encoding and decoding outside the event loop. A
+per-instance lock protects the Hugging Face wrapper's internal mutable state;
+request options are passed per call. No chat template, padding, truncation,
+inference, operation ID, artifact or CUDA queue is involved. HTTP disconnects
+and task cancellation release response interest and may cancel work that has
+not started; an already running native encode finishes in its worker.
+
+`tests/test_tokenization.py` generates tiny byte-level BPE and normalizing
+WordPiece tokenizers locally and compares results directly with Hugging Face.
+It also covers missing offsets, concurrent options, snapshot changes, prohibited
+network/weight work, responsive metadata and disconnect/task cancellation.

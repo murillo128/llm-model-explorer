@@ -11,6 +11,14 @@ from .operations import OperationRuntime
 from .services import Services
 from .sessions import SessionRegistry
 from .settings import Settings
+from .tokenization import TokenizerService
+
+
+def get_tokenizers(request: Request) -> TokenizerService:
+    service = get_services(request).tokenizers
+    if service is None:
+        raise RuntimeError("tokenizer service is not configured")
+    return service
 
 
 def get_settings(request: Request) -> Settings:
