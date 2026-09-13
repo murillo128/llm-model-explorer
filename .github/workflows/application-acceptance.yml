@@ -31,7 +31,7 @@ jobs:
     name: Contract, backend, UI and real product acceptance
     runs-on: [self-hosted, codex]
     concurrency:
-      group: local-browser-${{ github.repository }}
+      group: application-acceptance-${{ github.repository }}
       cancel-in-progress: false
     timeout-minutes: 25
     env:
@@ -46,6 +46,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: ui/.nvmrc
+      - name: Select isolated component-browser ports
+        shell: bash
+        run: |
+          base_port=$((20000 + (GITHUB_RUN_ID % 10000) * 3))
+          echo "UI_TEST_PORT=$base_port" >> "$GITHUB_ENV"
       - name: Reuse persistent backend environment
         shell: bash
         run: |
