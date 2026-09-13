@@ -104,3 +104,8 @@ See [validation evidence](evidence/validation.md) for the captured results.
 
 The accepted [UI architecture](../docs/spec/ui/architecture.md) and
 [visual language](../docs/spec/ui/visual-language.md) own durable UI decisions.
+
+The [browser API boundary](src/api/README.md) provides generated contract types,
+validated JSON methods, incremental LMEX decoding, and cancellable streams.
+Run `npm run api:generate` after accepted OpenAPI changes; the normal check
+command rejects generated contract drift.

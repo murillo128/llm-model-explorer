@@ -21,7 +21,7 @@ test('one production build accepts two deployed backend URLs', async ({ page }, 
   const before = await assetHashes();
   const backendRequests: string[] = [];
   page.on('request', (request) => {
-    if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') backendRequests.push(request.url());
+    if (new URL(request.url()).origin !== new URL(testInfo.project.use.baseURL!).origin) backendRequests.push(request.url());
   });
   try {
     for (const backend of ['https://models-a.example/api/', 'http://192.0.2.10:9000///']) {
