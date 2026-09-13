@@ -2,8 +2,11 @@
 
 A separately buildable React + TypeScript + Vite application. Tensor Explorer and
 Tokenizer Explorer have reusable composition slots. The shell discovers models,
-creates and recovers sessions, and presents a logical tensor hierarchy. Explorer
-rendering and tokenization internals are connected separately through these slots.
+creates and recovers sessions, and presents a logical tensor hierarchy. The
+[reusable inline prompt editor](src/tokenizer/README.md) is connected as the
+standalone Tokenizer Explorer and calls the session's typed tokenization endpoint.
+See its [interaction evidence](evidence/tokenizer.md). Tensor rendering is connected
+separately through its slot.
 
 The independent [exact-pixel WebGL2 renderer](src/rendering/README.md) is available
 separately at `/renderer-demo.html` in both dev and production builds. It is not yet

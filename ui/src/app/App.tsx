@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { ApiClient } from '../api/client';
 import type { RuntimeConfig } from '../api/runtime-config';
 import { Button } from '../components/Button';
@@ -11,6 +11,7 @@ import { SessionController } from './session-controller';
 import type { Explorer, SessionStorage } from './session-controller';
 
 const explorers: Explorer[] = ['Tensor Explorer', 'Tokenizer Explorer'];
+const TokenizerExplorer = lazy(() => import('../tokenizer/PromptTokenizer').then((module) => ({ default: module.TokenizerExplorer })));
 interface AppProps { config: RuntimeConfig; slots?: ExplorerSlots }
 function tabStorage(): SessionStorage | null {
   try { return window.sessionStorage; } catch { return null; }
@@ -99,7 +100,9 @@ function BackendApp({ config, slots }: Required<AppProps>) {
             {!supported && <p>Direct viewing supports complete rank-1 and rank-2 tensors. This rank-{tensor.rank} tensor is available for metadata inspection only.</p>}
           </>}
           {context ? <ExplorerContext.Provider key={state.viewRevision} value={context}>
-            {Slot ? <Slot {...context} /> : <p>{state.explorer} view is not connected yet. No computation has started.</p>}
+            {Slot ? <Slot {...context} /> : state.explorer === 'Tokenizer Explorer' ?
+              <Suspense fallback={<p role="status">Loading prompt editor…</p>}><TokenizerExplorer {...context} tokenizerAvailable={model?.tokenizer_available ?? true} /></Suspense> :
+              <p>{state.explorer} view is not connected yet. No computation has started.</p>}
             {state.viewStatus !== 'idle' && <p role="status" data-state={state.viewStatus}>{state.viewStatus === 'failed' ? 'Operation failed.' : `Operation ${state.viewStatus}.`}</p>}
           </ExplorerContext.Provider> : !tensor || state.explorer === 'Tokenizer Explorer' ?
             <p>{state.session ? 'Select a tensor to inspect.' : 'Open a model session to use this explorer.'}</p> : null}
