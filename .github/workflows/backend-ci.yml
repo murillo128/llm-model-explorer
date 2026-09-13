@@ -24,7 +24,6 @@ jobs:
         python: ['3.12', '3.14']
     env:
       UV_PYTHON: ${{ matrix.python }}
-      UV_PROJECT_ENVIRONMENT: ${{ runner.tool_cache }}/llm-model-explorer/backend/python-${{ matrix.python }}-${{ hashFiles('backend/uv.lock') }}
     defaults:
       run:
         working-directory: backend
@@ -35,6 +34,9 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           version: '0.12.13'
+      - name: Select persistent Python environment
+        shell: bash
+        run: echo "UV_PROJECT_ENVIRONMENT=${{ runner.tool_cache }}/llm-model-explorer/backend/python-${{ matrix.python }}-${{ hashFiles('backend/uv.lock') }}" >> "$GITHUB_ENV"
       - run: uv sync --locked --python '${{ matrix.python }}'
       - run: uv run --locked ruff check .
       - run: uv run --locked ruff format --check .
