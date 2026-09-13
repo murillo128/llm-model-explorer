@@ -8,7 +8,7 @@ The project is intentionally split into three independent system boundaries: a P
 
 The initial reference model is `HuggingFaceTB/SmolLM2-135M` Base.
 
-The first proof of concept has two user-facing capabilities:
+The implemented proof of concept has two user-facing capabilities:
 
 - **Tensor Explorer**: discover model tensors through a hierarchical list and open complete 1D or 2D tensors for progressive visualization.
 - **Tokenizer Explorer**: run the real Hugging Face tokenizer associated with the selected model and inspect its result.
@@ -31,7 +31,7 @@ Large numeric payloads are binary and progressive. The UI must be able to consum
 
 The backend owns physical model-format knowledge. The main visualization path exposes logical tensor values in canonical `float32`, so the UI does not need to implement NF4, INT8, or other quantization decoders. Model values remain authoritative and visualization must not mutate them.
 
-The proof-of-concept tensor renderer follows an exact spatial rule: **one weight equals one rendered pixel**. Matrices are not fit to the viewport, resampled, or aggregated; oversized content uses normal scrolling. Weight value is encoded through luminosity using a configurable nonlinear sigmoid-like transfer based on robust tensor statistics. Color remains an independent semantic channel for later uses such as selection, activations, clusters, and highlighting.
+The proof-of-concept tensor renderer follows an exact spatial rule: **one weight equals one rendered pixel**. Matrices are not fit to the viewport, resampled, or aggregated; oversized content uses normal scrolling. Weight value is encoded through luminosity using a configurable nonlinear sigmoid-like transfer based on robust tensor statistics. Color remains an independent semantic channel; current hover selection preserves scalar luminosity.
 
 ## Sessions and artifact cache
 
@@ -55,6 +55,83 @@ Tensor Explorer and Tokenizer Explorer behavior is owned by `docs/spec/ui/tensor
 
 This repository uses the Skillforge issue-driven development workflow. Durable accepted design belongs in repository documentation, bounded implementation work belongs in GitHub issues, and non-trivial implementation follows the repository agent and review workflow defined in [`AGENTS.md`](AGENTS.md).
 
-The [backend foundation](backend/README.md) is installable and separately runnable,
-with validated CLI settings, application lifecycle/dependency seams, and repeatable
-CPU checks. Product endpoints and explorer implementations are subsequent work.
+## Run on separate computers
+
+Use Python 3.12 (3.14 is also checked), uv 0.12.13, Node 24.14.x and npm 11.9.x.
+The lockfiles pin application dependencies. Models are supplied locally; the
+application never downloads weights. Place each HF checkpoint in an immediate
+child directory of the model root, including its configuration and tokenizer assets.
+Supported checkpoint dtypes are F32, F16 and BF16 safetensors.
+
+On the backend computer:
+
+```sh
+cd backend
+uv sync --locked --python 3.12
+uv run --locked llm-model-explorer-backend \
+  --model-root /srv/models \
+  --cache-dir /srv/lmex-cache \
+  --device cpu --host 0.0.0.0 --port 8000 \
+  --cors-origin http://ui-computer:8080
+```
+
+`--model-root` and `--cache-dir` are required and must not overlap. `--device`
+accepts `cpu`, `cuda`, or `cuda:N`; CUDA needs a compatible operator-installed
+PyTorch/CUDA runtime (the default lock installs CPU PyTorch on Linux).
+`--host` defaults to `127.0.0.1`, `--port` to `8000`. Repeat `--cors-origin`
+for each exact allowed UI origin, including its port; it defaults to no allowed
+cross-origin UI. Do not put a path or trailing slash in an origin.
+
+On the UI computer, from the repository root:
+
+```sh
+cd ui
+npm ci
+npm run build
+printf '%s\n' '{"backend_base_url":"http://backend-computer:8000"}' > dist/runtime-config.json
+python3 -m http.server 8080 --bind 0.0.0.0 --directory dist
+```
+
+Open `http://ui-computer:8080`. The runtime URL must be reachable **from the
+browser**, and can be changed without rebuilding. Serve `runtime-config.json`
+alongside `index.html`; avoid caching that deployment file. This uses different
+origins directly, with CORS and exposed operation IDs, without an API proxy.
+For local UI development use `npm run dev` and edit `ui/public/runtime-config.json`;
+allow the resulting Vite origin explicitly on the backend.
+
+The PoC has **no authentication** and is intended for a trusted network or otherwise
+trusted environment. Model files are read-only. Sessions survive refresh while
+the backend stays alive, but backend restart discards them. Complete artifacts
+survive restart. To rebuild the disposable cache, stop the backend, manually delete
+the configured cache directory (for the example: `rm -rf /srv/lmex-cache`), and
+restart it. There is no automatic cache eviction or cache-management UI.
+
+## Check the application
+
+The combined command is `acceptance/check.sh` after the dependency setup in
+[acceptance/README.md](acceptance/README.md). It runs independent OpenAPI validation
+and reproducible fixture/binding generation, backend lint/type/unit/integration
+checks, UI lint/type/unit/build checks, and real-network/WebGL2 acceptance.
+Individual entry points:
+
+```sh
+# With the separate API tool environment installed:
+api/.venv/bin/python api/validate_contract.py
+(cd backend && uv run --locked ruff check . && uv run --locked ruff format --check . && uv run --locked mypy && uv run --locked pytest)
+(cd ui && npm run check && xvfb-run -a npm run test:browser)
+backend/.venv/bin/python -m pytest acceptance -ra
+(cd ui && npm run build && npm run test:acceptance)
+```
+
+[The reproducibility report](acceptance/evidence.md) distinguishes fixture evidence
+from optional operator-supplied `HuggingFaceTB/SmolLM2-135M` Base and CUDA evidence.
+A missing reference directory or CUDA capability is reported as **SKIP**. No
+reference weights are downloaded by the harness.
+
+Local discovery, all ten API operations, sessions, complete artifact caching,
+progressive tensor/statistics/distribution delivery, both explorers and matrix
+inspection are implemented. Inference, attention, KV cache, matrix multiplication,
+FFT/SVD, clustering, and quantization inspection remain future work. Final epic
+acceptance and default-branch integration are separate workflow decisions.
+See [backend](backend/README.md), [UI](ui/README.md), and [API](api/README.md)
+for component-specific commands and implementation details.

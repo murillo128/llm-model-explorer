@@ -15,6 +15,8 @@ export default defineConfig({
     baseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    // Use deterministic WebGL2 on CI and hosts without sandbox GPU access.
+    launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
   },
   projects: [
     { name: 'desktop', testIgnore: '**/tensor-explorer-scrollbars.spec.ts', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },

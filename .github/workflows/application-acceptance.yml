@@ -1,0 +1,60 @@
+name: Application acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'ui/**'
+      - 'api/**'
+      - 'acceptance/**'
+      - 'docs/spec/**'
+      - 'README.md'
+      - 'AGENTS.md'
+      - '.github/workflows/application-acceptance.yml'
+  push:
+    branches: [main, 'codex/epic-issue-*']
+    paths:
+      - 'backend/**'
+      - 'ui/**'
+      - 'api/**'
+      - 'acceptance/**'
+      - 'docs/spec/**'
+      - '.github/workflows/application-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  application:
+    name: Contract, backend, UI and real product acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      LMEX_EVIDENCE_DIR: ${{ runner.temp }}/lmex-evidence
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.13'
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ui/.nvmrc
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: uv sync --locked --project backend --python 3.12
+      - run: uv venv api/.venv --python 3.12
+      - run: uv pip install --python api/.venv/bin/python -r api/requirements.txt
+      - run: npm ci --prefix ui
+      - run: cd ui && npx playwright install --with-deps chromium
+      - run: acceptance/check.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: application-acceptance-evidence
+          path: |
+            ${{ runner.temp }}/lmex-evidence/
+            ui/test-results/
+          retention-days: 14
