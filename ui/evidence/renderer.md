@@ -17,10 +17,13 @@ npm run test:browser
 
 The local run used the already-installed Chromium through
 `PLAYWRIGHT_BROWSERS_PATH=/tmp/issue-3-playwright`. Typecheck, lint, production
-build and 32 unit/component tests passed. All 44 browser cases passed across the
-desktop and narrow projects (30 renderer cases plus 14 existing shell cases).
-The renderer fixture uses port 4174; shell and standalone demo checks use the
-production preview on 4173. No backend or downloaded model is required.
+build, API generation drift check and 158 unit/component tests passed after
+reconciliation with the integration branch's API client. All 48 browser cases
+passed across desktop and narrow projects (30 renderer, 14 shell, 4 transport).
+The final local run set `UI_TEST_PORT=4183`, verifying both configurable servers:
+renderer fixtures used 4184; shell and standalone demo used production preview
+on 4183. Defaults remain 4174/4173. No production backend or downloaded model is
+required; transport tests use their own fixture server.
 
 ## Pixel and geometry observations
 
