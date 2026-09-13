@@ -11,8 +11,9 @@ The specification is split along the three system boundaries: backend, API contr
 - [`backend/models.md`](backend/models.md): local Hugging Face discovery, model identity, lazy loading, and logical tensor materialization.
 - [`backend/sessions-and-execution.md`](backend/sessions-and-execution.md): sessions, UI-driven execution, long operations, cancellation, concurrency, and GPU scheduling.
 - [`backend/artifact-cache.md`](backend/artifact-cache.md): persistent disk artifacts, deduplication, publication, and invalidation.
-- [`api/contract.md`](api/contract.md): API ownership, capabilities, typed operations, errors, and contract rules.
-- [`api/binary-streaming.md`](api/binary-streaming.md): binary streaming semantics and common framing requirements.
+- [`api/openapi.yaml`](api/openapi.yaml): machine-readable HTTP endpoint, schema, identifier, and status-code contract.
+- [`api/contract.md`](api/contract.md): API ownership and the normative semantics connecting HTTP, tensors, tokenizer results, long operations, statistics, and distributions.
+- [`api/binary-streaming.md`](api/binary-streaming.md): exact binary streaming framing, frame types, payload layouts, and terminal behavior.
 - [`ui/architecture.md`](ui/architecture.md): React application architecture and separation from the WebGL2 renderer.
 - [`ui/rendering.md`](ui/rendering.md): common tensor rendering rules and visual encoding.
 - [`ui/visual-language.md`](ui/visual-language.md): cross-cutting UI visual language, shared composition rules, typography, spacing, neutral surfaces, and interaction styling.
@@ -21,4 +22,6 @@ The specification is split along the three system boundaries: backend, API contr
 
 ## Authority
 
-These documents describe accepted design decisions. Cross-cutting UI styling belongs in `ui/visual-language.md`; component-specific behavior and visual semantics belong in the dedicated component specification. When a generic visual-language rule and a component-specific accepted rule disagree, the more specific component document controls that component.
+These documents describe accepted design decisions. The API is contract-first: `api/openapi.yaml` is authoritative for HTTP paths and schemas, while `api/binary-streaming.md` is authoritative for the bytes carried by streaming endpoints; `api/contract.md` defines their shared semantics.
+
+Cross-cutting UI styling belongs in `ui/visual-language.md`; component-specific behavior and visual semantics belong in the dedicated component specification. When a generic visual-language rule and a component-specific accepted rule disagree, the more specific component document controls that component.
