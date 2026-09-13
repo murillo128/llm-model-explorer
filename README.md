@@ -13,7 +13,7 @@ The first proof of concept has two user-facing capabilities:
 - **Tensor Explorer**: discover model tensors through a hierarchical list and open complete 1D or 2D tensors for progressive visualization.
 - **Tokenizer Explorer**: run the real Hugging Face tokenizer associated with the selected model and inspect its result.
 
-The detailed behavior of both explorers is intentionally delegated to their dedicated specifications. The general architecture must already support the later move to step-by-step inference without replacing the backend model, API boundary, session model, streaming mechanism, artifact cache, or renderer boundary.
+The detailed behavior of both explorers lives in their dedicated specifications. The general architecture must already support the later move to step-by-step inference without replacing the backend model, API boundary, session model, streaming mechanism, artifact cache, or renderer boundary.
 
 Future work will extend the same architecture to embeddings, transformer layers, attention, matrix/vector operations, activations, token generation, KV cache, sampling, and other intermediate inference state. Execution remains UI-driven: even a continuous Play mode is conceptually a sequence of explicit steps requested by the UI rather than an autonomous backend process.
 
@@ -46,9 +46,10 @@ The accepted product and architecture specification lives under [`docs/spec/`](d
 - [`docs/spec/product.md`](docs/spec/product.md) — product scope, proof-of-concept boundaries, and future direction.
 - [`docs/spec/backend/`](docs/spec/backend/) — backend runtime, models, sessions/execution, and artifact cache.
 - [`docs/spec/api/`](docs/spec/api/) — API contract and binary streaming protocol.
-- [`docs/spec/ui/`](docs/spec/ui/) — UI architecture, rendering rules, and dedicated explorer specifications.
+- [`docs/spec/ui/`](docs/spec/ui/) — UI architecture, rendering rules, visual language, and dedicated explorer specifications.
+- [`docs/spec/ui/visual-language.md`](docs/spec/ui/visual-language.md) — the shared light editorial UI language, composition rules, typography, spacing, and interaction styling used across the application.
 
-`docs/spec/ui/tensor-explorer.md` and `docs/spec/ui/tokenizer-explorer.md` are currently deliberate placeholders for their dedicated design work; their detailed behavior must not be reconstructed from the general architecture documents.
+Tensor Explorer and Tokenizer Explorer behavior is owned by `docs/spec/ui/tensor-explorer.md` and `docs/spec/ui/tokenizer-explorer.md`. Cross-cutting UI styling is owned by `docs/spec/ui/visual-language.md`.
 
 ## Repository workflow
 

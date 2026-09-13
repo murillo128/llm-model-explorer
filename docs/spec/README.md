@@ -15,9 +15,10 @@ The specification is split along the three system boundaries: backend, API contr
 - [`api/binary-streaming.md`](api/binary-streaming.md): binary streaming semantics and common framing requirements.
 - [`ui/architecture.md`](ui/architecture.md): React application architecture and separation from the WebGL2 renderer.
 - [`ui/rendering.md`](ui/rendering.md): common tensor rendering rules and visual encoding.
-- [`ui/tensor-explorer.md`](ui/tensor-explorer.md): reserved for the dedicated Tensor Explorer specification.
-- [`ui/tokenizer-explorer.md`](ui/tokenizer-explorer.md): reserved for the dedicated Tokenizer Explorer specification.
+- [`ui/visual-language.md`](ui/visual-language.md): cross-cutting UI visual language, shared composition rules, typography, spacing, neutral surfaces, and interaction styling.
+- [`ui/tensor-explorer.md`](ui/tensor-explorer.md): accepted Tensor Explorer behavior, Matrix Inspector geometry, hover/selection, magnifier, and scientific-view guardrails.
+- [`ui/tokenizer-explorer.md`](ui/tokenizer-explorer.md): accepted Tokenizer Explorer behavior and the reusable live prompt/tokenization surface.
 
 ## Authority
 
-These documents describe accepted design decisions. Detailed Tensor Explorer and Tokenizer Explorer behavior is intentionally not specified here and must be completed from their dedicated design work rather than reconstructed or duplicated in this general specification.
+These documents describe accepted design decisions. Cross-cutting UI styling belongs in `ui/visual-language.md`; component-specific behavior and visual semantics belong in the dedicated component specification. When a generic visual-language rule and a component-specific accepted rule disagree, the more specific component document controls that component.
