@@ -18,7 +18,7 @@ Every successful streaming response exposes:
 
 `X-Operation-Id: <uuid>`
 
-The backend CORS configuration must expose `X-Operation-Id` to the browser. Implementations should also return `Cache-Control: no-store`; application-level artifact caching is owned by the backend and must not be confused with HTTP intermediary caching.
+The backend CORS configuration must expose `X-Operation-Id` to the browser. Implementations must also return `Cache-Control: no-store`; application-level artifact caching is owned by the backend and must not be confused with HTTP intermediary caching.
 
 Before the response is started, ordinary HTTP status codes and JSON errors apply. Once the streaming response is started, terminal error/cancellation state is represented inside the framing described below.
 
@@ -44,7 +44,7 @@ The header contains no protocol-version field.
 
 A receiver must reject a frame whose magic is not `LMEX`, whose flags/reserved fields are non-zero under the current contract, or whose declared payload cannot be read before the underlying HTTP body terminates.
 
-The maximum payload of one frame is therefore `2^32 - 1` bytes, but implementations should emit much smaller data frames suitable for progressive consumption. Frame size is an implementation tuning parameter and is not an API semantic.
+The header can represent a payload of `2^32 - 1` bytes, but JSON control frames (`META_JSON`, `PROGRESS_JSON`, and `ERROR_JSON`) must not exceed **1 MiB (1,048,576 payload bytes)**. Reject a larger declared JSON length before buffering its payload. DATA lengths must be multiples of four, so the largest valid DATA length is `2^32 - 4`; implementations should emit much smaller data frames suitable for progressive consumption. Frame size is an implementation tuning parameter and is not an API semantic.
 
 **HTTP/Fetch chunk boundaries are not frame boundaries.** A browser parser must handle a header or payload split across multiple `ReadableStream` chunks and may receive multiple frames in one network chunk.
 
@@ -65,18 +65,35 @@ The first application frame in a successful stream must be `META_JSON`. The back
 
 After `META_JSON`, zero or more `DATA` and `PROGRESS_JSON` frames may appear. Exactly one terminal frame then ends the protocol-level stream: `COMPLETE`, `ERROR_JSON`, or `CANCELLED`. No bytes may follow a terminal frame.
 
+`ERROR_JSON` or `CANCELLED` may instead be the first and only frame when
+failure/cancellation occurs after HTTP headers are committed but before
+metadata is available. Do not fabricate META in this case. DATA, PROGRESS,
+and COMPLETE before META are invalid.
+
+Receivers must reject unknown frame types, duplicate META, nonzero
+flags/reserved, invalid UTF-8, invalid JSON (including NaN/Infinity literals),
+and control objects that fail their OpenAPI schema or cross-field constraints.
+COMPLETE and CANCELLED payloads must be empty. Statistics reject every DATA
+frame, even an empty one. An overrun of metadata byte length is invalid as
+soon as it is detectable; ERROR/CANCELLED do not legalize a preceding overrun.
+Reject truncated headers or payloads, successful completion with too few DATA
+bytes, a missing terminal frame, and **any trailing byte** after a terminal.
+A terminal frame cannot make a transport with trailing bytes valid: consume
+to body end to establish validity. Error/cancellation may terminate with fewer
+DATA bytes than the metadata declares; those bytes are incomplete results.
+
 If the HTTP transport itself is interrupted before a terminal frame, the result is incomplete and must not be treated as a successful operation.
 
 ## Common metadata
 
-Every `META_JSON` payload is a UTF-8 JSON object with at least:
+Every `META_JSON` payload validates against `#/components/schemas/StreamMetadata` in `openapi.yaml`, discriminated by `kind`. All three variants include:
 
 - `kind`: string identifying the result semantics;
 - `byte_length`: total number of logical `DATA` payload bytes expected before successful completion.
 
 `DATA` frames contain consecutive portions of one logical byte payload. They do not carry offsets. The receiver appends each `DATA` payload in arrival order. On `COMPLETE`, the accumulated data byte count must equal `META_JSON.byte_length`.
 
-A receiver must treat a length mismatch as an invalid/incomplete result.
+A receiver must treat a length mismatch as an invalid/incomplete result. Sizes and computed products/sums must satisfy the safe-integer and cross-field rules in `contract.md` before allocation.
 
 ## Tensor result
 
@@ -90,7 +107,7 @@ For `kind: "tensor"`, `META_JSON` contains:
 - `layout: "c"`;
 - `byte_length`.
 
-`byte_length` is exactly `numel * 4`.
+`byte_length` is exactly `product(shape) * 4` (the descriptor calls this element count `numel`). Scalar `[]` has one element; a zero dimension gives zero elements.
 
 The concatenated `DATA` bytes are the complete logical tensor in C-contiguous order. Individual `DATA` frame payload lengths must be multiples of 4 so one `float32` element is never split across protocol frames.
 
@@ -146,11 +163,13 @@ The binning algorithm and finite/non-finite handling are normative in `contract.
 
 ## Progress result
 
-`PROGRESS_JSON` is optional and advisory. Its UTF-8 JSON payload has:
+`PROGRESS_JSON` is optional and advisory, and validates against `StreamProgress` in `openapi.yaml`. Its UTF-8 JSON payload has:
 
 - `completed`: non-negative integer;
 - `total`: positive integer when known;
-- `unit`: short string such as `bytes`, `elements`, or `rows`.
+- `unit`: nonempty string such as `bytes`, `elements`, or `rows`.
+
+The integer safe bound applies to both counters, and `completed <= total` when total is supplied.
 
 Progress frames must not change result semantics, offsets, shapes, histogram domains, or any other metadata already declared. Clients may ignore all progress frames without affecting correctness.
 
@@ -175,6 +194,13 @@ Cancellation never implies that another consumer of deduplicated backend work ha
 ## Minimal-copy requirement
 
 The protocol is designed so `DATA` payload bytes can be appended directly into their destination binary allocation and, where browser/WebGL2 APIs permit, uploaded without numeric text parsing or application-owned format conversion.
+
+Consume DATA incrementally into its final destination (and/or progressive
+upload path). Do not allocate a separate buffer of its declared frame length.
+Network chunks may split a four-byte value; retain only the small carry needed
+for element alignment as appropriate, without requiring network chunks to be
+multiples of four. Check cumulative length before copying. Bounded JSON
+control payload buffering is permitted.
 
 The contract promises **minimal-copy**, not literal end-to-end zero-copy: browser networking, JavaScript runtime, WebGL2, drivers, and GPU uploads may impose unavoidable copies outside application control.
 

@@ -43,11 +43,19 @@ For each ordinary token:
 
 Conceptually, a token is therefore rendered as a gray `[` + black source text + gray `]`, with its gray token ID associated with that span. The text itself must not be repeated in a separate token-only row.
 
-When source offsets are available from the tokenizer result, they are used to associate ordinary tokens with the exact input substring. When they are not available, the UI uses the tokenizer-provided textual/decoded representation rather than inventing character boundaries.
+When source offsets are available from the tokenizer result, they are used to associate tokens with the exact input substring. API offsets count Unicode code points and must be converted explicitly to JavaScript/DOM UTF-16 positions without normalization.
+
+Overlapping source spans are grouped around their union, with every associated token ID retained in sequence order. The source character appears once, including when multiple byte-level tokens cover the same emoji. Do not split overlapping spans into invented disjoint boundaries.
+
+When a reliable nonempty source span is unavailable, show the tokenizer-native/decoded representation as an explicitly unmapped annotation at its sequence position. This placement does not claim a character mapping. Per-token decoded strings need not concatenate to the input.
+
+Annotations are separate from the editable value and never enter tokenizer requests or source clipboard text. Asynchronous decoration changes preserve native selection, caret, undo/redo, paste and IME composition. Pending results hide previous boundaries while keeping the prompt editable.
 
 ## Special tokens
 
-Special tokens are part of the tokenizer sequence but are not user-entered prompt text. Their textual representation and token ID are therefore rendered in gray.
+The API `special` flag identifies a special token ID, not whether its text was inserted. A source-typed special with a supplied source span remains black editable source, with gray brackets and metadata like any other source span.
+
+Backend-inserted special tokens have no source span. Their textual representation and token ID are gray non-editable annotations, separate from the prompt value.
 
 Special tokens are placed at the sequence position reported by the tokenizer, for example before or after ordinary prompt tokens when the tokenizer inserts beginning/end markers. They must remain visually distinguishable from black user-entered text without introducing a separate color scheme per token.
 

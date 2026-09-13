@@ -1,0 +1,142 @@
+# Integrated product acceptance
+
+This harness runs the current production backend, independent API and built UI
+as one application. Component tests remain separate gates. Nothing under this
+directory is imported by the shipped backend, and the browser probe is injected
+by Playwright, not bundled into the UI.
+
+## Reproduce
+
+From the repository root, with uv 0.12.13, Python 3.12 and Node 24.14.x/npm 11.9.x:
+
+```sh
+uv sync --locked --project backend --python 3.12
+uv venv api/.venv --python 3.12
+uv pip install --python api/.venv/bin/python -r api/requirements.txt
+npm ci --prefix ui
+(cd ui && npx playwright install --with-deps chromium)
+acceptance/check.sh
+```
+
+Linux needs `xvfb-run` for the existing native-scrollbar component tests. The
+product browser tests use headless Chromium with real WebGL2 at DPR 1 and 2,
+using SwiftShader by default. Set `LMEX_WEBGL_BACKEND=vulkan` to request the host
+Vulkan path; the actual renderer and limits are recorded, so this setting alone
+is not a hardware claim. This tests browser GL behavior, not physical GPU
+performance. The backend computes fixture results on CPU. Dependency installation
+may use the network; the acceptance application runs with `HF_HUB_OFFLINE=1`.
+
+The runner writes JUnit, JSON counts, measurements and version information to a
+new `/tmp/lmex-evidence-*` directory. Set `LMEX_EVIDENCE_DIR` for a stable output
+location. Browser screenshots and failure-only traces go to ignored
+`ui/test-results/`; CI uploads these for 14 days. Only a concise report and a few
+small selected screenshots belong in Git. `LMEX_CONTRACT_PYTHON` can select an
+existing API-tools interpreter; API tooling stays separate from the backend lock.
+
+Focused commands:
+
+```sh
+backend/.venv/bin/python -m pytest acceptance -ra
+(cd ui && npm run build && npm run test:acceptance)
+```
+
+The product browser harness reserves loopback ports 4175 (static UI) and 8765
+(backend). Each test starts a fresh backend subprocess with a temporary model and
+cache root and stops it at teardown. The HTTP suite uses dynamically allocated
+loopback ports. Do not run two product browser suites simultaneously. A static
+server serves `ui/dist` and a runtime URL file; it does not proxy API traffic or
+serve development modules. CORS allows only the static origin and exposes
+`X-Operation-Id` through the production middleware.
+
+## Fixture and coverage
+
+`fixtures.py` generates HF-compatible safetensors and tokenizer assets outside
+Git. Seed 17 defines `((index * 17) % 257 - 128) / 128`, exactly representable in
+FP16 and float32. The fixture has `[576,1536]` and `[1536,576]` MLP orientations,
+a `[1025,576]` embedding, a 576-value vector, an empty tensor, and a small F32
+scientific tensor with NaN/infinity/signed zero. The byte BPE uses an explicitly
+ordered alphabet with no stochastic training.
+
+| Gate | Real application evidence |
+| --- | --- |
+| All ten routes | Model/session/inventory/three streams/tokenize/cancel over TCP; CORS preflight and structured pre-stream errors |
+| Scientific correctness | Exact fixture float32 bytes; independent NumPy float64 statistics/percentiles and independently accumulated uint32 row/column counts |
+| Progressive delivery | Hold the real producer after its first flushed block; observe DATA and rendered pixels while publication is still impossible; distributions have their own barrier |
+| Sharing and cache | Two sessions, distinct public operation IDs, late join from byte zero, parked slow reader, one producer, warm reuse with identical key/digest/inode/mtime |
+| Lifecycle | One/all-consumer cancellation, session deletion, socket disconnection, pre-META and midstream failure; no partial valid artifacts; live operations/readers/tasks return to zero |
+| Restart/invalidation | New process loses sessions and reuses artifacts; mutated source rejects old pinned sessions and generates new keys; stopped-cache deletion permits rebuild |
+| UI scientific view | Native vector and both matrix orientations, embedding, device-pixel extents, linked scrolling, exact hover value, unchanged luminance under chroma, all 81 magnifier pixels |
+| UI ownership | Native allocation/upload observers, one scalar texture representation, bounded uploads, no hover reupload, reader/texture baseline after repeated navigation/cancel; weak references plus explicit GC check retained CPU owners |
+| Live tokenizer | Real Unicode echo/IDs, overlapping emoji code-point spans, one editable source, delayed actual old response cannot overwrite current annotations; refresh reconnects |
+
+`server.py` wraps only the test process. Its `/__test/*` routes control delays and
+faults and expose internal counters. They are absent from the production CLI.
+Production algorithms, artifact storage, session ownership, LMEX framing and the
+real tokenizer remain active. Fault injection raises in real production seams;
+stale-token tests delay an actual backend response. Python wire parsing and numeric
+oracles are independent of the service's encoder and calculations.
+
+Timing reports distinguish first received DATA (TCP), first upload and populated
+render (browser), the deliberate release barrier, and completion. These are
+observations of an instrumented test, with no millisecond performance thresholds.
+Full framebuffer readback probes are enabled for the small fixture geometry
+checks; reference smoke disables those test-only readbacks and uses the real
+inspection readout. GPU byte counts are allocated scalar texture bytes; browser/driver-internal copies
+and total process/VRAM usage are not measured. Readback snapshots are test-only
+display evidence. They are not application buffers. Correctness and explicit owner
+cleanup are the gates.
+
+## Optional local reference and CUDA
+
+Supply a directory containing **HuggingFaceTB/SmolLM2-135M Base**:
+
+```sh
+export LMEX_REFERENCE_MODEL_DIR=/absolute/path/to/SmolLM2-135M
+# Optional: export LMEX_REFERENCE_DEVICE=cuda:0
+# Optional: export LMEX_WEBGL_BACKEND=vulkan
+acceptance/check.sh
+```
+
+The directory must be an immediate model child of its parent; supported assets
+must resolve inside that root. The operator is responsible for supplying the Base
+checkpoint. Smoke validation rejects an explicitly Instruct identity and checks
+the reference architecture. It enumerates actual descriptors and reads bounded
+local samples using safetensors, streams the normalization vector, both MLP
+orientations and embedding through real HTTP, compares those samples, and checks
+real tokenizer IDs. The production UI opens those same tensors and verifies matrix
+hover samples; the actual inventory/sample manifest is attached to browser evidence.
+No weights are copied into Git or downloaded. Missing configuration produces SKIP;
+a supplied invalid/unreadable directory fails.
+
+The CUDA test runs only when the installed PyTorch build and hardware expose CUDA;
+otherwise it reports an explicit reason for SKIP. Use a compatible operator-managed
+CUDA environment to run it. The repository's default Linux lock is CPU-only.
+Neither a CPU pass nor a software WebGL pass is CUDA evidence.
+
+
+For the validated GTX 1650 / driver 535 host, an explicit local CUDA override is:
+
+```sh
+uv pip install --python backend/.venv/bin/python 'torch==2.14.0+cu126' \
+  --index-url https://download.pytorch.org/whl/cu126
+backend/.venv/bin/python -c 'import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))'
+```
+
+This keeps the application version at 2.14.0 and selects its CUDA 12.6 build.
+Use `backend/.venv/bin/python -m llm_model_explorer ... --device cuda:0` or
+`uv run --no-sync` for that local installation: `uv sync`/`uv run --locked` will
+restore the repository's CPU build. The acceptance runner uses the environment
+directly. CUDA checks need host access to NVIDIA device nodes; a sandbox that hides
+them cannot provide hardware evidence. The installed PyTorch wheel provides its
+CUDA libraries; no driver replacement was needed for the recorded run. See
+[PyTorch's installer](https://pytorch.org/get-started/locally/) and
+[NVIDIA's CUDA 12.x compatibility requirements](https://docs.nvidia.com/deploy/cuda-compatibility/minor-version-compatibility.html).
+
+The operator-requested reference installation can be reproduced separately from
+the offline harness (using the Hugging Face CLI):
+
+```sh
+hf download HuggingFaceTB/SmolLM2-135M \
+  --revision 93efa2f097d58c2a74874c7e644dbc9b0cee75a2 \
+  --local-dir /absolute/path/to/models/SmolLM2-135M
+```

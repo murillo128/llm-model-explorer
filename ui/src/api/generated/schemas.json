@@ -1,0 +1,745 @@
+{
+  "components": {
+    "schemas": {
+      "ModelSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "display_name",
+          "architectures",
+          "tokenizer_available"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable public logical model identifier. Never a filesystem path."
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "architectures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "model_type": {
+            "type": "string"
+          },
+          "parameter_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "tokenizer_available": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateSessionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "model_id"
+        ],
+        "properties": {
+          "model_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "Session": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "model_id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "TensorInventory": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tensors"
+        ],
+        "properties": {
+          "tensors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TensorDescriptor"
+            }
+          }
+        }
+      },
+      "TensorDescriptor": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "path",
+          "shape",
+          "rank",
+          "numel",
+          "storage_dtype",
+          "logical_dtype"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque URL-safe identifier used in tensor endpoint paths."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full logical/model tensor name."
+          },
+          "path": {
+            "type": "array",
+            "description": "Logical name segments used by the UI to build the hierarchy.",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "shape": {
+            "$ref": "#/components/schemas/TensorShape"
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "numel": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "storage_dtype": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Physical dtype/representation reported by the backend."
+          },
+          "storage_format": {
+            "type": "string",
+            "description": "Optional additional physical format such as a quantization scheme."
+          },
+          "logical_dtype": {
+            "type": "string",
+            "enum": [
+              "float32"
+            ]
+          }
+        },
+        "description": "rank equals shape.length; numel equals product(shape), with product([]) = 1. Validate all products before allocation."
+      },
+      "TokenizeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "add_special_tokens": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "TokenizeResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "add_special_tokens",
+          "tokens"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "add_special_tokens": {
+            "type": "boolean"
+          },
+          "tokens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Token"
+            }
+          }
+        },
+        "description": "Exact input echo without normalization. Token indices are consecutive from zero. Present spans satisfy 0 <= start <= end <= code-point length(text); spans may overlap."
+      },
+      "Token": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "index",
+          "id",
+          "token",
+          "decoded",
+          "special"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "token": {
+            "type": "string",
+            "description": "Tokenizer-native token representation."
+          },
+          "decoded": {
+            "type": "string",
+            "description": "Tokenizer-provided decoded representation; concatenation need not reconstruct input."
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Inclusive Unicode code-point index into the exact echoed text; paired with end.",
+            "maximum": 9007199254740991
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Exclusive Unicode code-point index into the exact echoed text; paired with start.",
+            "maximum": 9007199254740991
+          },
+          "special": {
+            "type": "boolean",
+            "description": "True for a tokenizer special ID. Source-typed special IDs may have spans; backend-inserted specials have none."
+          }
+        },
+        "dependentRequired": {
+          "start": [
+            "end"
+          ],
+          "end": [
+            "start"
+          ]
+        }
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "malformed_json",
+              "model_not_found",
+              "session_not_found",
+              "tensor_not_found",
+              "model_content_changed",
+              "validation_error",
+              "unsupported_representation",
+              "unsupported_rank",
+              "unsupported_size",
+              "resource_exhausted",
+              "internal_error"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "description": "Pre-stream JSON error or terminal ERROR_JSON payload. Messages/details must not expose filesystem paths or tracebacks. Cancellation uses CANCELLED, not Error."
+      },
+      "SafeInteger": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "TensorShape": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/SafeInteger"
+        },
+        "description": "Generic rank. [] has one element; any zero dimension gives zero elements. Validate product and byte length before allocation."
+      },
+      "NullableFiniteNumber": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "description": "Finite JSON number, or null only when there are no finite source values. NaN and Infinity are never JSON numbers."
+      },
+      "TensorMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "tensor_id",
+          "name",
+          "shape",
+          "dtype",
+          "byte_order",
+          "layout",
+          "byte_length"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "tensor"
+          },
+          "tensor_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "shape": {
+            "$ref": "#/components/schemas/TensorShape"
+          },
+          "dtype": {
+            "type": "string",
+            "const": "float32"
+          },
+          "byte_order": {
+            "type": "string",
+            "const": "little"
+          },
+          "layout": {
+            "type": "string",
+            "const": "c"
+          },
+          "byte_length": {
+            "$ref": "#/components/schemas/SafeInteger"
+          }
+        },
+        "description": "LMEX JSON metadata only; byte_length = 4 * product(shape). Numeric values follow as binary DATA."
+      },
+      "TensorStatisticsMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "tensor_id",
+          "count",
+          "finite_count",
+          "non_finite_count",
+          "minimum",
+          "maximum",
+          "mean",
+          "stddev",
+          "percentiles",
+          "byte_length"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "tensor_statistics"
+          },
+          "tensor_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "count": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "finite_count": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "non_finite_count": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "minimum": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "maximum": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "mean": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "stddev": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "percentiles": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "p01",
+              "p05",
+              "p50",
+              "p95",
+              "p99"
+            ],
+            "properties": {
+              "p01": {
+                "$ref": "#/components/schemas/NullableFiniteNumber"
+              },
+              "p05": {
+                "$ref": "#/components/schemas/NullableFiniteNumber"
+              },
+              "p50": {
+                "$ref": "#/components/schemas/NullableFiniteNumber"
+              },
+              "p95": {
+                "$ref": "#/components/schemas/NullableFiniteNumber"
+              },
+              "p99": {
+                "$ref": "#/components/schemas/NullableFiniteNumber"
+              }
+            }
+          },
+          "byte_length": {
+            "type": "integer",
+            "const": 0
+          }
+        },
+        "description": "count = finite_count + non_finite_count. No DATA frames, including empty DATA. Finite fields are all null iff finite_count = 0. See contract.md for numeric semantics.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "finite_count": {
+                  "const": 0
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "minimum": {
+                  "type": "null"
+                },
+                "maximum": {
+                  "type": "null"
+                },
+                "mean": {
+                  "type": "null"
+                },
+                "stddev": {
+                  "type": "null"
+                },
+                "percentiles": {
+                  "properties": {
+                    "p01": {
+                      "type": "null"
+                    },
+                    "p05": {
+                      "type": "null"
+                    },
+                    "p50": {
+                      "type": "null"
+                    },
+                    "p95": {
+                      "type": "null"
+                    },
+                    "p99": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "minimum": {
+                  "type": "number"
+                },
+                "maximum": {
+                  "type": "number"
+                },
+                "mean": {
+                  "type": "number"
+                },
+                "stddev": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "percentiles": {
+                  "properties": {
+                    "p01": {
+                      "type": "number"
+                    },
+                    "p05": {
+                      "type": "number"
+                    },
+                    "p50": {
+                      "type": "number"
+                    },
+                    "p95": {
+                      "type": "number"
+                    },
+                    "p99": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "DistributionSection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "shape",
+          "offset",
+          "byte_length"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "row_counts",
+              "column_counts"
+            ]
+          },
+          "shape": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/SafeInteger"
+            }
+          },
+          "offset": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "byte_length": {
+            "$ref": "#/components/schemas/SafeInteger"
+          }
+        },
+        "description": "C-order uint32 section; byte_length = 4 * product(shape). Offsets refer to concatenated DATA, excluding frame headers."
+      },
+      "TensorDistributionsMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "tensor_id",
+          "rows",
+          "columns",
+          "bin_count",
+          "binning",
+          "domain_minimum",
+          "domain_maximum",
+          "dtype",
+          "byte_order",
+          "sections",
+          "byte_length"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "tensor_distributions"
+          },
+          "tensor_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rows": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "columns": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "bin_count": {
+            "type": "integer",
+            "const": 100
+          },
+          "binning": {
+            "type": "string",
+            "const": "linear-full-range"
+          },
+          "domain_minimum": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "domain_maximum": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "dtype": {
+            "type": "string",
+            "const": "uint32"
+          },
+          "byte_order": {
+            "type": "string",
+            "const": "little"
+          },
+          "sections": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "prefixItems": [
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/DistributionSection"
+                  },
+                  {
+                    "properties": {
+                      "name": {
+                        "const": "row_counts"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/DistributionSection"
+                  },
+                  {
+                    "properties": {
+                      "name": {
+                        "const": "column_counts"
+                      }
+                    }
+                  }
+                ]
+              }
+            ],
+            "items": false
+          },
+          "byte_length": {
+            "$ref": "#/components/schemas/SafeInteger"
+          }
+        },
+        "description": "row_counts shape [rows,100], offset 0; column_counts shape [100,columns], offset row byte length. Total length is section sum. Both domain endpoints null iff no finite source values; counts then all zero. See contract.md.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "domain_minimum": {
+                  "type": "null"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "domain_maximum": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "domain_maximum": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "StreamMetadata": {
+        "description": "JSON payload of META_JSON; never a JSON encoding of numeric DATA.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TensorMetadata"
+          },
+          {
+            "$ref": "#/components/schemas/TensorStatisticsMetadata"
+          },
+          {
+            "$ref": "#/components/schemas/TensorDistributionsMetadata"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "tensor": "#/components/schemas/TensorMetadata",
+            "tensor_statistics": "#/components/schemas/TensorStatisticsMetadata",
+            "tensor_distributions": "#/components/schemas/TensorDistributionsMetadata"
+          }
+        }
+      },
+      "StreamProgress": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "completed",
+          "unit"
+        ],
+        "properties": {
+          "completed": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "description": "Advisory PROGRESS_JSON payload. When total is present, completed <= total. Does not change metadata."
+      }
+    }
+  },
+  "$defs": {
+    "listModels": {
+      "type": "object",
+      "required": [
+        "models"
+      ],
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ModelSummary"
+          }
+        }
+      }
+    },
+    "createSession": {
+      "$ref": "#/components/schemas/Session"
+    },
+    "getSession": {
+      "$ref": "#/components/schemas/Session"
+    },
+    "listTensors": {
+      "$ref": "#/components/schemas/TensorInventory"
+    },
+    "tokenize": {
+      "$ref": "#/components/schemas/TokenizeResponse"
+    }
+  }
+}

@@ -16,7 +16,7 @@ For non-trivial work start with `AGENTS.md` and the controlling issue. Then read
 
 For backend work, load the relevant documents under `docs/spec/backend/` plus API documents when the change affects the contract. For API work, load `docs/spec/api/` plus the specific backend/UI documents whose boundary is affected. For UI work, load the relevant documents under `docs/spec/ui/` plus API documents consumed by the UI.
 
-`docs/spec/ui/tensor-explorer.md` and `docs/spec/ui/tokenizer-explorer.md` are deliberately reserved for dedicated design work. Until those documents contain accepted detailed behavior, do not reconstruct or invent that behavior from the general architecture. If a task requires unspecified explorer behavior and the controlling issue does not supply an accepted bounded design, route it through design rather than guessing.
+`docs/spec/ui/tensor-explorer.md` and `docs/spec/ui/tokenizer-explorer.md` contain accepted explorer behavior. Read the relevant dedicated specification before changing an explorer. Features explicitly reserved for future design remain outside the proof of concept; route unspecified behavior through design rather than guessing.
 
 On resume, verify branch, `HEAD`, worktree, controlling issue's current single workflow-state label, canonical execution context when applicable, and new material issue/PR discussion. Reuse unchanged inspected context rather than replaying history.
 
@@ -97,6 +97,16 @@ Keep deliberate normative docs and generated memory distinct. `docs/spec/**` is 
 
 The curator has standing write authority only for `wiki/**`, and only after its adversarial review and hard write-boundary gate. It never modifies non-wiki paths. New curator-created issues use `curator-detected`.
 
+## Implementation and check entry points
+
+- Backend application and CLI: `backend/src/llm_model_explorer/app.py` and `cli.py`; domain modules and tests live under `backend/src/llm_model_explorer/` and `backend/tests/`.
+- Independent API checks/fixtures: `api/validate_contract.py`; generated UI contract bindings: `ui/scripts/api-generator/generate.mjs`.
+- UI composition/navigation: `ui/src/app/`; Tensor Explorer: `ui/src/explorers/`; reusable WebGL2 renderer: `ui/src/rendering/`; live tokenizer: `ui/src/tokenizer/`.
+- UI unit and browser checks: `ui/package.json`, `ui/src/**/*.test.*`, and `ui/tests/`.
+- Integrated TCP/production-browser acceptance: `acceptance/check.sh`, `acceptance/test_*.py`, and `ui/acceptance/`; `.github/workflows/application-acceptance.yml` aggregates application gates. Reproduction and optional capability checks are documented in `acceptance/README.md`.
+
+These are implementation navigation links, not alternative normative specifications. Preserve the separate Skillforge workflow scripts and dispatchers.
+
 ## Evidence and artifacts
 
 Keep evidence proportional. Commit source, tests, configuration, small deterministic fixtures, concise reports, and compact reproducibility evidence. Keep large generated outputs, binaries, model weights, datasets, caches, traces, or bulky logs outside Git unless explicitly required and distributable. Never publish secrets/private data/restricted artifacts.
@@ -120,7 +130,7 @@ The concise rules below are operational reminders. `docs/spec/**` is authoritati
 
 ### Product and boundaries
 
-- The proof of concept has two user-facing capabilities: Tensor Explorer and Tokenizer Explorer. Detailed behavior belongs in their dedicated specifications and must not be invented while those documents remain placeholders.
+- The proof of concept has two user-facing capabilities: Tensor Explorer and Tokenizer Explorer. Detailed behavior belongs in their accepted dedicated specifications; future-analysis backlog entries do not expand current scope.
 - The system has three independent boundaries: backend, API contract, and browser UI. Keep ownership aligned with `docs/spec/backend/`, `docs/spec/api/`, and `docs/spec/ui/`.
 - The initial reference model is `HuggingFaceTB/SmolLM2-135M` Base, not Instruct.
 - The proof of concept must be evolvable into step-by-step transformer inference without replacing the established backend/API/session/stream/cache/renderer boundaries.

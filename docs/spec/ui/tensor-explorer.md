@@ -302,3 +302,61 @@ A conforming current Matrix Inspector for rank-2 tensors has all of these proper
 - no recolored duplicate of the tensor in GPU memory;
 - light, minimal, editor-like UI shell;
 - no general zoom or pan in the proof of concept.
+
+## Progressive composition and density baseline
+
+The scientific screen tracks tensor, statistics and distribution operations
+independently. A received prefix remains explicitly incomplete until that
+operation completes successfully, including validation through stream EOF.
+Failure or cancellation preserves any received prefix for inspection; an
+auxiliary failure does not invalidate successfully received tensor data.
+Statistics update the scalar transfer only after a valid successful result,
+without reuploading weights. Selection generations fence all callbacks, including
+returning to the same tensor. Disposing the view cancels its own operation handles
+and releases its rendering resources.
+
+Distribution storage preserves the API's uint32 counts. The baseline density is
+`log1p(count) / log1p(axis_length)`, evaluated only for drawing; `axis_length` is
+columns for row profiles and rows for column profiles. A zero-length axis maps to
+zero intensity. This normalization is fixed for the tensor, independent of hover,
+arriving subsets or the maximum count observed so far. Unknown counts use the
+same visibly unpopulated treatment as unknown tensor pixels. The common domain
+and binning remain backend/API-owned.
+
+The matrix and both profiles share the common renderer's device-pixel convention
+and snapped data origins. Distribution depth is 100 device pixels, with CSS gaps
+for chrome. The matrix's native scroller drives the right profile's Y origin and
+the lower profile's X origin; both profiles have the matrix's visible data extent
+on their shared axis, excluding native scrollbars. Empty tensors show an explicit
+empty state without starting tensor/statistics/distribution operations. Rank-1
+uses the common strip with statistics and no distributions.
+
+### Inspection implementation and resource ownership
+
+The native renderer's snapped canvas rectangle and current integer scroll origin
+resolve pointer coordinates through DPR; texture-band origins affect sampling,
+not logical selection identity. Readout uses the retained float32 scalar value's
+shortest JavaScript round-trip decimal, with explicit `-0`, `NaN`, and signed
+infinities. Pending cells report unavailable and no numeric value. Stream and
+transfer updates refresh an active inspection; leaving, disposing, or losing the
+matrix context clears it. Focus exposes the first visible coordinate, arrow keys
+inspect adjacent cells with native scrolling as needed, and Escape/blur clear
+inspection. The focus outline and coordinate/value text remain independent of hue.
+
+The 170px magnifier card presents a 9×9 display canvas at 162×162 CSS pixels with
+nearest-neighbor enlargement. It reuses the matrix shader and existing scalar
+bands through one renderer-owned 9×9 RGBA8 renderbuffer/framebuffer. A 324-byte
+readback transfers only the small rendered display image to the card's 2D canvas;
+it is not scalar storage, a selection mask, or a weight upload. There is no new
+WebGL context, weight texture, tensor array, or per-hover request. The offscreen
+pass does not resize the main canvas or change its view/scroll/scale. Clear the
+inspection framebuffer to unavailable before drawing intersecting source bands,
+so out-of-bounds cells never repeat edge weights. Dispose the display resources
+with the owning renderer, including context loss/reconstruction.
+
+The card/readout chooses among four pointer-relative placements and clamps within
+the viewport while excluding the inspected neighborhood where viewport dimensions
+permit a 170×212 CSS-pixel inspection surface. The thin center marker exists only
+on the magnified display; no guide lines cross the scientific data rectangles.
+Concrete luminance coefficients, gamut handling and display encoding are owned by
+[`rendering.md`](rendering.md#concrete-linear-srgb-selection-transfer).

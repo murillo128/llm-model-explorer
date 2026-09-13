@@ -6,15 +6,54 @@ The fundamental proof-of-concept rule is exact spatial mapping: **one tensor wei
 
 A 2D tensor of width `W` and height `H` therefore occupies `W × H` rendered pixels. The renderer must not fit the matrix to the viewport, resample it, aggregate weights, or use zoom as a substitute for the one-to-one mapping.
 
+Here a rendered pixel means one framebuffer/device pixel, not one CSS pixel. At
+devicePixelRatio `d`, the complete data extent is `W/d × H/d` CSS pixels. Rank-2
+`[rows, columns]` uses columns on X and rows on Y, with row zero at the top. The
+rank-1 baseline is a horizontal `N × 1` device-pixel strip. Empty tensors show an
+explicit empty state and allocate no scalar textures.
+
+Visible framebuffer dimensions and data scroll origins are integers. Convert the
+browser's actual native scroll offsets to data origins with `round(offset * d)`;
+hit testing uses `origin + floor(localCSSCoordinate * d)` and excludes coordinates
+outside the visible surface. Native browsers may round requested scroll offsets
+before this conversion. Snap the canvas's screen position to device pixels too.
+Account for browser compositing: fractional canvas CSS dimensions must not cause
+rounding/interpolation. Integer canvas dimensions with a DPR-only presentation
+transform and a constrained layout box are one valid implementation.
+A DPR change explicitly recomputes canvas dimensions, CSS extent and hit-test
+geometry; it never enlarges a scalar into a multi-pixel block. A separate inspection
+magnifier does not change the main surface's mapping.
+
 If the rendered dimensions exceed the available viewport, the containing UI uses normal horizontal and/or vertical scrolling.
 
 If a tensor dimension exceeds a WebGL2 texture or render-target limit, the renderer may partition the representation internally into multiple textures/bands. This is an implementation detail and must preserve the visible one-weight-to-one-pixel mapping and the logical identity of one complete matrix.
+
+Query actual texture, renderbuffer and viewport limits. Use a bounded visible
+framebuffer over the complete native scroll extent rather than requiring a giant
+canvas. Disjoint texture bands are needed only when a dimension exceeds the
+effective texture ceiling (the hardware limit or an explicitly lower resource
+ceiling). Band edges must neither omit nor duplicate cells. Report unsupported
+WebGL2, allocation failure or an unrepresentable browser scroll extent explicitly;
+never silently scale the data to fit a limit. This partitioning does not change
+complete-tensor downloading or introduce API tiles/prefetch.
 
 ## Numeric representation
 
 The renderer consumes the logical visualization representation supplied by the backend. The initial representation is one `float32` logical value per weight regardless of the model's physical storage representation.
 
 The tensor value remains authoritative. The renderer must not rewrite tensor values in order to change color, brightness, selection state, or another visual property.
+
+Store one authoritative scalar GPU representation using single-channel R32F
+textures with exact indexed sampling (`texelFetch`, nearest filtering, one mip
+level). Grayscale and later semantic-color/inspection drawing reuse that storage.
+No RGB/YUV weight encoding, interpolation, downsampling or quantization is allowed.
+One optional CPU Float32Array may support exact readout and reconstruction. Do not
+retain accumulated chunk lists or values belonging to disposed tensors.
+
+Accept consecutive row-major float32 chunks and track their populated prefix.
+Not-yet-received cells and received nonfinite values are distinct unavailable
+states, visually separate from finite grayscale data; neither represents a zero
+weight. Rendering may start before the complete prefix or statistics arrive.
 
 ## Luminosity
 
@@ -23,6 +62,26 @@ Weight value is represented through luminosity rather than semantic color.
 The renderer maps tensor values to a normalized `[0, 1]` visual intensity using a configurable nonlinear, sigmoid-like transfer function. The default transfer uses robust tensor statistics such as percentiles rather than relying only on raw minimum and maximum values, so a small number of extreme values does not collapse most weights around the same mid-level intensity.
 
 Tensor statistics are supplied independently by the backend and may arrive after tensor data has already started rendering. The renderer may use a provisional mapping and update the visual transfer function when the statistics become available without retransmitting or rewriting tensor values.
+
+The reproducible baseline uses `a=p01`, `b=p99`, `k=8`, and
+`u=clamp((w-a)/(b-a), 0, 1)`. With `L(x)=1/(1+exp(-x))`, intensity is
+`(L(k*(u-0.5))-L(-k/2))/(L(k/2)-L(-k/2))`. Normalize without overflowing
+float32 subtraction, including opposite-sign finite extremes. If percentile
+anchors coincide, use finite minimum/maximum when distinct; constant finite data
+maps to 0.5. Before statistics arrive, use the provisional centered logistic
+`L(k*w)`, clamping its exponent input for numeric stability. Changing slope or
+anchors changes small draw uniforms, never scalar bytes. The renderer accepts
+slopes from 0.01 through 80 to keep endpoint normalization well-conditioned.
+Scalar intensity is the luminosity input that future semantic chroma must preserve.
+
+## Resource lifetime
+
+Disposal releases scalar textures, shader/program/vertex resources, the optional
+CPU array and the visible framebuffer. Context loss invalidates GPU storage and
+stops drawing; context restoration alone does not mark old textures valid.
+An explicit reconstruction/retry allocates new resources and reuploads the retained
+prefix, or restarts the prefix at zero when no CPU copy exists. Ordinary drawing,
+hover, scrolling and transfer changes do not take this reconstruction path.
 
 ## Color
 
@@ -33,3 +92,26 @@ Applying or changing semantic color must not change the luminosity-derived under
 ## Interaction scope
 
 The proof of concept does not require zoom or pan. Detailed Tensor Explorer interaction behavior is owned by `tensor-explorer.md` and must not be inferred from this common rendering specification.
+
+### Concrete linear-sRGB selection transfer
+
+Scalar transfer output is linear-sRGB luminance `Y`. Matrix and distribution
+shaders use the same coefficients `Y = 0.2126 R + 0.7152 G + 0.0722 B`.
+Starting at neutral `(Y,Y,Y)`, amber adds `t * d`, where
+`d = (1, (0.0722*0.6 - 0.2126)/0.7152, -0.6)` has zero luminance.
+The standard row/column strength is `t=0.08`; their intersection uses `0.3`.
+For each positive component `d_i`, bound `t <= (1-Y)/d_i`; for each negative
+component, bound `t <= -Y/d_i`. Use the minimum of all bounds and requested
+strength. This reduces chroma along one vector without clipping RGB components
+or changing Y. At black/white, `t=0` and data stays unchanged.
+
+Encode each resulting linear component once with the sRGB OETF:
+`12.92*c` for `c <= 0.0031308`, otherwise `1.055*c^(1/2.4)-0.055`.
+The canvas and inspection RGBA8 buffer store these display-encoded bytes; do not
+apply a second gamma conversion. Pending/nonfinite colors remain explicit status
+colors outside this scalar transfer. Relative to ideal display encoding, pixel
+validation permits at most one 8-bit code per channel (rounding plus shader
+precision); decoded luminance versus prequantized Y permits `0.0045` absolute
+error, bounded by the maximum sRGB inverse derivative times half an 8-bit code.
+CPU numeric validation before display quantization uses floating-point tolerance,
+not that display error allowance.

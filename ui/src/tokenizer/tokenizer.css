@@ -1,0 +1,17 @@
+.prompt-tokenizer { display: grid; gap: 12px; min-width: 0; }
+.tokenizer-help, .tokenizer-status { font-size: 14px; color: var(--ui-text-muted); }
+.tokenizer-editor { min-width: 0; height: 260px; min-height: 160px; overflow: auto; resize: vertical; border: 1px solid var(--ui-border); border-radius: 6px; background: white; }
+.tokenizer-editor:focus-within { outline: 2px solid var(--ui-text); outline-offset: 4px; }
+.tokenizer-editor .cm-editor { min-height: 100%; color: #000; }
+.tokenizer-editor .cm-editor.cm-focused { outline: none; }
+.tokenizer-editor .cm-scroller { font: 16px / 3.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow: visible; }
+.tokenizer-editor .cm-content { padding: 16px 20px 28px; caret-color: #000; }
+.tokenizer-editor .cm-content:focus-visible { outline: none; box-shadow: none; }
+.tokenizer-editor .cm-line { padding: 0; }
+.source-annotation { display: inline-block; position: relative; white-space: pre; }
+.token-opening, .token-closing, .unmapped-annotation { display: inline-block; position: relative; color: var(--ui-text-muted); user-select: none; }
+.token-opening { margin-left: 3px; }
+.token-closing { margin-right: 3px; }
+.token-ids { position: absolute; left: 0; top: 3.4em; font: 11px / 12px ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; }
+.unmapped-annotation { margin: 0 8px; min-width: 2ch; }
+.empty-token-space { display: inline-block; width: 3ch; }

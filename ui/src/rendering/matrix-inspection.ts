@@ -1,0 +1,136 @@
+import type { MatrixViewport } from './matrix-viewport';
+import type { Selection } from './chroma';
+
+export function formatFloat32(value: number) {
+  if (Object.is(value, -0)) return '-0';
+  return String(value); // JS shortest round-trip decimal also round-trips its float32 source.
+}
+
+/** Keep the whole card/readout within the viewport and outside the 9×9 source area. */
+export function inspectionPosition(x: number, y: number, width: number, height: number, dpr: number) {
+  const cardWidth = 170, cardHeight = 212, gap = 12 + 5 / dpr, margin = 8;
+  const candidates = [
+    [x + gap, y + gap], [x - gap - cardWidth, y + gap],
+    [x + gap, y - gap - cardHeight], [x - gap - cardWidth, y - gap - cardHeight],
+  ];
+  const clamp = ([left, top]: number[]) => ({
+    left: Math.max(margin, Math.min(width - cardWidth - margin, left!)),
+    top: Math.max(margin, Math.min(height - cardHeight - margin, top!)),
+  });
+  const placements = candidates.map(clamp);
+  return placements.find(({ left, top }) => left > x + 5 / dpr || left + cardWidth < x - 5 / dpr ||
+    top > y + 5 / dpr || top + cardHeight < y - 5 / dpr) ?? placements[0]!;
+}
+
+export interface Inspection extends Selection {
+  readonly value: string;
+  readonly left: number;
+  readonly top: number;
+  readonly draw: (canvas: HTMLCanvasElement) => void;
+}
+
+/** Native-coordinate interaction, independent of React and transport. */
+export class MatrixInspection {
+  private pointer: { x: number; y: number } | null = null;
+  private cell: Selection | null = null;
+  private disposed = false;
+  constructor(private readonly viewport: MatrixViewport, private readonly changed: (value: Inspection | null) => void) {
+    const { canvas, host } = viewport.matrix;
+    canvas.classList.add('matrix-inspectable');
+    canvas.addEventListener('pointermove', this.move);
+    canvas.addEventListener('pointerleave', this.leave);
+    host.addEventListener('focus', this.focus);
+    host.addEventListener('blur', this.leave);
+    host.addEventListener('keydown', this.key);
+    window.addEventListener('scroll', this.windowScroll, true);
+  }
+
+  private move = (event: PointerEvent) => {
+    this.pointer = { x: event.clientX, y: event.clientY };
+    this.refresh();
+  };
+  private windowScroll = (event: Event) => {
+    // The native viewport's own refresh resolves its updated scroll origin.
+    if (event.target !== this.viewport.matrix.host) this.refresh();
+  };
+  private focus = () => {
+    this.pointer = null;
+    const view = this.viewport.matrix.renderer.view;
+    if (view) { this.cell = { row: view.y, column: view.x }; this.refresh(); }
+  };
+  private key = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') { this.leave(); return; }
+    const step = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const { renderer, host } = this.viewport.matrix;
+    const view = renderer.view;
+    if (!view) return;
+    this.pointer = null;
+    const cell = this.cell ?? { row: view.y, column: view.x };
+    this.cell = { row: Math.max(0, Math.min(renderer.geometry.rows - 1, cell.row + step[0]!)),
+      column: Math.max(0, Math.min(renderer.geometry.columns - 1, cell.column + step[1]!)) };
+    if (this.cell.column < view.x) host.scrollLeft = this.cell.column / view.dpr;
+    if (this.cell.column >= view.x + view.width) host.scrollLeft = (this.cell.column - view.width + 1) / view.dpr;
+    if (this.cell.row < view.y) host.scrollTop = this.cell.row / view.dpr;
+    if (this.cell.row >= view.y + view.height) host.scrollTop = (this.cell.row - view.height + 1) / view.dpr;
+    this.viewport.refresh();
+  };
+
+  private select(cell: Selection | null) {
+    const { matrix, rows, columns } = this.viewport;
+    matrix.renderer.setSelection(cell);
+    rows?.setSelection(cell ? { row: cell.row, column: -1 } : null);
+    columns?.setSelection(cell ? { row: -1, column: cell.column } : null);
+    for (const r of [matrix.renderer, rows, columns]) if (r?.state === 'ready' && r.view) r.draw();
+  }
+
+  refresh() {
+    if (this.disposed) return;
+    const { renderer, canvas } = this.viewport.matrix;
+    if (renderer.state !== 'ready' || renderer.view?.dpr !== window.devicePixelRatio) { this.leave(); return; }
+    const rect = canvas.getBoundingClientRect();
+    if (this.pointer) this.cell = renderer.cellAt(this.pointer.x - rect.left, this.pointer.y - rect.top);
+    if (!this.cell) { this.leave(); return; }
+    const { row, column } = this.cell;
+    const value = renderer.readCell(row, column);
+    if (!value) { this.leave(); return; }
+    this.select(this.cell);
+    const view = renderer.view!;
+    const x = this.pointer?.x ?? rect.left + (column - view.x + 0.5) / view.dpr;
+    const y = this.pointer?.y ?? rect.top + (row - view.y + 0.5) / view.dpr;
+    this.changed({ row, column, value: 'value' in value ? formatFloat32(value.value) : 'Unavailable — not received',
+      ...inspectionPosition(x, y, window.innerWidth, window.innerHeight, view.dpr),
+      draw: (target) => {
+        // A queued React render cannot read a disposed/replaced/lost tensor.
+        if (this.disposed || renderer.state !== 'ready' || this.cell?.row !== row || this.cell.column !== column) return;
+        const context = target.getContext('2d');
+        if (context) {
+          try { renderer.drawNeighborhood(row, column, context); }
+          catch { this.leave(); } // Renderer failure is reported through onStateChange.
+        }
+      } });
+  }
+
+  clear = () => { this.leave(); };
+  private leave = () => {
+    this.pointer = null;
+    this.cell = null;
+    this.select(null);
+    this.changed(null);
+  };
+
+  dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    const { canvas, host } = this.viewport.matrix;
+    canvas.classList.remove('matrix-inspectable');
+    canvas.removeEventListener('pointermove', this.move);
+    canvas.removeEventListener('pointerleave', this.leave);
+    host.removeEventListener('focus', this.focus);
+    host.removeEventListener('blur', this.leave);
+    host.removeEventListener('keydown', this.key);
+    window.removeEventListener('scroll', this.windowScroll, true);
+    this.leave();
+  }
+}
