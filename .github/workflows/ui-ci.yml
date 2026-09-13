@@ -34,12 +34,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: ui/.nvmrc
+      - name: Select isolated browser ports
+        shell: bash
+        run: |
+          base_port=$((20000 + (GITHUB_RUN_ID % 10000) * 3))
+          echo "UI_TEST_PORT=$base_port" >> "$GITHUB_ENV"
       - name: Restore locked node_modules
         id: node-modules
         uses: actions/cache@v4
         with:
-          path: ui/node_modules
-          key: ui-node-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ui/.nvmrc', 'ui/package.json', 'ui/package-lock.json', 'ui/scripts/api-generator/package.json') }}
+          path: |
+            ui/node_modules
+            ui/scripts/api-generator/node_modules
+          key: ui-node-modules-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ui/.nvmrc', 'ui/package.json', 'ui/package-lock.json', 'ui/scripts/api-generator/package.json') }}
       - if: steps.node-modules.outputs.cache-hit != 'true'
         run: npm ci
       - run: npm run check
