@@ -274,6 +274,53 @@ def test_invalid_key_cannot_traverse(store: ArtifactStore) -> None:
         store.lookup(spec)
 
 
+@pytest.mark.parametrize("filename", ["manifest.json", "payload.bin"])
+def test_directory_in_place_of_cache_file_misses_and_regenerates(
+    store: ArtifactStore, filename: str
+) -> None:
+    spec = specification()
+    publish(store, spec)
+    corrupt = store.root / spec.key / filename
+    corrupt.unlink()
+    corrupt.mkdir()
+    descriptors = Path("/proc/self/fd")
+    before = len(list(descriptors.iterdir())) if descriptors.is_dir() else None
+    for _ in range(20):
+        assert store.lookup(spec) is None
+    if before is not None:
+        assert len(list(descriptors.iterdir())) == before
+    assert corrupt.is_dir()
+    publish(store, spec)
+    assert contents(store, spec) == b"0123456789abcdef"
+    assert corrupt.is_file()
+    assert list(store.root.iterdir()) == [store.root / spec.key]
+
+
+@pytest.mark.parametrize("filename", ["manifest.json", "payload.bin"])
+def test_failed_file_wrapper_closes_raw_descriptor(store: ArtifactStore, filename: str) -> None:
+    spec = specification()
+    publish(store, spec)
+    inode = (store.root / spec.key / filename).stat().st_ino
+    failed: list[int] = []
+    original = os.fdopen
+
+    def fail_wrapper(descriptor: int, *args: Any, **kwargs: Any) -> Any:
+        if os.fstat(descriptor).st_ino == inode:
+            failed.append(descriptor)
+            raise OSError(errno.EIO, "cannot wrap cache descriptor")
+        return original(descriptor, *args, **kwargs)
+
+    with patch("os.fdopen", side_effect=fail_wrapper):
+        with pytest.raises(OSError) as error:
+            store.lookup(spec)
+        assert error.value.errno == errno.EIO
+    assert len(failed) == 1
+    with pytest.raises(OSError) as closed:
+        os.fstat(failed[0])
+    assert closed.value.errno == errno.EBADF
+    assert contents(store, spec) == b"0123456789abcdef"
+
+
 @pytest.mark.parametrize("error", [errno.ENOSPC, errno.EACCES, errno.EIO])
 @pytest.mark.parametrize("stage", ["append", "manifest", "sync", "rename"])
 def test_disk_failures_leave_no_partial_entry(

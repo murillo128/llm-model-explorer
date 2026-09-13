@@ -27,6 +27,20 @@ _MANIFEST_LIMIT = 64 * 1024
 _DIGEST = re.compile(r"[0-9a-f]{64}")
 
 
+def _open_regular(directory: int, filename: str) -> BinaryIO | None:
+    """Transfer ownership only after validating and wrapping a raw descriptor."""
+    descriptor = os.open(filename, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+    payload: BinaryIO | None = None
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            return None
+        payload = os.fdopen(descriptor, "rb", buffering=0)
+        return payload
+    finally:
+        if payload is None:
+            os.close(descriptor)
+
+
 def _canonical(value: object) -> str:
     # Reject non-JSON values and non-string mapping keys, including nested ones.
     def validate(item: object) -> None:
@@ -198,10 +212,10 @@ class ArtifactStore:
             raise
         payload: BinaryIO | None = None
         try:
-            flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
-            with os.fdopen(os.open("manifest.json", flags, dir_fd=directory), "rb") as manifest:
-                if not stat.S_ISREG(os.fstat(manifest.fileno()).st_mode):
-                    return None
+            manifest = _open_regular(directory, "manifest.json")
+            if manifest is None:
+                return None
+            with manifest:
                 raw = manifest.read(_MANIFEST_LIMIT + 1)
             if len(raw) > _MANIFEST_LIMIT:
                 return None
@@ -227,9 +241,11 @@ class ArtifactStore:
                 or not _DIGEST.fullmatch(metadata["sha256"])
             ):
                 return None
-            payload = os.fdopen(os.open("payload.bin", flags, dir_fd=directory), "rb", buffering=0)
+            payload = _open_regular(directory, "payload.bin")
+            if payload is None:
+                return None
             info = os.fstat(payload.fileno())
-            if not stat.S_ISREG(info.st_mode) or info.st_size != spec.expected_bytes:
+            if info.st_size != spec.expected_bytes:
                 payload.close()
                 return None
             return payload, metadata["sha256"]
