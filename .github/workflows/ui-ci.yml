@@ -38,8 +38,10 @@ jobs:
         id: node-modules
         uses: actions/cache@v4
         with:
-          path: ui/node_modules
-          key: ui-node-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ui/.nvmrc', 'ui/package.json', 'ui/package-lock.json', 'ui/scripts/api-generator/package.json') }}
+          path: |
+            ui/node_modules
+            ui/scripts/api-generator/node_modules
+          key: ui-node-modules-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ui/.nvmrc', 'ui/package.json', 'ui/package-lock.json', 'ui/scripts/api-generator/package.json') }}
       - if: steps.node-modules.outputs.cache-hit != 'true'
         run: npm ci
       - run: npm run check
