@@ -24,9 +24,6 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     name: Typecheck, lint, unit, build and browser
     runs-on: [self-hosted, codex]
-    concurrency:
-      group: local-browser-${{ github.repository }}
-      cancel-in-progress: false
     defaults:
       run:
         working-directory: ui
@@ -37,6 +34,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: ui/.nvmrc
+      - name: Select isolated browser ports
+        shell: bash
+        run: |
+          base_port=$((20000 + (GITHUB_RUN_ID % 10000) * 3))
+          echo "UI_TEST_PORT=$base_port" >> "$GITHUB_ENV"
       - name: Restore locked node_modules
         id: node-modules
         uses: actions/cache@v4
