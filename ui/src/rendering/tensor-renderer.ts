@@ -138,7 +138,7 @@ export class TensorRenderer {
       }
       this.vao = gl.createVertexArray();
       if (!this.vao) throw new Error('WebGL2 vertex array allocation failed.');
-      for (const name of ['weights', 'bandOffset', 'viewHeight', 'prefix', 'mode', 'slope', 'anchors', 'scale']) {
+      for (const name of ['weights', 'bandOffset', 'viewHeight', 'prefix', 'mode', 'slope', 'anchors', 'scale', 'span', 'correction']) {
         const location = gl.getUniformLocation(this.program!, name);
         if (location === null) throw new Error(`Missing renderer uniform: ${name}`);
         this.uniforms[name] = location;
@@ -267,6 +267,8 @@ export class TensorRenderer {
     gl.uniform1f(u.slope!, this.transfer.slope);
     gl.uniform2f(u.anchors!, this.transfer.low, this.transfer.high);
     gl.uniform1f(u.scale!, this.transfer.scale);
+    gl.uniform1f(u.span!, this.transfer.span);
+    gl.uniform1f(u.correction!, this.transfer.correction);
     const prefixRow = Math.floor(this._populated / this.geometry.columns);
     const prefixColumn = this._populated % this.geometry.columns;
     for (const band of this.bands) {

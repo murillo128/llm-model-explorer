@@ -17,6 +17,8 @@ export interface TransferUniforms {
   readonly low: number;
   readonly high: number;
   readonly scale: number;
+  readonly span: number;
+  readonly correction: number;
 }
 
 export function transferUniforms(parameters: TransferParameters = {}): TransferUniforms {
@@ -34,10 +36,16 @@ export function transferUniforms(parameters: TransferParameters = {}): TransferU
       anchors = [stats.minimum, stats.maximum];
     }
   }
-  if (!anchors) return { mode: 0, slope, low: 0, high: 1, scale: 1 };
+  if (!anchors) return { mode: 0, slope, low: 0, high: 1, scale: 1, span: 1, correction: 0 };
   const [low, high] = anchors;
   if (![low, high].every((value) => Number.isFinite(value) && Number.isFinite(Math.fround(value))) || low > high) {
     throw new Error('Luminosity anchors must be ordered finite float32-range numbers.');
   }
-  return { mode: low === high ? 2 : 1, slope, low, high, scale: Math.max(Math.abs(low), Math.abs(high), 1e-30) };
+  const scale = Math.max(Math.abs(low), Math.abs(high), 1e-30);
+  // Compute the span before uniform conversion: close percentile anchors can
+  // round to the same float32 even though their normalized range is meaningful.
+  const span = (high - low) / scale;
+  if (low !== high && Math.fround(span) === 0) throw new Error('Anchor separation is too small for float32 normalization.');
+  return { mode: low === high ? 2 : 1, slope, low, high, scale, span,
+    correction: (Math.fround(low) - low) / scale };
 }

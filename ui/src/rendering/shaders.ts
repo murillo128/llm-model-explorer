@@ -15,6 +15,8 @@ uniform int mode;
 uniform float slope;
 uniform vec2 anchors;
 uniform float scale;
+uniform float span;
+uniform float correction;
 out vec4 color;
 
 float logistic(float v) { return 1.0 / (1.0 + exp(-v)); }
@@ -34,9 +36,16 @@ void main() {
     // Provisional centered logistic; clamp before multiplying to avoid overflow.
     intensity = logistic(clamp(w, -80.0 / slope, 80.0 / slope) * slope);
   } else if (mode == 1) {
-    float a = anchors.x / scale;
-    float b = anchors.y / scale;
-    float u = b > a ? clamp((clamp(w, anchors.x, anchors.y) / scale - a) / (b - a), 0.0, 1.0) : 0.5;
+    float u;
+    if (w < anchors.x) u = 0.0;
+    else if (w > anchors.y) u = 1.0;
+    else {
+      // Same-sign subtraction preserves close values; opposite signs scale
+      // first to avoid overflow at the finite float32 extremes.
+      float delta = (w < 0.0) != (anchors.x < 0.0)
+        ? w / scale - anchors.x / scale : (w - anchors.x) / scale;
+      u = clamp((delta + correction) / span, 0.0, 1.0);
+    }
     float endpoint = logistic(-0.5 * slope);
     intensity = (logistic(slope * (u - 0.5)) - endpoint) / (1.0 - 2.0 * endpoint);
   }

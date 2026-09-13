@@ -70,7 +70,8 @@ exactly `63 * 4 = 252` bytes, with one optional CPU array of the same size.
 
 GL prototype instrumentation counted actual scalar allocations/uploads/deletes.
 Late p01/p99 statistics, fallback min/max, constant values, opposite-sign float32
-extremes, changed sigmoid slope, ordinary redraw and DPR changes caused no scalar
+extremes, distinct anchors that round to the same float32, changed sigmoid slope,
+ordinary redraw and DPR changes caused no scalar
 reallocation/reupload. Twelve create/upload/draw/dispose cycles and a partial
 allocation failure deleted all 74 created textures; no live texture remained.
 

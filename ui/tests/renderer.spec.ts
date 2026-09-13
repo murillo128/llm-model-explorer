@@ -149,9 +149,13 @@ test('late robust statistics, constant/fallback/extreme values and transfer-only
     const constant = pixels(r);
     r.setTransfer({ anchors: [-1, 1], slope: 2 });
     const slope = pixels(r);
+    r.setTransfer({ anchors: [1 + 1e-8, 1 + 3e-8] });
+    const closeOutside = pixels(r);
+    r.setTransfer({ anchors: [1 - 1e-8, 1 + 3e-8] });
+    const closeInside = pixels(r);
     const after = { allocations: metrics.allocations, uploads: metrics.uploads };
     r.dispose();
-    return { provisional, robust, extreme, fallback, constant, slope, before, after };
+    return { provisional, robust, extreme, fallback, constant, slope, closeOutside, closeInside, before, after };
   });
   expect(result.after).toEqual(result.before);
   expect(result.robust[0]!.slice(0, 7).map((p) => p[0])).toEqual([-1, -1, -0.5, 0, 0.5, 1, 1].map((v) => gray(v)));
@@ -162,6 +166,8 @@ test('late robust statistics, constant/fallback/extreme values and transfer-only
   expect(result.robust[0]!.slice(7)).toEqual(Array(3).fill([178, 51, 140, 255]));
   expect(result.provisional[0]![2]).not.toEqual(result.robust[0]![2]);
   expect(result.slope[0]![2]![0]).toBe(gray(-0.5, -1, 1, 2));
+  expect(result.closeOutside[0]![5]![0]).toBe(0);
+  expect(result.closeInside[0]![5]![0]).toBe(gray(1, 1 - 1e-8, 1 + 3e-8));
 });
 
 for (const retainValues of [true, false]) {
