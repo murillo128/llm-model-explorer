@@ -5,6 +5,7 @@ from typing import cast
 from fastapi import Request
 
 from .execution import BlockingWork
+from .models import ModelCatalogue
 from .services import Services
 from .settings import Settings
 
@@ -24,7 +25,7 @@ def get_blocking_work(request: Request) -> BlockingWork:
     return get_services(request).blocking_work
 
 
-def get_catalogue(request: Request) -> object:
+def get_catalogue(request: Request) -> ModelCatalogue:
     service = get_services(request).catalogue
     if service is None:
         raise RuntimeError("catalogue service is not configured")

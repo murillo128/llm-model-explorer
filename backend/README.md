@@ -1,9 +1,10 @@
 # Backend foundation
 
 The installable Python service provides configuration, an app factory, lifecycle
-ownership, CORS and dependency seams. Product routers are added by subsequent
-backend modules; `/models` and other unimplemented paths currently return 404.
-The service does not load models or serve a frontend bundle.
+ownership, CORS and dependency seams. `GET /models` lists local Hugging Face
+checkpoints with lazy safetensors sources. Other product routers are added by
+subsequent backend modules. The service does not load full models or serve a
+frontend bundle.
 
 ## CPU installation and execution
 
@@ -100,9 +101,9 @@ and 3.14, and installs the built wheel before testing it outside the source tree
   the normative HTTP contract. Generated OpenAPI/docs routes are disabled so an
   incomplete runtime schema does not compete with it.
 - `dependencies.py` exposes `get_settings`, `get_blocking_work`, `get_catalogue`,
-  `get_sessions`, `get_artifacts`, and `get_operation_delivery`. The four domain
-  slots in `Services` begin unset and fail loudly if accessed. Replace their
-  `object` annotations with concrete service types as each module lands; no
+  `get_sessions`, `get_artifacts`, and `get_operation_delivery`. The catalogue
+  slot is a concrete `ModelCatalogue`; other domain slots begin unset and fail
+  loudly if accessed. Replace their `object` annotations as each module lands; no
   speculative business methods or provider interface is prescribed here.
 - Supply an async context manager through `service_lifespan` to initialize domain
   resources, yield `Services`, and release resources in `finally`. Compose with
@@ -116,3 +117,68 @@ and 3.14, and installs the built wheel before testing it outside the source tree
   does not stop a running Python thread.
 - Use `with TestClient(app)` (or an ASGI lifespan manager) so services exist for
   requests and are released afterward. No services survive an app lifespan.
+
+## Catalogue and pinned source integration
+
+Discovery rules and fingerprint ownership are specified in
+[`docs/spec/backend/models.md`](../docs/spec/backend/models.md). `GET /models`
+runs discovery in the owned worker pool and returns path-free JSON with
+`Cache-Control: no-store`. Invalid candidates appear in local logs. Conflicting
+public identities fail the request with `422 validation_error`.
+
+Sessions can retain the returned concrete `ModelSource` for their lifetime:
+
+```python
+# Inside an async session handler, using the existing dependency seams:
+source = await work.run(catalogue.pin, model_id)
+fingerprint = source.fingerprint  # internal artifact-key input; never serialize
+descriptors = await work.run(source.tensors)
+inventory = {"tensors": [d.model_dump(mode="json") for d in descriptors]}
+```
+
+Materialization consumes bounded flat CPU float32 chunks in C order. Execute
+the iterator in blocking work, then hand its chunks to the operation's delivery
+mechanism. Do not iterate synchronously on the async event loop:
+
+```python
+def produce(source, tensor_id, consume_chunk):
+    for values in source.iter_tensor(tensor_id, chunk_elements=65536):
+        consume_chunk(values)
+    # Exhaustion includes a final snapshot check. Only now may a downstream
+    # artifact producer mark the complete result publishable.
+```
+
+Empty tensors yield no chunks; their descriptors still carry their full shape.
+Consumers own independent iterators and may close one without affecting another.
+`ModelError.code`, `.status`, and its path-free message are available to future
+HTTP/stream adapters; changed pinned sources use `409 model_content_changed`.
+The source never repins automatically. `source.check_unchanged(rehash=True)`
+also verifies the content digest explicitly.
+
+The backend-only tokenizer seam exposes a guarded local directory. The tokenizer
+module must use only snapshot-covered conventional assets, disable network and
+repository-provided code, and retain the guard around loading/use in a worker:
+
+```python
+def tokenize_locally(source, text):
+    # Transformers is a dependency of the tokenizer module, not the catalogue.
+    from transformers import AutoTokenizer
+
+    with source.local_directory() as directory:
+        tokenizer = AutoTokenizer.from_pretrained(
+            str(directory), local_files_only=True, trust_remote_code=False
+        )
+        result = tokenizer(text)
+    return result
+```
+
+The guard also belongs around use of a cached tokenizer so changed source assets
+cannot be served through an old session. This example defines integration only;
+session lifecycle, tokenization, binary framing, and artifact persistence are
+implemented by their respective modules.
+
+Catalogue tests generate tiny local checkpoints, including shards, scalar/empty
+and rank-3 shapes, F16/BF16 conversions, malformed headers, identity collisions,
+path escapes, and concurrent readers. They verify bounded header/content reads,
+path-independent fingerprints, and mutation detection before/during work.
+No real SmolLM2 checkpoint or CUDA smoke is required or claimed by these tests.
