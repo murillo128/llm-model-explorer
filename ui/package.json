@@ -17,7 +17,8 @@
     "test:browser": "playwright test",
     "check": "npm run api:check && npm run typecheck && npm run lint && npm test && npm run build",
     "api:generate": "node scripts/api-generator/generate.mjs",
-    "api:check": "node scripts/api-generator/generate.mjs --check"
+    "api:check": "node scripts/api-generator/generate.mjs --check",
+    "test:acceptance": "playwright test --config acceptance/playwright.config.ts"
   },
   "dependencies": {
     "@codemirror/commands": "6.11.0",
