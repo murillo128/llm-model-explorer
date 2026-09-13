@@ -4,13 +4,19 @@ Repository-wide instructions for ChatGPT, Codex, and other development agents.
 
 ## Mission and scope
 
-The project's durable mission and product/domain scope belong in `README.md` and the repository documentation that explicitly owns them. Do not broaden the project, invent adjacent goals, or promote exploratory discussion into settled scope without an explicit repository or issue-level decision.
+The project's durable mission and accepted architecture are defined by `docs/spec/`, with `docs/spec/README.md` as the specification index. `docs/spec/product.md` owns cross-cutting product scope; documents under `docs/spec/backend/`, `docs/spec/api/`, and `docs/spec/ui/` own decisions inside those system boundaries. `README.md` is the project entry point and summary, but it does not override the specification.
+
+Do not broaden the project, invent adjacent goals, or promote exploratory discussion into settled scope without an explicit repository or issue-level decision. Do not duplicate a normative decision across specification boundaries when one document already owns it.
 
 This file owns repository-wide agent invariants and routes work to reusable skills. Skills define reusable procedure, issues define bounded task contracts, and repository documents define durable project knowledge.
 
 ## Load context progressively
 
-For non-trivial work start with `AGENTS.md` and the controlling issue. Then load only accepted decisions/spec sections, source/tests/config/evidence, and the one workflow skill needed by the current role/action. Do not preload every document, skill, issue/PR history, result directory, or derived wiki.
+For non-trivial work start with `AGENTS.md` and the controlling issue. Then read `docs/spec/README.md` and load only the specification documents relevant to the component being changed, followed by source/tests/config/evidence and the one workflow skill needed by the current role/action. Do not preload every specification file, document, skill, issue/PR history, result directory, or derived wiki.
+
+For backend work, load the relevant documents under `docs/spec/backend/` plus API documents when the change affects the contract. For API work, load `docs/spec/api/` plus the specific backend/UI documents whose boundary is affected. For UI work, load the relevant documents under `docs/spec/ui/` plus API documents consumed by the UI.
+
+`docs/spec/ui/tensor-explorer.md` and `docs/spec/ui/tokenizer-explorer.md` are deliberately reserved for dedicated design work. Until those documents contain accepted detailed behavior, do not reconstruct or invent that behavior from the general architecture. If a task requires unspecified explorer behavior and the controlling issue does not supply an accepted bounded design, route it through design rather than guessing.
 
 On resume, verify branch, `HEAD`, worktree, controlling issue's current single workflow-state label, canonical execution context when applicable, and new material issue/PR discussion. Reuse unchanged inspected context rather than replaying history.
 
@@ -19,15 +25,16 @@ On resume, verify branch, `HEAD`, worktree, controlling issue's current single w
 Unless project-specific documentation defines a stricter hierarchy:
 
 1. Tests, formal checks, evaluation outputs, and captured evidence establish observed behavior.
-2. Accepted specifications, decisions, architecture docs, `docs/**`, and other explicitly normative documents establish durable intended behavior.
-3. The controlling issue establishes the bounded execution contract.
-4. PRs, checks, reviews, commits, and Git history preserve implementation and reproducible evidence.
-5. Roadmaps/epics/planning establish planning/dependency status only within their declared authority.
-6. Exploratory notes/research/drafts are provisional unless explicitly adopted.
-7. `wiki/**` is agent-generated derived non-normative knowledge and never overrides stronger sources.
-8. Chat is provisional until intentionally recorded in an authoritative repository/GitHub source.
+2. Accepted specifications under `docs/spec/**`, accepted decisions, and other explicitly normative architecture documents establish durable intended behavior.
+3. The controlling issue establishes the bounded execution contract and may specialize the accepted specification only within its explicit authority; it must not silently contradict normative project invariants.
+4. `README.md` summarizes product state and navigation but does not override `docs/spec/**`.
+5. PRs, checks, reviews, commits, and Git history preserve implementation and reproducible evidence.
+6. Roadmaps/epics/planning establish planning/dependency status only within their declared authority.
+7. Exploratory notes/research/drafts are provisional unless explicitly adopted.
+8. `wiki/**` is agent-generated derived non-normative knowledge and never overrides stronger sources.
+9. Chat is provisional until intentionally recorded in an authoritative repository/GitHub source.
 
-Do not promote `OPEN`, `SPECULATIVE`, exploratory, or wiki-derived statements into requirements without explicit adoption. Surface material conflicts rather than silently choosing.
+Do not promote `OPEN`, `SPECULATIVE`, placeholder, exploratory, or wiki-derived statements into requirements without explicit adoption. Surface material conflicts rather than silently choosing.
 
 ## Skill-driven workflow
 
@@ -80,17 +87,21 @@ The single `.github/workflows/codex-issue-state.yml` dispatcher is the only `iss
 
 For non-trivial changes, design a self-contained controlling issue; implement the smallest coherent outcome; preserve behavior outside scope; validate proportionally with repository-native checks; retain enough evidence for claims; and use independent review only at issue-declared intermediate risk boundaries plus the final audit controller.
 
-Do not invent project-wide roadmaps, schemas, frameworks, ontologies, or process machinery merely because they might be useful. Do not mechanically implement every reviewer suggestion; judge findings against contract/materiality/invariants.
+Implement against the accepted specification rather than re-deriving architecture from framework defaults or current source layout. When implementation convenience conflicts with `docs/spec/**`, surface the conflict and route it through design instead of silently changing the contract.
+
+Do not invent project-wide roadmaps, schemas, frameworks, provider abstractions, compatibility layers, storage systems, or process machinery merely because they might be useful. Do not mechanically implement every reviewer suggestion; judge findings against contract/materiality/invariants.
 
 ## Durable knowledge and wiki
 
-Keep deliberate normative docs and generated memory distinct. `docs/**` and other explicitly normative sources use normal design/execution workflow. `wiki/**` is generated, derived, non-normative memory maintained by `repository-wiki-curation`. GitHub issues own actionable discrepancies, unresolved decisions, suspected defects/drift, and bounded work contracts.
+Keep deliberate normative docs and generated memory distinct. `docs/spec/**` is normative accepted product/architecture specification. Other explicitly normative `docs/**` sources use normal design/execution workflow. `wiki/**` is generated, derived, non-normative memory maintained by `repository-wiki-curation`. GitHub issues own actionable discrepancies, unresolved decisions, suspected defects/drift, and bounded work contracts.
 
 The curator has standing write authority only for `wiki/**`, and only after its adversarial review and hard write-boundary gate. It never modifies non-wiki paths. New curator-created issues use `curator-detected`.
 
 ## Evidence and artifacts
 
 Keep evidence proportional. Commit source, tests, configuration, small deterministic fixtures, concise reports, and compact reproducibility evidence. Keep large generated outputs, binaries, model weights, datasets, caches, traces, or bulky logs outside Git unless explicitly required and distributable. Never publish secrets/private data/restricted artifacts.
+
+The runtime artifact cache described by the product specification is local derived state, not repository evidence. Do not commit cache contents or local model files.
 
 ## Git and GitHub behavior
 
@@ -105,9 +116,56 @@ Keep evidence proportional. Commit source, tests, configuration, small determini
 
 ## Project-specific invariants
 
-- The target runtime is the browser. GPU visualization and interaction should use WebGL2/GLSL unless a later accepted design explicitly changes that direction.
+The concise rules below are operational reminders. `docs/spec/**` is authoritative when more detail is needed.
+
+### Product and boundaries
+
+- The proof of concept has two user-facing capabilities: Tensor Explorer and Tokenizer Explorer. Detailed behavior belongs in their dedicated specifications and must not be invented while those documents remain placeholders.
+- The system has three independent boundaries: backend, API contract, and browser UI. Keep ownership aligned with `docs/spec/backend/`, `docs/spec/api/`, and `docs/spec/ui/`.
 - The initial reference model is `HuggingFaceTB/SmolLM2-135M` Base, not Instruct.
-- Preserve exact tensor and weight values. Do not add rounding, grouping, quantization, or other lossy transforms for rendering convenience unless an accepted specification explicitly requires them.
-- Do not maintain duplicate authoritative GPU-side copies of the same weights solely for visualization. Prefer a single GPU representation when the chosen WebGL2 format and operation permit it.
-- Treat color mapping as rendering state rather than model state: changing the visual encoding must not require rewriting the stored tensor values.
-- Keep matrix/vector visualization primitives reusable across model operations rather than implementing one-off representations for each screen.
+- The proof of concept must be evolvable into step-by-step transformer inference without replacing the established backend/API/session/stream/cache/renderer boundaries.
+
+### Backend and models
+
+- The backend is Python with FastAPI/Starlette for HTTP and PyTorch for tensor computation. Do not add a project-owned C, C++, or Rust compute layer without an accepted design change.
+- Heavy tensor computation uses PyTorch/native kernels rather than Python element-by-element loops. CPU and CUDA must expose the same logical API result; CUDA is optional and selected by backend configuration.
+- The proof of concept supports local Hugging Face model directories only. Do not add generic model-provider abstractions or remote model download support without accepted design.
+- The backend receives a local model root, discovers models beneath it, and keeps filesystem paths private. Model files are read-only.
+- Model access is lazy. Do not require loading an entire model into RAM or GPU merely to inspect metadata or one tensor; use memory mapping/equivalent lazy access when the storage format permits it.
+- Public model identity is derived from Hugging Face metadata when suitable, with directory-name fallback. Cache validity uses a content fingerprint independent from the model's local path.
+- Physical storage formats belong to the backend. The main visualization path exposes logical tensor values in canonical `float32`; the UI must not need NF4, INT8, or other quantization decoders.
+
+### API and streaming
+
+- The API is contract-first and independent from backend implementation classes and UI code. Conventional HTTP behavior is described by the API contract/OpenAPI; large numeric results follow the binary streaming specification.
+- Use explicit typed capabilities, not a universal stringly typed `execute` endpoint.
+- JSON is for commands, descriptors, metadata, and small responses. Large numeric tensor payloads are binary and must not be encoded as JSON or Base64.
+- Long operations expose an `operation_id`; the request that starts the operation carries its progressive binary response. Operations are cancelable and cancellation is a distinct outcome.
+- Errors before streaming begins use HTTP plus structured JSON; errors after a stream starts use an error frame in the binary stream.
+- The proof of concept has no public backwards-compatible API versioning such as `/v1`; backend and UI evolve together against the current accepted contract.
+
+### Sessions, concurrency, and cache
+
+- Multiple sessions may exist concurrently. A session is bound to exactly one `model_id` for its lifetime.
+- Proof-of-concept session state is in backend memory and may survive UI refresh/reconnect while the backend process remains alive. Backend restart may discard sessions.
+- Disk reads, cache hits, tokenization, and HTTP streams may run concurrently. Expensive GPU work is serialized through one execution queue per GPU device.
+- Equivalent artifact-producing operations are deduplicated across sessions. Cancelling one consumer must not cancel shared work while another consumer still needs it.
+- The artifact cache is shared across sessions, filesystem-only, disposable, and contains complete immutable reconstructible artifacts. Chunks are transport units, not cache units.
+- Publish a cache artifact only after successful complete generation; cancelled or failed work must not become a valid cache entry. Model-derived artifact keys include the model content fingerprint.
+- Do not add automatic cache GC, LRU, size limits, databases, Redis, or cache-management UI in the proof of concept unless an accepted design changes scope.
+
+### UI and rendering
+
+- The UI is React + TypeScript + Vite and is deployable independently from the backend, including on a different computer. Backend base URL is configurable.
+- WebGL2 rendering lives in a reusable TypeScript renderer independent from React. React owns application composition; the renderer owns GPU resources and drawing.
+- WebGL2 is for visualization and visual transformations, not authoritative model computation. Mathematical model operations belong to PyTorch on the backend.
+- The UI consumes long-operation results progressively and must be able to begin rendering before a complete tensor has arrived.
+- The proof-of-concept direct tensor visualization supports complete 1D and 2D tensors. Tensor shape in the API remains generic for arbitrary rank.
+- Preserve the spatial invariant **one tensor weight equals one rendered pixel**. Do not fit matrices to the viewport, resample, aggregate, or introduce zoom/pan as a substitute. Oversized content uses normal scroll. Internal texture/band partitioning is allowed only when required by WebGL2 limits and must preserve the logical complete tensor and one-to-one pixel mapping.
+- Tensor value controls luminosity through a configurable nonlinear sigmoid-like transfer using robust tensor statistics such as percentiles. Statistics are independent derived artifacts and may arrive after tensor bytes begin rendering.
+- Color is a separate semantic channel for selection, activation state, clusters, highlighting, and similar overlays. Changing color or luminosity must not rewrite the underlying tensor values.
+
+### Deployment and security
+
+- Backend and UI are independent processes and may run on separate machines. Configure backend host/port, model root, artifact-cache directory, compute device, and CORS primarily through command-line options for the proof of concept.
+- The proof of concept has no authentication and assumes a trusted local network or otherwise trusted environment. Do not invent user/account/authentication systems without accepted design.
