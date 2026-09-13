@@ -87,3 +87,15 @@ aside > .tensor-tree { padding-left: 0; }
 .tensor-explorer { display: grid; gap: 14px; min-width: 0; }
 .tensor-results { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 12px; color: var(--ui-text-muted); }
 .matrix-scroll { background: var(--ui-surface-soft); }
+
+.matrix-inspectable {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' viewBox='0 0 17 17'%3E%3Cpath d='M8.5 1v5M8.5 11v5M1 8.5h5M11 8.5h5' stroke='%23c47a22' stroke-width='1'/%3E%3C/svg%3E") 8 8, crosshair;
+}
+.matrix-scroll:focus-visible { outline: 2px solid #74552f; outline-offset: 3px; }
+.inspection-help { font-size: 12px; color: var(--text-secondary, #62666a); }
+.matrix-inspection { position: fixed; z-index: 20; width: 170px; height: 212px; pointer-events: none; }
+.magnifier-card { position: relative; width: 170px; height: 170px; padding: 4px; background: #fff; border-radius: 9px; box-shadow: 0 4px 18px #24272b26; }
+.magnifier-card canvas { display: block; width: 162px; height: 162px; image-rendering: pixelated; }
+.magnifier-center { position: absolute; left: 76px; top: 76px; width: 18px; height: 18px; border: 1px solid #c47a22; }
+.inspection-readout { display: block; margin-top: 4px; padding: 2px 4px; border-radius: 4px; background: #fff; color: #24272b; font: 10px/15px ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+.inspection-readout span { display: block; }

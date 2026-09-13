@@ -63,8 +63,7 @@ standalone progressive example. Browser tests use a source-only harness at port
 instrumentation are excluded from production build inputs.
 
 The normative geometry, scalar storage, transfer and lifetime rules are in
-[rendering.md](../../../docs/spec/ui/rendering.md). The current renderer excludes
-selection chroma, magnifier/hover UI, transport and React composition.
+[rendering.md](../../../docs/spec/ui/rendering.md). Transport and React composition remain outside the renderer.
 
 `MatrixViewport` composes the scalar `TensorViewport` with a right-hand and lower
 `DistributionRenderer` for nonempty rank-2 descriptors. It uses a single native
@@ -78,3 +77,13 @@ renderer, with R32UI / RED_INTEGER / UNSIGNED_INT storage and a Uint32Array CPU
 copy. Its density shader converts counts only at draw time using the fixed
 `log1p(count)/log1p(axisLength)` transfer. Pending counts remain distinguishable
 from received zeros. No client-side histogram computation is performed.
+
+`setSelection({ row, column })` sets small chroma uniforms; `null` clears selection.
+A negative coordinate disables that axis, allowing linked row/column profiles.
+`MatrixViewport` accepts `onInspection` to enable its rank-2 interaction controller.
+The callback supplies exact coordinates, round-trip value text, viewport placement,
+and a guarded `draw(canvas)` function for an application-owned 9×9 2D canvas.
+React owns the floating card/readout; the renderer owns the shared-texture display
+pass and its small framebuffer. `drawNeighborhood()` never changes the main view,
+allocates scalar storage, or uploads weights. See the owning specifications for
+linear-sRGB chroma, display encoding, missing-data and keyboard semantics.

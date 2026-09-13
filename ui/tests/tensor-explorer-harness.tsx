@@ -9,14 +9,30 @@ import { models, sessionA } from '../src/test/shell-fixtures';
 import '../src/app/styles.css';
 
 const tensors: TensorDescriptor[] = [
-  ['A', [2, 3]], ['B', [3, 2]], ['reference', [576, 1536]], ['vector', [5]], ['wide-vector', [1536]], ['short-matrix', [2, 1536]], ['empty', [0, 3]], ['unsupported', [2, 2, 2]],
+  ['inspection', [17, 19]], ['A', [2, 3]], ['B', [3, 2]], ['reference', [576, 1536]], ['vector', [5]], ['wide-vector', [1536]], ['short-matrix', [2, 1536]], ['empty', [0, 3]], ['unsupported', [2, 2, 2]],
 ].map(([name, dimensions]) => {
   const shape = dimensions as number[];
   return { id: name as string, name: name as string, path: [name as string], shape, rank: shape.length, numel: shape.reduce((a, b) => a * b, 1), storage_dtype: 'float32', logical_dtype: 'float32' };
 });
-const metrics = { scalarAllocations: 0, integerAllocations: 0, uploads: 0, live: new Set<WebGLTexture>(), failAllocation: false, bandLimit: Infinity };
+const metrics = { textureCreates: 0, float32Allocations: 0, fetches: 0, displayAllocations: 0, liveDisplays: new Set<WebGLRenderbuffer>(), scalarAllocations: 0, integerAllocations: 0, uploads: 0, live: new Set<WebGLTexture>(), failAllocation: false, bandLimit: Infinity };
+const OriginalFloat32Array = Float32Array;
+window.Float32Array = new Proxy(OriginalFloat32Array, { construct(target, args, newTarget) {
+  metrics.float32Allocations++;
+  return Reflect.construct(target, args, newTarget);
+} });
 const renderers: GridRenderer[] = [];
 const proto = WebGL2RenderingContext.prototype;
+const createDisplay = proto.createRenderbuffer;
+proto.createRenderbuffer = function () {
+  const resource = createDisplay.call(this);
+  if (resource) { metrics.displayAllocations++; metrics.liveDisplays.add(resource); }
+  return resource;
+};
+const deleteDisplay = proto.deleteRenderbuffer;
+proto.deleteRenderbuffer = function (resource) {
+  if (resource) metrics.liveDisplays.delete(resource);
+  deleteDisplay.call(this, resource);
+};
 const storage = proto.texStorage2D;
 proto.texStorage2D = function (target, levels, format, width, height) {
   if (format === this.R32F) metrics.scalarAllocations++;
@@ -26,7 +42,7 @@ proto.texStorage2D = function (target, levels, format, width, height) {
 const parameter = proto.getParameter;
 proto.getParameter = function (name: number) { return name === this.MAX_TEXTURE_SIZE ? Math.min(parameter.call(this, name), metrics.bandLimit) : parameter.call(this, name); };
 const create = proto.createTexture;
-proto.createTexture = function () { const texture = create.call(this); if (texture) metrics.live.add(texture); return texture; };
+proto.createTexture = function () { const texture = create.call(this); if (texture) { metrics.textureCreates++; metrics.live.add(texture); } return texture; };
 const remove = proto.deleteTexture;
 proto.deleteTexture = function (texture) { if (texture) metrics.live.delete(texture); remove.call(this, texture); };
 const upload = proto.texSubImage2D;
@@ -53,6 +69,7 @@ let releaseCatalogue: (() => void) | undefined;
 const catalogue = { paused: false, resume() { this.paused = false; releaseCatalogue?.(); } };
 const originalFetch = window.fetch.bind(window);
 window.fetch = async (input, options) => {
+  metrics.fetches++;
   const url = String(input);
   if (!url.startsWith('https://fixture.example')) return originalFetch(input, options);
   const path = new URL(url).pathname;

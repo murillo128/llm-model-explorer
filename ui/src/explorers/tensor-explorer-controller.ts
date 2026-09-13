@@ -4,7 +4,7 @@ import type { Metadata } from '../api/validation';
 import type { ExplorerContextValue } from '../app/explorer-context';
 import { Lifetime } from '../app/lifetime';
 import { MatrixViewport } from '../rendering/matrix-viewport';
-import type { RendererOptions } from '../rendering/tensor-renderer';
+import type { MatrixViewportOptions } from '../rendering/matrix-viewport';
 import { StreamWords } from './stream-words';
 
 export type ResultState = 'loading' | 'streaming' | 'complete' | 'failed' | 'cancelled' | 'unneeded';
@@ -26,7 +26,7 @@ export class TensorExplorerController {
   private cancelled = false;
   private status: ExplorerStatus = { tensor: 'loading', statistics: 'loading', distributions: 'loading', rendering: 'ready' };
 
-  constructor(host: HTMLElement, context: TensorExplorerInput, private readonly changed: (status: ExplorerStatus) => void, options: RendererOptions = {}) {
+  constructor(host: HTMLElement, context: TensorExplorerInput, private readonly changed: (status: ExplorerStatus) => void, options: MatrixViewportOptions = {}) {
     const tensor = context.selectedTensor!;
     this.viewport = new MatrixViewport(host, tensor, { ...options, onStateChange: (state) => {
       options.onStateChange?.(state);

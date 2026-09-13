@@ -1,7 +1,31 @@
+import { amber } from './chroma';
+
 export const vertexShader = `#version 300 es
 void main() {
   vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
   gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+// Shared by scalar and count shaders, including the inspection framebuffer.
+const selectionShader = `
+uniform ivec2 bandOrigin;
+uniform ivec2 selection;
+uniform vec2 chromaStrength;
+vec3 semanticColor(float y, ivec2 cell) {
+  ivec2 logical = cell + bandOrigin;
+  bool row = selection.y >= 0 && logical.y == selection.y;
+  bool column = selection.x >= 0 && logical.x == selection.x;
+  float t = row && column ? chromaStrength.y : row || column ? chromaStrength.x : 0.0;
+  vec3 displacement = vec3(${amber.join(', ')});
+  // Shrink the entire chroma vector, never clip individual RGB channels.
+  for (int i = 0; i < 3; ++i) {
+    if (displacement[i] > 0.0) t = min(t, (1.0 - y) / displacement[i]);
+    if (displacement[i] < 0.0) t = min(t, -y / displacement[i]);
+  }
+  vec3 linear = vec3(y) + t * displacement;
+  // RGBA8 canvas storage is display encoded; WebGL performs no extra encoding.
+  return mix(1.055 * pow(max(linear, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055,
+    12.92 * linear, lessThanEqual(linear, vec3(0.0031308)));
 }`;
 
 export const fragmentShader = `#version 300 es
@@ -17,6 +41,7 @@ uniform vec2 anchors;
 uniform float scale;
 uniform float span;
 uniform float correction;
+${selectionShader}
 out vec4 color;
 
 float logistic(float v) { return 1.0 / (1.0 + exp(-v)); }
@@ -49,7 +74,7 @@ void main() {
     float endpoint = logistic(-0.5 * slope);
     intensity = (logistic(slope * (u - 0.5)) - endpoint) / (1.0 - 2.0 * endpoint);
   }
-  color = vec4(vec3(intensity), 1.0);
+  color = vec4(semanticColor(clamp(intensity, 0.0, 1.0), cell), 1.0);
 }`;
 
 export const distributionFragmentShader = `#version 300 es
@@ -60,6 +85,7 @@ uniform ivec2 bandOffset;
 uniform int viewHeight;
 uniform ivec2 prefix;
 uniform float densityDenominator;
+${selectionShader}
 out vec4 color;
 void main() {
   ivec2 cell = ivec2(int(gl_FragCoord.x), viewHeight - 1 - int(gl_FragCoord.y)) + bandOffset;
@@ -69,5 +95,5 @@ void main() {
   }
   uint count = texelFetch(weights, cell, 0).r;
   float intensity = densityDenominator > 0.0 ? log(1.0 + float(count)) / densityDenominator : 0.0;
-  color = vec4(vec3(clamp(intensity, 0.0, 1.0)), 1.0);
+  color = vec4(semanticColor(clamp(intensity, 0.0, 1.0), cell), 1.0);
 }`;
