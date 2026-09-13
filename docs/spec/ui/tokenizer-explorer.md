@@ -20,7 +20,7 @@ The current wireframe is the `Inference Explorer` frame in the Miro dashboard:
 
 https://miro.com/app/board/uXjVHnoDEYY=/?moveToWidget=3458764683523016635
 
-The Miro board is a visual reference for the combined prompt/tokenization area. This document is normative if the board and specification diverge. Downstream content visible in that wider inference wireframe, such as an embedding matrix, is outside the Tokenizer Explorer's ownership and is not specified here.
+The Miro board is a visual reference for the combined prompt/tokenization area. This document is normative if the board and specification diverge. Only the narrow input-embedding lookup described below is an accepted downstream extension; other inference content in the wider wireframe remains future scope.
 
 ## Live editing and tokenization
 
@@ -68,8 +68,28 @@ The Tokenizer Explorer intentionally uses a minimal monochrome distinction:
 
 Token identity is not encoded by assigning a different color to every token. The important visual relationship is the exact segmentation of the editable text and its associated metadata.
 
+## Accepted input-embedding extension
+
+The post-PoC Tokenizer Explorer may consume the input-embedding lookup defined
+in `../api/contract.md` for the latest successful tokenizer result. Submit its
+real token IDs in sequence order, including special tokens and duplicates,
+under the same session. Associate each matrix row with that sequence position
+using the echoed IDs; never infer IDs from displayed text or download the full
+vocabulary embedding table to gather rows in the browser.
+
+The matrix must correspond to the current editor result and session. An older
+lookup must not replace a newer one; while tokenization/lookup is pending or
+fails, an older matrix must not be presented as current. Empty input and
+unsupported lookup are explicit states. Consume the float32 matrix progressively
+using the common rules in `rendering.md`, preserving one weight per rendered
+pixel. This contract establishes data association and scope; detailed matrix
+composition and interaction are owned by the separate UI implementation issue.
+
 ## Reuse in later inference views
 
 Later inference exploration may place the tokenizer component directly above embeddings or other model stages. That composition must reuse this same live prompt/tokenization component rather than introducing a parallel tokenizer UI with different interaction or visual semantics.
 
-This document does not define those downstream stages. Tensor rendering rules remain in `rendering.md`, and inference/embedding behavior belongs to the future specification that owns those computations and views.
+Beyond the accepted input-embedding row lookup above, this document does not
+define downstream computation stages. Tensor rendering rules remain in
+`rendering.md`; positional encoding, transformer execution, logits, and
+generation require future design.
