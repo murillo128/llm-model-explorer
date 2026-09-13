@@ -103,9 +103,7 @@ and 3.14, and installs the built wheel before testing it outside the source tree
 - `dependencies.py` exposes `get_settings`, `get_blocking_work`, `get_catalogue`,
   `get_sessions`, `get_artifacts`, and `get_operation_delivery`. The catalogue and
   artifact slots provide concrete `ModelCatalogue` and `ArtifactStore` services.
-  Sessions and operation delivery begin unset and fail loudly if accessed.
-  Replace their `object` annotations as each module lands; no
-  speculative business methods or provider interface is prescribed here.
+  Sessions and operation delivery are app-owned concrete services (see below).
 - Supply an async context manager through `service_lifespan` to initialize domain
   resources, yield `Services`, and release resources in `finally`. Compose with
   `open_services(settings)` to reuse the owned worker pool. Tests may supply
@@ -114,7 +112,7 @@ and 3.14, and installs the built wheel before testing it outside the source tree
   PyTorch/native computation. Request context variables propagate into workers.
   The pool is created during lifespan and drained off the event loop at shutdown.
   This seam supplies neither per-GPU serialization nor cancellation/deduplication:
-  those belong to the later operation scheduler. Cancelling an awaiting coroutine
+  those belong to `OperationRuntime`. Cancelling an awaiting coroutine
   does not stop a running Python thread.
 - Use `with TestClient(app)` (or an ASGI lifespan manager) so services exist for
   requests and are released afterward. No services survive an app lifespan.
@@ -234,3 +232,78 @@ implemented by this module. Cache tests use small controlled producers and real
 temporary directories, including concurrent process publication, injected disk
 failures, corruption, crash leftovers, and an 8 MiB stream whose traced Python
 allocation peak stays below 1 MiB.
+
+## Session and shared-operation runtime
+
+`session_routes.py` implements session create/get/delete, tensor inventory and
+idempotent consumer-operation cancellation. `SessionRegistry` pins a `ModelSource`
+on creation and checks the snapshot on subsequent reads; its public descriptor
+contains only UUID `id` and logical `model_id`. The registry disappears at shutdown.
+Deleting a session releases its consumers and preserves other sessions and artifacts.
+
+`operations.py` coordinates coroutine producers over `ArtifactStore`. Construct an
+`ArtifactSpec` with the session source fingerprint and the complete computation
+identity. Use `SessionRegistry.subscribe(session_id, spec, producer)` for external
+requests; it validates the session snapshot and prevents deletion/registration races.
+Each call returns a distinct consumer UUID, including cache hits. The runtime's
+lower-level `subscribe` is for callers that already own session validation.
+
+A producer receives `ProducerContext` and must use these boundaries:
+
+- `await ctx.io(callable, ...)`: blocking CPU/file work in the app executor.
+- `await ctx.compute(callable, ...)`: blocking compute on the configured device,
+  serialized per CUDA device. A CUDA callback must synchronize launched work before
+  returning; no Python-level preemption of a running kernel is promised.
+- `await ctx.append(chunk)`: flush a bounded bytes chunk to the private spool and
+  wake readers. The runtime alone commits after successful producer return.
+- `ctx.cancellation.check()` or `await ctx.cancellation.wait(event)`: cooperative
+  safe boundaries for synchronous work or asynchronous barriers.
+- `async with ctx.dependency(spec, producer) as consumer`: hold an internal,
+  non-public interest in another artifact. Resolve dependencies **before** entering
+  a compute callback. The materialization/statistics dependency must be acyclic;
+  this runtime deliberately does not discover or schedule arbitrary workflows.
+
+Producers must not block the event loop, spawn unowned work, or retain all emitted
+chunks. Returning means all blocking work and source validation have finished.
+Cancellation stops subsequent steps and queued jobs; active blocking work settles
+before its writer is aborted or its device slot released. If commit has already
+started, a successful publication survives cancellation.
+Compute callbacks recheck cancellation inside the worker immediately before launch,
+including when they waited in the shared thread pool after acquiring a device slot.
+
+A future binary response adapter should acquire its consumer before sending
+headers, put its UUID in `X-Operation-Id`, and own its entire response lifetime:
+
+```python
+consumer = await sessions.subscribe(session_id, artifact_spec, producer)
+try:
+    while chunk := await consumer.read():
+        await send_data_frame(chunk)
+    await send_end_frame()
+except OperationCancelled:
+    await send_cancelled_frame_if_connected()
+except Exception as error:
+    await send_safe_error_frame_if_connected(error)
+finally:
+    await consumer.aclose()
+```
+
+This is adapter pseudocode, not an additional HTTP endpoint or binary encoder.
+The adapter must map exceptions to the accepted path-free error contract and emit
+exactly one terminal frame. `read()` returns at most 256 KiB; callers read serially
+and await delivery before asking for another chunk. Empty bytes mean successful
+EOF; cancellation and failure raise distinct exceptions. Disconnection cancels and
+drains an in-flight read before closing its file. Always `aclose()` when the
+response ends, even if headers or the first frame fail; no operation history is kept.
+
+Registration is atomic on the owning event loop. Readers replay from byte zero,
+then follow the flushed prefix using independent file cursors. Notifications carry
+no payload buffers. Slow network delivery holds neither the registry nor a GPU
+slot. An abandoned producer stays registered until its blocking work settles;
+new requests for that key wait for retirement before retrying. Lifespan shutdown
+cancels consumers, drains producers, and then shuts down the blocking executor.
+
+The deterministic tests in `test_operations.py` and `test_session_operations.py`
+cover singleflight, late replay, cache hits, independent cancellation, blocked I/O,
+commit races, slow readers, file/registry cleanup, fake per-device scheduling and
+nested dependencies. Real CUDA smoke is optional and is not implied by these tests.

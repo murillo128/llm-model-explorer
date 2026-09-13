@@ -23,7 +23,9 @@ from llm_model_explorer.dependencies import (
 )
 from llm_model_explorer.execution import BlockingWork
 from llm_model_explorer.models import ModelCatalogue
+from llm_model_explorer.operations import OperationRuntime
 from llm_model_explorer.services import Services, open_services
+from llm_model_explorer.sessions import SessionRegistry
 from llm_model_explorer.settings import Settings
 
 
@@ -31,7 +33,7 @@ def test_only_implemented_product_endpoints_are_available(settings: Settings) ->
     app = create_app(settings)
     with TestClient(app) as client:
         assert client.get("/models").json() == {"models": []}
-        for path in ["/sessions", "/openapi.json", "/docs", "/redoc"]:
+        for path in ["/openapi.json", "/docs", "/redoc"]:
             assert client.get(path).status_code == 404
         assert isinstance(app.state.services, Services)
     assert not hasattr(app.state, "services")
@@ -59,13 +61,15 @@ def test_lifecycle_and_injected_domain_services(settings: Settings) -> None:
     sentinel = ModelCatalogue(settings.model_root)
     artifacts = ArtifactStore(settings.cache_dir, model_root=settings.model_root)
     work = BlockingWork()
+    operations = OperationRuntime(artifacts, work)
+    sessions = SessionRegistry(sentinel, work, operations)
 
     @asynccontextmanager
     async def services(config: Settings) -> AsyncIterator[Services]:
         assert config is settings
         events.append("start")
         try:
-            yield Services(work, sentinel, sentinel, artifacts, sentinel)
+            yield Services(work, sentinel, sessions, artifacts, operations)
         finally:
             await work.aclose()
             events.append("stop")
@@ -75,8 +79,9 @@ def test_lifecycle_and_injected_domain_services(settings: Settings) -> None:
     @router.get("/test-only")
     def inspect(request: Request) -> dict[str, bool]:
         assert get_settings(request) is settings
-        for dependency in [get_catalogue, get_sessions, get_operation_delivery]:
-            assert dependency(request) is sentinel
+        assert get_catalogue(request) is sentinel
+        assert get_sessions(request) is sessions
+        assert get_operation_delivery(request) is operations
         assert get_artifacts(request) is artifacts
         return {"injected": True}
 
@@ -100,7 +105,16 @@ def test_unconfigured_domain_fails_and_supports_override(
         return {"injected": service is sentinel}
 
     sentinel = object()
-    app = create_app(settings, routers=[router])
+
+    @asynccontextmanager
+    async def unconfigured(config: Settings) -> AsyncIterator[Services]:
+        work = BlockingWork()
+        try:
+            yield Services(work)
+        finally:
+            await work.aclose()
+
+    app = create_app(settings, routers=[router], service_lifespan=unconfigured)
     with TestClient(app) as client:
         with pytest.raises(RuntimeError, match="not configured"):
             client.get("/test-only")
