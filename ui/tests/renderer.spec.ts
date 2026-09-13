@@ -7,7 +7,8 @@ function gray(value: number, low = -1, high = 1, slope = 8) {
   const u = Math.max(0, Math.min(1, (value - low) / (high - low)));
   const logistic = (x: number) => 1 / (1 + Math.exp(-x));
   const endpoint = logistic(-slope / 2);
-  return Math.round(255 * (logistic(slope * (u - 0.5)) - endpoint) / (1 - 2 * endpoint));
+  const y = (logistic(slope * (u - 0.5)) - endpoint) / (1 - 2 * endpoint);
+  return Math.round(255 * (y <= 0.0031308 ? 12.92 * y : 1.055 * y ** (1 / 2.4) - 0.055));
 }
 
 test.beforeEach(async ({ page }) => {
@@ -123,7 +124,7 @@ test('vector, empty tensors, rejected descriptors and non-consecutive uploads', 
   });
   expect(result.vector).toHaveLength(1);
   expect(result.vector[0]).toHaveLength(5);
-  expect(result.vector[0]![1]).toEqual([128, 128, 128, 255]);
+  expect(result.vector[0]![1]).toEqual([188, 188, 188, 255]);
   expect(result.vector[0]![3]).toEqual([46, 61, 76, 255]);
   expect(result.rejected).toHaveLength(5);
   expect(result.empties).toEqual(Array(3).fill({ state: 'empty', text: 'Empty tensor', textures: 0 }));
@@ -162,7 +163,7 @@ test('late robust statistics, constant/fallback/extreme values and transfer-only
   expect(result.fallback).toEqual(result.robust);
   expect(result.extreme[0]![0]).toEqual([0, 0, 0, 255]);
   expect(result.extreme[0]![6]).toEqual([255, 255, 255, 255]);
-  expect(result.constant[0]!.slice(0, 7)).toEqual(Array(7).fill([128, 128, 128, 255]));
+  expect(result.constant[0]!.slice(0, 7)).toEqual(Array(7).fill([188, 188, 188, 255]));
   expect(result.robust[0]!.slice(7)).toEqual(Array(3).fill([178, 51, 140, 255]));
   expect(result.provisional[0]![2]).not.toEqual(result.robust[0]![2]);
   expect(result.slope[0]![2]![0]).toBe(gray(-0.5, -1, 1, 2));
@@ -206,7 +207,7 @@ for (const retainValues of [true, false]) {
     expect(restored.generations).toBe(2);
     if (retainValues) {
       expect(restored.after).toBeGreaterThan(restored.before);
-      expect(restored.pixels[0]![1]).toEqual([128, 128, 128, 255]);
+      expect(restored.pixels[0]![1]).toEqual([188, 188, 188, 255]);
     } else {
       expect(restored.after).toBe(restored.before);
       expect(restored.pixels[0]![1]).toEqual([46, 61, 76, 255]);
@@ -363,4 +364,34 @@ test('shared API float32 fixture preserves row-major values, signed zero and non
   expect(result.cells[1]).toMatchObject({ value: -2.5 });
   expect(result.negativeZero).toBe(true);
   expect(result.pixels[1]).toEqual(Array(3).fill([178, 51, 140, 255]));
+});
+
+test('selection preserves linear luminance across the full anchored range including black and white', async ({ page }) => {
+  const result = await page.evaluate(() => {
+    const { create, pixels, metrics } = window.harness;
+    const r = create([1, 101], { textureLimit: 16 });
+    r.upload(Float32Array.from({ length: 101 }, (_, i) => i / 50 - 1));
+    r.setTransfer({ anchors: [-1, 1] }); r.setView(101, 1);
+    const neutral = pixels(r);
+    const before = { allocations: metrics.allocations, uploads: metrics.uploads };
+    r.setSelection({ row: 0, column: 50 }, [1, 1]);
+    const selected = pixels(r);
+    const after = { allocations: metrics.allocations, uploads: metrics.uploads };
+    r.dispose();
+    return { neutral, selected, before, after };
+  });
+  expect(result.after).toEqual(result.before);
+  expect(result.selected[0]![0]).toEqual([0, 0, 0, 255]);
+  expect(result.selected[0]![100]).toEqual([255, 255, 255, 255]);
+  const decode = (v: number) => v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4;
+  for (let i = 0; i <= 100; i++) {
+    const value = Math.fround(i / 50 - 1);
+    const endpoint = 1 / (1 + Math.exp(4));
+    const y = (1 / (1 + Math.exp(-4 * value)) - endpoint) / (1 - 2 * endpoint);
+    for (const image of [result.neutral, result.selected]) {
+      const rgb = image[0]![i]!;
+      const actualY = 0.2126 * decode(rgb[0]!) + 0.7152 * decode(rgb[1]!) + 0.0722 * decode(rgb[2]!);
+      expect(Math.abs(actualY - y)).toBeLessThanOrEqual(0.0045);
+    }
+  }
 });

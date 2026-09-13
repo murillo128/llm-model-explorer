@@ -1,3 +1,4 @@
+import type { Selection } from './chroma';
 import { hitTest, tensorGeometry, viewGeometry } from './geometry';
 import type { TensorDescriptor, ViewGeometry } from './geometry';
 import { distributionFragmentShader, fragmentShader, vertexShader } from './shaders';
@@ -42,6 +43,9 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
   private allocations = 0;
   private uploads = 0;
   private generations = 0;
+  private selection: Selection | null = null;
+  private strengths: readonly [number, number] = [0.08, 0.3];
+  private inspection: { framebuffer: WebGLFramebuffer; color: WebGLRenderbuffer; pixels: Uint8Array } | null = null;
   private _view: ViewGeometry | null = null;
 
   protected constructor(readonly canvas: HTMLCanvasElement, descriptor: TensorDescriptor, options: RendererOptions = {}, private readonly densityAxisLength?: number) {
@@ -141,7 +145,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
       }
       this.vao = gl.createVertexArray();
       if (!this.vao) throw new Error('WebGL2 vertex array allocation failed.');
-      for (const name of ['weights', 'bandOffset', 'viewHeight', 'prefix', ...(this.densityAxisLength === undefined ? ['mode', 'slope', 'anchors', 'scale', 'span', 'correction'] : ['densityDenominator'])]) {
+      for (const name of ['weights', 'bandOffset', 'bandOrigin', 'selection', 'chromaStrength', 'viewHeight', 'prefix', ...(this.densityAxisLength === undefined ? ['mode', 'slope', 'anchors', 'scale', 'span', 'correction'] : ['densityDenominator'])]) {
         const location = gl.getUniformLocation(this.program!, name);
         if (location === null) throw new Error(`Missing renderer uniform: ${name}`);
         this.uniforms[name] = location;
@@ -229,6 +233,15 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
     this.transfer = transferUniforms(parameters);
   }
 
+  /** Negative row/column disables that axis, for linked distribution surfaces. */
+  setSelection(selection: Selection | null, strengths: readonly [number, number] = [0.08, 0.3]) {
+    if (this._state === 'disposed') return;
+    if (selection && ![selection.row, selection.column].every(Number.isSafeInteger)) throw new Error('Invalid selection coordinates.');
+    if (!strengths.every((v) => Number.isFinite(v) && v >= 0 && v <= 1)) throw new Error('Invalid chroma strength.');
+    this.selection = selection;
+    this.strengths = strengths;
+  }
+
   setView(cssWidth: number, cssHeight: number, scrollLeft = 0, scrollTop = 0, dpr = window.devicePixelRatio) {
     this.assertReady();
     const view = viewGeometry(this.geometry, cssWidth, cssHeight, scrollLeft, scrollTop, dpr, this.maxWidth, this.maxHeight);
@@ -257,6 +270,10 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
     const view = this._view;
     if (!view) throw new Error('Set the viewport before drawing.');
     if (view.dpr !== window.devicePixelRatio) throw new Error('Device pixel ratio changed. Call setView before drawing again.');
+    this.render(view);
+  }
+
+  private render(view: ViewGeometry) {
     if (!view.width || !view.height || this._state === 'empty') return;
     const gl = this.gl;
     gl.viewport(0, 0, view.width, view.height);
@@ -268,6 +285,8 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
     gl.useProgram(this.program);
     gl.activeTexture(gl.TEXTURE0);
     const u = this.uniforms;
+    gl.uniform2i(u.selection!, this.selection?.column ?? -1, this.selection?.row ?? -1);
+    gl.uniform2f(u.chromaStrength!, ...this.strengths);
     gl.uniform1i(u.weights!, 0);
     gl.uniform1i(u.viewHeight!, view.height);
     if (this.densityAxisLength === undefined) {
@@ -287,6 +306,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
       const bottom = Math.min(view.y + view.height, band.y + band.height);
       if (right <= left || bottom <= top) continue;
       gl.scissor(left - view.x, view.height - (bottom - view.y), right - left, bottom - top);
+      gl.uniform2i(u.bandOrigin!, band.x, band.y);
       gl.uniform2i(u.bandOffset!, view.x - band.x, view.y - band.y);
       gl.uniform2i(u.prefix!, Math.max(0, Math.min(band.width, prefixColumn - band.x)),
         Math.max(-1, Math.min(band.height, prefixRow - band.y)));
@@ -300,6 +320,48 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
       this.releaseGPU();
       this.setState(gl.isContextLost() ? 'lost' : 'failed');
       throw error;
+    }
+  }
+
+  /** 9×9 display pixels from the SAME scalar bands/program, never weight copies.
+   * The caller owns a tiny 2D display canvas. Main geometry/buffer stays untouched.
+   */
+  drawNeighborhood(row: number, column: number, target: CanvasRenderingContext2D) {
+    this.assertReady();
+    if (!this._view || !this.readCell(row, column)) return;
+    const gl = this.gl;
+    try {
+      if (!this.inspection) {
+        const framebuffer = gl.createFramebuffer();
+        const color = gl.createRenderbuffer();
+        if (!framebuffer || !color) {
+          gl.deleteFramebuffer(framebuffer); gl.deleteRenderbuffer(color);
+          throw new Error('Inspection framebuffer allocation failed.');
+        }
+        this.inspection = { framebuffer, color, pixels: new Uint8Array(9 * 9 * 4) };
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.bindRenderbuffer(gl.RENDERBUFFER, color);
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA8, 9, 9);
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, color);
+        if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error('Inspection framebuffer incomplete.');
+      }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.inspection.framebuffer);
+      gl.disable(gl.SCISSOR_TEST);
+      gl.clearColor(46 / 255, 61 / 255, 76 / 255, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      this.render({ ...this._view, x: column - 4, y: row - 4, width: 9, height: 9 });
+      gl.readPixels(0, 0, 9, 9, gl.RGBA, gl.UNSIGNED_BYTE, this.inspection.pixels);
+      const output = target.createImageData(9, 9);
+      for (let y = 0; y < 9; y++) output.data.set(this.inspection.pixels.subarray((8 - y) * 36, (9 - y) * 36), y * 36);
+      target.putImageData(output, 0, 0);
+      this.checkGL('inspection');
+    } catch (error) {
+      this.releaseGPU();
+      this.setState(gl.isContextLost() ? 'lost' : 'failed');
+      throw error;
+    } finally {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, null);
     }
   }
 
@@ -347,6 +409,11 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
   }
 
   private releaseGPU() {
+    if (this.inspection) {
+      this.gl.deleteFramebuffer(this.inspection.framebuffer);
+      this.gl.deleteRenderbuffer(this.inspection.color);
+      this.inspection = null;
+    }
     for (const band of this.bands) this.gl.deleteTexture(band.texture);
     this.bands = [];
     if (this.program) this.gl.deleteProgram(this.program);
@@ -364,6 +431,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
     this.values = null;
     this._populated = 0;
     this._view = null;
+    this.selection = null;
     // Release the potentially large visible drawing buffer as well.
     this.canvas.width = 1;
     this.canvas.height = 1;

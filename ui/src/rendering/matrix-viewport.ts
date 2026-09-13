@@ -1,7 +1,13 @@
+import { MatrixInspection } from './matrix-inspection';
+import type { Inspection } from './matrix-inspection';
 import { DistributionRenderer } from './tensor-renderer';
 import type { RendererOptions } from './tensor-renderer';
 import { TensorViewport } from './tensor-viewport';
 import type { TensorDescriptor, ViewGeometry } from './geometry';
+
+export interface MatrixViewportOptions extends RendererOptions {
+  readonly onInspection?: (inspection: Inspection | null) => void;
+}
 
 /** Three exact scientific surfaces sharing the main surface's native scroll origin. */
 export class MatrixViewport {
@@ -13,8 +19,9 @@ export class MatrixViewport {
   private readonly columnHost = document.createElement('div');
   private readonly originalStyle: string | null;
   private disposed = false;
+  private inspection?: MatrixInspection;
 
-  constructor(readonly host: HTMLElement, descriptor: TensorDescriptor, options: RendererOptions = {}) {
+  constructor(readonly host: HTMLElement, descriptor: TensorDescriptor, options: MatrixViewportOptions = {}) {
     if (host.childNodes.length) throw new Error('MatrixViewport requires an empty host.');
     this.originalStyle = host.getAttribute('style');
     host.classList.add('matrix-surfaces');
@@ -51,10 +58,15 @@ export class MatrixViewport {
         host.style.gridTemplateColumns = `minmax(0, ${descriptor.shape.at(-1)! / dpr}px)${this.rows ? ` ${100 / dpr}px` : ''}`;
       };
       layout();
-      this.matrix = new TensorViewport(this.main, descriptor, { ...options, onViewChange: (view) => {
+      this.matrix = new TensorViewport(this.main, descriptor, { ...options, onStateChange: (state) => {
+        if (state !== 'ready') this.inspection?.clear();
+        options.onStateChange?.(state);
+      }, onViewChange: (view) => {
         layout();
         this.align(view);
+        this.inspection?.refresh();
       } });
+      if (descriptor.rank === 2 && options.onInspection) this.inspection = new MatrixInspection(this, options.onInspection);
     } catch (error) {
       this.rows?.dispose();
       this.columns?.dispose();
@@ -94,6 +106,7 @@ export class MatrixViewport {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this.inspection?.dispose();
     this.matrix.dispose();
     this.rows?.dispose();
     this.columns?.dispose();

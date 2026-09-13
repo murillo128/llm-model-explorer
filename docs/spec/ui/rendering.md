@@ -92,3 +92,26 @@ Applying or changing semantic color must not change the luminosity-derived under
 ## Interaction scope
 
 The proof of concept does not require zoom or pan. Detailed Tensor Explorer interaction behavior is owned by `tensor-explorer.md` and must not be inferred from this common rendering specification.
+
+### Concrete linear-sRGB selection transfer
+
+Scalar transfer output is linear-sRGB luminance `Y`. Matrix and distribution
+shaders use the same coefficients `Y = 0.2126 R + 0.7152 G + 0.0722 B`.
+Starting at neutral `(Y,Y,Y)`, amber adds `t * d`, where
+`d = (1, (0.0722*0.6 - 0.2126)/0.7152, -0.6)` has zero luminance.
+The standard row/column strength is `t=0.08`; their intersection uses `0.3`.
+For each positive component `d_i`, bound `t <= (1-Y)/d_i`; for each negative
+component, bound `t <= -Y/d_i`. Use the minimum of all bounds and requested
+strength. This reduces chroma along one vector without clipping RGB components
+or changing Y. At black/white, `t=0` and data stays unchanged.
+
+Encode each resulting linear component once with the sRGB OETF:
+`12.92*c` for `c <= 0.0031308`, otherwise `1.055*c^(1/2.4)-0.055`.
+The canvas and inspection RGBA8 buffer store these display-encoded bytes; do not
+apply a second gamma conversion. Pending/nonfinite colors remain explicit status
+colors outside this scalar transfer. Relative to ideal display encoding, pixel
+validation permits at most one 8-bit code per channel (rounding plus shader
+precision); decoded luminance versus prequantized Y permits `0.0045` absolute
+error, bounded by the maximum sRGB inverse derivative times half an 8-bit code.
+CPU numeric validation before display quantization uses floating-point tolerance,
+not that display error allowance.

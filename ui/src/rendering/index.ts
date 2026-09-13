@@ -6,3 +6,6 @@ export type { TensorDescriptor, TensorGeometry, ViewGeometry } from './geometry'
 export type { TensorStatistics, TransferParameters } from './transfer';
 export { MatrixViewport } from './matrix-viewport';
 export type { ViewportOptions } from './tensor-viewport';
+export type { Selection } from './chroma';
+export type { MatrixViewportOptions } from './matrix-viewport';
+export type { Inspection } from './matrix-inspection';
