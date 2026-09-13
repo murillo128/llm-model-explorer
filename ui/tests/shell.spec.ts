@@ -12,6 +12,7 @@ async function assetHashes() {
   ]));
 }
 async function mockConfig(page: Page, body = '{"backend_base_url":"https://backend.example/"}', status = 200) {
+  await page.route('**/models', (route) => route.fulfill({ json: { models: [] } }));
   await page.route('**/runtime-config.json', (route) => route.fulfill({ status, contentType: 'application/json', body }));
 }
 
@@ -23,16 +24,16 @@ test('one production build accepts two deployed backend URLs', async ({ page }, 
   page.on('request', (request) => {
     if (new URL(request.url()).origin !== new URL(testInfo.project.use.baseURL!).origin) backendRequests.push(request.url());
   });
+  await page.route('**/models', (route) => route.fulfill({ json: { models: [] } }));
   try {
     for (const backend of ['https://models-a.example/api/', 'http://192.0.2.10:9000///']) {
       await writeFile(configPath, JSON.stringify({ backend_base_url: backend }));
       await page.goto('/');
       await expect(page.getByTestId('backend-url')).toHaveText(backend.replace(/\/+$/, ''));
-      await expect(page.getByText('Configured · connection not checked')).toBeVisible();
-      await expect(page.getByRole('status')).toContainText('not implemented yet');
+      await expect(page.getByText('No models available on this backend.')).toBeVisible();
     }
     expect(await assetHashes()).toEqual(before);
-    expect(backendRequests).toEqual([]);
+    expect(backendRequests).toEqual(['https://models-a.example/api/models', 'http://192.0.2.10:9000/models']);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath('neutral-shell.png'), fullPage: true });
     await testInfo.attach('neutral shell', { path: testInfo.outputPath('neutral-shell.png'), contentType: 'image/png' });
@@ -57,7 +58,7 @@ test('keyboard navigation has visible focus and switches explorer slots', async 
   expect(await tokenizer.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tokenizer Explorer');
-  await expect(page.getByRole('status')).toHaveText('EmptyTokenizer Explorer is not implemented yet.');
+  await expect(page.getByText('Open a model session to use this explorer.')).toBeVisible();
   await expect(tokenizer).toHaveAttribute('aria-current', 'page');
   await page.reload();
   await expect(page.getByRole('navigation')).toBeVisible();
