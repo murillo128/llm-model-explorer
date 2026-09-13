@@ -1,0 +1,172 @@
+{
+  "fixture_seed": 17,
+  "cuda": {
+    "available": true,
+    "runtime": "12.6",
+    "device": "NVIDIA GeForce GTX 1650",
+    "capability": [
+      7,
+      5
+    ]
+  },
+  "reference": {
+    "supplied": true,
+    "device": "cuda:0"
+  },
+  "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+  "python": "3.12.14",
+  "node": "v24.14.0",
+  "packages": {
+    "torch": "2.14.0+cu126",
+    "fastapi": "0.141.1",
+    "starlette": "1.6.0",
+    "uvicorn": "0.52.4",
+    "transformers": "4.57.6",
+    "tokenizers": "0.22.2",
+    "pytest": "9.1.1"
+  },
+  "playwright": "1.63.0",
+  "backend": {
+    "tests": 462,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "network": {
+    "tests": 13,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "ui_unit": {
+    "numTotalTests": 181,
+    "numPassedTests": 181,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  "component_browser": {
+    "stats": {
+      "startTime": "2026-09-13T19:10:17.717Z",
+      "duration": 87673.89600000001,
+      "expected": 118,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "measurements": [],
+    "skip_reasons": [],
+    "reference_webgl": []
+  },
+  "product_browser": {
+    "stats": {
+      "startTime": "2026-09-13T19:16:32.756Z",
+      "duration": 60285.394,
+      "expected": 10,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "measurements": [
+      {
+        "limits": {
+          "dpr": 1,
+          "texture": 32768,
+          "renderbuffer": 32768,
+          "viewport": [
+            32768,
+            32768
+          ],
+          "renderer": "ANGLE (NVIDIA, Vulkan 1.3.242 (NVIDIA NVIDIA GeForce GTX 1650 (0x00001F82)), NVIDIA)"
+        },
+        "firstUploadMs": 137.80000000074506,
+        "firstPopulatedRenderMs": 138.30000000074506,
+        "completionMs": 470.69999999925494,
+        "producerHeldUntilMs": 229.19999999925494,
+        "resources": {
+          "readers": 0,
+          "peakReaders": 3,
+          "createdTextures": 3,
+          "peakTextures": 3,
+          "errors": [],
+          "contextLosses": 0,
+          "peakGpuBytes": 4383744,
+          "uploads": 165,
+          "firstUpload": 257.69999999925494,
+          "firstRender": 258.19999999925494,
+          "maxUploadBytes": 65536,
+          "textures": 3,
+          "gpuBytes": 4383744,
+          "arrays": [
+            230400,
+            614400,
+            3538944
+          ]
+        }
+      },
+      {
+        "limits": {
+          "dpr": 2,
+          "texture": 32768,
+          "renderbuffer": 32768,
+          "viewport": [
+            32768,
+            32768
+          ],
+          "renderer": "ANGLE (NVIDIA, Vulkan 1.3.242 (NVIDIA NVIDIA GeForce GTX 1650 (0x00001F82)), NVIDIA)"
+        },
+        "firstUploadMs": 110.09999999776483,
+        "firstPopulatedRenderMs": 110.5,
+        "completionMs": 610.3999999985099,
+        "producerHeldUntilMs": 145.59999999776483,
+        "resources": {
+          "readers": 0,
+          "peakReaders": 3,
+          "createdTextures": 3,
+          "peakTextures": 3,
+          "errors": [],
+          "contextLosses": 0,
+          "peakGpuBytes": 4383744,
+          "uploads": 170,
+          "firstUpload": 231,
+          "firstRender": 231.40000000223517,
+          "maxUploadBytes": 65536,
+          "textures": 3,
+          "gpuBytes": 4383744,
+          "arrays": [
+            230400,
+            614400,
+            3538944
+          ]
+        }
+      }
+    ],
+    "skip_reasons": [],
+    "reference_webgl": [
+      {
+        "dpr": 1,
+        "texture": 32768,
+        "renderbuffer": 32768,
+        "viewport": [
+          32768,
+          32768
+        ],
+        "renderer": "ANGLE (NVIDIA, Vulkan 1.3.242 (NVIDIA NVIDIA GeForce GTX 1650 (0x00001F82)), NVIDIA)"
+      },
+      {
+        "dpr": 2,
+        "texture": 32768,
+        "renderbuffer": 32768,
+        "viewport": [
+          32768,
+          32768
+        ],
+        "renderer": "ANGLE (NVIDIA, Vulkan 1.3.242 (NVIDIA NVIDIA GeForce GTX 1650 (0x00001F82)), NVIDIA)"
+      }
+    ]
+  },
+  "network_measurements": {
+    "first_data_seconds": "0.010554403001151513",
+    "completion_seconds": "0.100034372000664"
+  },
+  "network_skip_reasons": []
+}

@@ -1,0 +1,37 @@
+import { describe, expect, it } from 'vitest';
+import { amber, chromaRGB, encodeSRGB, luminance } from './chroma';
+import { formatFloat32, inspectionPosition } from './matrix-inspection';
+
+describe('luminance-preserving amber', () => {
+  it('keeps Y in gamut across strengths including black/white', () => {
+    expect(amber.reduce((sum, v, i) => sum + v * luminance[i]!, 0)).toBeCloseTo(0, 15);
+    for (let i = 0; i <= 1000; i++) for (const strength of [0, 0.08, 0.3, 1]) {
+      const y = i / 1000;
+      const rgb = chromaRGB(y, strength);
+      expect(rgb.every((c) => c >= -1e-15 && c <= 1 + 1e-15)).toBe(true);
+      expect(rgb.reduce((sum, v, j) => sum + v * luminance[j]!, 0)).toBeCloseTo(y, 14);
+    }
+    expect(chromaRGB(0, 1)).toEqual([0, 0, 0]);
+    expect(chromaRGB(1, 1)).toEqual([1, 1, 1]);
+    expect(encodeSRGB(0.5)).toBeCloseTo(0.735356983, 8);
+  });
+});
+
+it('readout round-trips exact float32s including signed zero and nonfinite values', () => {
+  const words = new Uint32Array([0, 0x80000000, 1, 0x7f7fffff, 0xff7fffff, 0x3f800001, 0x7f800000, 0xff800000, 0x7fc00000]);
+  for (const value of new Float32Array(words.buffer)) expect(Object.is(Math.fround(Number(formatFloat32(value))), value)).toBe(true);
+  expect(formatFloat32(-0)).toBe('-0');
+});
+
+it('places all viewport-edge cards outside the inspected neighborhood at DPR 1/2', () => {
+  for (const dpr of [1, 2]) for (const [width, height] of [[390, 844], [1440, 900]]) {
+    for (const x of [1, width! / 2, width! - 1]) for (const y of [1, height! / 2, height! - 1]) {
+      const p = inspectionPosition(x, y, width!, height!, dpr);
+      expect(p.left).toBeGreaterThanOrEqual(0);
+      expect(p.top).toBeGreaterThanOrEqual(0);
+      expect(p.left + 170).toBeLessThanOrEqual(width!);
+      expect(p.top + 212).toBeLessThanOrEqual(height!);
+      expect(p.left > x + 5 / dpr || p.left + 170 < x - 5 / dpr || p.top > y + 5 / dpr || p.top + 212 < y - 5 / dpr).toBe(true);
+    }
+  }
+});

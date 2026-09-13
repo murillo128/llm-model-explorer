@@ -25,6 +25,15 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/ModelSummary"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        '422':
+          $ref: "#/components/responses/Unprocessable"
+        '503':
+          $ref: "#/components/responses/ResourceExhausted"
+        '500':
+          $ref: "#/components/responses/InternalError"
   /sessions:
     post:
       operationId: createSession
@@ -43,8 +52,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Session"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
         "404":
           $ref: "#/components/responses/NotFound"
+        '422':
+          $ref: "#/components/responses/Unprocessable"
+        '503':
+          $ref: "#/components/responses/ResourceExhausted"
+        '500':
+          $ref: "#/components/responses/InternalError"
+        '400':
+          $ref: "#/components/responses/BadRequest"
   /sessions/{session_id}:
     parameters:
       - $ref: "#/components/parameters/SessionId"
@@ -59,17 +79,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Session"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
         "404":
           $ref: "#/components/responses/NotFound"
+        '422':
+          $ref: "#/components/responses/Unprocessable"
+        '503':
+          $ref: "#/components/responses/ResourceExhausted"
+        '500':
+          $ref: "#/components/responses/InternalError"
+        '409':
+          $ref: "#/components/responses/ModelChanged"
     delete:
       operationId: deleteSession
       tags: [Sessions]
       summary: Delete a session and release its ephemeral runtime state
       responses:
         "204":
-          description: Session deleted
+          description: Session deleted; cancels this session's consumers only, preserving other consumers
+            and shared artifacts
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
         "404":
           $ref: "#/components/responses/NotFound"
+        '422':
+          $ref: "#/components/responses/Unprocessable"
+        '503':
+          $ref: "#/components/responses/ResourceExhausted"
+        '500':
+          $ref: "#/components/responses/InternalError"
   /sessions/{session_id}/tensors:
     parameters:
       - $ref: "#/components/parameters/SessionId"
@@ -84,8 +125,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TensorInventory"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
         "404":
           $ref: "#/components/responses/NotFound"
+        '422':
+          $ref: "#/components/responses/Unprocessable"
+        '503':
+          $ref: "#/components/responses/ResourceExhausted"
+        '500':
+          $ref: "#/components/responses/InternalError"
+        '409':
+          $ref: "#/components/responses/ModelChanged"
   /sessions/{session_id}/tensors/{tensor_id}/data:
     parameters:
       - $ref: "#/components/parameters/SessionId"
@@ -102,6 +154,14 @@ paths:
           $ref: "#/components/responses/BinaryStream"
         "404":
           $ref: "#/components/responses/NotFound"
+        '422':
+          $ref: "#/components/responses/Unprocessable"
+        '503':
+          $ref: "#/components/responses/ResourceExhausted"
+        '500':
+          $ref: "#/components/responses/InternalError"
+        '409':
+          $ref: "#/components/responses/ModelChanged"
   /sessions/{session_id}/tensors/{tensor_id}/statistics:
     parameters:
       - $ref: "#/components/parameters/SessionId"
@@ -118,6 +178,14 @@ paths:
           $ref: "#/components/responses/BinaryStream"
         "404":
           $ref: "#/components/responses/NotFound"
+        '422':
+          $ref: "#/components/responses/Unprocessable"
+        '503':
+          $ref: "#/components/responses/ResourceExhausted"
+        '500':
+          $ref: "#/components/responses/InternalError"
+        '409':
+          $ref: "#/components/responses/ModelChanged"
   /sessions/{session_id}/tensors/{tensor_id}/distributions:
     parameters:
       - $ref: "#/components/parameters/SessionId"
@@ -137,6 +205,12 @@ paths:
           $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/Unprocessable"
+        '503':
+          $ref: "#/components/responses/ResourceExhausted"
+        '500':
+          $ref: "#/components/responses/InternalError"
+        '409':
+          $ref: "#/components/responses/ModelChanged"
   /sessions/{session_id}/tokenize:
     parameters:
       - $ref: "#/components/parameters/SessionId"
@@ -157,10 +231,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TokenizeResponse"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
         "404":
           $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/Unprocessable"
+        '503':
+          $ref: "#/components/responses/ResourceExhausted"
+        '500':
+          $ref: "#/components/responses/InternalError"
+        '400':
+          $ref: "#/components/responses/BadRequest"
+        '409':
+          $ref: "#/components/responses/ModelChanged"
   /operations/{operation_id}:
     parameters:
       - $ref: "#/components/parameters/OperationId"
@@ -174,8 +259,18 @@ paths:
         Shared work may continue while another consumer still requires it.
       responses:
         "204":
-          description: Cancellation accepted or the operation is already terminal
+          description: Cancellation accepted, already terminal, or ID no longer retained (including unknown
+            valid UUIDs)
 
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        '422':
+          $ref: "#/components/responses/Unprocessable"
+        '503':
+          $ref: "#/components/responses/ResourceExhausted"
+        '500':
+          $ref: "#/components/responses/InternalError"
 components:
   parameters:
     SessionId:
@@ -212,10 +307,11 @@ components:
             type: string
             format: uuid
         Cache-Control:
-          required: false
+          $ref: "#/components/headers/NoStore"
+        Access-Control-Expose-Headers:
+          description: For allowed cross-origin requests, must include X-Operation-Id.
           schema:
             type: string
-          description: Implementations should return `no-store`.
       content:
         application/vnd.llm-model-explorer.stream:
           schema:
@@ -226,14 +322,79 @@ components:
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/Error"
+            allOf:
+              - $ref: "#/components/schemas/Error"
+              - properties:
+                  code:
+                    enum: [model_not_found, session_not_found, tensor_not_found]
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
     Unprocessable:
-      description: The request is valid JSON/HTTP but not supported for the target resource
+      description: Invalid fields or unsupported representation, rank, size, or uint32 histogram count
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/Error"
-
+            allOf:
+              - $ref: "#/components/schemas/Error"
+              - properties:
+                  code:
+                    enum: [validation_error, unsupported_representation, unsupported_rank, unsupported_size]
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+    BadRequest:
+      description: Malformed JSON request body
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/Error"
+              - properties:
+                  code:
+                    enum: [malformed_json]
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+    ModelChanged:
+      description: Model content differs from the fingerprint pinned by the session
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/Error"
+              - properties:
+                  code:
+                    enum: [model_content_changed]
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+    ResourceExhausted:
+      description: Insufficient runtime resources
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/Error"
+              - properties:
+                  code:
+                    enum: [resource_exhausted]
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+    InternalError:
+      description: Unexpected failure
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/Error"
+              - properties:
+                  code:
+                    enum: [internal_error]
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
   schemas:
     ModelSummary:
       type: object
@@ -259,12 +420,12 @@ components:
           type: string
         parameter_count:
           type: integer
-          format: int64
           minimum: 0
+          maximum: 9007199254740991
         size_bytes:
           type: integer
-          format: int64
           minimum: 0
+          maximum: 9007199254740991
         tokenizer_available:
           type: boolean
 
@@ -327,18 +488,15 @@ components:
           items:
             type: string
         shape:
-          type: array
-          items:
-            type: integer
-            format: int64
-            minimum: 0
+          $ref: "#/components/schemas/TensorShape"
         rank:
           type: integer
           minimum: 0
+          maximum: 9007199254740991
         numel:
           type: integer
-          format: int64
           minimum: 0
+          maximum: 9007199254740991
         storage_dtype:
           type: string
           minLength: 1
@@ -349,6 +507,8 @@ components:
         logical_dtype:
           type: string
           enum: [float32]
+      description: rank equals shape.length; numel equals product(shape), with product([]) = 1. Validate
+        all products before allocation.
 
     TokenizeRequest:
       type: object
@@ -375,6 +535,8 @@ components:
           items:
             $ref: "#/components/schemas/Token"
 
+      description: Exact input echo without normalization. Token indices are consecutive from zero. Present
+        spans satisfy 0 <= start <= end <= code-point length(text); spans may overlap.
     Token:
       type: object
       additionalProperties: false
@@ -383,25 +545,35 @@ components:
         index:
           type: integer
           minimum: 0
+          maximum: 9007199254740991
         id:
           type: integer
+          minimum: 0
+          maximum: 9007199254740991
         token:
           type: string
           description: Tokenizer-native token representation.
         decoded:
           type: string
-          description: Tokenizer-provided decoded representation for this token.
+          description: Tokenizer-provided decoded representation; concatenation need not reconstruct input.
         start:
           type: integer
           minimum: 0
-          description: Inclusive character offset when the tokenizer provides a source span.
+          description: Inclusive Unicode code-point index into the exact echoed text; paired with end.
+          maximum: 9007199254740991
         end:
           type: integer
           minimum: 0
-          description: Exclusive character offset when the tokenizer provides a source span.
+          description: Exclusive Unicode code-point index into the exact echoed text; paired with start.
+          maximum: 9007199254740991
         special:
           type: boolean
 
+          description: True for a tokenizer special ID. Source-typed special IDs may have spans; backend-inserted
+            specials have none.
+      dependentRequired:
+        start: [end]
+        end: [start]
     Error:
       type: object
       additionalProperties: false
@@ -409,10 +581,274 @@ components:
       properties:
         code:
           type: string
-          minLength: 1
+          enum: [malformed_json, model_not_found, session_not_found, tensor_not_found, model_content_changed,
+            validation_error, unsupported_representation, unsupported_rank, unsupported_size, resource_exhausted,
+            internal_error]
         message:
           type: string
           minLength: 1
         details:
           type: object
           additionalProperties: true
+      description: Pre-stream JSON error or terminal ERROR_JSON payload. Messages/details must not expose
+        filesystem paths or tracebacks. Cancellation uses CANCELLED, not Error.
+    SafeInteger:
+      type: integer
+      minimum: 0
+      maximum: 9007199254740991
+    TensorShape:
+      type: array
+      items:
+        $ref: "#/components/schemas/SafeInteger"
+      description: Generic rank. [] has one element; any zero dimension gives zero elements. Validate
+        product and byte length before allocation.
+    NullableFiniteNumber:
+      type: [number, 'null']
+      description: Finite JSON number, or null only when there are no finite source values. NaN and Infinity
+        are never JSON numbers.
+    TensorMetadata:
+      type: object
+      additionalProperties: false
+      required: [kind, tensor_id, name, shape, dtype, byte_order, layout, byte_length]
+      properties:
+        kind:
+          type: string
+          const: tensor
+        tensor_id:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        shape:
+          $ref: "#/components/schemas/TensorShape"
+        dtype:
+          type: string
+          const: float32
+        byte_order:
+          type: string
+          const: little
+        layout:
+          type: string
+          const: c
+        byte_length:
+          $ref: "#/components/schemas/SafeInteger"
+      description: LMEX JSON metadata only; byte_length = 4 * product(shape). Numeric values follow as
+        binary DATA.
+    TensorStatisticsMetadata:
+      type: object
+      additionalProperties: false
+      required: [kind, tensor_id, count, finite_count, non_finite_count, minimum, maximum, mean, stddev,
+        percentiles, byte_length]
+      properties:
+        kind:
+          type: string
+          const: tensor_statistics
+        tensor_id:
+          type: string
+          minLength: 1
+        count:
+          $ref: "#/components/schemas/SafeInteger"
+        finite_count:
+          $ref: "#/components/schemas/SafeInteger"
+        non_finite_count:
+          $ref: "#/components/schemas/SafeInteger"
+        minimum:
+          $ref: "#/components/schemas/NullableFiniteNumber"
+        maximum:
+          $ref: "#/components/schemas/NullableFiniteNumber"
+        mean:
+          $ref: "#/components/schemas/NullableFiniteNumber"
+        stddev:
+          $ref: "#/components/schemas/NullableFiniteNumber"
+        percentiles:
+          type: object
+          additionalProperties: false
+          required: [p01, p05, p50, p95, p99]
+          properties:
+            p01:
+              $ref: "#/components/schemas/NullableFiniteNumber"
+            p05:
+              $ref: "#/components/schemas/NullableFiniteNumber"
+            p50:
+              $ref: "#/components/schemas/NullableFiniteNumber"
+            p95:
+              $ref: "#/components/schemas/NullableFiniteNumber"
+            p99:
+              $ref: "#/components/schemas/NullableFiniteNumber"
+        byte_length:
+          type: integer
+          const: 0
+      description: count = finite_count + non_finite_count. No DATA frames, including empty DATA. Finite
+        fields are all null iff finite_count = 0. See contract.md for numeric semantics.
+      allOf:
+        - if:
+            properties:
+              finite_count:
+                const: 0
+          then:
+            properties:
+              minimum:
+                type: 'null'
+              maximum:
+                type: 'null'
+              mean:
+                type: 'null'
+              stddev:
+                type: 'null'
+              percentiles:
+                properties:
+                  p01:
+                    type: 'null'
+                  p05:
+                    type: 'null'
+                  p50:
+                    type: 'null'
+                  p95:
+                    type: 'null'
+                  p99:
+                    type: 'null'
+          else:
+            properties:
+              minimum:
+                type: number
+              maximum:
+                type: number
+              mean:
+                type: number
+              stddev:
+                type: number
+                minimum: 0
+              percentiles:
+                properties:
+                  p01:
+                    type: number
+                  p05:
+                    type: number
+                  p50:
+                    type: number
+                  p95:
+                    type: number
+                  p99:
+                    type: number
+    DistributionSection:
+      type: object
+      additionalProperties: false
+      required: [name, shape, offset, byte_length]
+      properties:
+        name:
+          type: string
+          enum: [row_counts, column_counts]
+        shape:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: "#/components/schemas/SafeInteger"
+        offset:
+          $ref: "#/components/schemas/SafeInteger"
+        byte_length:
+          $ref: "#/components/schemas/SafeInteger"
+      description: C-order uint32 section; byte_length = 4 * product(shape). Offsets refer to concatenated
+        DATA, excluding frame headers.
+    TensorDistributionsMetadata:
+      type: object
+      additionalProperties: false
+      required: [kind, tensor_id, rows, columns, bin_count, binning, domain_minimum, domain_maximum, dtype,
+        byte_order, sections, byte_length]
+      properties:
+        kind:
+          type: string
+          const: tensor_distributions
+        tensor_id:
+          type: string
+          minLength: 1
+        rows:
+          $ref: "#/components/schemas/SafeInteger"
+        columns:
+          $ref: "#/components/schemas/SafeInteger"
+        bin_count:
+          type: integer
+          const: 100
+        binning:
+          type: string
+          const: linear-full-range
+        domain_minimum:
+          $ref: "#/components/schemas/NullableFiniteNumber"
+        domain_maximum:
+          $ref: "#/components/schemas/NullableFiniteNumber"
+        dtype:
+          type: string
+          const: uint32
+        byte_order:
+          type: string
+          const: little
+        sections:
+          type: array
+          minItems: 2
+          maxItems: 2
+          prefixItems:
+            - allOf:
+                - $ref: "#/components/schemas/DistributionSection"
+                - properties:
+                    name:
+                      const: row_counts
+            - allOf:
+                - $ref: "#/components/schemas/DistributionSection"
+                - properties:
+                    name:
+                      const: column_counts
+          items: false
+        byte_length:
+          $ref: "#/components/schemas/SafeInteger"
+      description: row_counts shape [rows,100], offset 0; column_counts shape [100,columns], offset row
+        byte length. Total length is section sum. Both domain endpoints null iff no finite source values;
+        counts then all zero. See contract.md.
+      allOf:
+        - if:
+            properties:
+              domain_minimum:
+                type: 'null'
+          then:
+            properties:
+              domain_maximum:
+                type: 'null'
+          else:
+            properties:
+              domain_maximum:
+                type: number
+    StreamMetadata:
+      description: JSON payload of META_JSON; never a JSON encoding of numeric DATA.
+      oneOf:
+        - $ref: "#/components/schemas/TensorMetadata"
+        - $ref: "#/components/schemas/TensorStatisticsMetadata"
+        - $ref: "#/components/schemas/TensorDistributionsMetadata"
+      discriminator:
+        propertyName: kind
+        mapping:
+          tensor: "#/components/schemas/TensorMetadata"
+          tensor_statistics: "#/components/schemas/TensorStatisticsMetadata"
+          tensor_distributions: "#/components/schemas/TensorDistributionsMetadata"
+    StreamProgress:
+      type: object
+      additionalProperties: false
+      required: [completed, unit]
+      properties:
+        completed:
+          $ref: "#/components/schemas/SafeInteger"
+        total:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        unit:
+          type: string
+          minLength: 1
+      description: Advisory PROGRESS_JSON payload. When total is present, completed <= total. Does not
+        change metadata.
+  headers:
+    NoStore:
+      required: true
+      description: Required on all API responses. Shared backend artifact caching is independent.
+      schema:
+        type: string
+        const: no-store
