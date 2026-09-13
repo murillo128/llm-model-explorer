@@ -13,6 +13,7 @@ function mockBackend() {
   const fetcher = vi.fn(async (input: string | URL | Request, options?: RequestInit) => {
     const url = String(input);
     if (url.endsWith('/models')) return json({ models });
+    if (url.endsWith('/tokenize')) return json({ ...JSON.parse(options!.body as string), tokens: [] });
     if (url.endsWith('/tensors')) return json({ tensors });
     if (options?.method === 'DELETE') return new Response(null, { status: 204 });
     if (options?.method === 'POST') return json(JSON.parse(options.body as string).model_id === models[1]!.id ? sessionB : sessionA, 201);
@@ -60,7 +61,7 @@ it('mounts and releases child-owned consumers and rejects stale status after A â
     }, [props]);
     return <p>Consumer {props.selectedTensor?.id}</p>;
   }
-  render(<App config={config} slots={{ tensor: Probe }} />); await chooseAlpha();
+  render(<App config={config} slots={{ tensor: Probe, tokenizer: () => <p>Tokenizer editor</p> }} />); await chooseAlpha();
   await userEvent.click(screen.getByRole('button', { name: /left.weight/ }));
   const old = contexts.at(-1)!;
   await userEvent.click(screen.getByRole('button', { name: /right.weight/ }));
