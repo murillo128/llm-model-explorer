@@ -4,7 +4,7 @@ import hashlib
 import math
 import struct
 import sys
-from collections.abc import Generator, Iterator
+from collections.abc import Generator, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -121,6 +121,14 @@ class ModelSource:
         self.check_unchanged()
         return tuple(location.descriptor for location in self._locations)
 
+    def configuration(self) -> dict[str, object]:
+        """Read only the pinned local configuration; never import model code."""
+        with self._snapshot.open("config.json") as stream:
+            raw = stream.read(MAX_METADATA_BYTES + 1)
+        if len(raw) > MAX_METADATA_BYTES:
+            raise ModelError("unsupported_size", "Model metadata exceeds the supported size.")
+        return parse_json(raw)
+
     @contextmanager
     def local_directory(self) -> Iterator[Path]:
         """Backend-only seam for local tokenizer loading/use; never serialize this path.
@@ -148,30 +156,71 @@ class ModelSource:
         location = next((loc for loc in self._locations if loc.descriptor.id == tensor_id), None)
         if location is None:
             raise ModelError("tensor_not_found", "Unknown tensor.", 404)
-        dtype, width = DTYPES[location.descriptor.storage_dtype]
-        with self._snapshot.open(location.file) as stream:
-            stream.seek(location.offset)
-            remaining = location.descriptor.numel
-            while remaining:
-                self.check_unchanged()
-                count = min(remaining, chunk_elements)
-                raw = bytearray(stream.read(count * width))
-                if len(raw) != count * width:
-                    raise changed()
-                # safetensors is little-endian; torch.frombuffer uses native order.
-                if sys.byteorder != "little":
-                    import array
+        yield from self._iter_ranges(location, [(0, location.descriptor.numel)], chunk_elements)
 
-                    words = array.array("I" if width == 4 else "H", raw)
-                    words.byteswap()
-                    raw = bytearray(words.tobytes())
-                try:
-                    values = torch.frombuffer(raw, dtype=dtype).to(dtype=torch.float32)
-                except torch.OutOfMemoryError as exc:
-                    # Do not let the snapshot's RuntimeError guard misclassify
-                    # native allocation failure as changed model content.
-                    raise MemoryError("Insufficient memory for tensor conversion.") from exc
-                self.check_unchanged()
-                yield values
-                remaining -= count
+    def iter_rows(
+        self, tensor_id: str, rows: tuple[int, ...], *, chunk_elements: int = DEFAULT_CHUNK_ELEMENTS
+    ) -> Generator[torch.Tensor, None, None]:
+        """Backend-only ordered row access; each range is bounded before conversion.
+
+        Coalesce adjacent ascending IDs without sorting or changing duplicates.
+        A single repeated bounded range reuses the preceding block. No row/table
+        sized allocation is needed even when a row exceeds the chunk bound.
+        """
+        if type(chunk_elements) is not int or not 0 < chunk_elements <= DEFAULT_CHUNK_ELEMENTS:
+            raise ValueError(f"chunk_elements must be between 1 and {DEFAULT_CHUNK_ELEMENTS}")
+        self.check_unchanged()
+        location = next((loc for loc in self._locations if loc.descriptor.id == tensor_id), None)
+        if location is None:
+            raise ModelError("tensor_not_found", "Unknown tensor.", 404)
+        shape = location.descriptor.shape
+        if len(shape) != 2:
+            raise ModelError("unsupported_rank", "Row access requires a matrix.")
+        if any(type(row) is not int or not 0 <= row < shape[0] for row in rows):
+            raise ModelError("validation_error", "Invalid input token IDs.")
+
+        def ranges() -> Iterator[tuple[int, int]]:
+            index = 0
+            while index < len(rows):
+                end = index + 1
+                while end < len(rows) and rows[end] == rows[end - 1] + 1:
+                    end += 1
+                yield rows[index] * shape[1], (end - index) * shape[1]
+                index = end
+
+        yield from self._iter_ranges(location, ranges(), chunk_elements)
+
+    def _iter_ranges(
+        self, location: TensorLocation, ranges: Iterable[tuple[int, int]], chunk_elements: int
+    ) -> Generator[torch.Tensor, None, None]:
+        dtype, width = DTYPES[location.descriptor.storage_dtype]
+        previous: tuple[int, int] | None = None
+        values: torch.Tensor | None = None
+        with self._snapshot.open(location.file) as stream:
+            for start, remaining in ranges:
+                while remaining:
+                    self.check_unchanged()
+                    count = min(remaining, chunk_elements)
+                    if previous != (start, count):
+                        stream.seek(location.offset + start * width)
+                        raw = bytearray(stream.read(count * width))
+                        if len(raw) != count * width:
+                            raise changed()
+                        # safetensors is little-endian; frombuffer uses native order.
+                        if sys.byteorder != "little":
+                            import array
+
+                            words = array.array("I" if width == 4 else "H", raw)
+                            words.byteswap()
+                            raw = bytearray(words.tobytes())
+                        try:
+                            values = torch.frombuffer(raw, dtype=dtype).to(dtype=torch.float32)
+                        except torch.OutOfMemoryError as exc:
+                            raise MemoryError("Insufficient memory for tensor conversion.") from exc
+                        previous = (start, count)
+                    self.check_unchanged()
+                    assert values is not None
+                    yield values
+                    start += count
+                    remaining -= count
         self.check_unchanged()

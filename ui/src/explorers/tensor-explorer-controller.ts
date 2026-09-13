@@ -68,6 +68,7 @@ export class TensorExplorerController {
           } else if (metadata.kind === 'tensor_statistics') {
             requireProtocol(metadata.count === tensor.numel, 'Statistics descriptor/count mismatch');
           } else {
+            requireProtocol(metadata.kind === 'tensor_distributions', 'Unexpected tensor explorer result');
             requireProtocol(metadata.rows === tensor.shape[0] && metadata.columns === tensor.shape[1], 'Distribution descriptor/shape mismatch');
             distributions = metadata;
           }

@@ -1,5 +1,5 @@
 import { StrictMode, useEffect } from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { deferred, json, models, sessionA, sessionB, tensors } from '../test/shell-fixtures';
@@ -33,12 +33,15 @@ it('renders public model metadata and logical hierarchy, describes unsupported r
   const slot = vi.fn((props: ExplorerContextValue) => <p>Viewer: {props.selectedTensor?.id}</p>);
   render(<StrictMode><App config={config} slots={{ tensor: slot }} /></StrictMode>);
   await chooseAlpha();
-  expect(screen.getByText('ExampleArchitecture')).toBeInTheDocument();
-  expect(screen.getByText('left', { selector: 'summary' })).toBeInTheDocument();
-  expect(screen.getByText('right', { selector: 'summary' })).toBeInTheDocument();
+  expect(within(screen.getByRole('contentinfo')).getByText('ExampleArchitecture')).toBeInTheDocument();
+  expect(screen.getByText('left', { selector: 'summary > span' })).toBeInTheDocument();
+  expect(screen.getByText('right', { selector: 'summary > span' })).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /left.weight/ }));
   expect(screen.getByText('Viewer: first')).toBeInTheDocument();
-  expect(screen.getByText('safetensors')).toBeInTheDocument();
+  expect(screen.queryByText('safetensors')).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Tensor information and help' }));
+  expect(screen.getByText('safetensors')).toBeVisible();
+  await userEvent.keyboard('{Escape}');
   await userEvent.click(screen.getByRole('button', { name: /right.weight/ }));
   expect(screen.getByText('Viewer: second')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /cube/ }));
@@ -122,7 +125,35 @@ it('backend replacement disposes the old view, fences old inventory, and uses ba
   await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
   await act(async () => { pending.resolve(json({ tensors })); });
   expect(screen.queryByRole('button', { name: /left.weight/ })).not.toBeInTheDocument();
-  expect(screen.getByText('No model selected')).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('');
   expect(sessionStorage.getItem(sessionStorageKey(config.backendBaseUrl))).toBe(sessionA.id);
   expect(fetcher.mock.calls.some(([url]) => String(url).startsWith('https://second.example/sessions'))).toBe(false);
+});
+
+
+it('keeps model/session API actions in compact accessible controls and discloses raw metadata', async () => {
+  const fetcher = mockBackend();
+  fetcher.mockResolvedValueOnce(json({ models: [{ ...models[0], size_bytes: 272400000 }] }));
+  render(<App config={config} />);
+  await chooseAlpha();
+  expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+  expect(screen.queryByText('Tensor Explorer workspace')).not.toBeInTheDocument();
+  expect(screen.getByText('272.4 MB')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Close session' })).not.toBeInTheDocument();
+  const options = screen.getByRole('button', { name: 'Session options' });
+  await userEvent.click(options);
+  expect(options).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByText('272,400,000')).toBeVisible();
+  await userEvent.keyboard('{Escape}');
+  expect(options).toHaveFocus();
+  expect(options).toHaveAttribute('aria-expanded', 'false');
+  const requests = fetcher.mock.calls.length;
+  await userEvent.click(screen.getByRole('button', { name: 'Refresh models' }));
+  await waitFor(() => expect(fetcher.mock.calls.slice(requests).map(([url]) => url)).toEqual(['https://backend.example/models']));
+  await userEvent.click(options);
+  await userEvent.click(screen.getByRole('button', { name: 'Close session' }));
+  await screen.findByText('Session closed.');
+  expect(fetcher).toHaveBeenCalledWith(`https://backend.example/sessions/${sessionA.id}`, expect.objectContaining({ method: 'DELETE' }));
+  expect(options).toHaveFocus();
+  expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('');
 });

@@ -30,9 +30,13 @@ Rank-1 tensors remain in scope, but the dedicated design work so far has not fix
 
 ## Tensor navigation and header
 
-The inventory is presented hierarchically using the tensor's logical/model name structure. Selecting a tensor opens one complete Tensor Explorer view; filesystem paths never appear in the UI.
+The inventory follows the public descriptor's logical path segments, never filesystem structure. Branches alone use chevron disclosure controls. Each leaf is one compact row with a tensor icon, its relative final path segment, and inline shape/storage dtype when width permits. Selection highlights the row rather than opening a card. Use shallow, capped indentation, truncate long labels, and retain full public identity in accessible names/tooltips so duplicate leaf names remain distinguishable. Native disclosure and selection work with Enter/Space and Tab; arrow keys navigate visible rows, open/close branches, or return to a parent, with Home/End reaching the first/last visible row.
 
-The inspector header should make the current context unambiguous without consuming significant data-view area. It may show the model, logical layer/module path, tensor name, shape, and the fact that the data view uses exact pixel mapping. The UI should use the descriptors already supplied by the inventory/API instead of reconstructing model metadata from names.
+The selected tensor has one compact contextual header inside the workspace: its breadcrumb/path plus immediately useful shape and storage dtype. Do not repeat it in global chrome, a large tensor-name title, or a permanent logical-path field. Use descriptors supplied by the inventory/API rather than inferring model metadata from names.
+
+A focusable, clickable information control beside the identity exposes secondary metadata on demand: full logical path (including any truncated portion), rank, element count, storage dtype/format, and logical dtype. The labelled popover supports pointer and keyboard opening, moves focus inside, dismisses on Escape with focus restored to the trigger, and closes when focus or pointer interaction leaves it. Filesystem paths never appear. Put exact-pixel orientation and keyboard inspection help here rather than in permanent workspace copy.
+
+Pending/streaming operations show compact transient feedback with a small spinner and accessible text near the header, plus cancellation while work remains active. Successful results return to a quiet ready state, without permanent completion labels. Keep independent tensor, statistics, and distribution error/cancellation states visible; auxiliary failure must not disable a successful matrix. Rendering resource failures remain explicit and actionable.
 
 The primary screen should remain visually sparse. The current design has three primary data rectangles for a 2D tensor and does not add a fourth legend/control block in the lower-right corner merely to fill space.
 

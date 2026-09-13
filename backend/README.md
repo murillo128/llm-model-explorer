@@ -311,7 +311,7 @@ nested dependencies. Real CUDA smoke is optional and is not implied by these tes
 ## Common LMEX delivery
 
 `lmex.LMEXWriter` implements the accepted 12-byte framing and validates the
-three metadata variants, progress and error objects against the current contract.
+metadata variants, progress and error objects against the current contract.
 It returns separate header/payload buffers; DATA uses memoryviews, is four-byte
 aligned and bounded to 256 KiB by default. It rejects length overruns, incomplete
 success, invalid ordering, non-finite JSON and control payloads above 1 MiB.
@@ -443,3 +443,28 @@ checks, independent consumer cancellation, and atomic publication apply to both.
 
 See [analysis evidence](evidence/tensor-analysis.md) for numerical tolerances,
 edge cases, cancellation/queue tests, synthetic timing, and workspace limits.
+
+## Input embedding rows
+
+`POST /sessions/{session_id}/embeddings` accepts ordered `token_ids` and streams
+only those input-embedding rows through LMEX as little-endian float32
+`[token_count, hidden_size]`. Order, duplicate IDs, and empty sequences are
+preserved. Preflight validates all IDs, matrix byte limits, and the 1 MiB META
+limit before registering a consumer.
+
+The initial resolver supports local `llama` / `LlamaForCausalLM` checkpoints
+(including SmolLM2-135M Base) when configuration dimensions agree with the
+architecture's input table. Missing/ambiguous architecture, custom model code
+mappings, and incompatible tables return `unsupported_representation` without
+using output weights or guessing from names.
+
+F32/F16/BF16 row reads share the tensor path's guarded native conversion, with
+at most 65,536 elements per block. Ascending adjacent rows are coalesced and an
+immediately repeated bounded range reuses its block. Each operation owns its
+reader, runs blocking reads in the worker pool, and uses existing cancellation
+and session cleanup. No prompt-specific disk artifact is created. Session
+pinning still hashes model assets in bounded reads; subsequent embedding lookup
+reads only requested row ranges and checks the pinned snapshot throughout.
+
+See [input embedding evidence](evidence/input-embeddings.md) for fixture coverage
+and a reproducible optional local SmolLM2 comparison.

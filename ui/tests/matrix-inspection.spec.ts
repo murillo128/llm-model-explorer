@@ -36,8 +36,9 @@ async function open(page: Page, prefix = 323) {
     }
     f.data(2, counts); f.end(2);
   }, prefix);
-  await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', prefix === 323 ? 'complete' : 'streaming');
-  await expect(page.locator('[data-result="distributions"]')).toHaveAttribute('data-state', 'complete');
+  if (prefix === 323) await expect(page.locator('[data-result="tensor"]')).toHaveCount(0);
+  else await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', 'streaming');
+  await expect(page.locator('[data-result="distributions"]')).toHaveCount(0);
   await page.locator('.matrix-scroll').scrollIntoViewIfNeeded();
 }
 async function hover(page: Page, row: number, column: number) {
@@ -137,6 +138,9 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
 
   test('card flips within all viewport corners without covering the inspected neighborhood', async ({ page }) => {
     await open(page);
+    // This isolated magnifier test deliberately moves data outside the workspace.
+    // Hide the fixed application bars so they do not intercept those corner probes.
+    await page.addStyleTag({ content: '.app-bar, .app-status-bar { visibility: hidden; }' });
     for (const [right, bottom] of [[false, false], [true, false], [false, true], [true, true]]) {
       await page.locator('.matrix-surfaces').evaluate((host: HTMLElement, [right, bottom]) => {
         Object.assign(host.style, { position: 'fixed', width: `${119 / devicePixelRatio + 10}px`, zIndex: '10', left: `${right ? innerWidth - 19 / devicePixelRatio - 2 : 2}px`,
@@ -210,4 +214,15 @@ test('matrix context loss clears active text and inspection resources', async ({
   await expect(page.locator('.matrix-inspection')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.explorerFixture.metrics.liveDisplays.size)).toBe(0);
   await expect(page.getByRole('alert')).toContainText('Exact rendering is unavailable');
+});
+
+
+test('shell typography preserves hit-testing at the final tensor pixel across font stacks', async ({ page }) => {
+  await open(page);
+  for (const font of ['Arial, sans-serif', 'DejaVu Sans, sans-serif', 'monospace']) {
+    await page.locator('.app-shell').evaluate((shell: HTMLElement, font) => { shell.style.fontFamily = font; }, font);
+    await page.locator('.matrix-scroll').scrollIntoViewIfNeeded();
+    await hover(page, 16, 18);
+    expect(await page.evaluate(() => document.documentElement.scrollHeight === innerHeight)).toBe(true);
+  }
 });

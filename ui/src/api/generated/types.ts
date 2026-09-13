@@ -168,6 +168,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{session_id}/embeddings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stream model input embedding rows in token sequence order
+         * @description Starts a cancelable long operation with LMEX result kind `input_embeddings`.
+         *     Validate all token IDs against the session model vocabulary before META/DATA.
+         *     Return unsupported_representation when a trustworthy input-embedding source
+         *     or its hidden size cannot be resolved. No full vocabulary table transfer or
+         *     eager full-table materialization is required. See contract.md.
+         */
+        post: operations["streamInputEmbeddings"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/{operation_id}": {
         parameters: {
             query?: never;
@@ -235,6 +261,11 @@ export interface components {
             /** @enum {string} */
             logical_dtype: "float32";
         };
+        /** @description Empty input is valid. Every ID must be below the model vocabulary size and address a resolved input-embedding row. Booleans and strings are not integer IDs. Source-dependent range checks are additional to JSON Schema validation. */
+        InputEmbeddingsRequest: {
+            /** @description Ordered IDs from the session tokenizer, including special IDs and duplicates. */
+            token_ids: components["schemas"]["SafeInteger"][];
+        };
         TokenizeRequest: {
             text: string;
             /** @default true */
@@ -284,6 +315,27 @@ export interface components {
             tensor_id: string;
             name: string;
             shape: components["schemas"]["TensorShape"];
+            /** @constant */
+            dtype: "float32";
+            /** @constant */
+            byte_order: "little";
+            /** @constant */
+            layout: "c";
+            byte_length: components["schemas"]["SafeInteger"];
+        };
+        /** @description Derived matrix, not a named checkpoint tensor. Shape is [token_ids.length, hidden_size]; byte_length = 4 * product(shape). Empty input has shape [0, hidden_size] and zero DATA bytes. The UTF-8 META payload must fit the existing 1 MiB control-frame limit; otherwise return unsupported_size. Numeric matrix values are binary DATA only. */
+        InputEmbeddingsMetadata: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "input_embeddings";
+            /** @description Exact ordered echo of the submitted token IDs; row i corresponds to token_ids[i]. */
+            token_ids: components["schemas"]["SafeInteger"][];
+            shape: [
+                components["schemas"]["SafeInteger"],
+                number
+            ];
             /** @constant */
             dtype: "float32";
             /** @constant */
@@ -364,7 +416,7 @@ export interface components {
             kind: "tensor_distributions";
         });
         /** @description JSON payload of META_JSON; never a JSON encoding of numeric DATA. */
-        StreamMetadata: components["schemas"]["TensorMetadata"] | components["schemas"]["TensorStatisticsMetadata"] | components["schemas"]["TensorDistributionsMetadata"];
+        StreamMetadata: components["schemas"]["TensorMetadata"] | components["schemas"]["InputEmbeddingsMetadata"] | components["schemas"]["TensorStatisticsMetadata"] | components["schemas"]["TensorDistributionsMetadata"];
         /** @description Advisory PROGRESS_JSON payload. When total is present, completed <= total. Does not change metadata. */
         StreamProgress: {
             completed: components["schemas"]["SafeInteger"];
@@ -706,6 +758,30 @@ export interface operations {
                     "application/json": components["schemas"]["TokenizeResponse"];
                 };
             };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModelChanged"];
+            422: components["responses"]["Unprocessable"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ResourceExhausted"];
+        };
+    };
+    streamInputEmbeddings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InputEmbeddingsRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["BinaryStream"];
             400: components["responses"]["BadRequest"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["ModelChanged"];

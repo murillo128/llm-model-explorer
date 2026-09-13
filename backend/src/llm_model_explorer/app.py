@@ -6,6 +6,7 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .embedding_routes import router as embedding_router
 from .model_routes import router as model_router
 from .services import Services, open_services
 from .session_routes import router as session_router
@@ -40,6 +41,13 @@ def create_app(
         allow_headers=["Content-Type"],
         expose_headers=["X-Operation-Id"],
     )
-    for router in (model_router, session_router, tokenizer_router, tensor_router, *routers):
+    for router in (
+        model_router,
+        session_router,
+        tokenizer_router,
+        tensor_router,
+        embedding_router,
+        *routers,
+    ):
         app.include_router(router)
     return app

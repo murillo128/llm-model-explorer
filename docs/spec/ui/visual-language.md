@@ -38,6 +38,8 @@ The following values are the implementation baseline for ordinary UI chrome. The
   --ui-accent-soft: #f3e1c9;
   --ui-shadow: 0 1px 2px rgb(43 39 31 / 4%);
   --ui-shadow-float: 0 10px 25px rgb(43 39 31 / 14%);
+  --ui-app-bar-height: 52px;
+  --ui-status-bar-height: 28px;
 }
 ```
 
@@ -51,34 +53,72 @@ Use a neutral sans-serif for product text and a neutral monospace for technical 
 
 Use these roles consistently:
 
-- product eyebrow: `12 px`, bold, uppercase, approximately `0.14em` tracking;
-- screen title: approximately `30–32 px`, semibold, compact line height;
-- model/path metadata: `13 px` monospace, muted;
-- section label: `11 px`, bold, uppercase, approximately `0.1em` tracking;
+- product identity and global navigation: `13 px`, semibold for identity and the active explorer;
+- status bar: `12 px` text with `11 px` technical metadata;
+- model/path metadata: `13 px` monospace with `20 px` line height, muted;
+- section label: `11 px` with `16 px` line height, bold, uppercase, approximately `0.1em` tracking;
 - ordinary body/control text: `14–16 px`;
 - compact coordinates, IDs, and helper text: `10–12 px` monospace.
 
 Avoid oversized marketing typography, multiple display faces, or a terminal-like wall of monospace. Monospace is a semantic tool for technical values, not the default font for the entire application.
 
-## Page and panel geometry
+## Application shell and panel geometry
 
-The current desktop composition reference is approximately `1736 × 872 px`. It is a design reference, not a fixed application viewport. The shell should adapt to the browser while preserving the exact native pixel geometry of scientific surfaces.
+The application occupies the browser viewport (`100dvh`). Its grid reserves exactly
+`--ui-app-bar-height: 52px` for the top bar and `--ui-status-bar-height: 28px` for
+the bottom status bar; the workspace frame receives all remaining height. These
+80 px leave about 90.5–91.1% of an 840–900 px desktop viewport for the workspace.
+Result rows and workspace notices use integer `20 px` line height;
+smaller inline labels retain their `16 px` leading so mixed font metrics do not
+enlarge the row and displace exact scientific surfaces by a fractional pixel.
+Normal application states must not produce document/body scrolling. Scrollable
+workspace panels have explicit shrinkable bounds; large scientific surfaces use
+ordinary panel scrolling without scaling, resampling, or changing exact pixels.
 
-At desktop sizes, use approximately `40 px` horizontal page padding and `24–30 px` top padding. Primary vertical gaps are normally `14–20 px`; aligned scientific surfaces use tighter gaps around `8 px`. Working panels use a `1 px` hairline border, approximately `8–10 px` corner radius, and at most the subtle base shadow. Floating inspection surfaces such as the magnifier may use the stronger floating shadow.
+The workspace frame uses `12 px` vertical and `16 px` horizontal padding on
+desktop, and `8 px` padding at narrow widths. Working panels use a `1 px` hairline
+border, approximately `8–10 px` corner radius, and at most the subtle base shadow.
+Floating inspection surfaces may use the stronger floating shadow.
 
-Do not fit, scale, or shrink a tensor surface to satisfy these page margins. When exact data geometry is larger than the available space, the containing region scrolls as defined by `rendering.md`.
+## Global application bar and status bar
 
-## Common screen header
+One compact global bar owns product identity, Tensor Explorer / Tokenizer Explorer
+navigation, the current model selector, adjacent refresh-model control, session
+state, and secondary session actions. The active navigation item is the explorer
+title. Do not repeat it as a large page heading or workspace title. The selector
+is the primary visible model identity; do not repeat the model as a subtitle or
+in the status bar. A workspace may retain an accessible explorer name without
+another visible title.
 
-Every explorer screen starts with the same quiet hierarchy:
+Refresh models is an icon control with an accessible name and tooltip. Close
+session belongs in the session-options overflow panel. This panel also exposes
+backend connection context, session identity, and raw model metadata on demand.
+Use semantic buttons and a labelled selector, visible keyboard focus, and an
+expanded-state disclosure. Escape dismisses the panel and returns focus to its
+trigger; moving focus outside also dismisses it.
 
-1. `LLM MODEL EXPLORER` eyebrow;
-2. one concise screen title;
-3. one muted technical metadata line containing only context useful for the current view.
+The fixed bottom bar presents compact inline session state and, when supplied,
+public architecture/model type, humanized decimal model size (for example
+`272.4 MB`), and tokenizer availability. Raw byte counts and parameter counts
+belong in the on-demand details. Loading, empty, error, retry, and storage notices
+remain readable in a bounded workspace notice area, without expanding the chrome.
 
-A small status chip may sit on the right when the state is actionable or materially informative, such as streaming, live tokenization, pinned inspection, or operation status. Do not create a permanent toolbar of decorative badges.
+At constrained widths, shorten visible navigation labels to Tensor / Tokenizer
+while retaining their full accessible names. Product identity and secondary
+metadata remain available in session options when omitted from the compact bars.
+Keep the model selector, refresh action, navigation, and overflow trigger usable
+in one row. Never restore a tall hero or scale scientific data to fit the chrome.
 
-Filesystem paths must never be shown. Model identity and tensor/module context come from public descriptors defined by the application contracts.
+Filesystem paths must never be shown. Model identity and tensor/module context
+come from public descriptors defined by the application contracts.
+
+Selected-item identity belongs to the owning workspace, with compact technical
+shape/type metadata beside it. Secondary descriptors and instructions use
+keyboard-accessible information popovers rather than permanent rows. The Tensor
+Explorer's exact hierarchy and feedback behavior are owned by
+[`tensor-explorer.md`](tensor-explorer.md#tensor-navigation-and-header).
+Navigation leaves use compact highlighted rows; reserve disclosure chevrons for
+branches and avoid nested selection cards.
 
 ## Tokenizer surface
 
@@ -126,6 +166,8 @@ These compositions may be wider than a normal viewport. Preserve native matrix g
 ## Loading, streaming, and incomplete data
 
 The UI must be useful before all derived information has arrived. When tensor bytes stream progressively, render available pixels as soon as possible. Distribution/statistics surfaces may appear or refine later. Never fabricate values, histogram data, or a fully populated matrix while bytes are missing.
+
+Successful operations leave no permanent completion chrome. Pending operations use compact spinners with accessible text; errors and warnings remain visible while attention is needed.
 
 Loading treatment belongs to the shell, not the data. Use restrained text/progress state around an incomplete scientific surface; do not replace unknown tensor regions with decorative fake heatmaps that could be mistaken for real values.
 

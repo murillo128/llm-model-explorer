@@ -37,8 +37,8 @@ async function open(page: Page, name = matrix) {
   await page.getByRole('button', { name: new RegExp(name.replaceAll('.', '\\.')) }).click();
 }
 async function complete(page: Page) {
-  await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'complete');
-  await expect(page.locator('[data-result=statistics]')).toHaveAttribute('data-state', 'complete');
+  await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
+  await expect(page.locator('[data-result=statistics]')).toHaveCount(0);
 }
 async function pixel(page: Page, x: number, y: number) {
   return page.evaluate(({ x, y }) => (window as any).__acceptance.pixel('.matrix-scroll canvas', x, y), { x, y });
@@ -116,7 +116,7 @@ test('production UI renders before producer completes; native geometry, inspecti
   expect(first.firstRender).toBeLessThan(beforeRelease);
   await control('release', {});
   await complete(page);
-  await expect(page.locator('[data-result=distributions]')).toHaveAttribute('data-state', 'complete');
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
   const ended = await page.evaluate(() => performance.now());
   const limits = await page.evaluate(() => (window as any).__acceptance.limits());
   const canvas = page.locator('.matrix-scroll canvas');
@@ -194,6 +194,7 @@ test('production UI renders before producer completes; native geometry, inspecti
     await idle();
     await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
   }
+  await page.getByRole('button', { name: 'Session options', exact: true }).click();
   await page.getByRole('button', { name: 'Close session', exact: true }).click();
   await idle();
 });
@@ -240,7 +241,7 @@ test('live tokenizer uses real Unicode IDs/spans and suppresses delayed old resp
   await expect(page.locator('.token-ids')).toHaveText(current);
   const persisted = await page.evaluate(() => sessionStorage.getItem(Object.keys(sessionStorage)[0]!));
   await page.reload();
-  await expect(page.locator('.session-feedback')).toHaveAttribute('data-state', 'ready');
+  await expect(page.getByRole('contentinfo').getByRole('status')).toHaveAttribute('data-state', 'ready');
   expect(await page.evaluate(() => sessionStorage.getItem(Object.keys(sessionStorage)[0]!))).toBe(persisted);
 });
 
@@ -259,6 +260,7 @@ test('cancel and network disconnect preserve incomplete status and return resour
     await idle();
     expect(Object.keys((await control()).artifacts)).toHaveLength(0);
   }
+  await page.getByRole('button', { name: 'Session options', exact: true }).click();
   await page.getByRole('button', { name: 'Close session', exact: true }).click();
   await expect.poll(async () => (await metrics(page)).textures).toBe(0);
   await expect.poll(async () => (await metrics(page)).readers).toBe(0);
@@ -269,8 +271,8 @@ test('real producer errors are distinct from cancellation in both primary and au
   await control('arm', { kind: 'tensor_statistics', mode: 'pre-meta-error' });
   await open(page);
   await expect(page.locator('[data-result=statistics]')).toHaveAttribute('data-state', 'failed');
-  await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'complete');
-  await expect(page.locator('[data-result=distributions]')).toHaveAttribute('data-state', 'complete');
+  await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
   await idle();
   const before = Object.keys((await control()).artifacts);
   await control('arm', { kind: 'logical_tensor', mode: 'midstream-error' });
