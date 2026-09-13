@@ -307,3 +307,43 @@ The deterministic tests in `test_operations.py` and `test_session_operations.py`
 cover singleflight, late replay, cache hits, independent cancellation, blocked I/O,
 commit races, slow readers, file/registry cleanup, fake per-device scheduling and
 nested dependencies. Real CUDA smoke is optional and is not implied by these tests.
+
+## Common LMEX delivery
+
+`lmex.LMEXWriter` implements the accepted 12-byte framing and validates the
+three metadata variants, progress and error objects against the current contract.
+It returns separate header/payload buffers; DATA uses memoryviews, is four-byte
+aligned and bounded to 256 KiB by default. It rejects length overruns, incomplete
+success, invalid ordering, non-finite JSON and control payloads above 1 MiB.
+
+`streaming.LMEXResponse(consumer, metadata_factory)` owns one public runtime
+consumer until the response ends. An endpoint first performs its known request
+checks (session/tensor existence, rank, supported representation and size), then
+subscribes and returns this response from a `LifecycleRoute` router. The async
+metadata factory returns a plain JSON-compatible metadata dictionary; it may wait
+for producer metadata, and must propagate metadata-production failures. It must
+cooperate with task cancellation and use the blocking-work service for disk or
+compute work. The response commits headers before invoking the factory.
+
+```python
+# Inside a domain endpoint after preflight and runtime subscription:
+async def metadata_factory() -> object:
+    return logical_metadata
+
+
+return LMEXResponse(consumer, metadata_factory)
+```
+
+The adapter reads incrementally with runtime backpressure, carrying at most
+three bytes between unaligned producer appends. Runtime EOF establishes producer
+success and successful artifact publication before COMPLETE is sent. Pre-META
+failures/cancellation use a terminal-only stream; subsequent failures terminate
+the partial result. Unexpected exception messages are kept off the wire. A failed
+ASGI send ends delivery without attempting another frame on a possibly truncated
+transport. Explicit operation DELETE and socket disconnect release only that
+consumer's interest; shared production can continue for another consumer.
+
+Progress emission is optional: the common writer supports it, while this response
+currently emits metadata, data and terminal frames only. No tensor, statistics or
+distribution product endpoint is introduced by this adapter. See
+[`evidence/lmex-streaming.md`](evidence/lmex-streaming.md) for transport evidence.
