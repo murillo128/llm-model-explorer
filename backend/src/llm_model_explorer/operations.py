@@ -108,8 +108,15 @@ class DeviceScheduler:
         **kwargs: P.kwargs,
     ) -> T:
         cancellation.check()
+
+        def invoke() -> T:
+            # A device slot does not imply an available executor worker. Check
+            # again at launch, after any wait in the shared thread-pool queue.
+            cancellation.check()
+            return function(*args, **kwargs)
+
         if device == "cpu":
-            result = await self.work.run(function, *args, **kwargs)
+            result = await self.work.run(invoke)
         else:
             device = "cuda:0" if device == "cuda" else device
             lock = self._devices.setdefault(device, asyncio.Lock())
@@ -122,7 +129,7 @@ class DeviceScheduler:
                 if acquire.done():
                     acquired = acquire.result()
                 cancellation.check()
-                result = await self.work.run(function, *args, **kwargs)
+                result = await self.work.run(invoke)
             finally:
                 if not acquire.done():
                     acquire.cancel()

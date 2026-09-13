@@ -11,7 +11,7 @@ ruff check backend: passed
 ruff format --check backend: passed
 cd backend
 PYTHONPATH=src /tmp/issue-5-venv/bin/mypy: passed (26 source files)
-PYTHONPATH=src /tmp/issue-5-venv/bin/pytest -q: 214 passed
+PYTHONPATH=src /tmp/issue-5-venv/bin/pytest -q: 220 passed
 ```
 
 Local environment setup exhausted available disk space when installing a second
@@ -36,6 +36,13 @@ Coverage includes:
 - Fake CUDA jobs serialize per device, queued cancellation skips launch, other
   devices/CPU progress independently, and active kernels retain their slot until
   completion even when the awaiting task is cancelled.
+- Saturated-executor barriers prove cancellation skips CPU and fake CUDA callbacks
+  waiting for a thread-pool worker, including after device-slot acquisition. Both
+  direct token cancellation and the last consumer leaving skip launch; cancelling
+  only one of two consumers preserves the remaining consumer's result. These six
+  regression cases produced four failures and two passing shared-consumer controls
+  before the worker-side cancellation check, and all six pass with the fix. They
+  also verify slot reuse, registry removal and temporary-artifact cleanup.
 - Nested materialization/statistics dependencies complete without owning a GPU
   slot while waiting, and parent cancellation releases internal interests.
 - HTTP session and operation DELETE cancel only their own consumers. Registries,

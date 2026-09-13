@@ -268,6 +268,8 @@ chunks. Returning means all blocking work and source validation have finished.
 Cancellation stops subsequent steps and queued jobs; active blocking work settles
 before its writer is aborted or its device slot released. If commit has already
 started, a successful publication survives cancellation.
+Compute callbacks recheck cancellation inside the worker immediately before launch,
+including when they waited in the shared thread pool after acquiring a device slot.
 
 A future binary response adapter should acquire its consumer before sending
 headers, put its UUID in `X-Operation-Id`, and own its entire response lifetime:

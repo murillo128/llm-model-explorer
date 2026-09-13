@@ -473,3 +473,103 @@ def test_external_task_cancel_keeps_gpu_slot_until_kernel_settles(tmp_path: Path
             assert next_entered.is_set()
 
     run(scenario())
+
+
+@asynccontextmanager
+async def saturated_executor(work: BlockingWork) -> AsyncIterator[None]:
+    """Occupy every real worker until the test explicitly leaves this context."""
+    loop = asyncio.get_running_loop()
+    release = Event()
+    entered = [asyncio.Event() for _ in range(work._executor._max_workers)]
+
+    def occupy(ready: asyncio.Event) -> None:
+        loop.call_soon_threadsafe(ready.set)
+        assert release.wait(10)
+
+    workers = [asyncio.create_task(work.run(occupy, ready)) for ready in entered]
+    try:
+        await asyncio.gather(*(ready.wait() for ready in entered))
+        yield
+    finally:
+        release.set()
+        await asyncio.gather(*workers)
+
+
+async def wait_for_executor_submission(work: BlockingWork) -> None:
+    # All workers are held at a barrier, so the queued callback cannot disappear.
+    # Yield until submission, without assuming how many event-loop turns it takes.
+    while work._executor._work_queue.empty():
+        await asyncio.sleep(0)
+
+
+@pytest.mark.parametrize("device", ["cpu", "cuda:0"])
+def test_cancel_compute_queued_in_saturated_executor(tmp_path: Path, device: str) -> None:
+    async def scenario() -> None:
+        async with runtime(tmp_path) as service:
+            cancellation = Cancellation()
+            launched = Event()
+            async with saturated_executor(service.work):
+                queued = asyncio.create_task(
+                    service.scheduler.run(device, cancellation, launched.set)
+                )
+                await wait_for_executor_submission(service.work)
+                cancellation.cancel()
+            with pytest.raises(OperationCancelled):
+                await queued
+            assert not launched.is_set()
+            # The skipped callback also releases its slot for subsequent live work.
+            assert await service.scheduler.run(device, Cancellation(), lambda: 42) == 42
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("device", ["cpu", "cuda:0"])
+@pytest.mark.parametrize("cancel_last", [True, False])
+def test_consumer_cancellation_of_compute_in_saturated_executor(
+    tmp_path: Path, device: str, cancel_last: bool
+) -> None:
+    async def scenario() -> None:
+        async with runtime(tmp_path) as service:
+            service.device = device
+            ready, compute = asyncio.Event(), asyncio.Event()
+            launched = Event()
+
+            def kernel() -> bytes:
+                launched.set()
+                return b"abcdefgh"
+
+            async def produce(ctx: ProducerContext) -> None:
+                ready.set()  # Lookup/writer creation have completed before saturation.
+                await ctx.cancellation.wait(compute)
+                await ctx.append(await ctx.compute(kernel))
+
+            first = await service.subscribe(uuid4(), spec(), produce)
+            second = await service.subscribe(uuid4(), spec(), produce)
+            await ready.wait()
+            async with saturated_executor(service.work):
+                compute.set()
+                await wait_for_executor_submission(service.work)
+                assert first.operation_id is not None
+                await service.cancel(first.operation_id)
+                assert not first._flight.cancellation.requested.is_set()
+                if cancel_last:
+                    assert second.operation_id is not None
+                    await service.cancel(second.operation_id)
+                    assert second._flight.cancellation.requested.is_set()
+            await second._flight.finished.wait()
+            if cancel_last:
+                assert not launched.is_set()
+                assert isinstance(second._flight.error, OperationCancelled)
+                assert service.store.lookup(spec()) is None
+                assert first.terminal == second.terminal == "cancelled"
+            else:
+                assert launched.is_set()
+                assert await drain(second) == b"abcdefgh"
+                assert first.terminal == "cancelled"
+                assert second.terminal == "complete"
+            assert not service._operations
+            assert not service._flights
+            assert not list(service.store.root.glob(".tmp-*"))
+            assert await service.scheduler.run(device, Cancellation(), lambda: 42) == 42
+
+    run(scenario())
