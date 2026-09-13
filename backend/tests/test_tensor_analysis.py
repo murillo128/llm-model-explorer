@@ -3,8 +3,12 @@
 import asyncio
 import json
 import math
+import os
 import statistics as reference
 import struct
+import subprocess
+import sys
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -16,6 +20,7 @@ from test_operations import run
 from test_streaming import Frames, forgotten, server
 from test_tensor_data import address, frames, payload, setup_stream
 
+import llm_model_explorer
 from llm_model_explorer.app import create_app
 from llm_model_explorer.materialization import LogicalTensor
 from llm_model_explorer.model_files import ModelError
@@ -277,6 +282,60 @@ def test_allocation_failure_is_clean(
         assert b"private" not in response.content
     assert not list(settings.cache_dir.glob("*/manifest.json"))
     assert not list(settings.cache_dir.glob(".tmp-*"))
+
+
+@pytest.mark.skipif(
+    sys.platform != "linux", reason="real allocator probe uses Linux RLIMIT_AS/proc"
+)
+def test_real_cpu_allocator_exhaustion(tmp_path: Path) -> None:
+    environment = dict(os.environ)
+    # Preserve the package actually under test, including isolated wheel runs.
+    environment["PYTHONPATH"] = str(Path(llm_model_explorer.__file__).resolve().parents[1])
+    environment["OMP_NUM_THREADS"] = "2"
+    probe = subprocess.run(
+        [sys.executable, str(Path(__file__).with_name("cpu_allocation_probe.py")), str(tmp_path)],
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=True,
+    )
+    result = json.loads(probe.stdout)
+    assert result["allocator_type"] == "RuntimeError"
+    assert "DefaultCPUAllocator: can't allocate memory:" in result["allocator_message"]
+    assert "Error code 12" in result["allocator_message"]
+    assert result["status"] == 200 and result["frame_types"] == [5]
+    assert result["error"] == {
+        "code": "resource_exhausted",
+        "message": "Insufficient memory for tensor analysis.",
+    }
+    assert result["complete_artifacts"] == 1  # Warmed statistics only.
+    assert result["temporary_artifacts"] == 0
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "unrelated native calculation failure",
+        "DefaultCPUAllocator: can't allocate memory: Error code 22 (Invalid argument)",
+        "OtherAllocator: can't allocate memory: Error code 12 (Cannot allocate memory)",
+    ],
+)
+def test_unrelated_runtime_errors_remain_internal(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, message: str
+) -> None:
+    make_model(settings.model_root)
+
+    def fail(*args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(TensorAnalysis, "_calculate", fail)
+    with TestClient(create_app(settings)) as client:
+        response = client.get(address(client).removesuffix("data") + "statistics")
+        result = frames(response.content)
+        assert [kind for kind, _ in result] == [5]
+        assert json.loads(result[0][1])["code"] == "internal_error"
+    assert not list(settings.cache_dir.glob("*/manifest.json"))
 
 
 @pytest.mark.parametrize("cancel_all", [False, True])

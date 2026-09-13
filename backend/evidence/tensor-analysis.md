@@ -40,6 +40,15 @@ Fixtures are generated locally; no model weights or cache artifacts are in Git.
   Materialization dependencies use the real device queue with CPU test callbacks
   to prove queue ordering, concurrent first DATA, and cancellation propagation.
   These scheduling tests are not represented as actual CUDA numerical evidence.
+- A Linux subprocess warms the real app, then limits virtual memory to current
+  usage plus 256 MiB. A native 800 MB `torch.empty` request confirms that the CPU
+  allocator raises ordinary `RuntimeError` with `DefaultCPUAllocator`/ENOMEM.
+  The real distributions endpoint for an empty `[0, 1000000]` F32 tensor then
+  fails its 800 MB histogram allocation with `ERROR_JSON resource_exhausted`.
+  Limits are restored in the subprocess; the pytest process is unconstrained.
+  No distribution artifact or temporary spool remains. Only the recognized CPU
+  allocator ENOMEM signature and typed PyTorch OOM are translated; other runtime
+  errors, allocator names, and error numbers remain internal failures.
 - MemoryError/native PyTorch OOM, source changes, and cancellation/failure after
   an internal cache prefix is written emit the proper terminal result, leave no
   valid partial artifact, and clean temporary files. Error payloads hide paths.
@@ -87,7 +96,7 @@ cannot establish GPU numerical equivalence. Existing warnings concern
 Starlette/AnyIO deprecations.
 
 Local final results: Ruff check/format and strict mypy pass. Source and isolated
-installed-wheel suites each pass **442 tests**, with **16 CUDA cases skipped**
-(57 passing derived-analysis cases added). The wheel was built with `uv build`,
+installed-wheel suites each pass **446 tests**, with **16 CUDA cases skipped**
+(61 passing derived-analysis cases added). The wheel was built with `uv build`,
 installed without dependencies into `/tmp/issue-9-installed`, and imported/tested
 from `/tmp` to verify the installed package independently of the source tree.

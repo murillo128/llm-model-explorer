@@ -3,6 +3,7 @@
 import array
 import ctypes
 import math
+import re
 import struct
 import sys
 from dataclasses import dataclass
@@ -26,6 +27,7 @@ DOMAIN = struct.Struct("<2d")
 BIN_COUNT = 100
 UINT32_MAX = 2**32 - 1
 WORK_ELEMENTS = MAX_READ_BYTES // 4
+CPU_ALLOCATION_FAILURE = re.compile(r"DefaultCPUAllocator: can't allocate memory:.*Error code 12\b")
 
 
 def _finite_mean(values: torch.Tensor, cancellation: Cancellation) -> float:
@@ -174,7 +176,13 @@ class TensorAnalysis:
     async def produce(self, context: ProducerContext) -> None:
         try:
             await self._produce(context)
-        except torch.OutOfMemoryError as exc:
+        except RuntimeError as exc:
+            # The pinned native CPU allocator reports ENOMEM as RuntimeError,
+            # unlike CUDA's typed OOM. Preserve every unrelated runtime failure.
+            if not isinstance(exc, torch.OutOfMemoryError) and not CPU_ALLOCATION_FAILURE.search(
+                str(exc)
+            ):
+                raise
             raise ModelError(
                 "resource_exhausted", "Insufficient memory for tensor analysis.", 503
             ) from exc
