@@ -1,23 +1,57 @@
 # LLM Model Explorer
 
-LLM Model Explorer is a browser-first interactive tool for understanding transformer models by inspecting and visualizing tensors, weights, activations, and matrix/vector operations.
+LLM Model Explorer is a browser-based interactive application for understanding transformer models by exposing their tensors and, in later phases, the individual computation steps involved in inference.
 
-## Current scope
+The project is intentionally split into three independent system boundaries: a Python backend that owns local model access and mathematical computation, a contract-first API that defines communication, and a browser UI that owns visualization and interaction.
 
-The initial reference model is `HuggingFaceTB/SmolLM2-135M`, using the Base variant rather than Instruct. The target runtime is the browser, with WebGL2 and GLSL shaders as the working direction for GPU-side tensor visualization and interaction.
+## Current proof of concept
 
-The explorer should make model computation inspectable rather than hiding it behind aggregate charts. Matrix and vector operations are intended to be reusable first-class views; for example, a matrix multiplication view should be able to show `[A] × [B] = [C]` and, when hovering an element of `C`, highlight the row of `A` and column of `B` that produced it.
+The initial reference model is `HuggingFaceTB/SmolLM2-135M` Base.
 
-## Data and visualization constraints
+The first proof of concept has two user-facing capabilities:
 
-Weight values must remain exact unless an explicit design decision says otherwise. Do not introduce rounding, grouping, quantization, or lossy visual storage merely to simplify rendering.
+- **Tensor Explorer**: discover model tensors through a hierarchical list and open complete 1D or 2D tensors for progressive visualization.
+- **Tokenizer Explorer**: run the real Hugging Face tokenizer associated with the selected model and inspect its result.
 
-Avoid maintaining duplicate GPU-side copies of the same weights solely for visualization. Prefer one authoritative GPU representation when the chosen WebGL2 format and operation allow it, and keep the relationship between stored values and visualized elements direct.
+The detailed behavior of both explorers is intentionally delegated to their dedicated specifications. The general architecture must already support the later move to step-by-step inference without replacing the backend model, API boundary, session model, streaming mechanism, artifact cache, or renderer boundary.
 
-Color is a visualization concern. Visual color mapping and interaction should be performed in shaders or equivalent rendering logic without rewriting the underlying weight values just to change their appearance.
+Future work will extend the same architecture to embeddings, transformer layers, attention, matrix/vector operations, activations, token generation, KV cache, sampling, and other intermediate inference state. Execution remains UI-driven: even a continuous Play mode is conceptually a sequence of explicit steps requested by the UI rather than an autonomous backend process.
+
+## System architecture
+
+The **backend** is Python with FastAPI/Starlette for HTTP and PyTorch for tensor computation. CUDA is the optimized path when configured and available; CPU remains supported with the same logical API behavior. Local Hugging Face models are discovered below a configured model root, opened lazily, and treated as read-only.
+
+The **API** is a first-class independent contract. Ordinary control and metadata operations use typed HTTP/JSON contracts, while large numeric results use binary HTTP streaming. Backend and UI evolve together against the current contract; public backwards-compatible API versioning is not a proof-of-concept requirement.
+
+The **UI** is React + TypeScript + Vite. WebGL2 rendering lives behind a reusable renderer boundary independent from React. Backend and UI are separately deployable and may run on different computers.
+
+## Data, streaming, and rendering invariants
+
+Large numeric payloads are binary and progressive. The UI must be able to consume and display data before the complete result has arrived. Potentially expensive work uses explicit cancelable long operations with an `operation_id`; the same HTTP response that starts an operation carries its progressive result.
+
+The backend owns physical model-format knowledge. The main visualization path exposes logical tensor values in canonical `float32`, so the UI does not need to implement NF4, INT8, or other quantization decoders. Model values remain authoritative and visualization must not mutate them.
+
+The proof-of-concept tensor renderer follows an exact spatial rule: **one weight equals one rendered pixel**. Matrices are not fit to the viewport, resampled, or aggregated; oversized content uses normal scrolling. Weight value is encoded through luminosity using a configurable nonlinear sigmoid-like transfer based on robust tensor statistics. Color remains an independent semantic channel for later uses such as selection, activations, clusters, and highlighting.
+
+## Sessions and artifact cache
+
+Multiple UI sessions may be active concurrently. Each session is bound to one model and its logical state is held in backend memory for the proof of concept. Expensive GPU work is serialized through one execution queue per GPU device, while disk reads, cache hits, tokenization, and HTTP streams may proceed concurrently.
+
+Derived reusable results are stored in a shared filesystem artifact cache. Cached artifacts are complete, immutable, reconstructible, and keyed by all inputs that determine their content, including the model content fingerprint. Chunks are transport units, not cache units. The cache is disposable: with the backend stopped, the entire cache directory may be deleted and rebuilt on demand.
+
+## Specification
+
+The accepted product and architecture specification lives under [`docs/spec/`](docs/spec/README.md):
+
+- [`docs/spec/product.md`](docs/spec/product.md) — product scope, proof-of-concept boundaries, and future direction.
+- [`docs/spec/backend/`](docs/spec/backend/) — backend runtime, models, sessions/execution, and artifact cache.
+- [`docs/spec/api/`](docs/spec/api/) — API contract and binary streaming protocol.
+- [`docs/spec/ui/`](docs/spec/ui/) — UI architecture, rendering rules, and dedicated explorer specifications.
+
+`docs/spec/ui/tensor-explorer.md` and `docs/spec/ui/tokenizer-explorer.md` are currently deliberate placeholders for their dedicated design work; their detailed behavior must not be reconstructed from the general architecture documents.
 
 ## Repository workflow
 
-This repository inherits the Skillforge issue-driven development workflow. Durable product decisions belong in repository documentation, bounded implementation work belongs in GitHub issues, and non-trivial implementation should follow the repository's agent and review workflow.
+This repository uses the Skillforge issue-driven development workflow. Durable accepted design belongs in repository documentation, bounded implementation work belongs in GitHub issues, and non-trivial implementation follows the repository agent and review workflow defined in [`AGENTS.md`](AGENTS.md).
 
-The application implementation has not been scaffolded yet; this repository bootstrap establishes project scope and development invariants only.
+The product architecture specification is established; the application implementation has not yet been scaffolded.
