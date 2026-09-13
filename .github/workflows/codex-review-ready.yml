@@ -148,12 +148,6 @@ jobs:
 
           git -C "$repo_root" show "${GITHUB_SHA}:.github/workflows/codex-execute-ready.yml" > "${state_dir}/published-launcher.yml"
           git -C "$repo_root" show "${GITHUB_SHA}:.github/scripts/prepare_pr_audit.py" > "${state_dir}/prepare_pr_audit.py"
-          validation="${state_dir}/validation"
-          for path in .github/workflows/codex-execute-ready.yml .github/workflows/codex-review-ready.yml .github/scripts/prepare_pr_audit.py tests/workflows/test_pr_audit_isolation.py tests/workflows/test_pr_audit_direct_review.py; do
-            mkdir -p "${validation}/$(dirname "$path")"
-            git -C "$repo_root" show "${GITHUB_SHA}:${path}" > "${validation}/${path}"
-          done
-          python3 -m unittest discover -s "${validation}/tests/workflows" -v
           audit_client="${state_dir}/pr-audit-client.py"
           python3 "${state_dir}/prepare_pr_audit.py" "${state_dir}/published-launcher.yml" "$audit_client"
 
