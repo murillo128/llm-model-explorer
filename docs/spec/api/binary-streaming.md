@@ -4,7 +4,7 @@
 
 Long operations return progressive binary HTTP responses so the UI can consume useful data before the complete result has been produced or transferred.
 
-The same framing is used for tensor transfer, tensor statistics, row/column distributions, and later large or progressive results such as activations and inference intermediates.
+The same framing is used for tensor transfer, input embedding lookup, tensor statistics, row/column distributions, and later large or progressive results such as activations and inference intermediates.
 
 The protocol has no public version negotiation. Backend and UI implement the current accepted framing together.
 
@@ -86,7 +86,7 @@ If the HTTP transport itself is interrupted before a terminal frame, the result 
 
 ## Common metadata
 
-Every `META_JSON` payload validates against `#/components/schemas/StreamMetadata` in `openapi.yaml`, discriminated by `kind`. All three variants include:
+Every `META_JSON` payload validates against `#/components/schemas/StreamMetadata` in `openapi.yaml`, discriminated by `kind`. All variants include:
 
 - `kind`: string identifying the result semantics;
 - `byte_length`: total number of logical `DATA` payload bytes expected before successful completion.
@@ -112,6 +112,28 @@ For `kind: "tensor"`, `META_JSON` contains:
 The concatenated `DATA` bytes are the complete logical tensor in C-contiguous order. Individual `DATA` frame payload lengths must be multiples of 4 so one `float32` element is never split across protocol frames.
 
 The UI may progressively copy/upload complete received values without waiting for the terminal frame, but it must not treat missing regions as populated tensor values.
+
+## Input-embedding result
+
+For `kind: "input_embeddings"`, META validates against
+`InputEmbeddingsMetadata` and contains `token_ids`, `shape`, `dtype: "float32"`,
+`byte_order: "little"`, `layout: "c"`, and `byte_length`. It deliberately has no
+checkpoint tensor ID or name. `token_ids` echoes the request in exact order;
+shape is `[token_ids.length, hidden_size]`, with positive hidden size and
+`byte_length == 4 * product(shape)`.
+
+Concatenated DATA is one complete derived matrix in C-order: row `i` is the
+input embedding for `token_ids[i]`, including duplicate rows for duplicate IDs.
+DATA frame lengths are multiples of four and may split rows. Network chunks
+may split any header or value. Progressive copy/upload follows the tensor-result
+rules; incomplete values are never treated as a successful complete matrix.
+
+Empty input uses META with shape `[0, hidden_size]`, zero DATA bytes, and
+COMPLETE (optional progress remains advisory). The common error/cancellation
+rules apply before META or after partial DATA. The existing 1 MiB JSON limit
+includes the ordered ID echo; oversized metadata uses `unsupported_size`, not
+an enlarged control-frame limit. Lookup and request validation semantics belong
+to `contract.md`.
 
 ## Tensor-statistics result
 

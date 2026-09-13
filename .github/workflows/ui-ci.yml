@@ -5,14 +5,14 @@ on:
     paths:
       - 'ui/**'
       - 'docs/spec/api/openapi.yaml'
-      - 'api/fixtures/conformance.json'
+      - 'api/fixtures/**'
       - '.github/workflows/ui-ci.yml'
   push:
     branches: [main, 'codex/epic-issue-*']
     paths:
       - 'ui/**'
       - 'docs/spec/api/openapi.yaml'
-      - 'api/fixtures/conformance.json'
+      - 'api/fixtures/**'
       - '.github/workflows/ui-ci.yml'
   workflow_dispatch:
 

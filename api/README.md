@@ -68,6 +68,36 @@ case declares a nearly 4 GiB DATA frame but supplies no payload; run it with a
 bounded destination/sink to verify incremental handling without allocating a
 frame-sized staging buffer. It is intentionally a tiny file, not a large blob.
 
+## Input-embedding extension
+
+[`fixtures/embeddings.json`](fixtures/embeddings.json) uses the same `wire_cases`
+and `schema_cases` formats for the accepted post-PoC capability. Keeping it
+separate lets the backend implementation child adopt these producer fixtures
+without changing the existing named-tensor producer in this contract issue.
+The UI decoder consumes both files; this does not add an embedding request
+method or compose an embedding view.
+
+`source` contains a tiny synthetic input table and its vocabulary/hidden sizes.
+`request_cases` checks IDs against that source, including the exclusive upper
+bound. An out-of-range ID is structurally valid JSON Schema but fails the
+source-dependent request check with `validation_error`. `association_cases`
+separates valid wire metadata from request matching: an otherwise valid result
+with reordered/different IDs must not be displayed for the originating request.
+The backend/UI implementation children must adopt these contextual cases in
+addition to the codec fixtures. Numeric rows here are repository oracles only,
+never a JSON matrix response format.
+
+`api/validate_contract.py` validates and deterministically regenerates both files.
+It checks explicit expected rows/bytes, shape products, request ranges, metadata
+size limits, and positive/negative schemas. The shared stream cases cover
+asymmetry, duplicates, singleton/empty sequences, early/partial error and cancel,
+invalid metadata, and malformed/truncated framing.
+
+After changing OpenAPI, run `npm run api:generate --prefix ui`, then
+`npm run api:check --prefix ui`. Generated `types.ts` and `schemas.json` must
+match the contract exactly; a second generation must leave their bytes unchanged.
+`npm run check --prefix ui` also checks binding drift and shared codec fixtures.
+
 The generator constructs frames and asserts small numeric reference results;
 it does **not** parse streams or claim that a future codec passes these cases.
 Codec behavior, incremental memory use, HTTP/CORS headers, session cancellation,

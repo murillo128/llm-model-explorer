@@ -101,7 +101,7 @@ export class ApiClient {
   streamTensorDistributions(session: string, tensor: string, options: StreamOptions = {}): StreamOperation {
     return this.stream(`${this.tensorPath(session, tensor)}/distributions`, tensor, 'tensor_distributions', options);
   }
-  private stream(path: string, tensor: string, kind: Metadata['kind'], options: StreamOptions): StreamOperation {
+  private stream(path: string, tensor: string, kind: Exclude<Metadata['kind'], 'input_embeddings'>, options: StreamOptions): StreamOperation {
     const controller = new AbortController();
     let operationId: string | undefined;
     let settled = false;
