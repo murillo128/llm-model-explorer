@@ -14,6 +14,9 @@ from llm_model_explorer.stream_metadata import METADATA, StreamError, StreamProg
 FIXTURES: dict[str, Any] = json.loads(
     (Path(__file__).resolve().parents[2] / "api/fixtures/conformance.json").read_text()
 )
+EMBEDDINGS: dict[str, Any] = json.loads(
+    (Path(__file__).resolve().parents[2] / "api/fixtures/embeddings.json").read_text()
+)
 
 
 def metadata(length: int = 8) -> dict[str, object]:
@@ -31,7 +34,11 @@ def metadata(length: int = 8) -> dict[str, object]:
 
 @pytest.mark.parametrize(
     "case",
-    [c for c in FIXTURES["wire_cases"] if c["expected"]["outcome"] != "reject"],
+    [
+        c
+        for c in FIXTURES["wire_cases"] + EMBEDDINGS["wire_cases"]
+        if c["expected"]["outcome"] != "reject"
+    ],
     ids=lambda c: c["name"],
 )
 def test_shared_wire_bytes(case: dict[str, Any]) -> None:
@@ -62,14 +69,15 @@ def test_shared_wire_bytes(case: dict[str, Any]) -> None:
     "case",
     [
         c
-        for c in FIXTURES["schema_cases"]
-        if c["schema"] in ("StreamMetadata", "StreamProgress", "Error")
+        for c in FIXTURES["schema_cases"] + EMBEDDINGS["schema_cases"]
+        if c["schema"] in ("StreamMetadata", "InputEmbeddingsMetadata", "StreamProgress", "Error")
     ],
     ids=lambda c: c["name"],
 )
 def test_shared_control_schemas(case: dict[str, Any]) -> None:
     validators: dict[str, Callable[[Any], object]] = {
         "StreamMetadata": METADATA.validate_python,
+        "InputEmbeddingsMetadata": METADATA.validate_python,
         "StreamProgress": StreamProgress.model_validate,
         "Error": StreamError.model_validate,
     }

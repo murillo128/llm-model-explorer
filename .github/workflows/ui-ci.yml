@@ -21,22 +21,48 @@ permissions:
 
 jobs:
   ui:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     name: Typecheck, lint, unit, build and browser
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, codex]
     defaults:
       run:
         working-directory: ui
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version-file: ui/.nvmrc
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
-      - run: npm ci
+      - name: Select isolated browser ports
+        shell: bash
+        run: |
+          base_port=$((20000 + (GITHUB_RUN_ID % 10000) * 3))
+          echo "UI_TEST_PORT=$base_port" >> "$GITHUB_ENV"
+      - name: Restore locked node_modules
+        id: node-modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ui/node_modules
+            ui/scripts/api-generator/node_modules
+          key: ui-node-modules-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ui/.nvmrc', 'ui/package.json', 'ui/package-lock.json', 'ui/scripts/api-generator/package.json') }}
+      - if: steps.node-modules.outputs.cache-hit != 'true'
+        run: npm ci
       - run: npm run check
-      - run: npx playwright install --with-deps chromium
-      - run: xvfb-run -a npm run test:browser
+      - name: Ensure the locked Chromium build is available
+        run: npx playwright install chromium
+      - name: Run browser tests
+        shell: bash
+        run: |
+          if command -v xvfb-run >/dev/null 2>&1; then
+            xvfb-run -a npm run test:browser
+          elif [ -n "${DISPLAY:-}" ]; then
+            npm run test:browser
+          else
+            echo "xvfb-run is required once on the self-hosted CI runner for the headful scrollbar test." >&2
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
