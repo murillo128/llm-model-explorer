@@ -20,7 +20,7 @@ export class MatrixViewport {
     host.classList.add('matrix-surfaces');
     Object.assign(host.style, { display: 'grid', gap: '10px', alignItems: 'start', minWidth: '0' });
     this.main.className = 'matrix-scroll';
-    Object.assign(this.main.style, { gridColumn: '1', gridRow: '1', minWidth: '0' });
+    Object.assign(this.main.style, { gridColumn: '1', gridRow: '1', minWidth: '0', height: 'auto' });
     this.main.setAttribute('role', 'region');
     this.main.setAttribute('aria-label', 'Tensor matrix; scroll to inspect all values');
     this.main.tabIndex = 0;
@@ -29,6 +29,10 @@ export class MatrixViewport {
     Object.assign(this.rowHost.style, { gridColumn: '2', gridRow: '1' });
     Object.assign(this.columnHost.style, { gridColumn: '1', gridRow: '2' });
     host.append(this.main);
+    // Auto height includes native horizontal scrollbar chrome in addition to the
+    // intrinsic data extent. A fixed data-height border box can hide a short strip.
+    const hostMaxHeight = getComputedStyle(this.main).maxHeight;
+    this.main.style.maxHeight = hostMaxHeight === 'none' ? '50vh' : `min(50vh, ${hostMaxHeight})`;
     try {
       if (descriptor.rank === 2 && descriptor.numel > 0) {
         for (const [panel, label] of [[this.rowHost, 'Row distributions'], [this.columnHost, 'Column distributions']] as const) {
@@ -45,7 +49,6 @@ export class MatrixViewport {
       const layout = () => {
         const dpr = window.devicePixelRatio;
         host.style.gridTemplateColumns = `minmax(0, ${descriptor.shape.at(-1)! / dpr}px)${this.rows ? ` ${100 / dpr}px` : ''}`;
-        this.main.style.height = `min(50vh, ${(descriptor.rank === 1 ? 1 : descriptor.shape[0]!) / dpr}px)`;
       };
       layout();
       this.matrix = new TensorViewport(this.main, descriptor, { ...options, onViewChange: (view) => {

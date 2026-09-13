@@ -54,7 +54,8 @@ export class TensorViewport {
     const maxWidth = Math.min(options.framebufferLimit ?? Infinity, limits.renderbufferSize, limits.viewportWidth);
     const maxHeight = Math.min(options.framebufferLimit ?? Infinity, limits.renderbufferSize, limits.viewportHeight);
     const hostMaxWidth = getComputedStyle(host).maxWidth;
-    const hostMaxHeight = getComputedStyle(host).maxHeight;
+    // Keep an inline relative ceiling (e.g. 50vh) responsive across resizes.
+    const hostMaxHeight = host.style.maxHeight || getComputedStyle(host).maxHeight;
     this.setCeilings = () => {
       const width = `${maxWidth / window.devicePixelRatio}px`;
       const height = `${maxHeight / window.devicePixelRatio}px`;

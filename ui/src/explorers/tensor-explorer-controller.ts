@@ -14,6 +14,7 @@ export interface ExplorerStatus {
   distributions: ResultState;
   rendering: 'ready' | 'failed';
 }
+type TensorExplorerInput = Pick<ExplorerContextValue, 'client' | 'sessionId' | 'selectedTensor' | 'selection'>;
 type Result = 'tensor' | 'statistics' | 'distributions';
 
 /** One selected descriptor and its three independently owned operation handles. */
@@ -25,7 +26,7 @@ export class TensorExplorerController {
   private cancelled = false;
   private status: ExplorerStatus = { tensor: 'loading', statistics: 'loading', distributions: 'loading', rendering: 'ready' };
 
-  constructor(host: HTMLElement, context: ExplorerContextValue, private readonly changed: (status: ExplorerStatus) => void, options: RendererOptions = {}) {
+  constructor(host: HTMLElement, context: TensorExplorerInput, private readonly changed: (status: ExplorerStatus) => void, options: RendererOptions = {}) {
     const tensor = context.selectedTensor!;
     this.viewport = new MatrixViewport(host, tensor, { ...options, onStateChange: (state) => {
       options.onStateChange?.(state);

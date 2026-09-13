@@ -79,13 +79,15 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
-npx playwright install chromium
-npm run test:browser
+npx playwright install --with-deps chromium
+xvfb-run -a npm run test:browser
 ```
 
 `npm run check` combines type-checking, lint, unit/component tests, and production
 build. On a fresh Linux host, `npx playwright install --with-deps chromium` also
-installs Chromium's required system libraries. Playwright starts its own Vite
+installs Chromium's required system libraries and Xvfb. The `native-scrollbars`
+project uses headed Chromium to verify non-overlay scrollbars; on Linux without
+a display run the suite with `xvfb-run -a` as above. Playwright starts its own Vite
 preview server on port 4173; run it after building and with that port free.
 Renderer browser fixtures also use a Vite dev server on port 4174. They exercise
 the source renderer; set `UI_TEST_PORT` to move both servers (preview uses that

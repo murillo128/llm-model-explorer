@@ -16,19 +16,19 @@ export function TensorExplorer(context: ExplorerContextValue) {
   return <LoadedTensorExplorer {...context} />;
 }
 
-function LoadedTensorExplorer(context: ExplorerContextValue) {
+function LoadedTensorExplorer({ client, sessionId, selectedTensor, selection }: ExplorerContextValue) {
   const controller = useRef<TensorExplorerController | null>(null);
-  const [status, setStatus] = useState<ExplorerStatus>({ tensor: 'loading', statistics: 'loading', distributions: context.selectedTensor!.rank === 2 ? 'loading' : 'unneeded', rendering: 'ready' });
+  const [status, setStatus] = useState<ExplorerStatus>({ tensor: 'loading', statistics: 'loading', distributions: selectedTensor!.rank === 2 ? 'loading' : 'unneeded', rendering: 'ready' });
   const [allocationFailed, setAllocationFailed] = useState(false);
   const mount = useCallback((host: HTMLDivElement | null) => {
     if (!host) return;
     try {
-      controller.current = new TensorExplorerController(host, context, setStatus);
+      controller.current = new TensorExplorerController(host, { client, sessionId, selectedTensor, selection }, setStatus);
     } catch {
       setAllocationFailed(true);
     }
     return () => { controller.current?.dispose(); controller.current = null; };
-  }, [context]);
+  }, [client, sessionId, selectedTensor, selection]);
   const active = [status.tensor, status.statistics, status.distributions].some((state) => state === 'loading' || state === 'streaming');
   return <section className="tensor-explorer" aria-label="Tensor scientific view">
     <p className="metadata">One value per device pixel · columns → · rows ↓</p>

@@ -6,15 +6,18 @@ and WebGL2 renderer with controlled stream timing. It does not require model
 weights or claim real-backend integration.
 
 Reproduce from `ui/` with `npm ci`, `npm run check`, then
-`npx playwright install chromium` and `npm run test:browser`.
+`npx playwright install --with-deps chromium` and
+`xvfb-run -a npm run test:browser` on Linux without a display.
 The focused suite is `npm run test:browser -- tensor-explorer.spec.ts`.
 Local execution used `UI_TEST_PORT=4314` and an already installed matching browser
-via `PLAYWRIGHT_BROWSERS_PATH=/tmp/issue-3-playwright`; neither changes the tests.
+via `PLAYWRIGHT_BROWSERS_PATH=/tmp/issue-3-playwright`. Due to host disk exhaustion,
+this issue’s installed dependencies and browser temporary files were held under
+`/dev/shm/issue-14-browser`; these local paths do not change the tests.
 
 | Evidence | Observed result |
 | --- | --- |
 | API generation, strict types, lint, unit tests, production build | Passed; 175 unit/component cases |
-| Focused browser suite | 16 passed across desktop/narrow projects, with explicit DPR 1/2 contexts |
+| Complete browser suite | 80 passed, including 18 Tensor Explorer desktop/narrow cases and 4 headed native-scrollbar cases |
 | Asymmetric `[2,3]` matrix | Values and framebuffer pixels preserve native C order; split words decode progressively |
 | Distribution sections | Cross-section chunks preserve `[rows,100]` and `[100,columns]`; pending suffix differs from zero |
 | Delayed statistics | Matrix displays first; successful statistics update without additional scalar allocation/upload |
@@ -38,3 +41,22 @@ CI retains the complete browser report and per-test screenshots as its
 `ui-browser-evidence` artifact. Hover, chroma selection and magnifier interactions
 remain separate work. Backend integration is outside this fixture-based screen
 validation.
+
+## Audit regressions
+
+The catalogue-refresh regression first reproduced disposal of a populated
+renderer on both desktop and narrow layouts. It now holds catalogue loading open
+and checks both loading and completion while the tensor prefix is streaming and
+after cancellation. The same three operation handles, scalar/count allocations,
+upload totals, renderer instances and received values survive all four shell
+updates. Controller identity depends on the actual client/session/selection
+inputs, not the props wrapper created by React.
+
+The headed `native-scrollbars` project first reproduced zero visible rows for a
+complete `[1536]` strip at DPR 1 and 2. It checks that native scrollbar thickness
+is positive, the exact scientific height is visible, and scrolling reaches the
+last value for `[1536]` and `[2,1536]`. It also removes/restores horizontal overflow
+by resizing, without scalar reallocation. The main scroller uses intrinsic auto
+height so the browser adds native scrollbar chrome outside the data extent,
+with a responsive viewport ceiling. CI runs the suite under Xvfb and retains
+per-test screenshots plus measured scrollbar/data geometry as attachments.

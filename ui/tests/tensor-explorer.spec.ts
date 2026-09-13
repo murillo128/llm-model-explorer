@@ -223,3 +223,34 @@ test('uint32 density storage preserves large counts and defines zero-axis intens
   expect(result.zeroPixel).toEqual([0, 0, 0, 255]);
   expect(result.live).toBe(0); expect(result.integer).toBe(2); expect(result.scalar).toBe(0);
 });
+
+test('catalogue refresh preserves the selected prefix and cancelled view without restarting operations', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => {
+    const f = window.explorerFixture;
+    f.emit(0, 1, f.metadata(0)); f.data(0, [-2, 0, 2]);
+  });
+  await expect(status(page, 'tensor')).toHaveAttribute('data-state', 'streaming');
+  const snapshot = () => page.evaluate(() => {
+    const f = window.explorerFixture;
+    return { requests: f.requests.length, cancellations: f.cancelled.length,
+      allocations: [f.metrics.scalarAllocations, f.metrics.integerAllocations], uploads: f.metrics.uploads,
+      renderers: f.renderers.map((r) => ({ state: r.state, prefix: r.populatedPrefix })),
+      first: f.renderers[0]!.readCell(0, 0), pending: f.renderers[0]!.readCell(1, 0) };
+  });
+  for (const cancelled of [false, true]) {
+    if (cancelled) await page.getByRole('button', { name: 'Cancel loading' }).click();
+    const before = await snapshot();
+    expect(before.requests).toBe(3);
+    expect(before.allocations).toEqual([1, 2]);
+    expect(before.renderers[0]!.prefix).toBe(3);
+    await page.evaluate(() => { window.explorerFixture.catalogue.paused = true; });
+    await page.getByRole('button', { name: 'Refresh models' }).click();
+    await expect(page.getByText('Loading models…')).toBeVisible();
+    expect(await snapshot()).toEqual(before);
+    await page.evaluate(() => window.explorerFixture.catalogue.resume());
+    await expect(page.getByRole('combobox')).toBeEnabled();
+    expect(await snapshot()).toEqual(before);
+    await expect(status(page, 'tensor')).toHaveAttribute('data-state', cancelled ? 'cancelled' : 'streaming');
+  }
+});

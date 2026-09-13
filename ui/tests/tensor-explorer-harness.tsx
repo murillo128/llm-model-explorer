@@ -9,7 +9,7 @@ import { models, sessionA } from '../src/test/shell-fixtures';
 import '../src/app/styles.css';
 
 const tensors: TensorDescriptor[] = [
-  ['A', [2, 3]], ['B', [3, 2]], ['reference', [576, 1536]], ['vector', [5]], ['empty', [0, 3]], ['unsupported', [2, 2, 2]],
+  ['A', [2, 3]], ['B', [3, 2]], ['reference', [576, 1536]], ['vector', [5]], ['wide-vector', [1536]], ['short-matrix', [2, 1536]], ['empty', [0, 3]], ['unsupported', [2, 2, 2]],
 ].map(([name, dimensions]) => {
   const shape = dimensions as number[];
   return { id: name as string, name: name as string, path: [name as string], shape, rank: shape.length, numel: shape.reduce((a, b) => a * b, 1), storage_dtype: 'float32', logical_dtype: 'float32' };
@@ -49,6 +49,8 @@ for (const name of ['streamTensor', 'streamTensorStatistics', 'streamTensorDistr
 interface Request { id: string; tensor: string; kind: string; stream: ReadableStreamDefaultController<Uint8Array> }
 const requests: Request[] = [];
 const cancelled: string[] = [];
+let releaseCatalogue: (() => void) | undefined;
+const catalogue = { paused: false, resume() { this.paused = false; releaseCatalogue?.(); } };
 const originalFetch = window.fetch.bind(window);
 window.fetch = async (input, options) => {
   const url = String(input);
@@ -56,7 +58,10 @@ window.fetch = async (input, options) => {
   const path = new URL(url).pathname;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
   if (options?.method === 'DELETE') { cancelled.push(path.split('/').at(-1)!); return new Response(null, { status: 204 }); }
-  if (path === '/models') return json({ models });
+  if (path === '/models') {
+    if (catalogue.paused) await new Promise<void>((resolve) => { releaseCatalogue = resolve; });
+    return json({ models });
+  }
   if (path === '/sessions') return json(sessionA, 201);
   if (path.endsWith('/tensors')) return json({ tensors });
   if (path === `/sessions/${sessionA.id}`) return json(sessionA);
@@ -105,9 +110,9 @@ function pixels(renderer: GridRenderer) {
 }
 const root = createRoot(document.getElementById('root')!);
 root.render(<App config={{ backendBaseUrl: 'https://fixture.example' }} />);
-window.explorerFixture = { DistributionRenderer, tensors, metrics, renderers, requests, cancelled, callbacks, emit, end, metadata, data, pixels, unmount: () => root.unmount() };
+window.explorerFixture = { catalogue, DistributionRenderer, tensors, metrics, renderers, requests, cancelled, callbacks, emit, end, metadata, data, pixels, unmount: () => root.unmount() };
 declare global { interface Window { explorerFixture: {
-  DistributionRenderer: typeof DistributionRenderer; tensors: typeof tensors; metrics: typeof metrics; renderers: typeof renderers; requests: typeof requests;
+  catalogue: typeof catalogue; DistributionRenderer: typeof DistributionRenderer; tensors: typeof tensors; metrics: typeof metrics; renderers: typeof renderers; requests: typeof requests;
   cancelled: typeof cancelled; callbacks: typeof callbacks; emit: typeof emit; end: typeof end;
   metadata: typeof metadata; data: typeof data; pixels: typeof pixels; unmount: () => void;
 } } }
