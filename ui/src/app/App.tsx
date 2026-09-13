@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { TensorExplorer } from '../explorers/TensorExplorer';
 import { ApiClient } from '../api/client';
 import type { RuntimeConfig } from '../api/runtime-config';
 import { Button } from '../components/Button';
@@ -29,7 +30,7 @@ function BackendApp({ config, slots }: Required<AppProps>) {
   const model = state.models.find((entry) => entry.id === state.session?.model_id);
   const tensor = state.selected;
   const supported = tensor?.rank === 1 || tensor?.rank === 2;
-  const Slot = state.explorer === 'Tensor Explorer' ? slots.tensor : slots.tokenizer;
+  const Slot = state.explorer === 'Tensor Explorer' ? (slots.tensor ?? TensorExplorer) : slots.tokenizer;
   const canCompose = state.session && state.sessionStatus === 'ready' &&
     (state.explorer === 'Tokenizer Explorer' || supported);
   const context = useMemo<ExplorerContextValue | null>(() => canCompose && state.session ? {

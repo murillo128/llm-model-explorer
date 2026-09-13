@@ -1,6 +1,10 @@
 import { TensorRenderer } from './tensor-renderer';
 import type { RendererOptions } from './tensor-renderer';
-import type { TensorDescriptor } from './geometry';
+import type { TensorDescriptor, ViewGeometry } from './geometry';
+
+export interface ViewportOptions extends RendererOptions {
+  readonly onViewChange?: (view: ViewGeometry) => void;
+}
 
 /** Small non-React native-scroll adapter. The supplied empty host owns layout. */
 export class TensorViewport {
@@ -15,7 +19,7 @@ export class TensorViewport {
   private disposed = false;
   private readonly originalStyle: string | null;
 
-  constructor(readonly host: HTMLElement, descriptor: TensorDescriptor, options: RendererOptions = {}) {
+  constructor(readonly host: HTMLElement, descriptor: TensorDescriptor, private readonly options: ViewportOptions = {}) {
     if (host.childNodes.length) throw new Error('TensorViewport requires an empty host.');
     this.originalStyle = host.getAttribute('style');
     Object.assign(host.style, { overflow: 'auto', position: 'relative', padding: '0' });
@@ -61,7 +65,7 @@ export class TensorViewport {
     this.observer.observe(host);
     host.addEventListener('scroll', this.schedule);
     window.addEventListener('resize', this.dprChanged);
-    this.dprChanged();
+    try { this.dprChanged(); } catch (error) { this.dispose(); throw error; }
   }
 
   private readonly setCeilings: () => void;
@@ -108,6 +112,7 @@ export class TensorViewport {
     this.surface.style.top = `${this.host.scrollTop + Math.round(top * dpr) / dpr - top}px`;
     this.canvas.dataset.origin = `${view.x},${view.y}`;
     this.renderer.draw();
+    this.options.onViewChange?.(view);
   }
 
   dispose() {

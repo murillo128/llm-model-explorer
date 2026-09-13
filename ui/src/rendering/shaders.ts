@@ -51,3 +51,23 @@ void main() {
   }
   color = vec4(vec3(intensity), 1.0);
 }`;
+
+export const distributionFragmentShader = `#version 300 es
+precision highp float;
+precision highp int;
+uniform highp usampler2D weights;
+uniform ivec2 bandOffset;
+uniform int viewHeight;
+uniform ivec2 prefix;
+uniform float densityDenominator;
+out vec4 color;
+void main() {
+  ivec2 cell = ivec2(int(gl_FragCoord.x), viewHeight - 1 - int(gl_FragCoord.y)) + bandOffset;
+  if (cell.y > prefix.y || (cell.y == prefix.y && cell.x >= prefix.x)) {
+    color = vec4(0.18, 0.24, 0.30, 1.0);
+    return;
+  }
+  uint count = texelFetch(weights, cell, 0).r;
+  float intensity = densityDenominator > 0.0 ? log(1.0 + float(count)) / densityDenominator : 0.0;
+  color = vec4(vec3(clamp(intensity, 0.0, 1.0)), 1.0);
+}`;

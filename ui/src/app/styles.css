@@ -83,3 +83,7 @@ aside > .tensor-tree { padding-left: 0; }
   .tensor-layout { grid-template-columns: minmax(0, 1fr); }
   .tensor-layout > aside { max-height: 35vh; }
 }
+
+.tensor-explorer { display: grid; gap: 14px; min-width: 0; }
+.tensor-results { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 12px; color: var(--ui-text-muted); }
+.matrix-scroll { background: var(--ui-surface-soft); }

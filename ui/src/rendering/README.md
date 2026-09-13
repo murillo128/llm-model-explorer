@@ -64,4 +64,17 @@ instrumentation are excluded from production build inputs.
 
 The normative geometry, scalar storage, transfer and lifetime rules are in
 [rendering.md](../../../docs/spec/ui/rendering.md). The current renderer excludes
-selection chroma, magnifier/hover UI, histograms, transport and React composition.
+selection chroma, magnifier/hover UI, transport and React composition.
+
+`MatrixViewport` composes the scalar `TensorViewport` with a right-hand and lower
+`DistributionRenderer` for nonempty rank-2 descriptors. It uses a single native
+matrix scroller and passes its exact view origins/extents to both profiles.
+`TensorViewport.onViewChange` is the small composition hook; ordinary callers
+remain unchanged. Rank-1 creates only the common scalar strip.
+
+`DistributionRenderer(canvas, [rows, columns], axisLength, options)` uses the same
+band allocation, indexed draw, prefix tracking and resource lifetime as the scalar
+renderer, with R32UI / RED_INTEGER / UNSIGNED_INT storage and a Uint32Array CPU
+copy. Its density shader converts counts only at draw time using the fixed
+`log1p(count)/log1p(axisLength)` transfer. Pending counts remain distinguishable
+from received zeros. No client-side histogram computation is performed.

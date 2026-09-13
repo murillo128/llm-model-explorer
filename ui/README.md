@@ -9,8 +9,8 @@ See its [interaction evidence](evidence/tokenizer.md). Tensor rendering is conne
 separately through its slot.
 
 The independent [exact-pixel WebGL2 renderer](src/rendering/README.md) is available
-separately at `/renderer-demo.html` in both dev and production builds. It is not yet
-connected to the explorer slots.
+separately at `/renderer-demo.html` in both dev and production builds. The default
+Tensor Explorer slot also composes it with progressive API streams and distributions.
 
 ## Develop
 
@@ -161,3 +161,26 @@ backend errors/details. Logical hierarchy comes from `TensorDescriptor.path`;
 full supplied names distinguish duplicate leaf labels. Native HTML disclosure
 controls and buttons provide keyboard navigation, visible focus and nested-list
 semantics without introducing a partial ARIA tree keyboard model.
+
+## Progressive Tensor Explorer
+
+The default Tensor Explorer slot now composes the typed incremental API client
+with the independent exact renderer. Select a rank-1 or rank-2 tensor to start
+its complete tensor and statistics streams; nonempty rank-2 also starts the
+independent distribution stream. Each operation has its own visible completion,
+failure and cancellation state. Received prefixes remain inspectable and visibly
+incomplete after failure/cancellation. `Cancel loading` releases only this view's
+consumers. Selecting another tensor or explorer disposes its owned resources.
+
+Rank-2 has three data surfaces: matrix, row profiles to the right and column
+profiles below. Native matrix scrolling keeps both profiles aligned. Counts stay
+uint32 and are converted to density only by the shader; statistics change small
+transfer uniforms without reuploading tensor values. Empty/unsupported tensors
+and unavailable WebGL2 resources have explicit shell states. Hover, magnifier and
+selection chroma are reserved for separate interaction work.
+
+`tests/tensor-explorer.html` is a development-only browser fixture exercising the
+real React composition, client/decoder and GPU renderer with manually paced,
+contract-valid streams. Its tests capture screenshots and assert values, pixel
+geometry, independent outcomes and resource accounting. See
+[evidence/tensor-explorer.md](evidence/tensor-explorer.md).
