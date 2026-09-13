@@ -20,9 +20,13 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
     { name: 'narrow', use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } } },
   ],
-  webServer: {
+  webServer: [{
     command: `npm run preview -- --port ${port} --strictPort`,
     url: baseURL,
     reuseExistingServer: false,
-  },
+  }, {
+    command: `npm run dev -- --port ${port + 1} --strictPort`,
+    url: `http://127.0.0.1:${port + 1}`,
+    reuseExistingServer: false,
+  }],
 });

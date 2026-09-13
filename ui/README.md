@@ -2,8 +2,12 @@
 
 A separately buildable React + TypeScript + Vite application. Tensor Explorer and
 Tokenizer Explorer are **placeholder slots**: there is no model discovery,
-tokenization, tensor renderer, or backend request yet. Selecting an explorer changes
+tokenization, or backend request yet. Selecting an explorer changes
 the shell's workspace slot only; no routing library is needed at this stage.
+
+The independent [exact-pixel WebGL2 renderer](src/rendering/README.md) is available
+separately at `/renderer-demo.html` in both dev and production builds. It is not yet
+connected to the explorer slots.
 
 ## Develop
 
@@ -80,6 +84,12 @@ npm run test:browser
 build. On a fresh Linux host, `npx playwright install --with-deps chromium` also
 installs Chromium's required system libraries. Playwright starts its own Vite
 preview server on port 4173; run it after building and with that port free.
+Renderer browser fixtures also use a Vite dev server on port 4174. They exercise
+the source renderer; set `UI_TEST_PORT` to move both servers (preview uses that
+port and renderer fixtures use the following port). Tests exercise
+real WebGL2 pixel/resource behavior at DPR 1 and 2, including progressive bands,
+late statistics, context reconstruction and failure paths. The standalone demo is
+also exercised through the production build. See [renderer evidence](evidence/renderer.md).
 
 Browser acceptance runs against production assets at 1440 × 900 and 390 × 844.
 It covers both deployed backend URLs on the same assets, empty/loading/error
@@ -98,9 +108,8 @@ See [validation evidence](evidence/validation.md) for the captured results.
 - `src/app/`: startup gate, React composition, explorer slots, and shared CSS tokens.
 - `src/components/`: screen header, metadata, status/error text, button, and working
   surface primitives, using semantic HTML and visible focus.
-- `src/rendering/`: reserved React-independent TypeScript renderer boundary.
-  ESLint prohibits direct React/application imports and JSX here. No renderer or
-  scalar mathematics is implemented by this issue.
+- `src/rendering/`: React-independent scalar WebGL2 renderer and native-scroll adapter.
+  ESLint prohibits direct React/application imports and JSX here.
 
 The accepted [UI architecture](../docs/spec/ui/architecture.md) and
 [visual language](../docs/spec/ui/visual-language.md) own durable UI decisions.
