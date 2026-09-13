@@ -137,6 +137,9 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
 
   test('card flips within all viewport corners without covering the inspected neighborhood', async ({ page }) => {
     await open(page);
+    // This isolated magnifier test deliberately moves data outside the workspace.
+    // Hide the fixed application bars so they do not intercept those corner probes.
+    await page.addStyleTag({ content: '.app-bar, .app-status-bar { visibility: hidden; }' });
     for (const [right, bottom] of [[false, false], [true, false], [false, true], [true, true]]) {
       await page.locator('.matrix-surfaces').evaluate((host: HTMLElement, [right, bottom]) => {
         Object.assign(host.style, { position: 'fixed', width: `${119 / devicePixelRatio + 10}px`, zIndex: '10', left: `${right ? innerWidth - 19 / devicePixelRatio - 2 : 2}px`,

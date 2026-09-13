@@ -22,6 +22,23 @@ The proof-of-concept application exposes two principal modules: Tensor Explorer 
 
 The UI may keep a `session_id` across a page refresh so it can reconnect to an in-memory backend session while that backend process remains alive.
 
+## Application shell
+
+React composes one reusable global application bar, a bounded central workspace,
+and a bottom status bar. The shell owns explorer navigation, model selection,
+session actions, connection context, and low-priority model/session metadata.
+Shell dimensions, responsive controls, and presentation are owned by
+[`visual-language.md`](visual-language.md#application-shell-and-panel-geometry).
+The same viewport frame also bounds configuration loading and recovery.
+
+The document does not scroll during normal application use. The workspace takes
+the height left by the two bars, and its inventory and working panels own normal
+content scrolling. Explorer switching replaces the workspace without duplicating
+page headings or model identity. This containment must preserve renderer-native
+data geometry and progressive consumption; it does not alter explorer internals.
+Session creation, recovery, refresh, deletion, and consumer lifetimes continue to
+use the existing session controller and API contract.
+
 ## Progressive results
 
 The UI must consume long-operation responses incrementally. It must not wait for an entire tensor payload before allocating/filling the rendering representation and beginning display.

@@ -57,7 +57,7 @@ test('keyboard navigation has visible focus and switches explorer slots', async 
   await expect(tokenizer).toBeFocused();
   expect(await tokenizer.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tokenizer Explorer');
+  await expect(page.getByRole('button', { name: 'Tokenizer Explorer', exact: true })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByText('Open a model session to use this explorer.')).toBeVisible();
   await expect(tokenizer).toHaveAttribute('aria-current', 'page');
   await page.reload();
@@ -83,7 +83,7 @@ for (const config of [
     await page.unroute('**/runtime-config.json');
     await mockConfig(page);
     await page.getByRole('button', { name: 'Retry configuration' }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tensor Explorer');
+    await expect(page.getByRole('button', { name: 'Tensor Explorer', exact: true })).toHaveAttribute('aria-current', 'page');
   });
 }
 
@@ -98,5 +98,5 @@ test('configuration loading is visible before the explorer can initialize', asyn
   await expect(page.getByRole('status')).toContainText('Loading application configuration');
   await expect(page.getByRole('navigation')).toHaveCount(0);
   release();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tensor Explorer');
+  await expect(page.getByRole('button', { name: 'Tensor Explorer', exact: true })).toHaveAttribute('aria-current', 'page');
 });
