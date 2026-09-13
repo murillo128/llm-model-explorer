@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   backend:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, codex]
     strategy:
       matrix:
         python: ['3.12', '3.14']
