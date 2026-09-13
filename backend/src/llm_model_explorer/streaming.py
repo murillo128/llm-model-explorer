@@ -1,6 +1,7 @@
 """Reusable ASGI delivery of one runtime consumer; endpoints own preflight checks."""
 
 import asyncio
+import errno
 import logging
 from collections.abc import Awaitable, Callable
 
@@ -96,8 +97,10 @@ class LMEXResponse(Response):
         except Exception as exc:
             if isinstance(exc, ModelError):
                 error = {"code": exc.code, "message": str(exc)}
-            elif isinstance(exc, MemoryError):
-                error = {"code": "resource_exhausted", "message": "Insufficient runtime memory."}
+            elif isinstance(exc, MemoryError) or (
+                isinstance(exc, OSError) and exc.errno in {errno.ENOSPC, errno.EDQUOT, errno.ENOMEM}
+            ):
+                error = {"code": "resource_exhausted", "message": "Insufficient runtime resources."}
             else:
                 logger.exception("LMEX production or delivery failed")
                 error = {"code": "internal_error", "message": "Unable to complete stream."}

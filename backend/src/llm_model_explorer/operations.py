@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from threading import Event
-from typing import ParamSpec, TypeVar
+from typing import ParamSpec, Protocol, TypeVar
 from uuid import UUID, uuid4
 
 from .artifacts import ArtifactReader, ArtifactSpec, ArtifactStore, ArtifactWriter
@@ -144,6 +144,14 @@ class DeviceScheduler:
 Producer = Callable[["ProducerContext"], Awaitable[None]]
 
 
+class SourceReader(Protocol):
+    """Blocking bounded reader; empty bytes means validated successful EOF."""
+
+    def read_available(self, max_bytes: int) -> bytes: ...
+
+    def close(self) -> None: ...
+
+
 @dataclass(eq=False)
 class _Flight:
     spec: ArtifactSpec
@@ -219,6 +227,9 @@ class Consumer:
         self.cancellation = Cancellation()
         self._parent = parent
         self._reader: ArtifactReader | None = None
+        self._source_factory: Callable[[], SourceReader] | None = None
+        self._source_reader: SourceReader | None = None
+        self.read_guard: Callable[[], None] | None = None
         self._read_lock = asyncio.Lock()
         self._closed = False
         self.terminal: str | None = None
@@ -257,6 +268,22 @@ class Consumer:
                         return b""
                     if self._closed:
                         raise RuntimeError("consumer is closed")
+                    if self.read_guard is not None:
+                        await self.runtime.work.run(self.read_guard)
+                        self.cancellation.check()
+                    if self._source_factory is not None:
+                        if self._source_reader is None:
+                            self._source_reader = await self.runtime.work.run(self._source_factory)
+                        data = await self.runtime.work.run(
+                            self._source_reader.read_available, max_bytes
+                        )
+                        self.cancellation.check()
+                        if data:
+                            return data
+                        self.terminal = "complete"
+                        self.runtime._release(self)
+                        await self._close_reader()
+                        return b""
                     flight = self._flight
                     changed = flight.changed
                     finished = flight.finished.is_set()
@@ -265,6 +292,9 @@ class Consumer:
                     if self._reader is not None:
                         data = await self.runtime.work.run(self._reader.read_available, max_bytes)
                         self.cancellation.check()
+                        if self.read_guard is not None:
+                            await self.runtime.work.run(self.read_guard)
+                            self.cancellation.check()
                         if data:
                             return data
                     if finished:
@@ -304,6 +334,9 @@ class Consumer:
             raise
 
     async def _close_reader(self) -> None:
+        if self._source_reader is not None:
+            await self.runtime.work.run(self._source_reader.close)
+            self._source_reader = None
         if self._reader is not None:
             await self.runtime.work.run(self._reader.close)
             self._reader = None
@@ -337,6 +370,37 @@ class OperationRuntime:
 
     async def subscribe(self, session_id: UUID, spec: ArtifactSpec, producer: Producer) -> Consumer:
         return await self._subscribe(spec, producer, session_id, None)
+
+    def subscribe_source(
+        self,
+        spec: ArtifactSpec,
+        factory: Callable[[], SourceReader],
+        *,
+        session_id: UUID | None = None,
+        parent: Cancellation | None = None,
+    ) -> Consumer:
+        """Track direct immutable-source delivery without producing a cache copy.
+
+        Each interest owns its file cursor. Cancellation, session teardown and
+        internal parent ownership use the same consumer lifecycle as artifacts.
+        """
+        if self._closed:
+            raise RuntimeError("operation runtime is closed")
+        if parent is not None:
+            parent.check()
+
+        async def unused(context: ProducerContext) -> None:
+            raise AssertionError("direct sources have no producer")
+
+        flight = _Flight(spec, unused)
+        flight.finished.set()
+        consumer = Consumer(self, flight, session_id, parent)
+        consumer._source_factory = factory
+        flight.interests.add(consumer)
+        self._consumers.add(consumer)
+        if consumer.operation_id is not None:
+            self._operations[consumer.operation_id] = consumer
+        return consumer
 
     async def _subscribe(
         self,
