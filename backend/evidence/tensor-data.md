@@ -47,3 +47,7 @@ initial overlapping runs hit the host's disk limit. The wheel was built with
 `uv build`, installed without dependencies into an isolated target, and tested
 from `/tmp` using that target as `PYTHONPATH`. Existing warnings concern optional
 NumPy absence and Starlette/AnyIO deprecations.
+
+After integration with the local tokenizer service, Ruff check/format and strict
+mypy pass (37 files). The combined source and rebuilt installed-wheel suites each
+pass **385 tests**, run serially with the integration's pinned tokenizer packages.
