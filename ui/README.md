@@ -1,9 +1,9 @@
 # Browser UI foundation
 
 A separately buildable React + TypeScript + Vite application. Tensor Explorer and
-Tokenizer Explorer are **placeholder slots**: there is no model discovery,
-tokenization, or backend request yet. Selecting an explorer changes
-the shell's workspace slot only; no routing library is needed at this stage.
+Tokenizer Explorer have reusable composition slots. The shell discovers models,
+creates and recovers sessions, and presents a logical tensor hierarchy. Explorer
+rendering and tokenization internals are connected separately through these slots.
 
 The independent [exact-pixel WebGL2 renderer](src/rendering/README.md) is available
 separately at `/renderer-demo.html` in both dev and production builds. It is not yet
@@ -26,7 +26,7 @@ Open the URL printed by Vite. Development binds to `127.0.0.1` by default; use
 ## Runtime deployment configuration
 
 The UI loads `runtime-config.json` before mounting the application and before any
-future API initialization. `App` receives only validated configuration. The shipped
+API initialization. `App` receives only validated configuration. The shipped
 `public/runtime-config.json` uses `http://127.0.0.1:8000` for local development.
 This is the **browser's** loopback address, so replace it with a reachable backend
 address for a remote deployment:
@@ -64,8 +64,8 @@ backend address is compiled into JavaScript.
 
 The backend is an independent process and can run on another computer. Its CORS
 configuration must allow the deployed UI origin. For an HTTPS UI, use an HTTPS
-backend to avoid browser mixed-content restrictions. This scaffold displays
-“Configured · connection not checked”; it does not claim a successful connection.
+backend to avoid browser mixed-content restrictions. Catalogue and session requests
+report loading, empty, failure, and expiration states with retry controls.
 No Python or backend static-file server is needed to build or serve the UI.
 
 ## Validate
@@ -98,13 +98,13 @@ overflow. Tests restore the deployed config file after modifying it and therefor
 run with one worker. Generated screenshots/reports/traces stay in ignored
 `test-results/` and `playwright-report/`; CI uploads them as artifacts.
 
-[Desktop screenshot](evidence/neutral-shell-desktop.png) and
-[narrow screenshot](evidence/neutral-shell-narrow.png) are compact visual evidence.
-See [validation evidence](evidence/validation.md) for the captured results.
+The original [foundation evidence](evidence/validation.md) documents the initial
+placeholder shell. See [session navigation evidence](evidence/session-navigation.md)
+for the current shell and its fixture coverage.
 
 ## Source boundaries
 
-- `src/api/`: runtime configuration; future explicit API clients live here.
+- `src/api/`: runtime configuration, typed API client, and progressive stream transport.
 - `src/app/`: startup gate, React composition, explorer slots, and shared CSS tokens.
 - `src/components/`: screen header, metadata, status/error text, button, and working
   surface primitives, using semantic HTML and visible focus.
@@ -118,3 +118,43 @@ The [browser API boundary](src/api/README.md) provides generated contract types,
 validated JSON methods, incremental LMEX decoding, and cancellable streams.
 Run `npm run api:generate` after accepted OpenAPI changes; the normal check
 command rejects generated contract drift.
+
+## Session and explorer composition
+
+The active session ID is stored in `sessionStorage`, keyed by normalized backend
+URL. Refresh attempts GET session; a missing session is visibly expired and the
+stored ID is removed. Other failures preserve the ID for retry. Storage denial
+keeps the shell usable and explicitly disables refresh recovery. Switching models
+creates a new immutable session; it does not mutate or delete the previous one.
+Close session deletes only the active session. A superseded POST is allowed to
+finish so its newly created, unused session can be deleted by its returned ID.
+
+`App` accepts optional `slots.tensor` and `slots.tokenizer` component types. Each
+receives `ExplorerContextValue` as props (also available via
+`useExplorerContext`): the shared `ApiClient`, session/session ID, selected tensor
+descriptor, selection lifetime, and a guarded `reportStatus` callback. Unsupported
+ranks remain selectable for metadata inspection but never mount the tensor slot.
+Slots remount when selection, tool, or session changes. Backend changes replace
+the entire controller and client. No shader resources belong to app navigation.
+
+A child owns its request channels and operation handles. Create a `RequestChannel`
+from `selection` inside the child's effect. Call `channel.begin()` for each new
+request in that channel, use `request.guard(callback)` for every async state update,
+and pass `request.signal` to the API. This protects repeated A → B → A requests,
+including callbacks already queued when transport aborts. Independent data and
+statistics channels can run concurrently. Never guard by tensor name alone.
+
+For a stream handle, register `request.onDispose(() => {
+void operation.cancel().catch(handleCleanupFailure); })`. Report loading,
+streaming, complete, cancelled, failed, or expired-session via guarded callbacks.
+Dispose the channel on effect cleanup; this aborts its current request and cancels
+only the registered consumer. Also release any child-owned renderer resources in
+that cleanup. A selection disposal fences every attached channel synchronously,
+before the new explorer can accept results. Slot components must still implement
+their own React effect cleanup for unmount and Strict Mode effect replay.
+
+The shell consumes only validated public descriptor fields and never prints raw
+backend errors/details. Logical hierarchy comes from `TensorDescriptor.path`;
+full supplied names distinguish duplicate leaf labels. Native HTML disclosure
+controls and buttons provide keyboard navigation, visible focus and nested-list
+semantics without introducing a partial ARIA tree keyboard model.
