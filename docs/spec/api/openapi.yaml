@@ -1,0 +1,418 @@
+openapi: 3.1.0
+info:
+  title: LLM Model Explorer API
+  version: current
+  description: |
+    Current contract between the LLM Model Explorer backend and browser UI.
+    The `version` value is OpenAPI document metadata only; the product does not
+    expose a public versioned API and backend/UI evolve together against this file.
+paths:
+  /models:
+    get:
+      operationId: listModels
+      tags: [Models]
+      summary: List discovered local models
+      responses:
+        "200":
+          description: Available models
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [models]
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ModelSummary"
+  /sessions:
+    post:
+      operationId: createSession
+      tags: [Sessions]
+      summary: Create a session bound to one model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sessions/{session_id}:
+    parameters:
+      - $ref: "#/components/parameters/SessionId"
+    get:
+      operationId: getSession
+      tags: [Sessions]
+      summary: Retrieve an existing in-memory session
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteSession
+      tags: [Sessions]
+      summary: Delete a session and release its ephemeral runtime state
+      responses:
+        "204":
+          description: Session deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sessions/{session_id}/tensors:
+    parameters:
+      - $ref: "#/components/parameters/SessionId"
+    get:
+      operationId: listTensors
+      tags: [Tensors]
+      summary: List tensor descriptors for the session model
+      responses:
+        "200":
+          description: Tensor inventory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TensorInventory"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sessions/{session_id}/tensors/{tensor_id}/data:
+    parameters:
+      - $ref: "#/components/parameters/SessionId"
+      - $ref: "#/components/parameters/TensorId"
+    get:
+      operationId: streamTensor
+      tags: [Tensors]
+      summary: Stream the complete logical float32 tensor
+      description: |
+        Starts a cancelable long operation. The response body follows
+        `binary-streaming.md` with result kind `tensor`.
+      responses:
+        "200":
+          $ref: "#/components/responses/BinaryStream"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sessions/{session_id}/tensors/{tensor_id}/statistics:
+    parameters:
+      - $ref: "#/components/parameters/SessionId"
+      - $ref: "#/components/parameters/TensorId"
+    get:
+      operationId: streamTensorStatistics
+      tags: [Tensors]
+      summary: Compute or retrieve reusable statistics for a tensor
+      description: |
+        Starts a cancelable long operation. The response body follows
+        `binary-streaming.md` with result kind `tensor_statistics`.
+      responses:
+        "200":
+          $ref: "#/components/responses/BinaryStream"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sessions/{session_id}/tensors/{tensor_id}/distributions:
+    parameters:
+      - $ref: "#/components/parameters/SessionId"
+      - $ref: "#/components/parameters/TensorId"
+    get:
+      operationId: streamTensorDistributions
+      tags: [Tensors]
+      summary: Stream row and column histogram counts for a rank-2 tensor
+      description: |
+        Starts a cancelable long operation. The response body follows
+        `binary-streaming.md` with result kind `tensor_distributions`.
+        The proof-of-concept contract uses exactly 100 shared linear bins.
+      responses:
+        "200":
+          $ref: "#/components/responses/BinaryStream"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /sessions/{session_id}/tokenize:
+    parameters:
+      - $ref: "#/components/parameters/SessionId"
+    post:
+      operationId: tokenize
+      tags: [Tokenizer]
+      summary: Tokenize text using the session model tokenizer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenizeRequest"
+      responses:
+        "200":
+          description: Tokenization result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenizeResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /operations/{operation_id}:
+    parameters:
+      - $ref: "#/components/parameters/OperationId"
+    delete:
+      operationId: cancelOperation
+      tags: [Operations]
+      summary: Cancel this consumer-visible long operation
+      description: |
+        Cancellation is idempotent. A request may map internally to shared,
+        deduplicated work; cancelling one operation stops only that consumer.
+        Shared work may continue while another consumer still requires it.
+      responses:
+        "204":
+          description: Cancellation accepted or the operation is already terminal
+
+components:
+  parameters:
+    SessionId:
+      name: session_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TensorId:
+      name: tensor_id
+      in: path
+      required: true
+      description: Opaque URL-safe tensor identifier returned by the inventory.
+      schema:
+        type: string
+        minLength: 1
+    OperationId:
+      name: operation_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BinaryStream:
+      description: Progressive binary long-operation result
+      headers:
+        X-Operation-Id:
+          required: true
+          description: Unique identifier for this consumer-visible long operation.
+          schema:
+            type: string
+            format: uuid
+        Cache-Control:
+          required: false
+          schema:
+            type: string
+          description: Implementations should return `no-store`.
+      content:
+        application/vnd.llm-model-explorer.stream:
+          schema:
+            type: string
+            format: binary
+    NotFound:
+      description: Requested model, session, or tensor was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unprocessable:
+      description: The request is valid JSON/HTTP but not supported for the target resource
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    ModelSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - display_name
+        - architectures
+        - tokenizer_available
+      properties:
+        id:
+          type: string
+          minLength: 1
+          description: Stable public logical model identifier. Never a filesystem path.
+        display_name:
+          type: string
+          minLength: 1
+        architectures:
+          type: array
+          items:
+            type: string
+        model_type:
+          type: string
+        parameter_count:
+          type: integer
+          format: int64
+          minimum: 0
+        size_bytes:
+          type: integer
+          format: int64
+          minimum: 0
+        tokenizer_available:
+          type: boolean
+
+    CreateSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [model_id]
+      properties:
+        model_id:
+          type: string
+          minLength: 1
+
+    Session:
+      type: object
+      additionalProperties: false
+      required: [id, model_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        model_id:
+          type: string
+          minLength: 1
+
+    TensorInventory:
+      type: object
+      additionalProperties: false
+      required: [tensors]
+      properties:
+        tensors:
+          type: array
+          items:
+            $ref: "#/components/schemas/TensorDescriptor"
+
+    TensorDescriptor:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - path
+        - shape
+        - rank
+        - numel
+        - storage_dtype
+        - logical_dtype
+      properties:
+        id:
+          type: string
+          minLength: 1
+          description: Opaque URL-safe identifier used in tensor endpoint paths.
+        name:
+          type: string
+          minLength: 1
+          description: Full logical/model tensor name.
+        path:
+          type: array
+          description: Logical name segments used by the UI to build the hierarchy.
+          minItems: 1
+          items:
+            type: string
+        shape:
+          type: array
+          items:
+            type: integer
+            format: int64
+            minimum: 0
+        rank:
+          type: integer
+          minimum: 0
+        numel:
+          type: integer
+          format: int64
+          minimum: 0
+        storage_dtype:
+          type: string
+          minLength: 1
+          description: Physical dtype/representation reported by the backend.
+        storage_format:
+          type: string
+          description: Optional additional physical format such as a quantization scheme.
+        logical_dtype:
+          type: string
+          enum: [float32]
+
+    TokenizeRequest:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text:
+          type: string
+        add_special_tokens:
+          type: boolean
+          default: true
+
+    TokenizeResponse:
+      type: object
+      additionalProperties: false
+      required: [text, add_special_tokens, tokens]
+      properties:
+        text:
+          type: string
+        add_special_tokens:
+          type: boolean
+        tokens:
+          type: array
+          items:
+            $ref: "#/components/schemas/Token"
+
+    Token:
+      type: object
+      additionalProperties: false
+      required: [index, id, token, decoded, special]
+      properties:
+        index:
+          type: integer
+          minimum: 0
+        id:
+          type: integer
+        token:
+          type: string
+          description: Tokenizer-native token representation.
+        decoded:
+          type: string
+          description: Tokenizer-provided decoded representation for this token.
+        start:
+          type: integer
+          minimum: 0
+          description: Inclusive character offset when the tokenizer provides a source span.
+        end:
+          type: integer
+          minimum: 0
+          description: Exclusive character offset when the tokenizer provides a source span.
+        special:
+          type: boolean
+
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        details:
+          type: object
+          additionalProperties: true
