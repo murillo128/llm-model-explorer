@@ -4,6 +4,7 @@ import { ApiClient } from '../api/client';
 import type { RuntimeConfig } from '../api/runtime-config';
 import { Button } from '../components/Button';
 import { AppBar, AppStatusBar } from './AppChrome';
+import { TensorHeader } from '../components/TensorHeader';
 import { TensorTree } from '../components/TensorTree';
 import { WorkingSurface } from '../components/WorkingSurface';
 import { ExplorerContext } from './explorer-context';
@@ -60,16 +61,7 @@ function BackendApp({ config, slots }: Required<AppProps>) {
           </aside>}
           <WorkingSurface title={`${state.explorer} workspace`} showTitle={false}>
             {state.explorer === 'Tensor Explorer' && tensor && <>
-              <h2>{tensor.name}</h2>
-              <dl className="tensor-metadata metadata">
-                <dt>Logical path</dt><dd>{tensor.path.join(' › ')}</dd>
-                <dt>Shape</dt><dd>[{tensor.shape.join(', ')}]</dd>
-                <dt>Rank</dt><dd>{tensor.rank}</dd>
-                <dt>Elements</dt><dd>{tensor.numel.toLocaleString()}</dd>
-                <dt>Storage dtype</dt><dd>{tensor.storage_dtype}</dd>
-                {tensor.storage_format !== undefined && <><dt>Storage format</dt><dd>{tensor.storage_format}</dd></>}
-                <dt>Logical dtype</dt><dd>{tensor.logical_dtype}</dd>
-              </dl>
+              <TensorHeader key={tensor.id} tensor={tensor} />
               {!supported && <p>Direct viewing supports complete rank-1 and rank-2 tensors. This rank-{tensor.rank} tensor is available for metadata inspection only.</p>}
             </>}
             {context ? <ExplorerContext.Provider key={state.viewRevision} value={context}>

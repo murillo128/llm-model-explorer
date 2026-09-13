@@ -112,6 +112,14 @@ in one row. Never restore a tall hero or scale scientific data to fit the chrome
 Filesystem paths must never be shown. Model identity and tensor/module context
 come from public descriptors defined by the application contracts.
 
+Selected-item identity belongs to the owning workspace, with compact technical
+shape/type metadata beside it. Secondary descriptors and instructions use
+keyboard-accessible information popovers rather than permanent rows. The Tensor
+Explorer's exact hierarchy and feedback behavior are owned by
+[`tensor-explorer.md`](tensor-explorer.md#tensor-navigation-and-header).
+Navigation leaves use compact highlighted rows; reserve disclosure chevrons for
+branches and avoid nested selection cards.
+
 ## Tokenizer surface
 
 The reusable tokenizer component follows `tokenizer-explorer.md` exactly. The editable prompt and its tokenization are one surface; do not repeat the same prompt in a second token row.
@@ -158,6 +166,8 @@ These compositions may be wider than a normal viewport. Preserve native matrix g
 ## Loading, streaming, and incomplete data
 
 The UI must be useful before all derived information has arrived. When tensor bytes stream progressively, render available pixels as soon as possible. Distribution/statistics surfaces may appear or refine later. Never fabricate values, histogram data, or a fully populated matrix while bytes are missing.
+
+Successful operations leave no permanent completion chrome. Pending operations use compact spinners with accessible text; errors and warnings remain visible while attention is needed.
 
 Loading treatment belongs to the shell, not the data. Use restrained text/progress state around an incomplete scientific surface; do not replace unknown tensor regions with decorative fake heatmaps that could be mistaken for real values.
 

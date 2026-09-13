@@ -36,8 +36,9 @@ async function open(page: Page, prefix = 323) {
     }
     f.data(2, counts); f.end(2);
   }, prefix);
-  await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', prefix === 323 ? 'complete' : 'streaming');
-  await expect(page.locator('[data-result="distributions"]')).toHaveAttribute('data-state', 'complete');
+  if (prefix === 323) await expect(page.locator('[data-result="tensor"]')).toHaveCount(0);
+  else await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', 'streaming');
+  await expect(page.locator('[data-result="distributions"]')).toHaveCount(0);
   await page.locator('.matrix-scroll').scrollIntoViewIfNeeded();
 }
 async function hover(page: Page, row: number, column: number) {

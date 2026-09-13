@@ -35,7 +35,7 @@ for (const dpr of [1, 2]) test(`asymmetric progressive surfaces, independent res
   // Valid metadata alone does not claim a complete statistics result.
   await expect(status(page, 'statistics')).toHaveAttribute('data-state', 'loading');
   await page.evaluate(() => window.explorerFixture.end(1));
-  await expect(status(page, 'statistics')).toHaveAttribute('data-state', 'complete');
+  await expect(status(page, 'statistics')).toHaveCount(0);
   expect(await page.evaluate(() => window.explorerFixture.metrics.uploads)).toBe(partial.uploads);
   expect(await page.evaluate(() => window.explorerFixture.metrics.scalarAllocations)).toBe(initial);
   expect(initial).toBe(1);
@@ -51,7 +51,7 @@ for (const dpr of [1, 2]) test(`asymmetric progressive surfaces, independent res
     // The callback crosses the metadata section offset, then leaves a pending suffix.
     f.data(2, [...rows, ...columns.slice(0, 153)], 31);
   });
-  await expect(status(page, 'tensor')).toHaveAttribute('data-state', 'complete');
+  await expect(status(page, 'tensor')).toHaveCount(0);
   await expect(status(page, 'distributions')).toHaveAttribute('data-state', 'streaming');
   const distribution = await page.evaluate(() => {
     const f = window.explorerFixture;
@@ -68,8 +68,14 @@ for (const dpr of [1, 2]) test(`asymmetric progressive surfaces, independent res
     const tail = Array<number>(147).fill(0); tail[225 - 153] = 1; tail[299 - 153] = 1;
     f.data(2, tail); f.end(2);
   });
-  await expect(status(page, 'distributions')).toHaveAttribute('data-state', 'complete');
+  await expect(status(page, 'distributions')).toHaveCount(0);
   await expect(page.locator('.matrix-surfaces canvas')).toHaveCount(3);
+  await expect(page.locator('.tensor-results')).not.toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cancel loading' })).toHaveCount(0);
+  await expect(page.getByText('Complete', { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/One value per device pixel|Focus the matrix/)).toHaveCount(0);
+  const overhead = await page.evaluate(() => document.querySelector('.matrix-surfaces')!.getBoundingClientRect().top - document.querySelector('.working-surface')!.getBoundingClientRect().top);
+  expect(overhead).toBeLessThanOrEqual(50);
   const path = testInfo.outputPath(`asymmetric-dpr-${dpr}.png`);
   await page.screenshot({ path, fullPage: true });
   await testInfo.attach('asymmetric scientific layout', { path, contentType: 'image/png' });
@@ -103,8 +109,8 @@ for (const dpr of [1, 2]) test(`reference geometry and synchronized scrolling ac
     }
     f.data(2, counts); f.end(2);
   });
-  await expect(status(page, 'tensor')).toHaveAttribute('data-state', 'complete');
-  await expect(status(page, 'distributions')).toHaveAttribute('data-state', 'complete');
+  await expect(status(page, 'tensor')).toHaveCount(0);
+  await expect(status(page, 'distributions')).toHaveCount(0);
   for (const [x, y] of [[0, 0], [127 / dpr, 127 / dpr], [128 / dpr, 128 / dpr], [256 / dpr, 256 / dpr], [1e6, 1e6]]) {
     await page.locator('.matrix-scroll').evaluate((host, point) => { host.scrollLeft = point[0]!; host.scrollTop = point[1]!; }, [x!, y!]);
     await expect.poll(() => page.evaluate(() => {
@@ -151,10 +157,10 @@ test('auxiliary failure leaves matrix inspectable and failure/cancel prefixes vi
     f.emit(2, 1, f.metadata(2)); f.data(2, [1, 0]);
   });
   await expect(status(page, 'statistics')).toHaveAttribute('data-state', 'failed');
-  await expect(status(page, 'tensor')).toHaveAttribute('data-state', 'complete');
+  await expect(status(page, 'tensor')).toHaveCount(0);
   await page.getByRole('button', { name: 'Cancel loading' }).click();
   await expect(status(page, 'distributions')).toHaveAttribute('data-state', 'cancelled');
-  await expect(status(page, 'tensor')).toHaveAttribute('data-state', 'complete');
+  await expect(status(page, 'tensor')).toHaveCount(0);
   await expect(page.locator('body')).not.toContainText('/private/backend');
   expect(await page.evaluate(() => window.explorerFixture.renderers[1]!.readCell(0, 2))).toMatchObject({ state: 'pending' });
   await page.getByRole('button', { name: /^B \[/ }).click();
@@ -190,7 +196,7 @@ test('rank-1 strip, empty, unsupported and failed allocation have explicit state
   await expect(page.locator('.matrix-surfaces canvas')).toHaveCount(1);
   expect(await page.evaluate(() => window.explorerFixture.requests.map((r) => r.kind))).toEqual(['data', 'statistics']);
   await page.evaluate(() => { const f = window.explorerFixture; f.emit(0, 1, f.metadata(0)); f.data(0, [-2, -1, 0, 1, 2]); f.end(0); });
-  await expect(status(page, 'tensor')).toHaveAttribute('data-state', 'complete');
+  await expect(status(page, 'tensor')).toHaveCount(0);
   expect(await page.evaluate(() => window.explorerFixture.renderers[0]!.geometry)).toEqual({ columns: 5, rows: 1, count: 5 });
   await page.getByRole('button', { name: /^empty \[/ }).click();
   await expect(page.getByText('Empty tensor — no values to render.')).toBeVisible();

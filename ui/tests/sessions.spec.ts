@@ -66,10 +66,10 @@ test('keyboard operates logical disclosures, duplicate leaves, unsupported ranks
   await page.keyboard.press('Enter'); await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: /left.weight/ })).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'left.weight' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'left › weight' })).toBeVisible();
   const right = page.getByRole('button', { name: /right.weight/ });
   await right.focus(); await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'right.weight' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'right › weight' })).toBeVisible();
   await page.getByRole('button', { name: /cube/ }).focus(); await page.keyboard.press('Enter');
   await expect(page.getByText(/This rank-3 tensor/)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

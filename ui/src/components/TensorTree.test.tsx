@@ -1,0 +1,53 @@
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { expect, it, vi } from 'vitest';
+import { tensors } from '../test/shell-fixtures';
+import { TensorTree } from './TensorTree';
+
+it('uses relative leaf rows and preserves distinct public identities and selection', async () => {
+  const onSelect = vi.fn();
+  const { container } = render(<TensorTree tensors={tensors} selectedId="first" onSelect={onSelect} />);
+  const first = screen.getByRole('button', { name: /left.weight/ });
+  const second = screen.getByRole('button', { name: /right.weight/ });
+  expect(within(first).getByText('weight')).toBeInTheDocument();
+  expect(within(second).getByText('weight')).toBeInTheDocument();
+  expect(first).not.toHaveTextContent('left.weight');
+  expect(first).toHaveTextContent('[2 × 3] · bfloat16');
+  expect(first).toHaveAttribute('aria-pressed', 'true');
+  expect(second).toHaveAttribute('aria-pressed', 'false');
+  expect(first.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  expect(first.querySelector('summary')).toBeNull();
+  expect(container.querySelectorAll('summary')).toHaveLength(3);
+  await userEvent.click(second);
+  expect(onSelect).toHaveBeenCalledWith(tensors[1]);
+});
+
+it('navigates deep branches and visible rows with arrows, Home/End, Enter and Space', async () => {
+  const path = ['model', 'layers', '0', 'attention', 'projection', 'nested', 'deep', 'deeper', 'weight'];
+  const deep = { ...tensors[0]!, id: 'deep', path, name: path.join('.') };
+  const onSelect = vi.fn();
+  const { container } = render(<TensorTree tensors={[deep, tensors[3]!]} selectedId={undefined} onSelect={onSelect} />);
+  const summaries = container.querySelectorAll('summary');
+  const leaf = screen.getByRole('button', { name: /model.layers/ });
+  summaries[0]!.focus();
+  await userEvent.keyboard('{ArrowLeft}');
+  expect(summaries[0]!.parentElement).not.toHaveAttribute('open');
+  await userEvent.keyboard('{ArrowDown}');
+  expect(screen.getByRole('button', { name: /scalar/ })).toHaveFocus();
+  await userEvent.keyboard('{Home}{ArrowRight}{ArrowRight}');
+  expect(summaries[1]).toHaveFocus();
+  await userEvent.keyboard('{ArrowLeft}');
+  expect(summaries[1]!.parentElement).not.toHaveAttribute('open');
+  await userEvent.keyboard('{ArrowLeft}');
+  expect(summaries[0]).toHaveFocus();
+  await userEvent.keyboard('{ArrowRight}{ArrowRight}{ArrowRight}');
+  expect(summaries[2]).toHaveFocus();
+  await userEvent.keyboard('{End}{ArrowUp}{Enter}');
+  expect(leaf).toHaveFocus();
+  expect(onSelect).toHaveBeenLastCalledWith(deep);
+  await userEvent.keyboard(' ');
+  expect(onSelect).toHaveBeenCalledTimes(2);
+  expect(leaf.style.paddingInlineStart).toBe('60px');
+  await userEvent.keyboard('{ArrowLeft}');
+  expect(summaries[7]).toHaveFocus();
+});
