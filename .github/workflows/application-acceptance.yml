@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      LMEX_EVIDENCE_DIR: ${{ runner.temp }}/lmex-evidence
+      LMEX_EVIDENCE_DIR: /tmp/lmex-evidence
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -55,6 +55,6 @@ jobs:
         with:
           name: application-acceptance-evidence
           path: |
-            ${{ runner.temp }}/lmex-evidence/
+            ${{ env.LMEX_EVIDENCE_DIR }}/
             ui/test-results/
           retention-days: 14

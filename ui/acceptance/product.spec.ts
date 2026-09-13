@@ -82,6 +82,7 @@ test.beforeEach(async ({ page }, testInfo) => {
 });
 
 test.afterEach(async ({ page }, testInfo) => {
+  if (testInfo.status === 'skipped') return;
   if (!page.isClosed() && testInfo.status !== testInfo.expectedStatus) {
     await testInfo.attach('resource-state', { body: JSON.stringify(await metrics(page)), contentType: 'application/json' });
   }
