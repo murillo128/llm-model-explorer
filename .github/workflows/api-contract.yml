@@ -21,15 +21,24 @@ permissions:
 
 jobs:
   contract:
-    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: [self-hosted, codex]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: api/requirements.txt
-      - run: python -m pip install -r api/requirements.txt
-      - run: python api/validate_contract.py
-      - run: python api/validate_contract.py --write
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.13'
+      - name: Reuse persistent API environment
+        shell: bash
+        run: |
+          env_dir="${{ runner.tool_cache }}/llm-model-explorer/api-contract/python-3.12-${{ hashFiles('api/requirements.txt') }}"
+          if [ ! -x "$env_dir/bin/python" ]; then
+            uv venv "$env_dir" --python 3.12
+          fi
+          uv pip install --python "$env_dir/bin/python" -r api/requirements.txt
+          echo "LMEX_API_PYTHON=$env_dir/bin/python" >> "$GITHUB_ENV"
+      - run: '"$LMEX_API_PYTHON" api/validate_contract.py'
+      - run: '"$LMEX_API_PYTHON" api/validate_contract.py --write'
       - run: git diff --exit-code -- api/fixtures
