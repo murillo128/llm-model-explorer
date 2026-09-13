@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from .artifacts import ArtifactStore
 from .execution import BlockingWork
+from .materialization import LogicalTensorService
 from .models import ModelCatalogue
 from .operations import OperationRuntime
 from .sessions import SessionRegistry
@@ -23,6 +24,7 @@ class Services:
     artifacts: ArtifactStore | None = None
     operation_delivery: OperationRuntime | None = None
     tokenizers: TokenizerService | None = None
+    logical_tensors: LogicalTensorService | None = None
 
 
 @asynccontextmanager
@@ -44,6 +46,7 @@ async def open_services(settings: Settings) -> AsyncIterator[Services]:
             sessions=sessions,
             operation_delivery=operations,
             tokenizers=TokenizerService(settings.model_root),
+            logical_tensors=LogicalTensorService(operations),
         )
     finally:
         try:

@@ -165,7 +165,12 @@ class ModelSource:
                     words = array.array("I" if width == 4 else "H", raw)
                     words.byteswap()
                     raw = bytearray(words.tobytes())
-                values = torch.frombuffer(raw, dtype=dtype).to(dtype=torch.float32)
+                try:
+                    values = torch.frombuffer(raw, dtype=dtype).to(dtype=torch.float32)
+                except torch.OutOfMemoryError as exc:
+                    # Do not let the snapshot's RuntimeError guard misclassify
+                    # native allocation failure as changed model content.
+                    raise MemoryError("Insufficient memory for tensor conversion.") from exc
                 self.check_unchanged()
                 yield values
                 remaining -= count

@@ -10,6 +10,7 @@ from .model_routes import router as model_router
 from .services import Services, open_services
 from .session_routes import router as session_router
 from .settings import Settings
+from .tensor_routes import router as tensor_router
 from .tokenizer_routes import router as tokenizer_router
 
 
@@ -39,6 +40,6 @@ def create_app(
         allow_headers=["Content-Type"],
         expose_headers=["X-Operation-Id"],
     )
-    for router in (model_router, session_router, tokenizer_router, *routers):
+    for router in (model_router, session_router, tokenizer_router, tensor_router, *routers):
         app.include_router(router)
     return app

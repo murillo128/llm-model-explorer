@@ -6,6 +6,7 @@ from fastapi import Request
 
 from .artifacts import ArtifactStore
 from .execution import BlockingWork
+from .materialization import LogicalTensorService
 from .models import ModelCatalogue
 from .operations import OperationRuntime
 from .services import Services
@@ -61,4 +62,11 @@ def get_operation_delivery(request: Request) -> OperationRuntime:
     service = get_services(request).operation_delivery
     if service is None:
         raise RuntimeError("operation delivery service is not configured")
+    return service
+
+
+def get_logical_tensors(request: Request) -> LogicalTensorService:
+    service = get_services(request).logical_tensors
+    if service is None:
+        raise RuntimeError("logical tensor service is not configured")
     return service

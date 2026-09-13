@@ -381,3 +381,35 @@ not started; an already running native encode finishes in its worker.
 WordPiece tokenizers locally and compares results directly with Hugging Face.
 It also covers missing offsets, concurrent options, snapshot changes, prohibited
 network/weight work, responsive metadata and disconnect/task cancellation.
+
+## Logical tensor data
+
+`GET /sessions/{session_id}/tensors/{tensor_id}/data` streams one complete
+logical tensor through the common LMEX adapter. Safetensors F32 reads preserve
+raw float32 bits without creating a persistent copy. F16/BF16 use the existing
+native CPU source conversion in blocks of at most 65,536 elements (256 KiB of
+logical output); configuring CUDA does not route this disk/conversion path
+through a GPU. Shape remains generic, including scalars and zero dimensions.
+
+`Services.logical_tensors` is a `LogicalTensorService`. Its blocking
+`resolve(source, tensor_id)` returns a small `LogicalTensor` with `descriptor`,
+`spec`, and `metadata()`. HTTP callers use `subscribe(sessions, session_id,
+tensor_id)`. Numerical artifact producers use the same service directly:
+
+```python
+logical = await context.io(service.resolve, source, tensor_id)
+async with service.dependency(context, logical) as consumer:
+    while block := await consumer.read():
+        # Feed bounded little-endian float32 bytes to the numerical computation.
+        ...
+```
+
+Dependencies have no public operation ID and inherit parent cancellation.
+Exhaust readers to validated EOF before declaring a numerical result complete.
+F16/BF16 production shares the runtime's singleflight and complete-artifact
+store, keyed by fingerprint, tensor ID, physical dtype and exact float32
+little-endian C-order producer recipe. Warm reads replay disk bytes; independent
+read guards also reject changed session snapshots on cache hits. F32 dependencies
+own direct source cursors and use the same cancellation/session teardown.
+The service does not compute statistics, distributions, or rendering transforms.
+See [tensor data evidence](evidence/tensor-data.md) for validation and limits.
