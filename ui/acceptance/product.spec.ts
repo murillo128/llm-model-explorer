@@ -37,8 +37,8 @@ async function open(page: Page, name = matrix) {
   await page.getByRole('button', { name: new RegExp(name.replaceAll('.', '\\.')) }).click();
 }
 async function complete(page: Page) {
-  await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'complete');
-  await expect(page.locator('[data-result=statistics]')).toHaveAttribute('data-state', 'complete');
+  await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
+  await expect(page.locator('[data-result=statistics]')).toHaveCount(0);
 }
 async function pixel(page: Page, x: number, y: number) {
   return page.evaluate(({ x, y }) => (window as any).__acceptance.pixel('.matrix-scroll canvas', x, y), { x, y });
@@ -116,7 +116,7 @@ test('production UI renders before producer completes; native geometry, inspecti
   expect(first.firstRender).toBeLessThan(beforeRelease);
   await control('release', {});
   await complete(page);
-  await expect(page.locator('[data-result=distributions]')).toHaveAttribute('data-state', 'complete');
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
   const ended = await page.evaluate(() => performance.now());
   const limits = await page.evaluate(() => (window as any).__acceptance.limits());
   const canvas = page.locator('.matrix-scroll canvas');
@@ -271,8 +271,8 @@ test('real producer errors are distinct from cancellation in both primary and au
   await control('arm', { kind: 'tensor_statistics', mode: 'pre-meta-error' });
   await open(page);
   await expect(page.locator('[data-result=statistics]')).toHaveAttribute('data-state', 'failed');
-  await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'complete');
-  await expect(page.locator('[data-result=distributions]')).toHaveAttribute('data-state', 'complete');
+  await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
   await idle();
   const before = Object.keys((await control()).artifacts);
   await control('arm', { kind: 'logical_tensor', mode: 'midstream-error' });

@@ -70,7 +70,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1000, height: 840
     await model.selectOption(models[0]!.id);
     await expect(page.getByText('Session active.')).toBeVisible();
     await page.getByRole('button', { name: /layer-0.cube/ }).click();
-    await expect(page.getByRole('heading', { name: 'layer-0.cube' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'layer-0 › cube' })).toBeVisible();
     await geometry(page);
     const inventory = page.getByRole('complementary', { name: 'Tensor inventory' });
     expect(await inventory.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);

@@ -17,7 +17,7 @@ for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () =>
         values[0] = -2; values[values.length - 1] = 2;
         f.data(0, values); f.end(0);
       }, rows);
-      await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', 'complete');
+      await expect(page.locator('[data-result="tensor"]')).toHaveCount(0);
       const geometry = () => page.evaluate(() => {
         const host = document.querySelector<HTMLElement>('.matrix-scroll')!;
         const matrix = window.explorerFixture.renderers[0]!;

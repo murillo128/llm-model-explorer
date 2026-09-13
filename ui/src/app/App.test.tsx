@@ -34,11 +34,14 @@ it('renders public model metadata and logical hierarchy, describes unsupported r
   render(<StrictMode><App config={config} slots={{ tensor: slot }} /></StrictMode>);
   await chooseAlpha();
   expect(within(screen.getByRole('contentinfo')).getByText('ExampleArchitecture')).toBeInTheDocument();
-  expect(screen.getByText('left', { selector: 'summary' })).toBeInTheDocument();
-  expect(screen.getByText('right', { selector: 'summary' })).toBeInTheDocument();
+  expect(screen.getByText('left', { selector: 'summary > span' })).toBeInTheDocument();
+  expect(screen.getByText('right', { selector: 'summary > span' })).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /left.weight/ }));
   expect(screen.getByText('Viewer: first')).toBeInTheDocument();
-  expect(screen.getByText('safetensors')).toBeInTheDocument();
+  expect(screen.queryByText('safetensors')).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Tensor information and help' }));
+  expect(screen.getByText('safetensors')).toBeVisible();
+  await userEvent.keyboard('{Escape}');
   await userEvent.click(screen.getByRole('button', { name: /right.weight/ }));
   expect(screen.getByText('Viewer: second')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /cube/ }));

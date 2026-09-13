@@ -68,13 +68,27 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .model-metadata, .tensor-metadata { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; }
 .tensor-layout { display: grid; grid-template-columns: minmax(200px, 300px) minmax(0, 1fr); gap: 20px; }
 .tensor-layout > aside { min-width: 0; min-height: 0; overflow: auto; padding: 6px; }
-.tensor-tree { list-style: none; padding-left: 14px; margin: 6px 0; }
-aside > .tensor-tree { padding-left: 0; }
-.tensor-tree summary { cursor: pointer; overflow-wrap: anywhere; padding: 4px; }
-.tensor-choice { display: grid; gap: 4px; text-align: left; width: 100%; padding: 8px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--ui-text); cursor: pointer; overflow-wrap: anywhere; }
-.tensor-choice:hover { background: var(--ui-surface); }
-.tensor-choice[aria-pressed="true"] { background: var(--ui-accent-soft); border-color: var(--ui-accent); }
-.rank-note { font-size: 12px; }
+.tensor-navigator { container-type: inline-size; }
+.tensor-tree { list-style: none; padding: 0; margin: 0; }
+.tensor-tree summary { cursor: pointer; padding: 2px 4px; height: 28px; white-space: nowrap; font-size: 13px; line-height: 24px; }
+.tensor-tree summary > span { display: inline-block; max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
+.tensor-choice { display: flex; align-items: center; gap: 6px; text-align: left; width: 100%; height: 28px; padding: 2px 4px; border: 0; border-radius: 3px; background: transparent; color: var(--ui-text); cursor: pointer; font-size: 13px; line-height: 24px; }
+.tensor-choice:hover, .tensor-tree summary:hover { background: var(--ui-surface); }
+.tensor-choice[aria-pressed="true"] { background: var(--ui-accent-soft); box-shadow: inset 2px 0 var(--ui-accent); }
+.tensor-tree :focus-visible { outline-offset: -2px; }
+.tensor-leaf-icon { width: 14px; height: 14px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1; }
+.tensor-leaf-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tensor-leaf-metadata { flex-shrink: 0; font-size: 11px; white-space: nowrap; }
+@container (max-width: 230px) { .tensor-leaf-metadata { display: none; } }
+.tensor-layout .surface-content { padding: 12px; gap: 8px; }
+.tensor-header { position: relative; display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 28px; }
+.tensor-identity { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 13px/20px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.tensor-info { flex-shrink: 0; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--ui-text); font-size: 18px; line-height: 20px; cursor: pointer; }
+.tensor-info:hover { background: var(--ui-accent-soft); }
+.tensor-summary { flex-shrink: 0; font-size: 12px; white-space: nowrap; }
+.tensor-details { position: absolute; z-index: 20; top: 36px; right: 0; width: min(440px, 100%); max-height: min(400px, 50dvh); overflow: auto; display: grid; gap: 12px; padding: 12px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-surface); box-shadow: var(--ui-shadow-float); font-size: 13px; line-height: 20px; }
+.tensor-details .button { padding: 4px 8px; }
+.tensor-details .tensor-metadata { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 4px 8px; font-size: 12px; }
 .working-surface { min-width: 0; }
 @media (max-width: 760px) {
   .tensor-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 2fr); }
@@ -116,15 +130,22 @@ aside > .tensor-tree { padding-left: 0; }
   .status-metadata { display: none; }
 }
 
-.tensor-explorer { display: grid; gap: 14px; min-width: 0; }
-.tensor-results { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 12px; line-height: 20px; color: var(--ui-text-muted); }
+.tensor-explorer { display: grid; gap: 8px; min-width: 0; }
+.tensor-results { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; line-height: 20px; color: var(--ui-text-muted); }
+.tensor-results:empty { display: none; }
+.tensor-results p { display: flex; align-items: center; gap: 4px; }
+.tensor-results p > span:not(.operation-spinner) { text-transform: capitalize; }
+.tensor-results [data-state="failed"], .tensor-results [data-state="cancelled"] { color: var(--ui-text); border-left: 2px solid var(--ui-accent); padding-left: 6px; }
+.tensor-results .button { font-size: 12px; line-height: 20px; padding: 0 6px; }
+.operation-spinner { width: 10px; height: 10px; border: 1px solid var(--ui-border-strong); border-top-color: var(--ui-text); border-radius: 50%; animation: operation-spin 1s linear infinite; }
+@keyframes operation-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .operation-spinner { animation: none; } }
 .matrix-scroll { background: var(--ui-surface-soft); }
 
 .matrix-inspectable {
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' viewBox='0 0 17 17'%3E%3Cpath d='M8.5 1v5M8.5 11v5M1 8.5h5M11 8.5h5' stroke='%23c47a22' stroke-width='1'/%3E%3C/svg%3E") 8 8, crosshair;
 }
 .matrix-scroll:focus-visible { outline: 2px solid #74552f; outline-offset: 3px; }
-.inspection-help { font-size: 12px; color: var(--text-secondary, #62666a); }
 .matrix-inspection { position: fixed; z-index: 20; width: 170px; height: 212px; pointer-events: none; }
 .magnifier-card { position: relative; width: 170px; height: 170px; padding: 4px; background: #fff; border-radius: 9px; box-shadow: 0 4px 18px #24272b26; }
 .magnifier-card canvas { display: block; width: 162px; height: 162px; image-rendering: pixelated; }

@@ -7,7 +7,7 @@ import { TensorExplorerController } from './tensor-explorer-controller';
 import type { ExplorerStatus, ResultState } from './tensor-explorer-controller';
 
 const stateText: Record<ResultState, string> = {
-  loading: 'Waiting for data — incomplete', streaming: 'Receiving data — incomplete',
+  loading: 'Waiting', streaming: 'Receiving',
   complete: 'Complete', failed: 'Failed — incomplete', cancelled: 'Cancelled — incomplete', unneeded: 'Not required',
 };
 
@@ -34,16 +34,16 @@ function LoadedTensorExplorer({ client, sessionId, selectedTensor, selection }: 
   }, [client, sessionId, selectedTensor, selection]);
   const active = [status.tensor, status.statistics, status.distributions].some((state) => state === 'loading' || state === 'streaming');
   return <section className="tensor-explorer" aria-label="Tensor scientific view">
-    <p className="metadata">One value per device pixel · columns → · rows ↓</p>
     {allocationFailed || status.rendering === 'failed' ? <p role="alert">Exact rendering is unavailable. WebGL2 resources could not be allocated or were lost. Select the tensor again to retry.</p> : null}
     {!allocationFailed && <div className="tensor-results" aria-label="Result status">
-      {(['tensor', 'statistics', 'distributions'] as const).filter((result) => status[result] !== 'unneeded').map((result) =>
-        <p key={result} role="status" data-result={result} data-state={status[result]}><span className="section-label">{result}</span> · {stateText[status[result]]}</p>)}
+      {(['tensor', 'statistics', 'distributions'] as const).filter((result) => status[result] !== 'unneeded' && status[result] !== 'complete').map((result) =>
+        <p key={result} role={status[result] === 'failed' ? 'alert' : 'status'} data-result={result} data-state={status[result]}>
+          {(status[result] === 'loading' || status[result] === 'streaming') && <span className="operation-spinner" aria-hidden="true" />}
+          <span>{result}</span> · {stateText[status[result]]}</p>)}
+      {active && <Button onClick={() => controller.current?.cancel()}>Cancel loading</Button>}
     </div>}
     <div ref={mount} />
-    {selectedTensor!.rank === 2 && <p className="inspection-help">Focus the matrix and use arrow keys to inspect cells. Escape clears inspection.</p>}
     {inspection && <InspectionCard inspection={inspection} />}
-    {active && !allocationFailed && <Button onClick={() => controller.current?.cancel()}>Cancel loading</Button>}
   </section>;
 }
 
