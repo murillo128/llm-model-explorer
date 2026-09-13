@@ -5,10 +5,12 @@ import ctypes
 import errno
 import math
 import sys
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Generator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from uuid import UUID
+
+import torch
 
 from .artifacts import ArtifactSpec
 from .model_files import ModelError
@@ -22,9 +24,19 @@ CHUNK_ELEMENTS = MAX_READ_BYTES // 4
 class _TensorReader:
     """One bounded native source block, never a tensor-sized Python allocation."""
 
-    def __init__(self, source: ModelSource, tensor_id: str) -> None:
+    def __init__(
+        self,
+        source: ModelSource,
+        tensor_id: str,
+        *,
+        iterator: Generator[torch.Tensor, None, None] | None = None,
+    ) -> None:
         self.source = source
-        self.iterator = source.iter_tensor(tensor_id, chunk_elements=CHUNK_ELEMENTS)
+        self.iterator = (
+            source.iter_tensor(tensor_id, chunk_elements=CHUNK_ELEMENTS)
+            if iterator is None
+            else iterator
+        )
         self.pending = b""
 
     def read_available(self, max_bytes: int) -> bytes:
