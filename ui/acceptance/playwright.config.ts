@@ -18,7 +18,7 @@ const workers = process.env.PLAYWRIGHT_ACCEPTANCE_WORKERS
 
 export default defineConfig({
   testDir: '.',
-  testMatch: 'product.spec.ts',
+  testMatch: ['product.spec.ts', 'architecture.spec.ts'],
   workers,
   timeout: 90_000,
   expect: { timeout: 15_000 },

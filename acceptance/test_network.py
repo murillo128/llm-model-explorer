@@ -23,8 +23,9 @@ MATRIX = "model.layers.0.mlp.down_proj.weight"
 
 
 class Service:
-    def __init__(self, root, device="cpu", model_root=None):
+    def __init__(self, root, device="cpu", model_root=None, startup_timeout=30):
         self.root = root
+        self.startup_timeout = startup_timeout
         self.device = device
         self.model_root = model_root
         if model_root is None:
@@ -34,7 +35,12 @@ class Service:
             self.port = sock.getsockname()[1]
         self.client = httpx.Client(base_url=f"http://127.0.0.1:{self.port}", timeout=20)
         self.process = None
-        self.start()
+        try:
+            self.start()
+        except BaseException:
+            self.stop()
+            self.client.close()
+            raise
 
     def start(self):
         self.log = (self.root / "service.log").open("a")
@@ -74,7 +80,7 @@ class Service:
                 "TOKENIZERS_PARALLELISM": "false",
             },
         )
-        deadline = time.monotonic() + 30
+        deadline = time.monotonic() + self.startup_timeout
         while time.monotonic() < deadline:
             if self.process.poll() is not None:
                 raise AssertionError((self.root / "service.log").read_text())

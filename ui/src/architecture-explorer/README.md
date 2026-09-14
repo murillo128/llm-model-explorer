@@ -97,3 +97,12 @@ Modal/browser reproduction (synthetic asymmetric streams, not checkpoint inferen
 ```sh
 UI_TEST_PORT=18484 npm run test:browser -- tests/architecture-inspection.spec.ts --project=desktop --project=narrow
 ```
+
+## Integrated architecture acceptance
+
+The implemented descriptions, startup retrieval, global graph and native weight
+modal are exercised together over real HTTP and the built UI. See
+[architecture acceptance](../../../acceptance/architecture.md) for fixture coverage,
+operator-supplied reference manifests, measured evidence and the
+full-reference gate. Fixture and source-review success alone do not validate a
+complete installed reference checkpoint.

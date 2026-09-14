@@ -102,6 +102,7 @@ The curator has standing write authority only for `wiki/**`, and only after its 
 - Backend application and CLI: `backend/src/llm_model_explorer/app.py` and `cli.py`; domain modules and tests live under `backend/src/llm_model_explorer/` and `backend/tests/`.
 - Independent API checks/fixtures: `api/validate_contract.py`; generated UI contract bindings: `ui/scripts/api-generator/generate.mjs`.
 - UI composition/navigation: `ui/src/app/`; Tensor Explorer: `ui/src/explorers/`; reusable WebGL2 renderer: `ui/src/rendering/`; live tokenizer: `ui/src/tokenizer/`.
+- Static architecture analysis/startup: `backend/src/llm_model_explorer/architecture_analysis/` and `architecture_service.py`; global graph and native weight modal: `ui/src/architecture-explorer/`; integrated acceptance: `acceptance/test_architecture.py` and `ui/acceptance/architecture.spec.ts`. Full local reference acceptance remains separate from fixture success; see `acceptance/architecture.md`.
 - UI unit and browser checks: `ui/package.json`, `ui/src/**/*.test.*`, and `ui/tests/`.
 - Integrated TCP/production-browser acceptance: `acceptance/check.sh`, `acceptance/test_*.py`, and `ui/acceptance/`; `.github/workflows/application-acceptance.yml` aggregates application gates. Reproduction and optional capability checks are documented in `acceptance/README.md`.
 
@@ -131,6 +132,7 @@ The concise rules below are operational reminders. `docs/spec/**` is authoritati
 ### Product and boundaries
 
 - The proof of concept has two user-facing capabilities: Tensor Explorer and Tokenizer Explorer. Detailed behavior belongs in their accepted dedicated specifications; future-analysis backlog entries do not expand current scope.
+- The accepted post-PoC Architecture Explorer is implemented on the integration branch: static descriptions, blocking startup/cache retrieval, global canvas and native weight modal. Its dedicated specifications own behavior and selected coverage. Implementation and fixture success do not establish full local reference acceptance.
 - The system has three independent boundaries: backend, API contract, and browser UI. Keep ownership aligned with `docs/spec/backend/`, `docs/spec/api/`, and `docs/spec/ui/`.
 - The initial reference model is `HuggingFaceTB/SmolLM2-135M` Base, not Instruct.
 - The proof of concept must be evolvable into step-by-step transformer inference without replacing the established backend/API/session/stream/cache/renderer boundaries.

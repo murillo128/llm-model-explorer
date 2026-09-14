@@ -186,3 +186,12 @@ real React composition, client/decoder and GPU renderer with manually paced,
 contract-valid streams. Its tests capture screenshots and assert values, pixel
 geometry, independent outcomes and resource accounting. See
 [evidence/tensor-explorer.md](evidence/tensor-explorer.md).
+
+## Integrated architecture acceptance
+
+The implemented descriptions, startup retrieval, global graph and native weight
+modal are exercised together over real HTTP and the built UI. See
+[architecture acceptance](../acceptance/architecture.md) for fixture coverage,
+operator-supplied reference manifests, measured evidence and the
+full-reference gate. Fixture and source-review success alone do not validate a
+complete installed reference checkpoint.

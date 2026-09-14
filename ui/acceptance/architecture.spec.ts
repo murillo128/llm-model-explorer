@@ -1,0 +1,200 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Native test-only observations and evidence. */
+import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { spawn, execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { once } from 'node:events';
+import { fileURLToPath } from 'node:url';
+import type { Graph } from '../src/architecture-explorer/graph';
+import { layoutGraph } from '../src/architecture-explorer/graph';
+import { installProbe } from './probe';
+import { nativeCamera } from '../tests/native-camera';
+
+const repo = fileURLToPath(new URL('../../', import.meta.url));
+const python = `${repo}backend/.venv/bin/python`;
+let service: ReturnType<typeof spawn>;
+let root: string;
+let backend: string;
+let modelId: string;
+let log: string;
+let observed: string[];
+
+async function metrics(page: Page) { return page.evaluate(() => (window as any).__acceptance.metrics()); }
+async function control(path: string, body?: object) {
+  const response = await fetch(`${backend}/__test/${path}`, body ? {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  } : undefined);
+  expect(response.ok).toBeTruthy(); return response.json();
+}
+async function openParameter(page: Page, graph: Graph, parameter: Graph['parameters'][number]) {
+  const node = graph.nodes.find((n) => n.parameter_ids.includes(parameter.id))!;
+  await page.getByLabel('Select graph component', { exact: true }).selectOption(node.id);
+  await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+  await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
+}
+async function released(page: Page) {
+  await expect.poll(async () => { const m = await metrics(page); return [m.textures, m.readers]; }).toEqual([0, 0]);
+}
+async function selectGraph(page: Page): Promise<Graph> {
+  const response = page.waitForResponse((r) => r.url().endsWith('/architecture'));
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(modelId);
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  const body = await (await response).json();
+  expect(body.status).toBe('available');
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-graph-id', body.graph.graph_id);
+  return body.graph;
+}
+
+test.beforeEach(async ({ page }, info) => {
+  const family = /\[(\w+)\]/.exec(info.title)![1]!;
+  const reference = info.title.startsWith('complete local reference');
+  const supplied = process.env.LMEX_ARCHITECTURE_REFERENCES;
+  const hasReference = supplied && JSON.parse(readFileSync(supplied, 'utf8'))[family];
+  if (reference && process.env.LMEX_REQUIRE_ARCHITECTURE_REFERENCES === '1') expect(hasReference, `Required local ${family} missing`).toBeTruthy();
+  test.skip(reference && !hasReference, `Complete local ${family} absent; actual-reference acceptance pending`);
+  const component = Number(process.env.UI_TEST_PORT ?? 4173);
+  const dpr2 = info.project.name === 'dpr2';
+  const port = process.env.UI_TEST_PORT ? component + (dpr2 ? 5 : 3) : dpr2 ? 8767 : 8765;
+  const origin = `http://127.0.0.1:${process.env.UI_TEST_PORT ? component + (dpr2 ? 4 : 2) : dpr2 ? 4177 : 4175}`;
+  backend = `http://127.0.0.1:${port}`; log = ''; observed = [];
+  root = mkdtempSync(join(tmpdir(), 'lmex-architecture-browser-'));
+  let args: string[];
+  if (reference) {
+    const selected = JSON.parse(execFileSync(python, ['-m', 'acceptance.architecture_reference', family], { cwd: repo, encoding: 'utf8' }));
+    modelId = selected.model_id;
+    await info.attach('actual-reference-inventory', { body: JSON.stringify(selected.report), contentType: 'application/json' });
+    args = ['-m', 'llm_model_explorer', '--model-root', dirname(selected.directory), '--cache-dir', join(root, 'cache'), '--port', String(port), '--cors-origin', origin];
+  } else {
+    execFileSync(python, ['-m', 'acceptance.architecture_fixtures', join(root, 'models')], { cwd: repo });
+    modelId = family;
+    args = ['-m', 'acceptance.server', '--root', root, '--port', String(port), '--origin', origin];
+  }
+  service = spawn(python, args, { cwd: repo, env: { ...process.env, HF_HUB_OFFLINE: '1', TOKENIZERS_PARALLELISM: 'false' }, stdio: ['ignore', 'pipe', 'pipe'] });
+  service.stdout!.on('data', (data) => { log += data; }); service.stderr!.on('data', (data) => { log += data; });
+  await expect.poll(async () => {
+    if (service.exitCode !== null) throw new Error(log);
+    try { return (await fetch(`${backend}/models`)).status; } catch { return 0; }
+  }, { timeout: reference ? 300_000 : 30_000 }).toBe(200);
+  page.on('request', (r) => { if (r.url().startsWith(backend)) observed.push(new URL(r.url()).pathname); });
+  await page.addInitScript(installProbe);
+  await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
+  await page.goto('/');
+});
+
+test.afterEach(async ({ page }, info) => {
+  if (info.status === 'skipped') return;
+  await info.attach('backend-log', { body: log ?? '', contentType: 'text/plain' });
+  await page.close();
+  if (service?.exitCode === null) {
+    service.kill('SIGTERM'); const timer = setTimeout(() => service.kill('SIGKILL'), 10_000);
+    try { await once(service, 'exit'); } finally { clearTimeout(timer); }
+  }
+  if (root) rmSync(root, { recursive: true });
+});
+
+for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3', 'qwen35', 'vjepa2']) {
+  test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and native modal`, async ({ page }, info) => {
+    test.setTimeout(reference ? 420_000 : 90_000);
+    const graph = await selectGraph(page);
+    expect(graph.coverage).toBe('complete');
+    const canvas = page.getByLabel('Architecture graph', { exact: true });
+    await expect(page.getByLabel('Show dimensions')).not.toBeChecked();
+    const ids = await page.getByLabel('Select graph component', { exact: true }).locator('option').evaluateAll((options) => options.map((o) => (o as HTMLOptionElement).value).filter(Boolean));
+    expect(ids).toEqual(graph.nodes.map((n) => n.id));
+    await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+    await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    // Every source edge survives full expansion; compact boundaries retain explicit edges.
+    const expanded = layoutGraph(graph, graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id));
+    expect(expanded.edgeIds).toEqual(graph.edges.map((e) => e.id));
+    const compact = layoutGraph(graph, []), roots = new Set(compact.boxes.map((n) => n.id));
+    expect(compact.edgeIds).toEqual(graph.edges.filter((e) => roots.has(e.source.node_id) && roots.has(e.target.node_id)).map((e) => e.id));
+    for (const repetition of graph.repetitions) {
+      const last = repetition.instances.at(-1)!;
+      await page.getByLabel('Select graph component', { exact: true }).selectOption(last.node_id);
+      await expect(page.locator('.architecture-coverage')).toContainText(`instance ${last.index}`);
+    }
+    await page.getByLabel('Show dimensions').check();
+    await expect(page.getByLabel('Show dimensions')).toBeChecked();
+    const client = await page.context().newCDPSession(page);
+    await info.attach('production-architecture-layout', { body: JSON.stringify({ kind: reference ? 'actual checkpoint' : 'synthetic checkpoint', family,
+      nodes: graph.nodes.length, edges: graph.edges.length, layoutMs: Number(await canvas.getAttribute('data-layout-ms')),
+      heapSnapshot: await client.send('Runtime.getHeapUsage'), viewport: page.viewportSize(), browser: page.context().browser()!.version() }), contentType: 'application/json' });
+    // Later-layer vector proves the modal uses concrete bindings, never layer-zero fallback.
+    const parameter = graph.parameters.find((p) => p.inspection.status === 'available' && p.logical_shape?.length === 1 && p.name.includes('.1.'))!;
+    expect(parameter).toBeTruthy();
+    await page.evaluate(() => { (window as any).__acceptance.captureScalars = true; });
+    await openParameter(page, graph, parameter);
+    await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
+    await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
+    expect(observed.some((p) => p.includes(`/tensors/${parameter.inspection.status === 'available' ? parameter.inspection.tensor_id : ''}/data`))).toBe(true);
+    const uploaded = await page.evaluate(() => (window as any).__acceptance.scalarValues as number[]);
+    if (!reference) expect(uploaded).toEqual(Array.from({ length: (parameter.logical_shape![0] as { value: number }).value }, (_, i) => (i % 29 - 14) / 8));
+    else {
+      const oracle = JSON.parse(execFileSync(python, ['-m', 'acceptance.architecture_reference', family, '--tensor', parameter.name], { cwd: repo, encoding: 'utf8' }));
+      expect(uploaded).toHaveLength(oracle.shape[0]);
+      for (const sample of oracle.samples) expect(uploaded[sample.offset]).toBe(sample.value);
+    }
+    const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+    await page.keyboard.press('Escape'); await released(page);
+    await expect(page.getByRole('button', { name: 'Inspect selected', exact: true })).toBeFocused();
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+    // Inspect a native matrix too. Observe progressive first-cell values without
+    // retaining a second copy of a potentially large reference embedding table.
+    const matrices = graph.parameters.filter((p) => p.inspection.status === 'available' && p.logical_shape?.length === 2);
+    const size = (p: typeof parameter) => p.logical_shape!.reduce((total, d) => total * (d.kind === 'constant' ? d.value : 1), 1);
+    const matrix = matrices.sort((a, b) => size(a) - size(b))[0]!;
+    await page.evaluate(() => { (window as any).__acceptance.captureScalars = false; });
+    const firstValue = reference ? JSON.parse(execFileSync(python, ['-m', 'acceptance.architecture_reference', family, '--tensor', matrix.name], { cwd: repo, encoding: 'utf8' })).samples[0].value : -14 / 8;
+    await openParameter(page, graph, matrix);
+    const matrixCanvas = page.locator('.matrix-scroll canvas');
+    await expect(matrixCanvas).toBeVisible();
+    await nativeCamera(page);
+    // Native keyboard focus selects the exact viewport origin even when the
+    // canvas top lies between CSS pixels. Pointer fidelity has separate gates.
+    await page.mouse.move(0, 0);
+    await page.locator('.matrix-scroll').evaluate((element) => { element.scrollLeft = 0; element.scrollTop = 0; });
+    await page.locator('.matrix-scroll').focus();
+    await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 0${firstValue}`);
+    await page.keyboard.press('Escape'); await released(page);
+    const unavailable = graph.parameters.find((p) => p.inspection.status === 'unavailable');
+    if (unavailable) {
+      const requests = observed.length;
+      await openParameter(page, graph, unavailable);
+      await expect(page.getByRole('dialog').getByRole('status').first()).toBeVisible();
+      await expect(page.locator('.matrix-scroll canvas')).toHaveCount(0);
+      expect(observed.slice(requests).some((p) => p.endsWith('/data'))).toBe(false);
+      await page.keyboard.press('Escape');
+    }
+    await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
+    await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+    await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await expect(page.getByLabel('Show dimensions')).toBeChecked();
+    if (family === 'vjepa2') expect(observed.some((p) => p.endsWith('/tokenize'))).toBe(false);
+    await page.getByRole('button', { name: 'Collapse all', exact: true }).click();
+    await expect(canvas).toHaveAttribute('data-visible-nodes', String(compact.boxes.length));
+    await page.getByRole('button', { name: 'Center selected', exact: true }).click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+  });
+}
+
+test('deterministic production [smollm2] close during progressive data cancels and releases modal resources', async ({ page }) => {
+  const graph = await selectGraph(page);
+  const parameter = graph.parameters.find((p) => p.inspection.status === 'available' && p.logical_shape?.length === 2)!;
+  for (let cycle = 0; cycle < 3; cycle++) {
+    await page.evaluate(() => { const p = (window as any).__acceptance; p.captureScalars = true; p.scalarValues.length = 0; });
+    await control('arm', { kind: 'logical_tensor' });
+    await openParameter(page, graph, parameter);
+    await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
+    await expect.poll(async () => (await metrics(page)).firstRender).toBeGreaterThan(0);
+    const values = await page.evaluate(() => (window as any).__acceptance.scalarValues as number[]);
+    expect(values.length).toBeGreaterThan(0);
+    expect(values).toEqual(values.map((_, i) => (i % 29 - 14) / 8));
+    await page.keyboard.press('Escape');
+    await released(page);
+    await expect.poll(async () => { const s = await control('state'); return [s.operations, s.readers, s.consumers, s.flights, s.tasks, s.temporary]; }).toEqual([0, 0, 0, 0, 0, 0]);
+    await control('release', {});
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  }
+});

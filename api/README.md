@@ -119,7 +119,10 @@ repetition order, directional group ports, declared symbols, alias termination,
 physical versus logical geometry, and real native inspection membership. Schema
 success alone does not establish graph conformance. Runtime implementation children
 must consume the contextual cases when adding retrieval and graph consumers; this
-publication adds no client request method or backend architecture route.
+publication was followed by the generated-type client and production architecture
+route. Their integrated checks are documented in
+[architecture acceptance](../acceptance/architecture.md); full local reference
+acceptance remains a separate gate.
 
 `byte_cases` describe repeated 4 KiB chunks plus a tail, exercising the exact 32 MiB
 boundary and early rejection without allocating a large response. `bounded_size`
