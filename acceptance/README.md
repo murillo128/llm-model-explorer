@@ -18,8 +18,8 @@ npm ci --prefix ui
 acceptance/check.sh
 ```
 
-Linux needs `xvfb-run` for the existing native-scrollbar component tests. The
-product browser tests use headless Chromium with real WebGL2 at DPR 1 and 2,
+Linux needs `xvfb-run` for both browser suites. Product tests run headed Chromium
+under Xvfb with native scrollbars and real WebGL2 at DPR 1 and 2,
 using SwiftShader by default. Set `LMEX_WEBGL_BACKEND=vulkan` to request the host
 Vulkan path; the actual renderer and limits are recorded, so this setting alone
 is not a hardware claim. This tests browser GL behavior, not physical GPU
@@ -37,7 +37,7 @@ Focused commands:
 
 ```sh
 backend/.venv/bin/python -m pytest acceptance -ra
-(cd ui && npm run build && npm run test:acceptance)
+(cd ui && npm run build && xvfb-run -a npm run test:acceptance)
 ```
 
 The product browser harness reserves loopback ports 4175 (static UI) and 8765
@@ -53,28 +53,37 @@ serve development modules. CORS allows only the static origin and exposes
 `fixtures.py` generates HF-compatible safetensors and tokenizer assets outside
 Git. Seed 17 defines `((index * 17) % 257 - 128) / 128`, exactly representable in
 FP16 and float32. The fixture has `[576,1536]` and `[1536,576]` MLP orientations,
-a `[1025,576]` embedding, a 576-value vector, an empty tensor, and a small F32
-scientific tensor with NaN/infinity/signed zero. The byte BPE uses an explicitly
-ordered alphabet with no stochastic training.
+a `[1025,576]` embedding, a supported Llama embedding configuration, a 576-value
+vector, an empty tensor, and a small F32 scientific tensor with NaN/infinity/signed
+zero. The browser additionally generates four overflow matrices (`[32,32]`,
+`[1200,32]`, `[32,1600]`, `[1200,1600]`), 80 small inventory leaves, and an
+unsupported-embedding model with the same usable tokenizer. The byte BPE uses an
+explicitly ordered alphabet with no stochastic training.
 
 | Gate | Real application evidence |
 | --- | --- |
-| All ten routes | Model/session/inventory/three streams/tokenize/cancel over TCP; CORS preflight and structured pre-stream errors |
+| All eleven routes | Model/session/inventory/three tensor streams/tokenize/embeddings/cancel over TCP; CORS preflight and structured pre-stream errors |
 | Scientific correctness | Exact fixture float32 bytes; independent NumPy float64 statistics/percentiles and independently accumulated uint32 row/column counts |
 | Progressive delivery | Hold the real producer after its first flushed block; observe DATA and rendered pixels while publication is still impossible; distributions have their own barrier |
 | Sharing and cache | Two sessions, distinct public operation IDs, late join from byte zero, parked slow reader, one producer, warm reuse with identical key/digest/inode/mtime |
 | Lifecycle | One/all-consumer cancellation, session deletion, socket disconnection, pre-META and midstream failure; no partial valid artifacts; live operations/readers/tasks return to zero |
 | Restart/invalidation | New process loses sessions and reuses artifacts; mutated source rejects old pinned sessions and generates new keys; stopped-cache deletion permits rebuild |
-| UI scientific view | Native vector and both matrix orientations, embedding, device-pixel extents, linked scrolling, exact hover value, unchanged luminance under chroma, all 81 magnifier pixels |
+| UI scientific view | Native vector and both matrix orientations, embedding, device-pixel extents, linked scrolling, exact hover value, green scalar ordering/contrast and linked amber guides, all 81 magnifier pixels |
 | UI ownership | Native allocation/upload observers, one scalar texture representation, bounded uploads, no hover reupload, reader/texture baseline after repeated navigation/cancel; weak references plus explicit GC check retained CPU owners |
+| Embeddings | Exact ordered IDs including duplicates, independent float32 upload oracle, first-row barrier, requested-row-only source reads, A→B→A and model/session fences, unsupported region isolation |
+| Compact layout | 1000×700 and 390×640 at DPR 1/2 with real scrollbar gutters; all four overflow modes and four scroll corners, fixed document, independent inventory, aligned profiles |
+| Prompt regression | Pre-embedding snapshots retained from issue #44; real prompt pixels unchanged across embedding completion, selection/history and composition lifecycle |
 | Live tokenizer | Real Unicode echo/IDs, overlapping emoji code-point spans, one editable source, delayed actual old response cannot overwrite current annotations; refresh reconnects |
 
 `server.py` wraps only the test process. Its `/__test/*` routes control delays and
 faults and expose internal counters. They are absent from the production CLI.
 Production algorithms, artifact storage, session ownership, LMEX framing and the
 real tokenizer remain active. Fault injection raises in real production seams;
-stale-token tests delay an actual backend response. Python wire parsing and numeric
-oracles are independent of the service's encoder and calculations.
+stale-token and embedding tests delay actual backend responses. A cancellation-aware
+barrier in the real embedding consumer pauses after the first block; row-iterator
+observers record materialized elements and full-tensor accesses without changing
+source values. Embedding responses are ephemeral and publish no artifacts. Python
+wire parsing and numeric oracles are independent of the service's encoder and calculations.
 
 Timing reports distinguish first received DATA (TCP), first upload and populated
 render (browser), the deliberate release barrier, and completion. These are
@@ -140,3 +149,6 @@ hf download HuggingFaceTB/SmolLM2-135M \
   --revision 93efa2f097d58c2a74874c7e644dbc9b0cee75a2 \
   --local-dir /absolute/path/to/models/SmolLM2-135M
 ```
+
+Current compact explorer and embedding evidence is in [improvements.md](improvements.md).
+The earlier [evidence.md](evidence.md) remains the historical PoC report.

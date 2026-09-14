@@ -32,6 +32,6 @@ backend/.venv/bin/ruff format --check --config backend/pyproject.toml acceptance
   npm run build
   PLAYWRIGHT_JSON_OUTPUT_FILE="$LMEX_EVIDENCE_DIR/component-browser.json" \
     xvfb-run -a npm run test:browser -- --reporter=list,json
-  npm run test:acceptance
+  xvfb-run -a npm run test:acceptance
 )
 "$python_bin" -m acceptance.report "$LMEX_EVIDENCE_DIR"
