@@ -32,7 +32,7 @@ export function InfoPopover({ label, children }: { label: string; children: Reac
     };
     position();
     const observer = new ResizeObserver(position);
-    observer.observe(host.current!.closest('.matrix-panel-header') ?? host.current!);
+    observer.observe(host.current!.closest('.matrix-panel-context') ?? host.current!);
     window.addEventListener('resize', position);
     window.addEventListener('scroll', position, true);
     return () => { observer.disconnect(); window.removeEventListener('resize', position); window.removeEventListener('scroll', position, true); };

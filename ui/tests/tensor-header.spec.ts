@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-async function open(page: Page, name = 'A') {
+async function open(page: Page, name = 'A', longPath = false) {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);
+  if (longPath) await page.evaluate(() => { window.explorerFixture.tensors.find((tensor) => tensor.id === 'A')!.path = ['A'.repeat(200)]; });
   await page.getByRole('combobox').selectOption('lab/alpha');
-  await page.getByRole('button', { name: new RegExp(`^${name} \\[` ) }).click();
+  await page.getByRole('button', { name: new RegExp(`^${longPath ? 'A'.repeat(200) : name} \\[` ) }).click();
   await expect.poll(() => page.evaluate(() => window.explorerFixture.requests.length)).toBe(3);
 }
 const geometry = (page: Page) => page.evaluate(() => {
@@ -108,4 +109,22 @@ test('touch pins metadata and supports close and outside tap without hover', asy
   await page.getByRole('heading', { name: 'Tensors', exact: true }).tap();
   await expect(dialog).toHaveCount(0);
   await context.close();
+});
+
+
+test('pinned metadata follows its icon when operation status changes available identity width', async ({ page }) => {
+  await open(page, 'A', true);
+  const trigger = page.getByRole('button', { name: 'Tensor information', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Tensor information' });
+  await trigger.click();
+  // Simulate producer cancellation without an outside pointer dismissal.
+  await page.evaluate(() => { const f = window.explorerFixture; for (let i = 0; i < 3; i++) f.end(i, 6); });
+  await expect(page.getByRole('button', { name: 'Cancel loading' })).toHaveCount(0);
+  await expect.poll(() => dialog.evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    const icon = document.querySelector('.matrix-info-trigger')!.getBoundingClientRect();
+    const pane = node.closest('.working-surface')!.getBoundingClientRect();
+    return rect.top === icon.bottom && Math.abs(rect.left - Math.max(pane.left, Math.min(icon.left, pane.right - rect.width))) < 1;
+  })).toBe(true);
+  await expect(dialog).toBeVisible();
 });
