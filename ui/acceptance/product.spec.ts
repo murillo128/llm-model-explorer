@@ -109,9 +109,9 @@ test('production UI renders before producer completes; native geometry, inspecti
   const first = await metrics(page);
   expect(first.firstRender).toBeGreaterThan(started);
   const known = await pixel(page, 8, 8);
-  // First pixel read is real grayscale, missing data is the explicit pending color.
-  expect(known[0]).toBe(known[1]);
-  expect(known[1]).toBe(known[2]);
+  // First pixel read uses the green scalar family; pending data has its own color.
+  expect(known[1]).toBeGreaterThan(known[0]);
+  expect(known[1]).toBeGreaterThan(known[2]);
   const beforeRelease = await page.evaluate(() => performance.now());
   expect(first.firstRender).toBeLessThan(beforeRelease);
   await control('release', {});
@@ -149,7 +149,9 @@ test('production UI renders before producer completes; native geometry, inspecti
   const row = origin[1]! + 8, column = origin[0]! + 8;
   await expect(page.locator('.inspection-readout')).toHaveText(`row ${row} · column ${column}${value(row * 1536 + column)}`);
   const selected = await pixel(page, 8, 8);
-  expect(Math.abs(luminance(neutral) - luminance(selected))).toBeLessThan(.0045);
+  expect(neutral[1]).toBeGreaterThan(neutral[0]);
+  expect(selected[0] - selected[1]).toBeGreaterThan(30);
+  expect(luminance(selected)).toBeGreaterThan(0);
   expect(await metrics(page)).toMatchObject({ uploads: beforeHover.uploads, createdTextures: beforeHover.createdTextures });
   const neighborhood = page.getByLabel('9 by 9 tensor neighborhood');
   expect(await neighborhood.evaluate((c) => [(c as HTMLCanvasElement).width, (c as HTMLCanvasElement).height])).toEqual([9, 9]);

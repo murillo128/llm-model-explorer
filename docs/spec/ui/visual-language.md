@@ -145,7 +145,7 @@ The matrix itself is not styled using ordinary CSS palette tokens. Each value ma
 
 ## Hover, selection, and magnification
 
-Warm amber is the standard interaction chroma. Hovering a tensor cell links the corresponding row, column, and distribution scanlines while preserving the original scalar-derived luminosity. Do not paint opaque guide lines over tensor data and do not recolor a second copy of the tensor.
+Warm amber is the standard interaction chroma. Hovering or focusing a populated tensor cell links the corresponding row, column, and distribution scanlines with thin composited amber guides and a stronger intersection. Scientific surfaces use the sequential green family owned by `rendering.md`; green is scalar brightness, not a second brand accent or data variable. Guides preserve the underlying scalar transfer and values while changing final composited color/luminance. Do not paint opaque guide lines or recolor a second copy of the tensor.
 
 The primary pointer marker over a matrix is a small amber cross with a center gap. The hover readout uses compact monospace coordinates/value text. The current magnifier reference is approximately `170 × 170 px` and shows a `9 × 9` source neighborhood with nearest-neighbor/pixel-preserving enlargement. It is an inspection aid, not general zoom.
 
