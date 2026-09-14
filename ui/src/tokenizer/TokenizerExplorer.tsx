@@ -21,10 +21,18 @@ interface Props {
 export function TokenizerWorkspace({ client, sessionId, ...props }: Props) {
   const [tokenRow, setTokenRow] = useState<number | null>(null);
   const [matrixRow, setMatrixRow] = useState<number | null>(null);
+  function selectTokenRow(row: number | null) {
+    setTokenRow(row);
+    if (row !== null) setMatrixRow(null);
+  }
+  function selectMatrixRow(row: number | null) {
+    setMatrixRow(row);
+    if (row !== null) setTokenRow(null);
+  }
   return <div className="tokenizer-workspace">
-    <PromptTokenizer {...props} client={client} sessionId={sessionId} activeRow={matrixRow ?? tokenRow} onRowSelect={setTokenRow}
+    <PromptTokenizer {...props} client={client} sessionId={sessionId} activeRow={matrixRow ?? tokenRow} onRowSelect={selectTokenRow}
       downstream={current => <section className="input-embeddings" aria-label="Input embeddings">
-        {current ? <EmbeddingRegion client={client} sessionId={sessionId} current={current} highlightedRow={tokenRow} onRowSelect={setMatrixRow} />
+        {current ? <EmbeddingRegion client={client} sessionId={sessionId} current={current} highlightedRow={tokenRow} onRowSelect={selectMatrixRow} />
           : <><h2>Input embeddings</h2><p role="status">Waiting for current tokenization.</p></>}
       </section>} />
   </div>;

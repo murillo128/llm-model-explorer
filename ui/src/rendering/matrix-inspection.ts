@@ -90,6 +90,12 @@ export class MatrixInspection {
   /** External row context is display-only; it never moves focus or invents a cell. */
   setLinkedRow(row: number | null) {
     this.linkedRow = row !== null && Number.isInteger(row) && row >= 0 && row < this.viewport.matrix.renderer.geometry.rows ? row : null;
+    // A new external interaction supersedes prior local inspection, even when
+    // the matrix retains keyboard focus. Clear its readout, not browser focus.
+    if (this.linkedRow !== null) {
+      this.pointer = null;
+      this.cell = null;
+    }
     this.refresh();
   }
 

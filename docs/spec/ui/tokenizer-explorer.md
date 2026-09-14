@@ -105,7 +105,11 @@ first sequence position, while each existing ID independently addresses its own
 row. Hover/focus of a matrix cell highlights the associated existing annotation
 without changing editor text or selection. Duplicate IDs at different positions
 remain distinct links. Exact cell inspection retains row, hidden-dimension
-column, and float32 value. Linked row state changes display uniforms only.
+column, and float32 value. The latest token or matrix interaction takes precedence, including token hover
+or activation while the matrix retains keyboard focus. A token interaction
+clears the previous cell readout without moving focus or editor selection; a
+subsequent matrix interaction resumes exact cell inspection. Linked row state
+changes display uniforms only.
 
 Fence each lookup with the tokenizer editor generation and session/options
 identity, not text equality alone, including A→B→A changes. Invalidate the old

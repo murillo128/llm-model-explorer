@@ -61,3 +61,14 @@ Do not regenerate the frozen prompt snapshots when checking this implementation.
 The endpoint supplies no authoritative statistics/distribution artifact for these
 matrices. Matrix-only rendering uses the shared provisional transfer and green
 palette, with amber inspection guides. No browser model computation is added.
+
+
+## Interaction precedence regression
+
+The audit of the initial head found that token hover/click could not supersede a
+keyboard-focused matrix cell. The added browser regression first reproduced the
+failure, then verifies the correction at both viewport sizes: keyboard row 0 →
+token row 2 hover/click → matrix ArrowDown → another click on the same stationary
+token. The matrix keeps focus, editor selection/text remain unchanged, the stale
+cell readout clears, and pixel readback matches a row-2-only amber guide. Scalar
+upload counts, CPU storage and request counts stay unchanged.

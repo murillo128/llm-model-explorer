@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Tokenization } from '../src/tokenizer/annotations';
 
+import { color } from './scalar-oracle';
 import { frame, meta, data, values } from './embedding-fixtures';
 
 function tokens(text: string, ids = [2, 0, 2], special = true): Tokenization {
@@ -187,4 +188,57 @@ test('oversized embeddings use native internal scroll and release scalar resourc
   await editor.fill('new');
   await expect(page.locator('.matrix-scroll')).toHaveCount(0);
   expect(await page.evaluate(() => window.embeddingHarness.renderers.every(r => r.diagnostics.cpuBytes === 0 && r.state === 'disposed'))).toBe(true);
+});
+
+test('token hover and activation take over keyboard matrix inspection without moving focus or editor selection', async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2]);
+  await expect(page.getByText('3 token rows · 7 hidden dimensions')).toBeVisible();
+  await editor.press('Home'); await editor.press('ArrowRight');
+  const selection = await page.evaluate(() => window.tokenizerHarness.selection());
+  await page.mouse.move(0, 0);
+  const matrix = page.locator('.matrix-scroll');
+  await matrix.focus();
+  await expect(page.locator('.inspection-readout')).toContainText('row 0 · column 0');
+  const before = await page.evaluate(() => {
+    const r = window.embeddingHarness.renderers.at(-1)!;
+    return { uploads: r.diagnostics.scalarUploadCalls, cpu: r.diagnostics.cpuBytes, requests: window.embeddingHarness.requests.length };
+  });
+  const token = page.locator('[data-token-index="2"]');
+  await token.hover();
+  await expect(token).toHaveAttribute('data-active-token', '');
+  await expect(page.locator('[data-token-index="0"]')).not.toHaveAttribute('data-active-token');
+  await expect(page.locator('.inspection-readout')).toHaveCount(0);
+  await token.click();
+  await expect(matrix).toBeFocused();
+  await expect(token).toHaveAttribute('data-active-token', '');
+  // The still-focused matrix can take over again, then another click on the same
+  // stationary token must reclaim its row (no intervening pointer-enter event).
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.inspection-readout')).toContainText('row 1 · column 0');
+  await expect(page.locator('[data-token-index="1"]')).toHaveAttribute('data-active-token', '');
+  await token.click();
+  await expect(token).toHaveAttribute('data-active-token', '');
+  await expect(page.locator('.inspection-readout')).toHaveCount(0);
+  await expect(matrix).toBeFocused();
+  const pixels = await page.evaluate(() => {
+    const r = window.embeddingHarness.renderers.at(-1)!; r.draw();
+    const gl = r.canvas.getContext('webgl2')!;
+    const bytes = new Uint8Array(7 * 3 * 4);
+    gl.readPixels(0, 0, 7, 3, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
+    return [...bytes];
+  });
+  for (let row = 0; row < 3; row++) for (let column = 0; column < 7; column++) {
+    const value = values([2, 0, 2])[row * 7 + column]!;
+    const expected = color(1 / (1 + Math.exp(-12 * value)), row === 2 ? 0.65 : 0);
+    const offset = ((2 - row) * 7 + column) * 4;
+    for (let channel = 0; channel < 3; channel++) expect(Math.abs(pixels[offset + channel]! - expected[channel]!)).toBeLessThanOrEqual(1);
+  }
+  expect(await page.evaluate(() => window.tokenizerHarness.selection())).toEqual(selection);
+  expect(await page.evaluate(() => window.tokenizerHarness.source())).toBe('ABC');
+  expect(await page.evaluate(() => {
+    const r = window.embeddingHarness.renderers.at(-1)!;
+    return { uploads: r.diagnostics.scalarUploadCalls, cpu: r.diagnostics.cpuBytes, requests: window.embeddingHarness.requests.length };
+  })).toEqual(before);
 });
