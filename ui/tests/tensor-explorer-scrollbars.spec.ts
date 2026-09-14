@@ -82,7 +82,9 @@ for (const dpr of [1, 2]) test.describe(`workspace panes at DPR ${dpr}`, () => {
       await expect(page.getByRole('combobox')).toBeEnabled();
       await page.evaluate((dpr) => {
         const tensors = window.explorerFixture.tensors;
-        const cases = [['fits', 64, 120], ['tall', 1200, 120], ['wide', 64, 1800], ['both', 1200, 1800]] as const;
+        // Exceed every tested viewport with bounded fixtures; geometry checks do
+        // not need multi-megapixel allocations far beyond the visible surface.
+        const cases = [['fits', 64, 120], ['tall', 800, 120], ['wide', 64, 1100], ['both', 800, 1100]] as const;
         for (const [id, rows, columns] of cases) tensors.push({ ...tensors[0]!, id, name: id, path: [id],
           shape: [rows * dpr, columns * dpr], rank: 2, numel: rows * columns * dpr * dpr });
         for (let i = 0; i < 80; i++) tensors.push({ ...tensors[0]!, id: `inventory-${i}`, name: `inventory-${i}`, path: [`inventory-${i}`] });
@@ -109,6 +111,7 @@ for (const dpr of [1, 2]) test.describe(`workspace panes at DPR ${dpr}`, () => {
           horizontal: host.scrollWidth > host.clientWidth, vertical: host.scrollHeight > host.clientHeight,
           gutter: host.offsetWidth - host.clientWidth, scrollbar: host.offsetHeight - host.clientHeight,
           client: [host.clientWidth, host.clientHeight], scroll: [host.scrollLeft, host.scrollTop],
+          states: [m!.state, r!.state, c!.state],
           matrix: m!.view!, row: r!.view!, column: c!.view!,
           alignment: [(mr.top - rr.top) * devicePixelRatio, (mr.left - cr.left) * devicePixelRatio],
           pixels: [mr.width * devicePixelRatio, mr.height * devicePixelRatio],
@@ -138,9 +141,10 @@ for (const dpr of [1, 2]) test.describe(`workspace panes at DPR ${dpr}`, () => {
           await matrix.evaluate((e, [x, y]) => { e.scrollLeft = x!; e.scrollTop = y!; }, [x!, y!]);
           await expect.poll(async () => {
             const g = await geometry();
+            expect(g.states).toEqual(['ready', 'ready', 'ready']);
             return [g.matrix.x, g.matrix.y, g.column.x, g.row.y];
-          }).toEqual(x ? [horizontal ? 1800 * dpr - initial.matrix.width : 0, vertical ? 1200 * dpr - initial.matrix.height : 0,
-            horizontal ? 1800 * dpr - initial.matrix.width : 0, vertical ? 1200 * dpr - initial.matrix.height : 0] : [0, 0, 0, 0]);
+          }).toEqual(x ? [horizontal ? 1100 * dpr - initial.matrix.width : 0, vertical ? 800 * dpr - initial.matrix.height : 0,
+            horizontal ? 1100 * dpr - initial.matrix.width : 0, vertical ? 800 * dpr - initial.matrix.height : 0] : [0, 0, 0, 0]);
           const g = await geometry();
           expect(g.document).toEqual([viewport.width, viewport.height]);
           expect(g.body).toEqual(g.document);
