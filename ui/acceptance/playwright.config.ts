@@ -12,7 +12,7 @@ const dpr2 = {
 };
 const workers = process.env.PLAYWRIGHT_ACCEPTANCE_WORKERS
   ? Number(process.env.PLAYWRIGHT_ACCEPTANCE_WORKERS)
-  : 1;
+  : process.env.CI ? 2 : 1;
 
 export default defineConfig({
   testDir: '.',
