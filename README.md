@@ -8,14 +8,15 @@ The project is intentionally split into three independent system boundaries: a P
 
 The initial reference model is `HuggingFaceTB/SmolLM2-135M` Base.
 
-The implemented proof of concept has two user-facing capabilities:
+The implemented application retains the two proof-of-concept capabilities and adds the accepted static architecture view:
 
 - **Tensor Explorer**: discover model tensors through a hierarchical list and open complete 1D or 2D tensors for progressive visualization.
+- **Architecture Explorer**: inspect a prepared static graph, expand concrete layers, show dimensions, and inspect available native weights in the existing Matrix Explorer modal. Descriptions cover selected Qwen3, Qwen3.5, V-JEPA 2 encoder/predictor, and SmolLM2 variants; [local checkpoint acceptance and evidence](acceptance/architecture.md) are tracked separately from implementation.
 - **Tokenizer Explorer**: run the real Hugging Face tokenizer associated with the selected model, inspect its inline annotations, and progressively view the exact input-embedding rows for the current token sequence.
 
-The detailed behavior of both explorers lives in their dedicated specifications. The general architecture must already support the later move to step-by-step inference without replacing the backend model, API boundary, session model, streaming mechanism, artifact cache, or renderer boundary.
+The detailed behavior of these explorers lives in their dedicated specifications. The general architecture must already support the later move to step-by-step inference without replacing the backend model, API boundary, session model, streaming mechanism, artifact cache, or renderer boundary.
 
-Future work will extend the same architecture to transformer layers, attention, matrix/vector operations, activations, token generation, KV cache, sampling, and other intermediate inference state. Execution remains UI-driven: even a continuous Play mode is conceptually a sequence of explicit steps requested by the UI rather than an autonomous backend process.
+Future work will extend the same architecture to execution of transformer layers, attention and matrix/vector operations, plus activations, token generation, KV cache, sampling and other intermediate inference state. Execution remains UI-driven: even a continuous Play mode is conceptually a sequence of explicit steps requested by the UI rather than an autonomous backend process.
 
 ## System architecture
 
@@ -60,8 +61,13 @@ This repository uses the Skillforge issue-driven development workflow. Durable a
 Use Python 3.12 (3.14 is also checked), uv 0.12.13, Node 24.14.x and npm 11.9.x.
 The lockfiles pin application dependencies. Models are supplied locally; the
 application never downloads weights. Place each HF checkpoint in an immediate
-child directory of the model root, including its configuration and tokenizer assets.
-Supported checkpoint dtypes are F32, F16 and BF16 safetensors.
+child directory of the model root, including its configuration, all selected weight shards,
+and assets required for advertised capabilities. Native numeric views support F32,
+F16 and BF16 safetensors. The selected GPTQ Int4 and NVFP4 checkpoints additionally
+expose static architecture/storage metadata and explicit partial numeric inventories;
+packed weights are not decoded. A tokenizer is optional for V-JEPA 2.
+Startup prepares architectures before accepting connections, including content hashing
+on warm starts; graph retrieval never generates a model or runs inference.
 
 On the backend computer:
 

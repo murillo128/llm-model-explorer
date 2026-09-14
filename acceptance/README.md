@@ -161,3 +161,11 @@ hf download HuggingFaceTB/SmolLM2-135M \
 Navigable matrix and stale-tokenizer coverage is documented in [usability.md](usability.md).
 The earlier compact explorer and embedding evidence is in [improvements.md](improvements.md).
 The earlier [evidence.md](evidence.md) remains the historical PoC report.
+
+## Static Architecture Explorer
+
+The acceptance stack also exercises all four static descriptions through real
+HTTP and the built browser UI. See [architecture acceptance](architecture.md) for
+the complete-local-reference manifest, strict no-skip gate, coverage boundaries,
+and [current evidence](architecture-evidence.md). Ordinary fixture success does
+not complete the actual Qwen/V-JEPA/SmolLM2 reference gate.

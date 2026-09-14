@@ -1,0 +1,82 @@
+[
+  {
+    "kind": "actual checkpoint",
+    "family": "smollm2",
+    "nodes": 971,
+    "edges": 1386,
+    "layoutMs": 2,
+    "heapSnapshot": {
+      "usedSize": 33259544,
+      "totalSize": 107339776,
+      "embedderHeapUsedSize": 10970264,
+      "backingStorageSize": 1033074
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "browser": "153.0.8010.12",
+    "project": "dpr1",
+    "observation": "Full graph expanded and last instances selected; measured before numeric modal assertions"
+  },
+  {
+    "kind": "actual checkpoint",
+    "family": "qwen3",
+    "nodes": 963,
+    "edges": 1350,
+    "layoutMs": 3.0999999940395355,
+    "heapSnapshot": {
+      "usedSize": 33129148,
+      "totalSize": 106815488,
+      "embedderHeapUsedSize": 10414488,
+      "backingStorageSize": 1019240
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "browser": "153.0.8010.12",
+    "project": "dpr1",
+    "observation": "Full graph expanded and last instances selected; measured before numeric modal assertions"
+  },
+  {
+    "kind": "actual checkpoint",
+    "family": "qwen35",
+    "nodes": 948,
+    "edges": 1329,
+    "layoutMs": 14.599999994039536,
+    "heapSnapshot": {
+      "usedSize": 37764340,
+      "totalSize": 105766912,
+      "embedderHeapUsedSize": 13074616,
+      "backingStorageSize": 958272
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "browser": "153.0.8010.12",
+    "project": "dpr1",
+    "observation": "Full graph expanded and last instances selected; measured before numeric modal assertions"
+  },
+  {
+    "kind": "actual checkpoint",
+    "family": "vjepa2",
+    "nodes": 782,
+    "edges": 1079,
+    "layoutMs": 1.4000000059604645,
+    "heapSnapshot": {
+      "usedSize": 41560892,
+      "totalSize": 107864064,
+      "embedderHeapUsedSize": 63961520,
+      "backingStorageSize": 833934
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "browser": "153.0.8010.12",
+    "project": "dpr1",
+    "observation": "Full graph expanded and last instances selected; measured before numeric modal assertions"
+  }
+]

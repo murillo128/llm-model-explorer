@@ -1,0 +1,25 @@
+{
+  "kind": "synthetic local fixtures, not reference acceptance",
+  "graphs": {
+    "smollm2": {
+      "nodes": 74,
+      "edges": 98,
+      "coverage": "complete"
+    },
+    "qwen3": {
+      "nodes": 78,
+      "edges": 102,
+      "coverage": "complete"
+    },
+    "qwen35": {
+      "nodes": 89,
+      "edges": 121,
+      "coverage": "complete"
+    },
+    "vjepa2": {
+      "nodes": 89,
+      "edges": 122,
+      "coverage": "complete"
+    }
+  }
+}
