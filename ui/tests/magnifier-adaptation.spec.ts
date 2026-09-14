@@ -33,7 +33,10 @@ for (const dpr of [1, 1.25, 2]) test.describe(`adaptive magnifier DPR ${dpr}`, (
 });
 
 test('visibility history belongs to each Matrix Explorer instance', async ({ page }) => {
+  await page.setViewportSize({ width: page.viewportSize()!.width, height: 1100 });
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
+  // Leave enough protected free space in both panes to isolate zoom policy.
+  await page.addStyleTag({ content: '#workspace { height: 430px; }' });
   await page.evaluate(() => window.matrixFixture.renderPair());
   await expect(page.locator('.matrix-scroll')).toHaveCount(2);
   await page.evaluate(() => {
