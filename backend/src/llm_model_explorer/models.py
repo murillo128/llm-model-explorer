@@ -8,9 +8,11 @@ from pathlib import Path, PurePosixPath
 from pydantic import BaseModel, ConfigDict
 
 from .model_files import FileSnapshot, ModelError, confined, invalid, read_json
+from .quantized_inventory import encoding, logical_locations
 from .tensor_source import (
     MAX_SAFE_INTEGER,
     ModelSource,
+    PhysicalTensor,
     TensorDescriptor,
     TensorLocation,
     parse_header,
@@ -75,6 +77,11 @@ class CatalogueEntry:
     summary: ModelSummary
     _snapshot: FileSnapshot
     _locations: tuple[TensorLocation, ...]
+    _physical: tuple[PhysicalTensor, ...]
+
+    def physical_tensors(self) -> tuple[PhysicalTensor, ...]:
+        self._snapshot.check()
+        return self._physical
 
     def tensors(self) -> tuple[TensorDescriptor, ...]:
         """Inventory descriptors, without reading tensor payloads."""
@@ -83,7 +90,11 @@ class CatalogueEntry:
 
     def pin(self) -> ModelSource:
         return ModelSource(
-            self.summary.id, self._snapshot.fingerprint(), self._snapshot, self._locations
+            self.summary.id,
+            self._snapshot.fingerprint(),
+            self._snapshot,
+            self._locations,
+            self._physical,
         )
 
 
@@ -99,8 +110,7 @@ class ModelCatalogue:
         config = read_json(self._root, directory / "config.json")
         if not isinstance(config.get("model_type"), str) or not config["model_type"]:
             raise invalid("Missing Hugging Face model type.")
-        if config.get("quantization_config") is not None:
-            raise ModelError("unsupported_representation", "Quantized checkpoints are unsupported.")
+        encoding(config)
         indexes = [name for name, _ in initial.files if name.endswith(".safetensors.index.json")]
         if len(indexes) > 1:
             raise invalid("Multiple safetensors indexes are ambiguous.")
@@ -118,10 +128,10 @@ class ModelCatalogue:
             raise invalid("No safetensors weights found.")
         snapshot = FileSnapshot.capture(self._root, directory, shards)
         initial.check()
-        locations: dict[str, TensorLocation] = {}
+        locations: dict[str, PhysicalTensor] = {}
         for shard in shards:
             for location in parse_header(snapshot, shard):
-                name = location.descriptor.name
+                name = location.name
                 if name in locations:
                     raise invalid("Duplicate tensor name across shards.")
                 locations[name] = location
@@ -155,7 +165,10 @@ class ModelCatalogue:
             tokenizer_available=tokenizer_available,
             size_bytes=size if size <= MAX_SAFE_INTEGER else None,
         )
-        return CatalogueEntry(summary, snapshot, tuple(locations[k] for k in sorted(locations)))
+        physical = tuple(locations[k] for k in sorted(locations))
+        logical = logical_locations(config, physical)
+        snapshot.check()
+        return CatalogueEntry(summary, snapshot, logical, physical)
 
     def discover(self) -> tuple[CatalogueEntry, ...]:
         """Fresh metadata scan; only identity collisions require full streamed hashing."""
