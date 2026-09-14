@@ -61,7 +61,7 @@ function BackendApp({ config, slots }: Required<AppProps>) {
           {(restoreInventory) => <WorkingSurface title={`${state.explorer} workspace`} showTitle={false}>
             {restoreInventory}
             {state.explorer === 'Tensor Explorer' && tensor && <>
-              <TensorHeader key={tensor.id} tensor={tensor} />
+              {(!supported || slots.tensor) && <TensorHeader key={tensor.id} tensor={tensor} />}
               {!supported && <p>Direct viewing supports complete rank-1 and rank-2 tensors. This rank-{tensor.rank} tensor is available for metadata inspection only.</p>}
             </>}
             {context ? <ExplorerContext.Provider key={state.viewRevision} value={context}>

@@ -17,3 +17,16 @@
 .inspection-readout span { display: block; }
 
 .matrix-inspection, .matrix-inspection * { box-sizing: border-box; }
+
+.matrix-panel-header { position: sticky; top: 0; z-index: 21; display: flex; align-items: center; gap: 8px; height: 40px; min-height: 40px; max-height: 40px; min-width: 0; border-bottom: 1px solid var(--ui-border, #d7d3ca); background: var(--ui-surface, #fff); font-size: 13px; line-height: 20px; }
+.matrix-panel-context { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
+.matrix-panel-status { flex: 0 1 auto; max-width: 40%; min-width: 0; overflow: auto; scrollbar-width: thin; }
+.matrix-panel-status:empty, .matrix-panel-actions:empty { display: none; }
+.matrix-panel-actions { display: flex; align-items: center; flex-shrink: 0; }
+.matrix-info { flex-shrink: 0; }
+.matrix-info-trigger, .matrix-info-close, .matrix-header-cancel { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--ui-text, #20201d); cursor: pointer; font-size: 20px; }
+.matrix-info-trigger:hover, .matrix-info-close:hover, .matrix-header-cancel:hover { background: var(--ui-accent-soft, #f3e1c9); }
+.matrix-info-trigger svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.matrix-info-popover { position: fixed; z-index: 22; overflow: auto; padding: 12px; border: 1px solid var(--ui-border, #d7d3ca); border-radius: 6px; background: var(--ui-surface, #fff); box-shadow: var(--ui-shadow-float, 0 10px 25px #2b271f24); }
+.matrix-info-close { margin: -6px -6px 2px auto; }
+.matrix-panel-header :focus-visible { outline: 2px solid var(--ui-text, #20201d); outline-offset: -2px; }

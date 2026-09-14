@@ -491,9 +491,9 @@ test.describe('production native pane geometry', () => {
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(0);
       await expect(page.locator('.tensor-leaf-name')).toHaveText(Array(90).fill('weight'));
       await expect(page.locator('.tensor-choice summary, .tensor-choice details')).toHaveCount(0);
-      const info = page.getByRole('button', { name: 'Tensor information and help' });
+      const info = page.getByRole('button', { name: 'Tensor information' });
       await info.focus(); await info.press('Enter');
-      await expect(page.getByRole('dialog', { name: 'Tensor information and help' })).toContainText('Logical dtype');
+      await expect(page.getByRole('dialog', { name: 'Tensor information' })).toContainText('Logical dtype');
       await page.keyboard.press('Escape'); await expect(info).toBeFocused();
       await expect(page.getByText(/One value per device pixel/)).toHaveCount(0);
       const evidence = [];
@@ -532,7 +532,7 @@ test.describe('production native pane geometry', () => {
           await documentFits(page); evidence.push({ name, ...g });
         }
       }
-      await expect(page.locator('.tensor-header')).not.toContainText('complete');
+      await expect(page.locator('.matrix-panel-header')).not.toContainText('complete');
       await page.screenshot({ path: testInfo.outputPath('compact-tensor.png') });
       await testInfo.attach('measurements', { body: JSON.stringify({ scenario: 'native geometry', viewport,
         limits: await page.evaluate(() => (window as any).__acceptance.limits()), cases: evidence }), contentType: 'application/json' });

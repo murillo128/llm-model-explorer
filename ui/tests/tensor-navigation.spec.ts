@@ -34,9 +34,9 @@ test('compact deep navigator and contextual metadata remain accessible in narrow
   await expect(workspace.getByText('[1 × 2 × 3] · int8', { exact: true })).toBeVisible();
   await expect(workspace.getByText('Logical path')).toHaveCount(0);
   expect(await workspace.locator('h2').evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
-  const info = workspace.getByRole('button', { name: 'Tensor information and help' });
+  const info = workspace.getByRole('button', { name: 'Tensor information' });
   await info.focus(); await page.keyboard.press('Enter');
-  const dialog = page.getByRole('dialog', { name: 'Tensor information and help' });
+  const dialog = page.getByRole('dialog', { name: 'Tensor information' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button')).toBeFocused();
   await expect(dialog.getByText(path.join(' › '), { exact: true })).toBeVisible();
@@ -77,7 +77,7 @@ test('compact deep navigator and contextual metadata remain accessible in narrow
     return rect.top >= pane.top && rect.bottom <= pane.bottom && rect.left >= pane.left && rect.right <= pane.right;
   })).toBe(true);
   await dialog.evaluate((node) => { node.scrollTop = node.scrollHeight; });
-  await expect(dialog.getByText(/Oversized tensors scroll/)).toBeInViewport({ ratio: 1 });
+  await expect(dialog.getByText('Logical dtype', { exact: true })).toBeInViewport({ ratio: 1 });
   await page.keyboard.press('Escape');
   await expect(info).toBeFocused();
 });

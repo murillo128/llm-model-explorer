@@ -85,10 +85,10 @@ test('hide and restore reclaim the full track, retain selection, transfer focus 
   else expect(hidden.height - initial.height).toBeCloseTo(inventoryBox.height + 8, 1);
   await expect(pane.locator('h2')).toHaveText(path.join(' › '));
   await noDocumentOverflow(page);
-  await page.getByRole('button', { name: 'Tensor information and help' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Tensor information and help' });
+  await page.getByRole('button', { name: 'Tensor information' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Tensor information' });
   await expect(dialog).toBeVisible();
-  expect((await dialog.boundingBox())!.y).toBeGreaterThan((await pane.locator('.tensor-header').boundingBox())!.y);
+  expect((await dialog.boundingBox())!.y).toBeGreaterThan((await pane.locator('.matrix-panel-header').boundingBox())!.y);
   await page.keyboard.press('Escape');
   await show.focus();
   await page.keyboard.press('Space');
