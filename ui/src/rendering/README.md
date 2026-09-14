@@ -81,10 +81,10 @@ from received zeros. No client-side histogram computation is performed.
 `setSelection({ row, column })` sets small guide-coordinate/opacity uniforms; `null` clears selection.
 A negative coordinate disables that axis, allowing linked row/column profiles.
 `MatrixViewport` accepts `onInspection` to enable its rank-2 interaction controller.
-The callback supplies exact coordinates, round-trip value text, viewport placement,
+The callback supplies exact coordinates, round-trip value text, pane placement, magnifier visibility,
 and a guarded `draw(canvas)` function for an application-owned 9×9 2D canvas.
 React owns the floating card/readout; the renderer owns the shared-texture display
-pass and its small framebuffer. `drawNeighborhood()` never changes the main view,
+pass and its small framebuffer. `drawNeighborhood()` omits selection tint so the composition can draw thin guides after enlargement. It never changes the main view,
 allocates scalar storage, or uploads weights. See the owning specifications for
 linear-sRGB green/amber compositing, display encoding, missing-data and keyboard semantics.
 

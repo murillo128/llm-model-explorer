@@ -274,7 +274,19 @@ The magnifier:
 - repositions around the active cell when necessary to stay inside the usable scientific pane, avoid the right/bottom distribution panels, and avoid covering the inspected neighborhood when another valid position exists;
 - is an inspection aid, not the Matrix Explorer camera itself.
 
-The magnifier is independent of camera navigation. It does not change matrix scale or scroll position and continues to inspect the same 9×9 logical neighborhood at every zoom level.
+The magnifier does not change matrix scale or scroll position. It is suppressed
+when the effective on-screen logical cell size reaches 10 CSS pixels per side
+(`camera scale / devicePixelRatio`). Once hidden, it returns only below 8 CSS
+pixels per side. These per-instance hysteresis thresholds are named UI tokens in
+`inspection-layout.ts`. Hiding or restoring it preserves the active logical cell,
+linked inspection state, and compact row/column/value readout. When shown, it
+continues to inspect the same 9×9 logical neighborhood.
+
+Placement evaluates nearby and boundary candidates inside the visible scientific
+pane, rejects intersections with either distribution surface, and prefers avoiding
+the inspected neighborhood and matrix when space permits. Near the right/bottom
+edges it can move left/above. If the pane cannot accommodate the full card without
+covering distributions, retain the compact readout instead.
 
 ## Selection encoding: green data and amber inspection guides
 

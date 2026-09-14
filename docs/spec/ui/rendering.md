@@ -132,3 +132,15 @@ colors outside this scalar transfer. Pixel validation permits at most one 8-bit
 code per channel relative to ideal display encoding; decoded luminance versus
 prequantized color permits `0.0045` absolute error. CPU numeric validation before
 display quantization uses floating-point tolerance, not that display allowance.
+
+### Magnifier display overlays
+
+The 9×9 inspection buffer uses the same scalar bands and green transfer with
+selection overlays disabled; enlarging it with nearest sampling must not enlarge
+the main-view guides into cell-wide bands. The composition adds a 1 CSS-pixel
+warm-orange border around the center cell, plus one horizontal and one vertical
+1 CSS-pixel guide through its center across the magnifier. The guides use lower
+opacity (0.4) than the border and blend over the display without filling or
+replacing neighboring cells. These overlays require no duplicate scalar texture.
+Magnifier visibility and collision placement are owned by
+[tensor-explorer.md](tensor-explorer.md#magnifier).

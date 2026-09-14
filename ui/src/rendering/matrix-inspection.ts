@@ -1,31 +1,18 @@
 import type { MatrixViewport } from './matrix-viewport';
 import type { Selection } from './chroma';
+import { INSPECTION, inspectionPosition, magnifierVisible } from './inspection-layout';
 
 export function formatFloat32(value: number) {
   if (Object.is(value, -0)) return '-0';
   return String(value); // JS shortest round-trip decimal also round-trips its float32 source.
 }
 
-/** Keep the whole card/readout within the viewport and outside the 9×9 source area. */
-export function inspectionPosition(x: number, y: number, width: number, height: number, dpr: number) {
-  const cardWidth = 170, cardHeight = 212, gap = 12 + 5 / dpr, margin = 8;
-  const candidates = [
-    [x + gap, y + gap], [x - gap - cardWidth, y + gap],
-    [x + gap, y - gap - cardHeight], [x - gap - cardWidth, y - gap - cardHeight],
-  ];
-  const clamp = ([left, top]: number[]) => ({
-    left: Math.max(margin, Math.min(width - cardWidth - margin, left!)),
-    top: Math.max(margin, Math.min(height - cardHeight - margin, top!)),
-  });
-  const placements = candidates.map(clamp);
-  return placements.find(({ left, top }) => left > x + 5 / dpr || left + cardWidth < x - 5 / dpr ||
-    top > y + 5 / dpr || top + cardHeight < y - 5 / dpr) ?? placements[0]!;
-}
-
 export interface Inspection extends Selection {
   readonly value: string;
   readonly left: number;
   readonly top: number;
+  readonly magnifier: boolean;
+  readonly width: number;
   readonly draw: (canvas: HTMLCanvasElement) => void;
 }
 
@@ -36,6 +23,7 @@ export class MatrixInspection {
   private linkedRow: number | null = null;
   private disposed = false;
   private suspended = false;
+  private showMagnifier = true;
   constructor(private readonly viewport: MatrixViewport, private readonly changed: (value: Inspection | null) => void) {
     const { canvas, host } = viewport.matrix;
     canvas.classList.add('matrix-inspectable');
@@ -106,6 +94,8 @@ export class MatrixInspection {
     if (this.disposed || this.suspended) return;
     const { renderer, canvas } = this.viewport.matrix;
     if (renderer.state !== 'ready' || renderer.view?.dpr !== window.devicePixelRatio) { this.leave(); return; }
+    const cellSize = renderer.view!.scaleX / renderer.view!.dpr;
+    this.showMagnifier = magnifierVisible(this.showMagnifier, cellSize);
     const rect = canvas.getBoundingClientRect();
     if (this.pointer) this.cell = renderer.cellAt(this.pointer.x - rect.left, this.pointer.y - rect.top);
     if (!this.cell) { this.leave(); return; }
@@ -116,8 +106,20 @@ export class MatrixInspection {
     const view = renderer.view!;
     const x = this.pointer?.x ?? rect.left + (column - view.x + 0.5) * view.scaleX / view.dpr;
     const y = this.pointer?.y ?? rect.top + (row - view.y + 0.5) * view.scaleY / view.dpr;
-    this.changed({ row, column, value: 'value' in value ? formatFloat32(value.value) : 'Unavailable — not received',
-      ...inspectionPosition(x, y, window.innerWidth, window.innerHeight, view.dpr),
+    const pane = this.viewport.host.getBoundingClientRect();
+    const bounds = { left: Math.max(0, pane.left), top: Math.max(0, pane.top),
+      right: Math.min(window.innerWidth, pane.right), bottom: Math.min(window.innerHeight, pane.bottom) };
+    const panels = [this.viewport.rows, this.viewport.columns].flatMap((panel) =>
+      panel ? [panel.canvas.parentElement!.getBoundingClientRect()] : []);
+    let magnifier = this.showMagnifier;
+    let position = magnifier ? inspectionPosition(x, y, bounds, rect, panels, cellSize) : null;
+    if (!position) {
+      magnifier = false;
+      position = inspectionPosition(x, y, bounds, rect, panels, cellSize, INSPECTION.readoutHeight);
+    }
+    if (!position) { this.changed(null); return; }
+    this.changed({ row, column, magnifier, value: 'value' in value ? formatFloat32(value.value) : 'Unavailable — not received',
+      ...position,
       draw: (target) => {
         // A queued React render cannot read a disposed/replaced/lost tensor.
         if (this.disposed || renderer.state !== 'ready' || this.cell?.row !== row || this.cell.column !== column) return;
