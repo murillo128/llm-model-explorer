@@ -35,6 +35,7 @@ export class MatrixInspection {
   private cell: Selection | null = null;
   private linkedRow: number | null = null;
   private disposed = false;
+  private suspended = false;
   constructor(private readonly viewport: MatrixViewport, private readonly changed: (value: Inspection | null) => void) {
     const { canvas, host } = viewport.matrix;
     canvas.classList.add('matrix-inspectable');
@@ -102,7 +103,7 @@ export class MatrixInspection {
   }
 
   refresh() {
-    if (this.disposed) return;
+    if (this.disposed || this.suspended) return;
     const { renderer, canvas } = this.viewport.matrix;
     if (renderer.state !== 'ready' || renderer.view?.dpr !== window.devicePixelRatio) { this.leave(); return; }
     const rect = canvas.getBoundingClientRect();
@@ -129,6 +130,7 @@ export class MatrixInspection {
   }
 
   clear = () => { this.leave(); };
+  suspend(active: boolean) { this.suspended = active; if (active) this.clear(); }
   private leave = () => {
     this.pointer = null;
     this.cell = null;

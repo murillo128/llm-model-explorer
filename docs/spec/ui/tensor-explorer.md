@@ -112,9 +112,10 @@ scale across layout changes. A new source starts a fresh local camera.
 Wheel and trackpad/touch pinch zoom around their pointer/gesture focal point,
 retaining its logical coordinate as far as native scroll rounding and bounds
 permit. Zoom-out stops at native 1:1. Zoom-in supports substantial enlargement
-(the implementation ceiling is 64 times fit width). Scrollbars remain the panning
-mechanism; primary pointer drag is reserved for separately designed region
-selection. No minimap is present. Camera changes never move the document,
+(the implementation ceiling accommodates both 64 times fit width and a single
+logical cell filling either viewport dimension). Scrollbars remain the panning
+mechanism; primary pointer drag selects a region for direct zoom. No minimap is
+present. Camera changes never move the document,
 inventory, another Matrix Explorer or Tokenizer prompt/editor.
 
 The transform applies equally to X and Y, preserving square cells. Hover, click
@@ -165,9 +166,38 @@ The matrix must be usable before distribution/statistics results have completed.
 
 The Matrix Explorer owns one local camera with a uniform scale for both axes. Wheel and pinch gestures zoom around the pointer or gesture focal point so the logical cell under that point remains stable as far as matrix bounds permit. A fit-width reset returns the matrix to its default view. Camera changes are local to the current Matrix Explorer and never alter another matrix view or the Tensor inventory.
 
-The user may also navigate directly to a region. Dragging a nontrivial rectangle over the matrix selects exact logical row/column bounds and previews that pending zoom region with the interaction accent. Releasing the selection zooms to the largest uniform square-cell scale that fits the selected rectangle in the matrix viewport. Cancelling the gesture leaves the camera unchanged.
+Primary pointer dragging directly navigates to a region, without a mode toggle or
+confirmation. A matrix drag of at least 5 CSS pixels previews an arbitrary rectangle
+with a thin warm amber border and an 8%-opacity amber fill. Snap both endpoints to
+the nearest exact logical cell boundary, using the same raster edges as hit testing;
+normalize forward and reverse drags into half-open integer row/column bounds. Clip
+the preview to the data surface and clamp captured pointers outside it to its edge.
+The preview is small transient DOM state, independent of scalar/count storage and
+transfer settings; underlying variation remains readable.
 
-The aligned distribution panels provide one-axis equivalents. Selecting a start/end range in the bottom column-distribution panel zooms to that column range; selecting a range in the right row-distribution panel zooms to that row range. The same square-cell camera is used, and the orthogonal view position is preserved as far as bounds allow. These selections are navigation gestures only; they do not select, transform, or export tensor data.
+On release, fit the entire rectangle with the largest uniform square-cell scale
+allowed by the available matrix viewport dimensions, retaining the native 1:1
+minimum. Center the selected region in any spare dimension and clamp origins to
+matrix bounds. Use the full available viewport even when current data underfills
+it; account for native scrollbar geometry. Zero-width/height selections are no-ops.
+A movement below the threshold remains ordinary exact cell click/tap inspection.
+During an active drag, suspend hover inspection and suppress the release click so
+navigation does not become data selection. Resume normal inspection afterward.
+
+The aligned distribution panels provide one-axis equivalents. Dragging at least
+5 CSS pixels along the bottom panel selects a column boundary range; dragging
+along the right panel selects a row boundary range. Use the same amber preview
+across the fixed bin depth without changing counts. On release, fill the aligned
+matrix viewport dimension with that range using the same uniform camera; retain
+the previous logical center on the orthogonal axis as far as bounds allow.
+
+Escape, pointer cancellation/capture loss, window blur, camera/viewport changes,
+source replacement and context loss remove a pending preview without applying it.
+Wheel zoom cancels a pending selection before using the existing focal zoom.
+One-finger dragging on a data surface selects a region/range; a second touch
+cancels selection and allows the existing two-finger matrix pinch. Native
+scrollbars continue to own panning. These gestures remain local to their Matrix
+Explorer and never transform, export, or select tensor data or zoom prompt views.
 
 ## Scroll synchronization
 

@@ -2,6 +2,8 @@ import { TensorRenderer } from './tensor-renderer';
 import type { RendererOptions } from './tensor-renderer';
 import type { TensorDescriptor, ViewGeometry } from './geometry';
 import { fitWidthScale, focalScroll } from './geometry';
+import { selectionCamera } from './zoom-selection-geometry';
+import type { ZoomBounds } from './zoom-selection-geometry';
 
 export interface ViewportOptions extends RendererOptions {
   readonly zoom?: boolean;
@@ -117,14 +119,33 @@ export class TensorViewport {
     this.refresh(); // Reconcile any native scrolling before resolving the focal point.
     const view = this.renderer.view;
     if (!view) return;
-    // Allow 64x enlargement beyond fit width, even for a one-column tensor.
-    const next = Math.max(1, Math.min(scale, 64 * Math.max(1,
-      fitWidthScale(this.renderer.geometry.columns, this.host.clientWidth, view.dpr))));
+    // Accommodate both 64x fit width and direct selection of a single row/column.
+    const next = Math.max(1, Math.min(scale, Math.max(this.host.clientWidth * view.dpr,
+      this.host.clientHeight * view.dpr, 64 * fitWidthScale(this.renderer.geometry.columns, this.host.clientWidth, view.dpr))));
     this.requestedScroll = [focalScroll(view.x, cssX, this.scale, next, view.dpr),
       focalScroll(view.y, cssY, this.scale, next, view.dpr)];
     this.fitting = false;
     this.scale = next;
     this.refresh();
+  }
+
+  /** Fit exact logical bounds using this same square-cell/native-scroll camera. */
+  zoomToBounds(bounds: ZoomBounds) {
+    if (!this.options.zoom || this.disposed) return;
+    this.refresh();
+    const view = this.renderer.view;
+    if (!view) return;
+    // Scrollbar appearance can change the available height after scaling. Resolve
+    // that layout with the original orthogonal center, then fit once more.
+    for (let pass = 0; pass < 2; pass++) {
+      const camera = selectionCamera(bounds, view, this.renderer.geometry,
+        Math.floor(this.host.clientWidth * view.dpr), Math.floor(this.host.clientHeight * view.dpr));
+      if (!camera) return;
+      this.fitting = false;
+      this.scale = camera.scale;
+      this.requestedScroll = [camera.x * camera.scale / view.dpr, camera.y * camera.scale / view.dpr];
+      this.refresh();
+    }
   }
 
   private focal(clientX: number, clientY: number) {
