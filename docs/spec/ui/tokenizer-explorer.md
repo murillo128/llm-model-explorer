@@ -28,9 +28,11 @@ The Miro board is a visual reference for the combined prompt/tokenization area. 
 
 The explorer has one primary editable text surface. Tokenization updates in real time as the user types; there is no separate prompt view followed by a second token view that repeats the same text.
 
-Each edit retokenizes the current text and updates the visible token boundaries and token metadata in place. Token boundaries are allowed to change anywhere in the text after an edit; the UI must not assume that previously rendered token boundaries remain stable.
+Each edit retokenizes the current text. Token boundaries are allowed to change anywhere in the text after an edit; the UI must not assume that previously rendered token boundaries remain valid for the edited text.
 
-The rendered tokenizer state must correspond to the latest text currently in the editor. A result for an older input must not replace the presentation for a newer input if responses complete out of order.
+While a replacement tokenization is pending, the last successful tokenization remains visible as clearly stale/updating context instead of disappearing. The editable text is always the current user text, and stale annotations must not be presented as authoritative for that new text. When the matching current tokenization arrives, it replaces the stale presentation atomically, without an intermediate undecorated state.
+
+A result for an older input must never replace the presentation for a newer input if responses complete out of order. Only a result matching the current text, tokenizer options, session, and model may become authoritative.
 
 ## Inline token presentation
 
@@ -51,7 +53,7 @@ Overlapping source spans are grouped around their union, with every associated t
 
 When a reliable nonempty source span is unavailable, show the tokenizer-native/decoded representation as an explicitly unmapped annotation at its sequence position. This placement does not claim a character mapping. Per-token decoded strings need not concatenate to the input.
 
-Annotations are separate from the editable value and never enter tokenizer requests or source clipboard text. Asynchronous decoration changes preserve native selection, caret, undo/redo, paste and IME composition. Pending results hide previous boundaries while keeping the prompt editable.
+Annotations are separate from the editable value and never enter tokenizer requests or source clipboard text. Asynchronous decoration changes preserve native selection, caret, undo/redo, paste and IME composition. Retained stale annotations remain visually distinguishable from the current authoritative tokenization state.
 
 ## Special tokens
 
@@ -74,11 +76,17 @@ Token identity is not encoded by assigning a different color to every token. The
 
 After the latest successful tokenization, Tokenizer Explorer may inspect the session model's input embedding matrix for that exact token sequence. For `N` tokens, the matrix has shape `[N, hidden_size]`; row `i` corresponds to token sequence position `i`, including inserted special tokens and repeated token IDs.
 
-The embedding state must always correspond to the current editor text, tokenizer options, session, and model. A result associated with an older state must never replace or be presented as the current embedding matrix. Empty token sequences and models for which input-embedding lookup is unavailable are explicit states, and tokenization remains usable when embedding lookup is unavailable or fails.
+The prompt/tokenization surface and the input-embedding matrix are independent inspection surfaces. Matrix zoom, scrolling, fit, region selection, or other matrix navigation affects only the embeddings view and must not zoom, reflow, recenter, or otherwise change the prompt editor viewport.
 
-Token inspection and embedding-matrix inspection are linked by sequence position: identifying token position `i` identifies embedding row `i`, and identifying an embedding row identifies the corresponding token position. This linkage must not change the editable prompt content or the tokenizer result.
+The embeddings view exposes the same matrix-inspection and navigation behavior defined for the reusable Matrix Explorer, including exact row/column/value inspection and the accepted zoom/navigation behavior. Token inspection and embedding-matrix inspection are linked by sequence position: identifying token position `i` identifies embedding row `i`, and identifying an embedding row identifies the corresponding token position. This linkage must not change the editable prompt content or the tokenizer result.
 
-The input-embedding extension does not change the existing prompt/tokenization behavior and does not add positional encoding, transformer execution, logits, generation, or another later inference stage.
+While a replacement tokenization or embedding result is pending, the last successful embedding matrix may remain visible as clearly stale/updating context rather than disappearing. Only an embedding result matching the current tokenization generation, session, model, options, and ordered token IDs may become authoritative. Older results must never replace newer state.
+
+Token-to-row linkage is active only when the visible tokenization and visible embedding matrix belong to the same authoritative generation. If a newer tokenization is already current while an older embedding matrix remains visible as stale context, they must not be linked as if their row identities still matched.
+
+Empty token sequences and models for which input-embedding lookup is unavailable are explicit states, and tokenization remains usable when embedding lookup is unavailable or fails. Failure of a new embedding lookup does not roll back or invalidate a newer successful tokenization.
+
+The input-embedding extension does not add positional encoding, transformer execution, logits, generation, or another later inference stage.
 
 ## Reuse in later inference views
 

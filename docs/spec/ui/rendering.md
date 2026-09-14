@@ -32,19 +32,19 @@ Oversized content uses normal scrollbars. Internal texture/band partitioning may
 accommodate WebGL2 limits but must preserve exact scalar identity and sampling.
 
 Query actual texture, renderbuffer and viewport limits. Use a bounded visible
-framebuffer over the complete native scroll extent rather than requiring a giant
+framebuffer over the complete data extent rather than requiring a giant
 canvas. Disjoint texture bands are needed only when a dimension exceeds the
 effective texture ceiling (the hardware limit or an explicitly lower resource
 ceiling). Band edges must neither omit nor duplicate cells. Report unsupported
 WebGL2, allocation failure or an unrepresentable browser scroll extent explicitly;
-never silently scale the data to fit a limit. This partitioning does not change
+never alter logical tensor values or ordering to fit a limit. This partitioning does not change
 complete-tensor downloading or introduce API tiles/prefetch.
 
 ## Numeric representation
 
 The renderer consumes the logical visualization representation supplied by the backend. The initial representation is one `float32` logical value per weight regardless of the model's physical storage representation.
 
-The tensor value remains authoritative. The renderer must not rewrite tensor values in order to change color, brightness, selection state, or another visual property.
+The tensor value remains authoritative. The renderer must not rewrite tensor values in order to change color, brightness, selection state, zoom, or another visual property.
 
 Store one authoritative scalar GPU representation using single-channel R32F
 textures with exact indexed sampling (`texelFetch`, nearest filtering, one mip
@@ -86,7 +86,7 @@ CPU array and the visible framebuffer. Context loss invalidates GPU storage and
 stops drawing; context restoration alone does not mark old textures valid.
 An explicit reconstruction/retry allocates new resources and reuploads the retained
 prefix, or restarts the prefix at zero when no CPU copy exists. Ordinary drawing,
-hover, scrolling and transfer changes do not take this reconstruction path.
+hover, scrolling, zooming and transfer changes do not take this reconstruction path.
 
 ## Color
 

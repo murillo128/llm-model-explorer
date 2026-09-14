@@ -98,3 +98,12 @@ ctrl-wheel trackpad pinch are local nonpassive listeners; two-touch pinch retain
 the gesture's logical focal point. Disposal removes every listener. Camera changes
 never allocate scalar storage or upload values. Native TensorViewport callers
 remain at 1:1 unless explicitly enabling `zoom`.
+
+`MatrixZoomSelection` adds primary-drag navigation to nonempty rank-2 matrix and
+profile canvases. It snaps to the renderer's rasterized logical boundaries, uses
+a transient amber DOM overlay, and calls `TensorViewport.zoomToBounds()` with
+half-open row/column bounds. Omit an axis to preserve its current logical center.
+Five CSS pixels distinguish selection from inspection; Escape/cancel and a second
+touch discard the preview. Data canvases reserve one-finger drag for selection;
+native scrollbars and the existing two-touch pinch continue to navigate. Camera,
+source, context and disposal changes cancel previews without scalar/count uploads.

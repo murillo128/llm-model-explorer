@@ -1,4 +1,5 @@
 import { MatrixInspection } from './matrix-inspection';
+import { MatrixZoomSelection } from './matrix-zoom-selection';
 import type { Inspection } from './matrix-inspection';
 import { DistributionRenderer } from './tensor-renderer';
 import type { RendererOptions } from './tensor-renderer';
@@ -24,6 +25,7 @@ export class MatrixViewport {
   private readonly originalStyle: string | null;
   private disposed = false;
   private inspection?: MatrixInspection;
+  private zoomSelection?: MatrixZoomSelection;
   private rowScale?: DistributionScale;
   private columnScale?: DistributionScale;
   private readonly observer: ResizeObserver;
@@ -83,14 +85,17 @@ export class MatrixViewport {
       };
       layout();
       this.matrix = new TensorViewport(this.main, descriptor, { ...options, zoom: descriptor.rank === 2, onStateChange: (state) => {
-        if (state !== 'ready') this.inspection?.clear();
+        if (state !== 'ready') { this.zoomSelection?.cancel(); this.inspection?.clear(); }
         options.onStateChange?.(state);
       }, onViewChange: (view) => {
         layout();
         this.align(view);
+        this.zoomSelection?.refresh();
         this.inspection?.refresh();
       } });
       if (descriptor.rank === 2 && options.onInspection) this.inspection = new MatrixInspection(this, options.onInspection);
+      if (descriptor.rank === 2 && descriptor.numel > 0) this.zoomSelection = new MatrixZoomSelection(this,
+        (active) => this.inspection?.suspend(active));
       this.observer = new ResizeObserver(() => { layout(); this.matrix.refresh(); });
       this.observer.observe(host);
     } catch (error) {
@@ -139,6 +144,7 @@ export class MatrixViewport {
     if (this.disposed) return;
     this.disposed = true;
     this.observer.disconnect();
+    this.zoomSelection?.dispose();
     this.inspection?.dispose();
     this.matrix.dispose();
     this.rows?.dispose();

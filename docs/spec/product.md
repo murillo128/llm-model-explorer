@@ -19,11 +19,13 @@ The detailed behavior and visual design of both explorers are intentionally dele
 
 The proof of concept must establish the architecture that later inference exploration will use. It must not be a disposable implementation that requires replacing the backend, API model, session model, streaming mechanism, artifact cache, or renderer boundary when inference is added.
 
-## Accepted post-PoC capability
+## Accepted post-PoC capabilities
 
 Tokenizer Explorer also exposes the model input embedding matrix for its latest successful token sequence. For a sequence of `N` token IDs, the result has shape `[N, hidden_size]`; row `i` is the model input embedding for token sequence position `i`. Token order, repeated token IDs, and inserted special tokens are preserved.
 
 This capability is limited to input embedding lookup. It does not include positional encoding, transformer forward execution, logits, generation, or any later inference stage.
+
+Matrix exploration also supports viewport zoom and navigation while preserving exact logical tensor values, row/column identity, native order, and square matrix cells. Navigation changes only the view of a matrix; it never changes the tensor itself.
 
 ## Future direction
 
@@ -43,4 +45,4 @@ Multiple UI sessions may be active concurrently and independently.
 
 ## Out of scope for the proof of concept
 
-The initial proof of concept does not implement transformer inference, attention visualization, KV cache inspection, model execution timelines, interactive matrix multiplication, zoom or pan, authentication, remote model downloads, non-Hugging-Face model formats, automatic cache garbage collection, or backwards-compatible API versioning.
+The initial proof of concept does not implement transformer inference, attention visualization, KV cache inspection, model execution timelines, interactive matrix multiplication, authentication, remote model downloads, non-Hugging-Face model formats, automatic cache garbage collection, or backwards-compatible API versioning.
