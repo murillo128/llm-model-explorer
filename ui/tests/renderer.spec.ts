@@ -458,3 +458,54 @@ test('fractional zoom samples exact scalar cells across texture bands and preser
   expect(results.final.scalarBytes).toBe(results.initial.scalarBytes);
   await testInfo.attach('zoom-geometry', { body: JSON.stringify(results.output.map(({ view }) => view)), contentType: 'application/json' });
 });
+
+
+test('fractional selection guides stay inside the exact cell with one-pixel thickness', async ({ page }) => {
+  const results = await page.evaluate(() => {
+    const { create, pixels } = window.harness;
+    const r = create([32, 32], { textureLimit: 8 });
+    r.upload(new Float32Array(32 * 32));
+    const initial = r.diagnostics;
+    const output = [];
+    const dpr = devicePixelRatio;
+    for (const scale of [1, 1.01, 1.25, 1.5, 1.99, 3.25, 4.9]) {
+      for (const scroll of [0, 1, 7]) {
+        const view = r.setView(12, 12, scroll, scroll, dpr, scale);
+        const selected = { row: Math.floor(view.y) + 1, column: Math.floor(view.x) + 1 };
+        r.setSelection(selected);
+        const frame = pixels(r);
+        const cells = frame.map((row, y) => row.map((_, x) => r.cellAt((x + .25) / dpr, (y + .25) / dpr)));
+        output.push({ view, selected, frame, cells });
+      }
+    }
+    const final = r.diagnostics;
+    r.dispose();
+    return { output, initial, final };
+  });
+  for (const { frame, cells, selected, view } of results.output) {
+    const rowPixels = new Set<number>(), columnPixels = new Set<number>();
+    let intersections = 0;
+    for (let y = 0; y < frame.length; y++) for (let x = 0; x < frame[y]!.length; x++) {
+      const pixel = frame[y]![x]!, cell = cells[y]![x]!;
+      if (pixel[0]! <= pixel[1]!) continue;
+      const row = cell.row === selected.row, column = cell.column === selected.column;
+      expect(row || column, `scale ${view.scaleX}, origin ${view.x}, pixel ${x}:${y}`).toBe(true);
+      if (row && !column) rowPixels.add(y);
+      if (column && !row) columnPixels.add(x);
+      if (pixel.every((v, i) => Math.abs(v - [...color(.5, .9), 255][i]!) <= 1)) {
+        expect(row && column).toBe(true);
+        intersections++;
+      }
+    }
+    expect(rowPixels.size).toBe(1);
+    expect(columnPixels.size).toBe(1);
+    expect(intersections).toBe(1);
+    const guideY = [...rowPixels][0]!, guideX = [...columnPixels][0]!;
+    for (let y = 0; y < frame.length; y++) for (let x = 0; x < frame[y]!.length; x++) {
+      const expected = [...color(.5, y === guideY && x === guideX ? .9 : y === guideY || x === guideX ? .65 : 0), 255];
+      frame[y]![x]!.forEach((v, i) => expect(Math.abs(v - expected[i]!)).toBeLessThanOrEqual(1));
+    }
+  }
+  expect(results.final.scalarUploadCalls).toBe(results.initial.scalarUploadCalls);
+  expect(results.final.scalarBytes).toBe(results.initial.scalarBytes);
+});

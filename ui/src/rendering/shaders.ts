@@ -22,7 +22,12 @@ ivec2 sampledCell() {
 }
 vec3 semanticColor(float y, ivec2 cell) {
   vec2 pixel = vec2(floor(gl_FragCoord.x), float(viewHeight - 1) - floor(gl_FragCoord.y));
-  vec2 guide = floor((vec2(selection - cellOrigin) + 0.5) * cellScale - cameraOffset);
+  vec2 selected = vec2(selection - cellOrigin);
+  vec2 start = ceil(selected * cellScale - cameraOffset);
+  vec2 end = ceil((selected + 1.0) * cellScale - cameraOffset);
+  // Center within the sampled pixel interval, including near-native fractional
+  // scales where rounding the logical center can land in the previous cell.
+  vec2 guide = floor((start + end) * 0.5);
   bool row = selection.y >= 0 && pixel.y == guide.y;
   bool column = selection.x >= 0 && pixel.x == guide.x;
   float opacity = row && column ? guideOpacity.y : row || column ? guideOpacity.x : 0.0;

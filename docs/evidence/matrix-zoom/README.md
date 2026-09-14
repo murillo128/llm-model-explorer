@@ -27,15 +27,26 @@ The complete application gate remains `acceptance/check.sh`.
 - `matrix-zoom-pixels.spec.ts` reads actual WebGL profile pixels at fractional
   scale and compares every sampled scanline's logical index with the matrix and
   its authoritative uint32 density. It runs at DPR 1/2 in wide/narrow browsers.
+  Selection probes at scales 1.25, 1.99, 3.25 and 4.9 and scroll offsets 0, 1 and
+  7 verify one-pixel guides stay in the inspected matrix cell and align with
+  both distribution panels without scalar/count allocations or uploads.
 - `renderer.spec.ts` checks every framebuffer pixel at scales 1, 2, 3.25, 4.9 and
   23.7 across 8-cell texture bands against exact scalar/hit-test values. The 9×9
   magnifier output remains identical across scales. JSON geometry is attached to
   browser results. Existing transfer/value/magnifier oracles remain intact;
   `native-camera.ts` explicitly selects native scale where those oracles depend
   on one device pixel per cell.
+  A separate full-frame selection oracle covers scales 1, 1.01, 1.25, 1.5,
+  1.99, 3.25 and 4.9 across texture bands and fractional logical origins. It
+  checks exact cell membership, guide thickness and stronger intersection color.
 
 The fractional-scale oracle exposed a division-rounding seam at a texture-band
 boundary. Sampling, hit testing and band scissors now share float32 rasterized
 cell edges, keeping the integer logical origin separate. This avoids both the
 seam and loss of integer identity from converting a large scroll origin to a
 float uniform. Zoom does not create a recolored or resized copy of tensor data.
+
+Selection guides use the midpoint of those same rasterized pixel intervals.
+Rounding a logical cell center could previously place a guide in its neighbor
+near native scale. The new matrix/profile and scalar selection probes fail with
+that previous shader and pass with the raster-interval midpoint correction.
