@@ -18,15 +18,26 @@ const annotationField = StateField.define<DecorationSet>({
 });
 
 class AnnotationWidget extends WidgetType {
-  constructor(readonly text: string, readonly ids: string, readonly className: string, readonly description: string) { super(); }
-  eq(other: AnnotationWidget) { return this.text === other.text && this.ids === other.ids && this.className === other.className && this.description === other.description; }
+  constructor(readonly text: string, readonly ids: string, readonly className: string, readonly description: string, readonly indices: readonly number[] = []) { super(); }
+  eq(other: AnnotationWidget) { return this.text === other.text && this.ids === other.ids && this.className === other.className && this.description === other.description && this.indices.join() === other.indices.join(); }
   toDOM() {
     const node = document.createElement('span');
     node.className = this.className;
     node.setAttribute('aria-label', this.description);
     node.textContent = this.text;
+    if (this.indices.length) node.dataset.tokenIndices = this.indices.join(' ');
     if (this.ids) {
-      const label = document.createElement('span'); label.className = 'token-ids'; label.textContent = this.ids;
+      const label = document.createElement('span'); label.className = 'token-ids';
+      this.ids.split(', ').forEach((id, i) => {
+        if (i) label.append(', ');
+        const token = document.createElement('span');
+        token.textContent = id;
+        token.dataset.tokenIndex = String(this.indices[i]);
+        token.tabIndex = 0;
+        token.setAttribute('role', 'button');
+        token.setAttribute('aria-label', `Token ${id}, sequence ${this.indices[i]}`);
+        label.append(token);
+      });
       node.append(label);
     }
     return node;
@@ -45,11 +56,11 @@ function decorations(result: Tokenization): DecorationSet {
     while (from < group.end) {
       const newline = result.text.indexOf('\n', from);
       const to = newline >= 0 ? Math.min(newline, group.end) : group.end;
-      const opening = new AnnotationWidget('[', ids, 'token-opening', description);
+      const opening = new AnnotationWidget('[', ids, 'token-opening', description, group.tokens.map(token => token.index));
       ranges.push(Decoration.widget({ widget: opening, side: 1 }).range(from));
       ranges.push(Decoration.widget({ widget: new AnnotationWidget(']', '', 'token-closing', 'End source span'), side: to === from ? 2 : -2 }).range(to));
       if (from < to) ranges.push(Decoration.mark({ class: 'source-annotation', attributes: {
-        'data-token-ids': ids, 'aria-label': description,
+        'data-token-ids': ids, 'data-token-indices': group.tokens.map(token => token.index).join(' '), 'aria-label': description,
         style: `min-width: ${Math.max(0, ids.length * 6.7 - 8)}px`,
       } }).range(from, to));
       // Newline-only annotations still need room for their associated ID.
@@ -62,7 +73,7 @@ function decorations(result: Tokenization): DecorationSet {
     const native = token.token || token.decoded || '(empty)';
     ranges.push(Decoration.widget({ widget: new AnnotationWidget(
       native + (token.special ? '' : ' (no source span)'), String(token.id), 'unmapped-annotation',
-      `Sequence ${token.index}, token ${token.id}, no source span: ${native}`,
+      `Sequence ${token.index}, token ${token.id}, no source span: ${native}`, [token.index],
     ), side: -1 }).range(anchor));
   }
   return Decoration.set(ranges, true);
@@ -71,12 +82,14 @@ function decorations(result: Tokenization): DecorationSet {
 interface Props {
   id: string;
   result: Tokenization | undefined;
+  activeRow?: number | null | undefined;
+  onRowSelect?: ((row: number | null) => void) | undefined;
   onEdit: (text: string, composing: boolean, promptly?: boolean) => void;
 }
 
 /** CodeMirror's immutable document/history remain separate from decoration-only
  * transactions. Widgets and brackets never enter source, selections or copy. */
-export function InlineEditor({ id, result, onEdit }: Props) {
+export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const edit = useRef(onEdit);
@@ -106,5 +119,37 @@ export function InlineEditor({ id, result, onEdit }: Props) {
     if (!instance) return;
     instance.dispatch({ effects: annotationsChanged.of(result && result.text === instance.state.doc.toString() ? decorations(result) : Decoration.none) });
   }, [result]);
+  useLayoutEffect(() => {
+    const root = host.current!;
+    const rowFor = (target: EventTarget | null) => {
+      const node = target instanceof Element ? target.closest<HTMLElement>('[data-token-index], [data-token-indices]') : null;
+      return node && root.contains(node) ? Number(node.dataset.tokenIndex ?? node.dataset.tokenIndices?.split(' ')[0]) : null;
+    };
+    const enter = (event: Event) => onRowSelect?.(rowFor(event.target));
+    const leave = (event: Event) => onRowSelect?.(rowFor((event as MouseEvent).relatedTarget));
+    const press = (event: Event) => {
+      if (event.target instanceof Element && event.target.closest('[data-token-index]')) {
+        // Annotation interaction must not move the editor's native selection.
+        event.preventDefault(); enter(event);
+      }
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' || event.key === ' ') press(event);
+    };
+    root.addEventListener('pointerover', enter); root.addEventListener('pointerout', leave);
+    root.addEventListener('focusin', enter); root.addEventListener('focusout', leave);
+    root.addEventListener('mousedown', press); root.addEventListener('keydown', key);
+    return () => {
+      root.removeEventListener('pointerover', enter); root.removeEventListener('pointerout', leave);
+      root.removeEventListener('focusin', enter); root.removeEventListener('focusout', leave);
+      root.removeEventListener('mousedown', press); root.removeEventListener('keydown', key);
+    };
+  }, [onRowSelect]);
+  useLayoutEffect(() => {
+    for (const node of host.current!.querySelectorAll<HTMLElement>('[data-token-index], [data-token-indices]')) {
+      const indices = node.dataset.tokenIndex ?? node.dataset.tokenIndices ?? '';
+      node.toggleAttribute('data-active-token', activeRow !== null && indices.split(' ').includes(String(activeRow)));
+    }
+  }, [activeRow, result]);
   return <div ref={host} className="tokenizer-editor" />;
 }

@@ -12,7 +12,7 @@ import type { ExplorerContextValue, ExplorerSlots } from './explorer-context';
 import { SessionController } from './session-controller';
 import type { SessionStorage } from './session-controller';
 
-const TokenizerExplorer = lazy(() => import('../tokenizer/PromptTokenizer').then((module) => ({ default: module.TokenizerExplorer })));
+const TokenizerExplorer = lazy(() => import('../tokenizer/TokenizerExplorer').then((module) => ({ default: module.TokenizerExplorer })));
 interface AppProps { config: RuntimeConfig; slots?: ExplorerSlots }
 function tabStorage(): SessionStorage | null {
   try { return window.sessionStorage; } catch { return null; }

@@ -57,3 +57,12 @@ tests cover DPR 1/2, exact values and callbacks, local scrolling, A → B → A,
 StrictMode and texture/display/program/buffer/CPU lifetime. Tensor Explorer's
 existing browser suite covers full profiles, pixel colors, magnification and
 native scrollbars through this same component.
+
+
+`highlightedRow` accepts optional external row context. It draws a row-only guide
+without moving focus, scrolling, inventing a cell readout, resubscribing, or
+uploading scalar values. A new external row supersedes prior local inspection
+and clears its cell readout. A subsequent local pointer/focus/key interaction
+can inspect a cell again; linked consumers clear their external row when that
+local selection is reported. Clearing the external row does not clear a newer
+local cell.

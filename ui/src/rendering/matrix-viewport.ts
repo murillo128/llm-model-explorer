@@ -108,6 +108,7 @@ export class MatrixViewport {
   }
 
   refresh() { this.matrix.refresh(); }
+  setLinkedRow(row: number | null) { this.inspection?.setLinkedRow(row); }
 
   private restoreHost() {
     this.host.classList.remove('matrix-surfaces');

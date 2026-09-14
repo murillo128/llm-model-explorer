@@ -35,6 +35,8 @@ export interface MatrixExplorerProps {
   readonly label?: string;
   readonly header?: ReactNode;
   readonly onRenderingStateChange?: (state: RendererState) => void;
+  /** Display-only row context from a linked view; does not select a cell or move focus. */
+  readonly highlightedRow?: number | null;
   /** Hover/focus selection, cleared with null on leave, blur or replacement. */
   readonly onCellSelect?: (cell: MatrixCell | null) => void;
   readonly onRowSelect?: (row: number | null) => void;

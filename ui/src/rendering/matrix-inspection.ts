@@ -33,6 +33,7 @@ export interface Inspection extends Selection {
 export class MatrixInspection {
   private pointer: { x: number; y: number } | null = null;
   private cell: Selection | null = null;
+  private linkedRow: number | null = null;
   private disposed = false;
   constructor(private readonly viewport: MatrixViewport, private readonly changed: (value: Inspection | null) => void) {
     const { canvas, host } = viewport.matrix;
@@ -79,10 +80,23 @@ export class MatrixInspection {
 
   private select(cell: Selection | null) {
     const { matrix, rows, columns } = this.viewport;
+    cell ??= this.linkedRow === null ? null : { row: this.linkedRow, column: -1 };
     matrix.renderer.setSelection(cell);
     rows?.setSelection(cell ? { row: cell.row, column: -1 } : null);
     columns?.setSelection(cell ? { row: -1, column: cell.column } : null);
     for (const r of [matrix.renderer, rows, columns]) if (r?.state === 'ready' && r.view) r.draw();
+  }
+
+  /** External row context is display-only; it never moves focus or invents a cell. */
+  setLinkedRow(row: number | null) {
+    this.linkedRow = row !== null && Number.isInteger(row) && row >= 0 && row < this.viewport.matrix.renderer.geometry.rows ? row : null;
+    // A new external interaction supersedes prior local inspection, even when
+    // the matrix retains keyboard focus. Clear its readout, not browser focus.
+    if (this.linkedRow !== null) {
+      this.pointer = null;
+      this.cell = null;
+    }
+    this.refresh();
   }
 
   refresh() {
