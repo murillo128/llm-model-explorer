@@ -43,13 +43,13 @@ function LoadedTensorExplorer({ client, sessionId, selectedTensor, selection }: 
   const active = [status.tensor, status.statistics, status.distributions].some((state) => state === 'loading' || state === 'streaming');
   return <section className="tensor-explorer" aria-label="Tensor scientific view">
     <MatrixExplorer source={source} label="Tensor matrix; scroll to inspect all values"
-      header={<TensorHeader tensor={selectedTensor!} status={!allocationFailed && <div className="tensor-results" aria-label="Result status">
+      header={(cameraControls) => <TensorHeader tensor={selectedTensor!} status={!allocationFailed && <div className="tensor-results" aria-label="Result status">
         {(['tensor', 'statistics', 'distributions'] as const).filter((result) => status[result] !== 'unneeded' && status[result] !== 'complete').map((result) =>
           <p key={result} role={status[result] === 'failed' ? 'alert' : 'status'} data-result={result} data-state={status[result]}>
             {(status[result] === 'loading' || status[result] === 'streaming') && <span className="operation-spinner" aria-hidden="true" />}
             <span>{result}</span> · {stateText[status[result]]}</p>)}
-      </div>} actions={!allocationFailed && active && <button type="button" className="matrix-header-cancel"
-        aria-label="Cancel loading" title="Cancel loading" onClick={() => controller.current?.cancel()}>×</button>} />}
+      </div>} actions={<>{cameraControls}{!allocationFailed && active && <button type="button" className="matrix-header-cancel"
+        aria-label="Cancel loading" title="Cancel loading" onClick={() => controller.current?.cancel()}>×</button>}</>} />}
       onRenderingStateChange={(state) => setAllocationFailed(state === 'failed' && controller.current === null)} />
   </section>;
 }

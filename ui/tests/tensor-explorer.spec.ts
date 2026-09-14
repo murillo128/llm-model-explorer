@@ -1,3 +1,4 @@
+import { nativeCamera } from './native-camera';
 import { color, green } from './scalar-oracle';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -22,6 +23,7 @@ for (const dpr of [1, 2]) test(`asymmetric progressive surfaces, independent res
     return f.metrics.scalarAllocations;
   });
   await expect(status(page, 'tensor')).toHaveAttribute('data-state', 'streaming');
+  await nativeCamera(page);
   const partial = await page.evaluate(() => {
     const f = window.explorerFixture;
     const matrix = f.renderers.find((r) => r.geometry.columns === 3 && r.geometry.rows === 2)!;

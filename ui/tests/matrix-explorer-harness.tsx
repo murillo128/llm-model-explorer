@@ -2,6 +2,7 @@ import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MatrixExplorer } from '../src/matrix-explorer';
 import type { MatrixCell, MatrixSource, MatrixUpdates } from '../src/matrix-explorer';
+import { TensorViewport } from '../src/rendering/tensor-viewport';
 import { GridRenderer } from '../src/rendering/tensor-renderer';
 
 // No application, session, model, tensor tree, API or global application stylesheet.
@@ -44,6 +45,12 @@ GridRenderer.prototype.setView = function (...args) {
   if (!renderers.includes(this)) renderers.push(this);
   return view.apply(this, args);
 };
+const viewports: TensorViewport[] = [];
+const refresh = TensorViewport.prototype.refresh;
+TensorViewport.prototype.refresh = function () {
+  if (!viewports.includes(this)) viewports.push(this);
+  return refresh.call(this);
+};
 const subscriptions: MatrixUpdates[] = [];
 const cells: (MatrixCell | null)[] = [], rows: (number | null)[] = [], columns: (number | null)[] = [];
 function source(shape: [number, number], distributions = false): MatrixSource {
@@ -57,7 +64,7 @@ function source(shape: [number, number], distributions = false): MatrixSource {
       };
     } };
 }
-const sources = { A: source([3, 5]), B: source([5, 3]), large: source([576, 1536]), full: source([3, 5], true) };
+const sources = { A: source([3, 5]), B: source([5, 3]), large: source([576, 1536]), full: source([3, 5], true), tall: source([900, 25], true), short: source([4, 128], true), square: source([120, 100], true) };
 function Host({ source }: { source: MatrixSource }) {
   const [cell, setCell] = useState<MatrixCell | null>(null);
   return <><div id="workspace"><MatrixExplorer source={source} label="Synthetic result matrix"
@@ -77,9 +84,10 @@ function resources() {
     buffers: metrics.buffers.size, programs: metrics.programs.size,
     cpuBytes: renderers.reduce((sum, r) => sum + r.diagnostics.cpuBytes, 0) };
 }
+function renderPair() { root.render(<><Host source={sources.square} /><Host source={sources.short} /></>); }
 render('A');
-window.matrixFixture = { sources, subscriptions, renderers, metrics, cells, rows, columns, render, resources };
+window.matrixFixture = { renderPair, viewports, sources, subscriptions, renderers, metrics, cells, rows, columns, render, resources };
 declare global { interface Window { matrixFixture: {
-  sources: typeof sources; subscriptions: typeof subscriptions; renderers: typeof renderers; metrics: typeof metrics;
+  renderPair: typeof renderPair; viewports: typeof viewports; sources: typeof sources; subscriptions: typeof subscriptions; renderers: typeof renderers; metrics: typeof metrics;
   cells: typeof cells; rows: typeof rows; columns: typeof columns; render: typeof render; resources: typeof resources;
 } } }

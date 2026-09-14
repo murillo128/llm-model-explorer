@@ -1,3 +1,4 @@
+import { nativeCamera } from './native-camera';
 import { green } from './scalar-oracle';
 import { expect, test } from '@playwright/test';
 
@@ -11,6 +12,7 @@ for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () =>
       await expect(page.getByRole('combobox')).toBeEnabled();
       await page.getByRole('combobox').selectOption('lab/alpha');
       await page.getByRole('button', { name: new RegExp(`^${name} \\[` ) }).click();
+      await nativeCamera(page);
       await page.evaluate((rows) => {
         const f = window.explorerFixture;
         f.emit(0, 1, f.metadata(0));
@@ -124,6 +126,7 @@ for (const dpr of [1, 2]) test.describe(`workspace panes at DPR ${dpr}`, () => {
       const evidence = [];
       for (const [name, horizontal, vertical] of [['fits', false, false], ['tall', false, true], ['wide', true, false], ['both', true, true]] as const) {
         await page.getByRole('button', { name: new RegExp(`^${name} \\[` ) }).click();
+      await nativeCamera(page);
         await expect(matrix).toBeVisible();
         await expect.poll(async () => { const g = await geometry(); return [g.horizontal, g.vertical]; }).toEqual([horizontal, vertical]);
         const initial = await geometry();

@@ -49,7 +49,7 @@ Consumer cancellation must abort the active stream and use the operation cancell
 ## Matrix Explorer composition
 
 `ui/src/matrix-explorer/` owns the reusable React scientific composition above
-`MatrixViewport`: viewport lifetime, local scrolling, optional aligned profiles,
+`MatrixViewport`: viewport lifetime, per-instance square-cell camera and local scrolling, optional aligned profiles,
 compact contextual header slot, and hover/focus magnifier/readout. It accepts
 logical float32 descriptors and progressive subscriptions without application,
 model, navigation, or HTTP dependencies. Tensor Explorer remains responsible for

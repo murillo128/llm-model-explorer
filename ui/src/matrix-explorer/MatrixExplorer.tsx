@@ -4,6 +4,7 @@ import type { Inspection } from '../rendering/matrix-inspection';
 import type { RendererState } from '../rendering/tensor-renderer';
 import { compactValue } from '../rendering/distribution-scale';
 import type { DistributionDomain } from '../rendering/distribution-scale';
+import { PanelHeader } from './PanelHeader';
 import { InspectionCard } from './InspectionCard';
 import type { MatrixExplorerProps, MatrixUpdates } from './types';
 import './matrix-explorer.css';
@@ -95,8 +96,14 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
   useLayoutEffect(() => {
     host.current?.querySelector('.matrix-scroll')?.setAttribute('aria-label', label);
   }, [label, source]);
+  const controls = source.descriptor.rank === 2 && source.descriptor.numel > 0
+    ? <button type="button" className="matrix-fit-width" disabled={failed}
+      title="Fit width (minimum 1:1). Wheel or pinch to zoom; scrollbars to navigate."
+      onClick={() => currentViewport.current?.fitWidth()}>Fit width</button> : null;
+  const toolbar = typeof header === 'function' ? header(controls)
+    : controls ? <PanelHeader identity={header} actions={controls} /> : header;
   return <div className="matrix-explorer">
-    {header && <div className="matrix-explorer-header">{header}</div>}
+    {toolbar && <div className="matrix-explorer-header">{toolbar}</div>}
     {failed && <p role="alert">Exact rendering is unavailable. WebGL2 resources could not be allocated or were lost. Reopen this view to retry.</p>}
     {source.distributions && <div className="distribution-range" role="region" aria-label="Distribution range" tabIndex={0}>
       {!domain ? 'Bin domain unavailable' : domain.minimum === null || domain.maximum === null

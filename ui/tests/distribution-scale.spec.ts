@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { nativeCamera } from './native-camera';
 import { color } from './scalar-oracle';
 
 const cases = [
@@ -17,6 +18,7 @@ for (const fixture of cases) test(`${fixture.name}: authoritative domain, bin pl
   await page.getByRole('combobox').selectOption('lab/alpha');
   await page.getByRole('button', { name: new RegExp(`^${fixture.tensor} \\[` ) }).click();
   await expect(page.getByLabel('Distribution range')).toHaveText('Bin domain unavailable');
+  await nativeCamera(page);
   const position = () => page.locator('.matrix-surfaces').evaluate(node => node.getBoundingClientRect().top);
   const initialTop = await position();
   await page.evaluate((fixture) => {

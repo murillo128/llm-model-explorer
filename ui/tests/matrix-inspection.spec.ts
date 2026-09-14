@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type {} from './tensor-explorer-harness';
 
+import { nativeCamera } from './native-camera';
 import { color } from './scalar-oracle';
 function expected(value: number, row: boolean, column: boolean) {
   return color(1 / (1 + Math.exp(-12 * value)), row && column ? 0.9 : row || column ? 0.65 : 0);
@@ -31,6 +32,7 @@ async function open(page: Page, prefix = 323) {
   else await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', 'streaming');
   await expect(page.locator('[data-result="distributions"]')).toHaveCount(0);
   await page.locator('.matrix-scroll').scrollIntoViewIfNeeded();
+  await nativeCamera(page);
 }
 async function hover(page: Page, row: number, column: number) {
   const point = await page.evaluate(({ row, column }) => {
@@ -242,6 +244,7 @@ test('shell typography preserves hit-testing at the final tensor pixel across fo
   for (const font of ['Arial, sans-serif', 'DejaVu Sans, sans-serif', 'monospace']) {
     await page.locator('.app-shell').evaluate((shell: HTMLElement, font) => { shell.style.fontFamily = font; }, font);
     await page.locator('.matrix-scroll').scrollIntoViewIfNeeded();
+  await nativeCamera(page);
     await hover(page, 16, 18);
     expect(await page.evaluate(() => document.documentElement.scrollHeight === innerHeight)).toBe(true);
   }

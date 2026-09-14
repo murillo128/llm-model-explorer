@@ -424,3 +424,37 @@ for (const scenario of ['tightly centered', 'outlier-heavy']) test(`robust contr
   await testInfo.attach('contrast-comparison', { body: JSON.stringify({ scenario, oldSpread, newSpread,
     p25Luminance: luminance(tones[25]!), p75Luminance: luminance(tones[75]!) }), contentType: 'application/json' });
 });
+
+test('fractional zoom samples exact scalar cells across texture bands and preserves the magnifier', async ({ page }, testInfo) => {
+  const results = await page.evaluate(() => {
+    const { create, pixels } = window.harness;
+    const r = create([17, 19], { textureLimit: 8 });
+    r.setTransfer({ anchors: [-1, 1] });
+    r.upload(Float32Array.from({ length: 17 * 19 - 5 }, (_, i) => i % 2 ? 1 : -1));
+    const initial = r.diagnostics;
+    const output = [];
+    for (const scale of [1, 2, 3.25, 4.9, 23.7]) {
+      const view = r.setView(120, 100, 11, 13, devicePixelRatio, scale);
+      const frame = pixels(r);
+      const cells = frame.map((row, y) => row.map((_, x) => r.cellAt((x + .25) / devicePixelRatio, (y + .25) / devicePixelRatio)));
+      const card = document.createElement('canvas'); card.width = card.height = 9;
+      r.drawNeighborhood(8, 8, card.getContext('2d')!);
+      output.push({ view, frame, cells, neighborhood: Array.from(card.getContext('2d')!.getImageData(0, 0, 9, 9).data) });
+    }
+    const final = r.diagnostics;
+    r.dispose();
+    return { output, initial, final };
+  });
+  for (const { frame, cells, view, neighborhood } of results.output) {
+    for (let y = 0; y < frame.length; y++) for (let x = 0; x < frame[y]!.length; x++) {
+      const cell = cells[y]![x]!;
+      const index = cell.row * 19 + cell.column;
+      const expected = index >= 17 * 19 - 5 ? [46, 61, 76, 255] : green(index % 2 ? 1 : -1);
+      expect(frame[y]![x], `scale ${view.scaleX}, device pixel ${x}:${y}, cell ${cell.row}:${cell.column}`).toEqual(expected);
+    }
+    expect(neighborhood).toEqual(results.output[0]!.neighborhood);
+  }
+  expect(results.final.scalarUploadCalls).toBe(results.initial.scalarUploadCalls);
+  expect(results.final.scalarBytes).toBe(results.initial.scalarBytes);
+  await testInfo.attach('zoom-geometry', { body: JSON.stringify(results.output.map(({ view }) => view)), contentType: 'application/json' });
+});
