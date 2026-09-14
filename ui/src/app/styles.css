@@ -37,6 +37,14 @@ h2 { font-size: 18px; font-weight: 600; }
 .explorer-link { padding: 0 6px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--ui-text); cursor: pointer; font-size: 13px; white-space: nowrap; }
 .explorer-link[aria-current="page"] { border-bottom-color: var(--ui-accent); font-weight: 600; }
 .explorer-link:hover { background: var(--ui-accent-soft); }
+.architecture-nav-short { display: none; }
+@media (max-width: 360px) {
+  .app-bar .explorer-link { font-size: 11px; padding-inline: 3px; }
+  .architecture-nav-label { display: none; }
+  .architecture-nav-short { display: inline; }
+  .app-bar .model-label { min-width: 36px; }
+  .app-bar select { padding-inline: 2px; }
+}
 .working-surface { border: 1px solid var(--ui-border); border-radius: 9px; background: var(--ui-surface); box-shadow: var(--ui-shadow); overflow: auto; }
 .surface-label { padding: 16px 20px; border-bottom: 1px solid var(--ui-border); background: var(--ui-surface-soft); }
 .surface-content { padding: 24px; display: grid; gap: 18px; }

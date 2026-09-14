@@ -1,0 +1,53 @@
+import { useEffect, useState } from 'react';
+import type { ExplorerContextValue } from '../app/explorer-context';
+import { Lifetime } from '../app/lifetime';
+import { ApiFailure } from '../api/errors';
+import type { components } from '../api/generated/types';
+import { ArchitectureCanvas } from './ArchitectureCanvas';
+import type { ArchitectureSelection } from './ArchitectureCanvas';
+import { GraphViews } from './graph';
+
+type Response = components['schemas']['ArchitectureResponse'];
+const unavailable = {
+  unsupported_architecture: 'Architecture is not supported for this model.',
+  analysis_failed: 'Architecture preparation failed for this model.',
+  restart_required: 'The model is new or changed. Restart the backend to prepare its architecture.',
+  unsupported_size: 'This architecture exceeds the supported response size.',
+  cache_unavailable: 'The prepared architecture cache is unavailable.',
+};
+export function ArchitectureExplorer({ client, session, selection, views, tokenizerAvailable, onInspect }: ExplorerContextValue & {
+  views: GraphViews; tokenizerAvailable: boolean; onInspect?: ((selection: ArchitectureSelection) => void) | undefined;
+}) {
+  const [result, setResult] = useState<{ response?: Response; error?: string }>({});
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    const request = new Lifetime();
+    const detach = selection.onDispose(request.dispose);
+    const timeout = setTimeout(() => {
+      if (request.isCurrent()) { request.dispose(); setResult({ error: 'Architecture retrieval timed out. Retry retrieval.' }); }
+    }, 15_000);
+    // Inventory is required to validate actionable parameter bindings; no tensor bytes or tokenization.
+    void client.listTensors(session.id, request.signal).then(request.guard(async (inventory) => {
+      try {
+        const response = await client.getArchitecture(session.id, { modelId: session.model_id, inventory, tokenizerAvailable }, request.signal);
+        if (request.isCurrent()) setResult({ response });
+      } catch (error) {
+        if (request.isCurrent()) setResult({ error: error instanceof ApiFailure && error.detail?.code === 'model_content_changed'
+          ? 'Model content changed. Close this session and open a fresh session.' : 'Architecture retrieval failed or returned an invalid graph. Retry retrieval.' });
+      } finally { clearTimeout(timeout); }
+    }), request.guard(() => { clearTimeout(timeout); setResult({ error: 'Could not validate the model inventory. Retry retrieval.' }); }));
+    return () => { clearTimeout(timeout); request.dispose(); detach(); };
+  }, [client, session, selection, tokenizerAvailable, retry]);
+  const response = result.response;
+  if (result.error) return <div role="alert">{result.error} <button onClick={() => { setResult({}); setRetry(retry + 1); }}>Retry retrieval</button></div>;
+  if (!response) return <p role="status">Retrieving prepared architecture…</p>;
+  if (response.status === 'unavailable') return <div role="status"><p>{unavailable[response.reason]}</p>
+    {response.requires_restart && response.reason !== 'restart_required' && <p>Restart the backend to prepare this model again.</p>}
+    {response.diagnostics.map((d, i) => <p key={i}>{d.message}</p>)}
+  </div>;
+  return <>
+    {response.diagnostics.map((d, i) => <p key={i} role="status">{d.message}</p>)}
+    <ArchitectureCanvas key={JSON.stringify([session.id, response.model_id, response.graph.graph_id])} graph={response.graph}
+      modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onInspect={onInspect} />
+  </>;
+}

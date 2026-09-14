@@ -1,3 +1,4 @@
+import type { ArchitectureSelection } from '../architecture-explorer/ArchitectureCanvas';
 import { createContext, useContext } from 'react';
 import type { ComponentType } from 'react';
 import type { ApiClient } from '../api/client';
@@ -16,6 +17,8 @@ export interface ExplorerContextValue {
 export interface ExplorerSlots {
   tensor?: ComponentType<ExplorerContextValue>;
   tokenizer?: ComponentType<ExplorerContextValue>;
+  architecture?: ComponentType<ExplorerContextValue>;
+  inspectArchitecture?: (selection: ArchitectureSelection) => void;
 }
 export const ExplorerContext = createContext<ExplorerContextValue | null>(null);
 export function useExplorerContext() {
