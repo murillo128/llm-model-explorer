@@ -38,7 +38,7 @@ test('frozen prompt pixels and geometry', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Prompt' }).fill('A😀 A');
   await expect(prompt.getByRole('status')).toContainText('5 tokens');
   await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).focus();
-  await expect(page.getByText('5 token rows · 7 hidden dimensions')).toBeVisible();
+  await expect(page.getByText('[5 × 7] · float32')).toBeVisible();
   await expect(prompt).toHaveScreenshot('annotated-prompt.png');
   expect((await page.locator('.tokenizer-editor').boundingBox())!.height).toBe(260);
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight && document.documentElement.scrollWidth <= innerWidth)).toBe(true);

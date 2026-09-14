@@ -128,6 +128,7 @@ export class MatrixViewport {
 
   refresh() { this.matrix.refresh(); }
   fitWidth() { this.matrix.fitWidth(); }
+  revealRow(row: number) { this.matrix.revealRow(row); }
   setDistributionDomain(domain: DistributionDomain) {
     this.rowScale?.setDomain(domain);
     this.columnScale?.setDomain(domain);

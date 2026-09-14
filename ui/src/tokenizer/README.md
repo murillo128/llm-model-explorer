@@ -51,9 +51,22 @@ Resubscribing after any received bytes restarts the lookup at offset zero;
 StrictMode's synchronous pre-DATA detach/reattach can reuse the untouched stream.
 Every callback is fenced by the tokenizer abort signal and transport epoch.
 
-Existing ID text gets invisible per-sequence focus/interaction wiring; overlapping
-IDs remain separately addressable without repeating source text. Linked rows use
+`TokenizerWorkspace` frames the unchanged PromptTokenizer surface with a compact
+`PanelHeader` and gives Input Embeddings the same header through
+`MatrixExplorer.header`. Matrix shape and logical dtype appear once beside its
+identity; loading/error status uses the reserved header slot. Camera controls,
+inspection and magnifier remain entirely in the shared matrix implementation.
+
+Existing ID text gets per-sequence focus/interaction wiring; overlapping IDs
+remain separately addressable without repeating source text. Linked rows use
 `MatrixExplorer.highlightedRow`, and matrix inspection uses `onRowSelect` to mark
-the existing annotation. These interactions never dispatch editor document or
-selection transactions. `embeddings.css` styles only the new region and active
-annotation cues; the baseline `tokenizer.css` is unchanged.
+the existing annotation. Hover/focus is transient; click/tap or Enter/Space emits
+`onRowActivate`, creating a fresh `revealRow` intent without changing scale.
+Link state is stamped with the current tokenization's abort signal. Prompt and
+matrix consume it only for that generation, so session/options/source replacement
+cannot revive stale selection. Source replacement releases the old matrix and
+starts a fresh camera; remount does not restore old linkage.
+
+These interactions never dispatch editor document or selection transactions.
+They do not automatically scroll/focus the Prompt panel. `embeddings.css` styles
+the panel framing and active annotation cues; baseline `tokenizer.css` is unchanged.

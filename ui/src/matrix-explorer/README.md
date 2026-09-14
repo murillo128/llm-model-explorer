@@ -81,3 +81,11 @@ For an existing contextual header, pass `header={(cameraControls) => ...}` and
 compose `cameraControls` into its action slot. Header changes do not resubscribe.
 Distribution thickness and value-bin rulers remain independent of camera scale;
 their data axes share the matrix transform exactly. Rank-1 remains a native strip.
+
+`revealRow={{ row }}` is a narrow viewport intent for linked consumers. A new
+object identity requests minimal vertical scroll to expose that logical row,
+without changing scale, horizontal origin or browser focus. Keep the object
+stable between activations, and clear it on source/generation replacement.
+Invalid indices are ignored. If one cell is taller than the viewport, reveal its
+top edge. Row highlighting and reveal are separate: hover should normally set
+only `highlightedRow`, while explicit activation may issue `revealRow`.

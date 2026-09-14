@@ -1,8 +1,9 @@
-/* The original prompt grid, margins, editor height and resize behavior are frozen. */
+/* Panel framing does not change the editable surface's native geometry. */
 .tokenizer-workspace { display: grid; gap: 18px; min-width: 0; }
-.input-embeddings { display: flex; flex-direction: column; gap: 8px; min-width: 0; height: 280px; }
-.input-embeddings header { flex-shrink: 0; }
-.input-embeddings h2 { font-size: 14px; font-weight: 600; }
-.input-embeddings p { font-size: 13px; color: var(--ui-text-muted); }
+.prompt-panel { display: grid; gap: 12px; min-width: 0; }
+.input-embeddings { display: flex; flex-direction: column; min-width: 0; height: 280px; }
+.tokenizer-workspace h2 { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.embedding-shape { flex-shrink: 0; font: 11px/20px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ui-text-muted); }
+.input-embeddings .matrix-panel-status { font-size: 11px; color: var(--ui-text-muted); }
 [data-token-index][data-active-token] { background: var(--ui-accent-soft); outline: 1px solid var(--ui-accent); }
 .source-annotation[data-active-token] { text-decoration: underline; text-decoration-color: var(--ui-accent); text-underline-offset: 3px; }
