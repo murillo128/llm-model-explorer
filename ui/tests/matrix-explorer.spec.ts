@@ -1,13 +1,16 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { nativeCamera } from './native-camera';
 import type {} from './matrix-explorer-harness';
 
 const url = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4100) + 1}/tests/matrix-explorer.html`;
 async function open(page: Page, strict = false) {
   await page.goto(url + (strict ? '?strict' : ''));
   await expect(page.getByRole('region', { name: 'Synthetic result matrix' })).toBeVisible();
+  await nativeCamera(page);
 }
 async function hover(page: Page, row: number, column: number) {
+  await nativeCamera(page);
   const point = await page.evaluate(({ row, column }) => {
     const r = window.matrixFixture.renderers.filter((r) => r.state === 'ready')[0]!;
     const rect = r.canvas.getBoundingClientRect();
@@ -125,6 +128,7 @@ test('full and matrix-only compositions share scalar pixels and optional authori
   const matrixOnly = await pixels();
   await page.evaluate(() => window.matrixFixture.render('full'));
   await expect(page.locator('.matrix-surfaces canvas')).toHaveCount(3);
+  await nativeCamera(page);
   const full = await pixels();
   expect(full).toEqual(matrixOnly);
   await page.evaluate(() => {

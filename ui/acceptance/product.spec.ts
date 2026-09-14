@@ -8,6 +8,8 @@ import { dirname, join } from 'node:path';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { installProbe } from './probe';
+import { nativeCamera } from '../tests/native-camera';
+import { revealTensor } from '../tests/tensor-tree-helpers';
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
 const componentPort = Number(process.env.UI_TEST_PORT ?? 4173);
@@ -46,7 +48,7 @@ async function idle() {
 }
 async function open(page: Page, name = matrix) {
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/fixture');
-  await page.getByRole('button', { name: new RegExp(name.replaceAll('.', '\\.')) }).click();
+  await (await revealTensor(page.getByRole('button', { includeHidden: true, name: new RegExp(name.replaceAll('.', '\\.')) }))).click();
 }
 async function complete(page: Page) {
   await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
@@ -207,8 +209,9 @@ test('production UI renders before producer completes; native geometry, inspecti
     producerHeldUntilMs: beforeRelease - started, resources: await metrics(page) }, null, 2), contentType: 'application/json' });
   // Repeated real navigation must release GL allocations, readers and CPU owners.
   for (const name of ['model.norm.weight', 'model.layers.0.mlp.up_proj.weight', 'model.embed_tokens.weight']) {
-    await page.getByRole('button', { name: new RegExp(name.replaceAll('.', '\\.')) }).click();
+    await (await revealTensor(page.getByRole('button', { includeHidden: true, name: new RegExp(name.replaceAll('.', '\\.')) }))).click();
     await complete(page);
+    await nativeCamera(page);
     const dimensions = name === 'model.norm.weight' ? [576, 1] : name.includes('up_proj') ? [576, 1536] : [576, 1025];
     expect(await canvas.evaluate((c) => {
       const extent = c.closest('.matrix-scroll')!.firstElementChild as HTMLElement;
@@ -288,7 +291,7 @@ test('cancel and network disconnect preserve incomplete status and return resour
   for (const [name, disconnect] of [[matrix, false], ['model.layers.0.mlp.up_proj.weight', true]] as const) {
     await control('arm', { kind: 'logical_tensor' });
     if (name === matrix) await open(page, name);
-    else await page.getByRole('button', { name: new RegExp(name.replaceAll('.', '\\.')) }).click();
+    else await (await revealTensor(page.getByRole('button', { includeHidden: true, name: new RegExp(name.replaceAll('.', '\\.')) }))).click();
     await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
     if (disconnect) {
       await page.context().setOffline(true);
@@ -315,7 +318,7 @@ test('real producer errors are distinct from cancellation in both primary and au
   await idle();
   const before = Object.keys((await control()).artifacts);
   await control('arm', { kind: 'logical_tensor', mode: 'midstream-error' });
-  await page.getByRole('button', { name: /model\.layers\.0\.mlp\.up_proj\.weight/ }).click();
+  await (await revealTensor(page.getByRole('button', { includeHidden: true, name: /model\.layers\.0\.mlp\.up_proj\.weight/ }))).click();
   await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
   await control('release', {});
   await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'failed');
@@ -330,7 +333,7 @@ test('local reference Base opens normalization, both MLP orientations and embedd
   expect(model).toBeTruthy();
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(model.id);
   for (const tensor of referenceSamples.selected) {
-    await page.getByRole('button', { name: new RegExp(tensor.name.replaceAll('.', '\\.')) }).click();
+    await (await revealTensor(page.getByRole('button', { includeHidden: true, name: new RegExp(tensor.name.replaceAll('.', '\\.')) }))).click();
     await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
     await expect(page.locator('[data-result=tensor]')).toHaveCount(0, { timeout: 180_000 });
     if (tensor.shape.length === 2) {
@@ -505,16 +508,17 @@ test.describe('production native pane geometry', () => {
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(0);
       await expect(page.locator('.tensor-leaf-name')).toHaveText(Array(90).fill('weight'));
       await expect(page.locator('.tensor-choice summary, .tensor-choice details')).toHaveCount(0);
-      const info = page.getByRole('button', { name: 'Tensor information and help' });
+      const info = page.getByRole('button', { name: 'Tensor information' });
       await info.focus(); await info.press('Enter');
-      await expect(page.getByRole('dialog', { name: 'Tensor information and help' })).toContainText('Logical dtype');
+      await expect(page.getByRole('dialog', { name: 'Tensor information' })).toContainText('Logical dtype');
       await page.keyboard.press('Escape'); await expect(info).toBeFocused();
       await expect(page.getByText(/One value per device pixel/)).toHaveCount(0);
       const evidence = [];
       for (const [name, horizontal, vertical] of [['fits', false, false], ['tall', false, true], ['wide', true, false], ['both', true, true]] as const) {
-        const leaf = page.getByRole('button', { name: new RegExp(`^layout\\.${name}\\.weight`) });
-        await leaf.focus(); await leaf.press('Enter'); await expect(leaf).toHaveAttribute('aria-pressed', 'true');
+        const leaf = page.getByRole('button', { includeHidden: true, name: new RegExp(`^layout\\.${name}\\.weight`) });
+        await revealTensor(leaf); await leaf.focus(); await leaf.press('Enter'); await expect(leaf).toHaveAttribute('aria-pressed', 'true');
         await complete(page); await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+        await nativeCamera(page);
         const geometry = () => page.evaluate(() => {
           const m = document.querySelector<HTMLElement>('.matrix-scroll')!;
           const rect = (s: string) => { const r = document.querySelector(s)!.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; };
@@ -546,7 +550,7 @@ test.describe('production native pane geometry', () => {
           await documentFits(page); evidence.push({ name, ...g });
         }
       }
-      await expect(page.locator('.tensor-header')).not.toContainText('complete');
+      await expect(page.locator('.matrix-panel-header')).not.toContainText('complete');
       await page.screenshot({ path: testInfo.outputPath('compact-tensor.png') });
       await testInfo.attach('measurements', { body: JSON.stringify({ scenario: 'native geometry', viewport,
         limits: await page.evaluate(() => (window as any).__acceptance.limits()), cases: evidence }), contentType: 'application/json' });

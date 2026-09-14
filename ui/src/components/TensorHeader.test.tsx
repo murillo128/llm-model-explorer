@@ -4,32 +4,54 @@ import { expect, it } from 'vitest';
 import { tensors } from '../test/shell-fixtures';
 import { TensorHeader } from './TensorHeader';
 
-it('keeps one contextual identity and shape/dtype visible, with keyboard-accessible secondary metadata and help', async () => {
+it('previews metadata on hover/focus, pins on activation, and dismisses without reopening on restored focus', async () => {
+  const user = userEvent.setup();
   render(<><TensorHeader tensor={tensors[0]!} /><button>Outside</button></>);
   expect(screen.getAllByText('left › weight')).toHaveLength(1);
-  expect(screen.queryByText('left.weight')).not.toBeInTheDocument();
   expect(screen.getByText('[2 × 3] · bfloat16')).toBeVisible();
-  expect(screen.queryByText('Logical path')).not.toBeInTheDocument();
-  expect(screen.queryByText(/Focus the matrix/)).not.toBeInTheDocument();
-  const trigger = screen.getByRole('button', { name: 'Tensor information and help' });
-  trigger.focus();
-  await userEvent.keyboard('{Enter}');
-  const dialog = screen.getByRole('dialog', { name: 'Tensor information and help' });
-  expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  const trigger = screen.getByRole('button', { name: 'Tensor information' });
+  await user.hover(trigger);
+  expect(screen.getByRole('dialog')).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Close tensor information' })).not.toBeInTheDocument();
+  await user.unhover(trigger);
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  await user.tab();
+  expect(trigger).toHaveFocus();
+  expect(screen.getByRole('dialog')).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Close tensor information' })).not.toBeInTheDocument();
+  await user.keyboard('{Enter}');
+  const dialog = screen.getByRole('dialog', { name: 'Tensor information' });
   expect(within(dialog).getByRole('button')).toHaveFocus();
   for (const text of ['Logical path', 'Rank', 'Elements', 'Storage dtype', 'Storage format', 'Logical dtype', 'safetensors', 'float32']) {
     expect(within(dialog).getByText(text)).toBeVisible();
   }
-  expect(within(dialog).getByText(/Focus the matrix/)).toBeVisible();
-  await userEvent.keyboard('{Escape}');
+  expect(dialog.querySelectorAll('dt')).toHaveLength(6);
+  expect(screen.queryByText(/One value per device pixel|Focus the matrix/)).not.toBeInTheDocument();
+  await user.keyboard('{Escape}');
   expect(trigger).toHaveFocus();
   expect(trigger).toHaveAttribute('aria-expanded', 'false');
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  await userEvent.keyboard(' ');
-  await userEvent.tab();
+  await user.keyboard(' ');
+  await user.tab();
   expect(screen.getByRole('button', { name: 'Outside' })).toHaveFocus();
+  expect(screen.getByRole('dialog')).toBeVisible();
+  await user.keyboard('{Escape}');
+  expect(trigger).toHaveFocus();
+  await user.click(trigger);
+  await user.unhover(trigger);
+  expect(screen.getByRole('dialog')).toBeVisible();
+  await user.click(screen.getByRole('button', { name: 'Close tensor information' }));
+  expect(trigger).toHaveFocus();
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  await userEvent.click(trigger);
-  await userEvent.click(screen.getByRole('button', { name: 'Outside' }));
+  await user.click(trigger);
+  await user.click(screen.getByRole('button', { name: 'Outside' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+it('closes an ephemeral focus preview when keyboard focus leaves', async () => {
+  render(<><TensorHeader tensor={tensors[0]!} /><button>Outside</button></>);
+  await userEvent.tab();
+  expect(screen.getByRole('dialog')).toBeVisible();
+  await userEvent.tab();
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });

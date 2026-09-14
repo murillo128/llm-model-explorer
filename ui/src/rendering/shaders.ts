@@ -11,10 +11,25 @@ const selectionShader = `
 uniform ivec2 bandOrigin;
 uniform ivec2 selection;
 uniform vec2 guideOpacity;
+ivec2 sampledCell() {
+  vec2 pixel = vec2(floor(gl_FragCoord.x), float(viewHeight - 1) - floor(gl_FragCoord.y));
+  vec2 cell = floor((pixel + cameraOffset) / cellScale);
+  // Correct division at exact boundaries using the same float32 raster edges
+  // as CPU hit testing and band scissors. Origins retain integer cell identity.
+  cell += vec2(greaterThanEqual(pixel, ceil((cell + 1.0) * cellScale - cameraOffset)));
+  cell -= vec2(lessThan(pixel, ceil(cell * cellScale - cameraOffset)));
+  return ivec2(cell) + cellOrigin - bandOrigin;
+}
 vec3 semanticColor(float y, ivec2 cell) {
-  ivec2 logical = cell + bandOrigin;
-  bool row = selection.y >= 0 && logical.y == selection.y;
-  bool column = selection.x >= 0 && logical.x == selection.x;
+  vec2 pixel = vec2(floor(gl_FragCoord.x), float(viewHeight - 1) - floor(gl_FragCoord.y));
+  vec2 selected = vec2(selection - cellOrigin);
+  vec2 start = ceil(selected * cellScale - cameraOffset);
+  vec2 end = ceil((selected + 1.0) * cellScale - cameraOffset);
+  // Center within the sampled pixel interval, including near-native fractional
+  // scales where rounding the logical center can land in the previous cell.
+  vec2 guide = floor((start + end) * 0.5);
+  bool row = selection.y >= 0 && pixel.y == guide.y;
+  bool column = selection.x >= 0 && pixel.x == guide.x;
   float opacity = row && column ? guideOpacity.y : row || column ? guideOpacity.x : 0.0;
   vec3 green = vec3(0.001 + 0.819 * y * y * y,
     0.006 + 0.994 * pow(y, 1.5), 0.002 + 0.858 * y * y * y);
@@ -29,7 +44,9 @@ export const fragmentShader = `#version 300 es
 precision highp float;
 precision highp int;
 uniform highp sampler2D weights;
-uniform ivec2 bandOffset;
+uniform vec2 cameraOffset;
+uniform ivec2 cellOrigin;
+uniform vec2 cellScale;
 uniform int viewHeight;
 uniform ivec2 prefix;
 uniform int mode;
@@ -43,7 +60,7 @@ out vec4 color;
 
 float logistic(float v) { return 1.0 / (1.0 + exp(-v)); }
 void main() {
-  ivec2 cell = ivec2(int(gl_FragCoord.x), viewHeight - 1 - int(gl_FragCoord.y)) + bandOffset;
+  ivec2 cell = sampledCell();
   if (cell.y > prefix.y || (cell.y == prefix.y && cell.x >= prefix.x)) {
     color = vec4(0.18, 0.24, 0.30, 1.0); // pending, visibly distinct from a zero weight
     return;
@@ -78,14 +95,16 @@ export const distributionFragmentShader = `#version 300 es
 precision highp float;
 precision highp int;
 uniform highp usampler2D weights;
-uniform ivec2 bandOffset;
+uniform vec2 cameraOffset;
+uniform ivec2 cellOrigin;
+uniform vec2 cellScale;
 uniform int viewHeight;
 uniform ivec2 prefix;
 uniform float densityDenominator;
 ${selectionShader}
 out vec4 color;
 void main() {
-  ivec2 cell = ivec2(int(gl_FragCoord.x), viewHeight - 1 - int(gl_FragCoord.y)) + bandOffset;
+  ivec2 cell = sampledCell();
   if (cell.y > prefix.y || (cell.y == prefix.y && cell.x >= prefix.x)) {
     color = vec4(0.18, 0.24, 0.30, 1.0);
     return;

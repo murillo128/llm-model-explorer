@@ -1,5 +1,5 @@
 import type { Selection } from './chroma';
-import { hitTest, tensorGeometry, viewGeometry } from './geometry';
+import { hitTest, rasterEdge, rasterOffset, tensorGeometry, viewGeometry } from './geometry';
 import type { TensorDescriptor, ViewGeometry } from './geometry';
 import { distributionFragmentShader, fragmentShader, vertexShader } from './shaders';
 import { transferUniforms } from './transfer';
@@ -145,7 +145,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
       }
       this.vao = gl.createVertexArray();
       if (!this.vao) throw new Error('WebGL2 vertex array allocation failed.');
-      for (const name of ['weights', 'bandOffset', 'bandOrigin', 'selection', 'guideOpacity', 'viewHeight', 'prefix', ...(this.densityAxisLength === undefined ? ['mode', 'slope', 'anchors', 'scale', 'span', 'correction'] : ['densityDenominator'])]) {
+      for (const name of ['weights', 'cellScale', 'cameraOffset', 'cellOrigin', 'bandOrigin', 'selection', 'guideOpacity', 'viewHeight', 'prefix', ...(this.densityAxisLength === undefined ? ['mode', 'slope', 'anchors', 'scale', 'span', 'correction'] : ['densityDenominator'])]) {
         const location = gl.getUniformLocation(this.program!, name);
         if (location === null) throw new Error(`Missing renderer uniform: ${name}`);
         this.uniforms[name] = location;
@@ -242,9 +242,9 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
     this.strengths = strengths;
   }
 
-  setView(cssWidth: number, cssHeight: number, scrollLeft = 0, scrollTop = 0, dpr = window.devicePixelRatio) {
+  setView(cssWidth: number, cssHeight: number, scrollLeft = 0, scrollTop = 0, dpr = window.devicePixelRatio, scaleX = 1, scaleY = scaleX) {
     this.assertReady();
-    const view = viewGeometry(this.geometry, cssWidth, cssHeight, scrollLeft, scrollTop, dpr, this.maxWidth, this.maxHeight);
+    const view = viewGeometry(this.geometry, cssWidth, cssHeight, scrollLeft, scrollTop, dpr, this.maxWidth, this.maxHeight, scaleX, scaleY);
     // Zero data dimensions get a hidden 1x1 backing buffer, never a zero-sized texture.
     const width = Math.max(1, view.width);
     const height = Math.max(1, view.height);
@@ -289,6 +289,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
     gl.uniform2f(u.guideOpacity!, ...this.strengths);
     gl.uniform1i(u.weights!, 0);
     gl.uniform1i(u.viewHeight!, view.height);
+    gl.uniform2f(u.cellScale!, view.scaleX, view.scaleY);
     if (this.densityAxisLength === undefined) {
       gl.uniform1i(u.mode!, this.transfer.mode);
       gl.uniform1f(u.slope!, this.transfer.slope);
@@ -300,14 +301,15 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
     const prefixRow = Math.floor(this._populated / this.geometry.columns);
     const prefixColumn = this._populated % this.geometry.columns;
     for (const band of this.bands) {
-      const left = Math.max(view.x, band.x);
-      const top = Math.max(view.y, band.y);
-      const right = Math.min(view.x + view.width, band.x + band.width);
-      const bottom = Math.min(view.y + view.height, band.y + band.height);
+      const left = Math.max(0, rasterEdge(band.x, view.x, view.scaleX));
+      const top = Math.max(0, rasterEdge(band.y, view.y, view.scaleY));
+      const right = Math.min(view.width, rasterEdge(band.x + band.width, view.x, view.scaleX));
+      const bottom = Math.min(view.height, rasterEdge(band.y + band.height, view.y, view.scaleY));
       if (right <= left || bottom <= top) continue;
-      gl.scissor(left - view.x, view.height - (bottom - view.y), right - left, bottom - top);
+      gl.scissor(left, view.height - bottom, right - left, bottom - top);
       gl.uniform2i(u.bandOrigin!, band.x, band.y);
-      gl.uniform2i(u.bandOffset!, view.x - band.x, view.y - band.y);
+      gl.uniform2f(u.cameraOffset!, rasterOffset(view.x, view.scaleX), rasterOffset(view.y, view.scaleY));
+      gl.uniform2i(u.cellOrigin!, Math.floor(view.x), Math.floor(view.y));
       gl.uniform2i(u.prefix!, Math.max(0, Math.min(band.width, prefixColumn - band.x)),
         Math.max(-1, Math.min(band.height, prefixRow - band.y)));
       gl.bindTexture(gl.TEXTURE_2D, band.texture);
@@ -349,7 +351,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
       gl.disable(gl.SCISSOR_TEST);
       gl.clearColor(46 / 255, 61 / 255, 76 / 255, 1);
       gl.clear(gl.COLOR_BUFFER_BIT);
-      this.render({ ...this._view, x: column - 4, y: row - 4, width: 9, height: 9 });
+      this.render({ ...this._view, x: column - 4, y: row - 4, width: 9, height: 9, scaleX: 1, scaleY: 1 });
       gl.readPixels(0, 0, 9, 9, gl.RGBA, gl.UNSIGNED_BYTE, this.inspection.pixels);
       const output = target.createImageData(9, 9);
       for (let y = 0; y < 9; y++) output.data.set(this.inspection.pixels.subarray((8 - y) * 36, (9 - y) * 36), y * 36);

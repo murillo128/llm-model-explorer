@@ -40,6 +40,9 @@ from llm_model_explorer.tensor_analysis import (
 
 EXTREME = float(torch.finfo(torch.float32).max)
 CASES = [
+    ([2, 3], [-2.0, 0.0, 2.0, -1.0, 0.0, 1.0]),
+    ([2, 3], [-2.0, 0.0, 6.0, 0.0, 2.0, 4.0]),
+    ([2, 100], [-10000.0, 10000.0] + [-0.125, 0.0, 0.125] * 66),
     ([2, 3], [-7.0, 0.0, 3.0, -2.0, 1.0, 12.0]),
     ([2, 3], [3.5] * 6),
     ([2, 3], [-0.0, 0.0, -0.0, 0.0, 0.0, -0.0]),
@@ -196,6 +199,9 @@ def test_endpoints_and_disk_reuse(
                     assert actual == [None] * 9
             else:
                 assert data == histogram_oracle(shape, values)
+                finite = [x for x in values if math.isfinite(x)]
+                assert metadata["domain_minimum"] == (min(finite) if finite else None)
+                assert metadata["domain_maximum"] == (max(finite) if finite else None)
                 assert metadata["byte_length"] == len(data)
                 assert metadata["sections"][1]["offset"] == shape[0] * 400
         assert len(list(settings.cache_dir.glob("*/manifest.json"))) == 2

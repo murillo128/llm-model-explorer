@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { MatrixViewportOptions } from '../rendering/matrix-viewport';
 import type { Inspection } from '../rendering/matrix-inspection';
@@ -7,7 +7,7 @@ import type { MatrixSource, MatrixUpdates } from './types';
 
 const fake = vi.hoisted(() => ({ fail: false, transferFails: false, views: [] as {
   options: MatrixViewportOptions; upload: ReturnType<typeof vi.fn>; transfer: ReturnType<typeof vi.fn>;
-  dispose: ReturnType<typeof vi.fn>;
+  fitWidth: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn>;
 }[] }));
 vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
   matrix;
@@ -19,10 +19,12 @@ vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
     const transfer = vi.fn(() => { if (fake.transferFails) throw new Error('Invalid transfer'); });
     this.matrix = { renderer: { upload, setTransfer: transfer } };
     this.dispose = vi.fn(() => { options.onInspection?.(null); host.replaceChildren(); });
-    fake.views.push({ options, upload, transfer, dispose: this.dispose });
+    fake.views.push({ options, upload, transfer, fitWidth: this.fitWidth, dispose: this.dispose });
   }
+  fitWidth = vi.fn();
   refresh = vi.fn();
   setLinkedRow = vi.fn();
+  setDistributionDomain = vi.fn();
   dispose;
 } }));
 beforeEach(() => { fake.fail = false; fake.transferFails = false; fake.views.length = 0; });
@@ -41,6 +43,7 @@ it('fences retained subscriptions and disposes their allocation even when unsubs
     old.values(new Float32Array([99]), 0);
     old.transfer({ slope: 2 });
     old.distribution('rows', new Uint32Array([99]), 0);
+    old.distributionDomain({ minimum: -99, maximum: 99 });
   }
   expect(fake.views.every((v) => v.upload.mock.calls.length === 0 && v.transfer.mock.calls.length === 0)).toBe(true);
   expect(fake.views.slice(0, 2).every((v) => v.dispose.mock.calls.length === 1)).toBe(true);
@@ -78,6 +81,18 @@ it('reports allocation failure without subscribing and recovers on source replac
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   expect(b.updates).toHaveLength(1);
 });
+it('resets domain labels across source reuse and ignores detached metadata', () => {
+  const a = { ...source(), distributions: true }, b = { ...source(), distributions: true };
+  const view = render(<MatrixExplorer source={a} />);
+  act(() => a.updates[0]!.distributionDomain({ minimum: -2, maximum: 6 }));
+  expect(screen.getByTitle('True finite minimum: -2')).toBeVisible();
+  view.rerender(<MatrixExplorer source={b} />);
+  view.rerender(<MatrixExplorer source={a} />);
+  act(() => a.updates[0]!.distributionDomain({ minimum: -99, maximum: 99 }));
+  expect(screen.getByLabelText('Distribution range')).toHaveTextContent('Bin domain unavailable');
+  act(() => a.updates[1]!.distributionDomain({ minimum: null, maximum: null }));
+  expect(screen.getByLabelText('Distribution range')).toHaveTextContent('No finite values');
+});
 it('releases an allocated viewport if initial transfer setup fails', () => {
   fake.transferFails = true;
   const data = source();
@@ -95,4 +110,13 @@ it('releases the viewport and fences callbacks when a parent subscription throws
   expect(fake.views.every((v) => v.dispose.mock.calls.length === 1)).toBe(true);
   sink!.values(new Float32Array([1]), 0);
   expect(fake.views.every((v) => v.upload.mock.calls.length === 0)).toBe(true);
+});
+
+it('composes Fit width into the header action slot without resubscribing or uploading', () => {
+  const data = source();
+  render(<MatrixExplorer source={data} header={(controls) => <header>Result {controls}</header>} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Fit width' }));
+  expect(fake.views[0]!.fitWidth).toHaveBeenCalledOnce();
+  expect(fake.views[0]!.upload).not.toHaveBeenCalled();
+  expect(data.updates).toHaveLength(1);
 });
