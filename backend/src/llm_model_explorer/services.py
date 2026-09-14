@@ -3,7 +3,9 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from threading import Event
 
+from .architecture_service import ArchitectureService
 from .artifacts import ArtifactStore
 from .execution import BlockingWork
 from .materialization import LogicalTensorService
@@ -25,11 +27,14 @@ class Services:
     operation_delivery: OperationRuntime | None = None
     tokenizers: TokenizerService | None = None
     logical_tensors: LogicalTensorService | None = None
+    architectures: ArchitectureService | None = None
 
 
 @asynccontextmanager
-async def open_services(settings: Settings) -> AsyncIterator[Services]:
-    """Own resources for one application lifespan, with no model access."""
+async def open_services(
+    settings: Settings, *, startup_stop: Event | None = None
+) -> AsyncIterator[Services]:
+    """Own application resources and prepare static architectures before readiness."""
     work = BlockingWork()
     sessions = None
     try:
@@ -39,6 +44,8 @@ async def open_services(settings: Settings) -> AsyncIterator[Services]:
         catalogue = ModelCatalogue(settings.model_root)
         operations = OperationRuntime(artifacts, work, settings.device)
         sessions = SessionRegistry(catalogue, work, operations)
+        architectures = ArchitectureService(artifacts, work, stop=startup_stop)
+        await architectures.prepare(catalogue)
         yield Services(
             blocking_work=work,
             catalogue=catalogue,
@@ -47,6 +54,7 @@ async def open_services(settings: Settings) -> AsyncIterator[Services]:
             operation_delivery=operations,
             tokenizers=TokenizerService(settings.model_root),
             logical_tensors=LogicalTensorService(operations),
+            architectures=architectures,
         )
     finally:
         try:

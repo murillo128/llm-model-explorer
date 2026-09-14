@@ -27,7 +27,7 @@ def test_sessions_inventory_refresh_isolation_and_restart(settings: Settings) ->
         assert inventory.status_code == 200
         assert inventory.json()["coverage"] == "complete"
         assert inventory.json()["diagnostics"] == []
-        assert client.get(f"/sessions/{a_id}/architecture").status_code == 404
+        assert client.get(f"/sessions/{a_id}/architecture").status_code == 200
         tensor = inventory.json()["tensors"][0]
         assert tensor["name"] == "layer.weight"
         assert tensor["path"] == ["layer", "weight"]

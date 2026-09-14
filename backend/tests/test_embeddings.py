@@ -14,6 +14,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import torch
+from cache_helpers import numeric_cache_entries
 from fastapi.testclient import TestClient
 from starlette.types import Message
 from test_models import make_model, mutate_last_byte, write_weights
@@ -93,7 +94,7 @@ def test_contract_requests(settings: Settings, dtype: str, case: dict[str, Any])
             assert result[-1] == (4, b"")
             assert KEY.encode() not in response.content
     assert (directory / "model.safetensors").read_bytes() == before
-    assert not list(settings.cache_dir.iterdir())
+    assert not numeric_cache_entries(settings.cache_dir)
 
 
 @pytest.mark.parametrize(
@@ -266,7 +267,7 @@ def test_midstream_faults(settings: Settings, monkeypatch: pytest.MonkeyPatch, f
             }[fault]
         )
         assert b"private" not in response.content and KEY.encode() not in response.content
-    assert not list(settings.cache_dir.iterdir())
+    assert not numeric_cache_entries(settings.cache_dir)
 
 
 @pytest.mark.parametrize("action", ["cancel", "delete_session", "disconnect", "partial_send"])
@@ -332,7 +333,7 @@ def test_progressive_cleanup_and_independent_consumer(settings: Settings, action
             assert actual == struct.pack("<9f", *(ROWS[3] + ROWS[0] + ROWS[3]))
             await survivor.aclose()
             await forgotten(runtime)
-        assert not list(settings.cache_dir.iterdir())
+        assert not numeric_cache_entries(settings.cache_dir)
 
     run(scenario())
 

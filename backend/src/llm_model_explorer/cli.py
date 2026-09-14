@@ -1,6 +1,7 @@
 """Installable backend process entry point."""
 
 import argparse
+import logging
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -29,8 +30,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     except ValueError as exc:
         parser.error(str(exc))
 
-    import uvicorn
+    from .app import ApplicationServer, create_app
 
-    from .app import create_app
-
-    uvicorn.run(create_app(settings), host=settings.host, port=settings.port)
+    logging.basicConfig(level=logging.INFO)
+    ApplicationServer(create_app(settings), host=settings.host, port=settings.port).run()

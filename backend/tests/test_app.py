@@ -39,7 +39,7 @@ def test_only_implemented_product_endpoints_are_available(settings: Settings) ->
     assert not hasattr(app.state, "services")
 
 
-def test_app_creation_and_lifespan_do_not_touch_models_or_tensors(
+def test_app_creation_does_not_touch_models_or_tensors(
     settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Settings have already validated paths. No file/model I/O belongs in the app factory.
@@ -51,8 +51,7 @@ def test_app_creation_and_lifespan_do_not_touch_models_or_tensors(
         monkeypatch.setattr(torch, name, forbidden)
     monkeypatch.setattr(torch.cuda, "init", forbidden)
     app = create_app(settings)
-    with TestClient(app):
-        assert isinstance(app.state.services.catalogue, ModelCatalogue)
+    assert not hasattr(app.state, "services")
     forbidden.assert_not_called()
 
 

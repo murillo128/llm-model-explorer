@@ -4,6 +4,7 @@ from typing import cast
 
 from fastapi import Request
 
+from .architecture_service import ArchitectureService
 from .artifacts import ArtifactStore
 from .execution import BlockingWork
 from .materialization import LogicalTensorService
@@ -69,4 +70,11 @@ def get_logical_tensors(request: Request) -> LogicalTensorService:
     service = get_services(request).logical_tensors
     if service is None:
         raise RuntimeError("logical tensor service is not configured")
+    return service
+
+
+def get_architectures(request: Request) -> ArchitectureService:
+    service = get_services(request).architectures
+    if service is None:
+        raise RuntimeError("architecture service is not configured")
     return service
