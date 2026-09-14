@@ -45,3 +45,27 @@ use the existing session controller and API contract.
 The UI must consume long-operation responses incrementally. It must not wait for an entire tensor payload before allocating/filling the rendering representation and beginning display.
 
 Consumer cancellation must abort the active stream and use the operation cancellation contract where required.
+
+## Matrix Explorer composition
+
+`ui/src/matrix-explorer/` owns the reusable React scientific composition above
+`MatrixViewport`: viewport lifetime, local scrolling, optional aligned profiles,
+compact contextual header slot, and hover/focus magnifier/readout. It accepts
+logical float32 descriptors and progressive subscriptions without application,
+model, navigation, or HTTP dependencies. Tensor Explorer remains responsible for
+its operation handles, protocol validation, cancellation and result status.
+
+A source object identifies one immutable descriptor and delivery generation.
+Replacing it detaches the prior subscription and releases its viewport; retained
+callbacks cannot affect a later allocation, including returning to the same source.
+Subscriptions restart at offset zero on remount. Scalar chunks are consumed
+synchronously without retaining a second scalar array or accumulated chunk list.
+Transfer/statistics updates change draw state without uploading scalar values.
+
+Matrix-only composition omits auxiliary panels when the caller has no authoritative
+distribution artifact. Full composition reserves the existing aligned 100-bin
+uint32 profiles and accepts their progressive counts independently. Both reuse the
+same exact geometry, transfer and inspection path; scientific semantics remain
+owned by [rendering](rendering.md) and [Tensor Explorer](tensor-explorer.md).
+Native zero-based cell, row and column callbacks let parents link context without
+accessing renderer internals; leaving, blur and source disposal clear selection.

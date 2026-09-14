@@ -6,6 +6,7 @@ import { TensorViewport } from './tensor-viewport';
 import type { TensorDescriptor, ViewGeometry } from './geometry';
 
 export interface MatrixViewportOptions extends RendererOptions {
+  readonly distributions?: boolean;
   readonly onInspection?: (inspection: Inspection | null) => void;
 }
 
@@ -42,7 +43,7 @@ export class MatrixViewport {
     const hostMaxHeight = getComputedStyle(this.main).maxHeight;
     this.main.style.maxHeight = hostMaxHeight === 'none' ? 'var(--matrix-height)' : `min(var(--matrix-height), ${hostMaxHeight})`;
     try {
-      if (descriptor.rank === 2 && descriptor.numel > 0) {
+      if (descriptor.rank === 2 && descriptor.numel > 0 && options.distributions !== false) {
         for (const [panel, label] of [[this.rowHost, 'Row distributions'], [this.columnHost, 'Column distributions']] as const) {
           const canvas = document.createElement('canvas');
           canvas.setAttribute('aria-label', label);

@@ -153,12 +153,12 @@ test('production UI renders before producer completes; native geometry, inspecti
   expect(selected[0] - selected[1]).toBeGreaterThan(30);
   expect(luminance(selected)).toBeGreaterThan(0);
   expect(await metrics(page)).toMatchObject({ uploads: beforeHover.uploads, createdTextures: beforeHover.createdTextures });
-  const neighborhood = page.getByLabel('9 by 9 tensor neighborhood');
+  const neighborhood = page.getByLabel('9 by 9 matrix neighborhood');
   expect(await neighborhood.evaluate((c) => [(c as HTMLCanvasElement).width, (c as HTMLCanvasElement).height])).toEqual([9, 9]);
   const center = await neighborhood.evaluate((c) => [...(c as HTMLCanvasElement).getContext('2d')!.getImageData(4, 4, 1, 1).data]);
   center.forEach((v, i) => expect(Math.abs(v - selected[i])).toBeLessThanOrEqual(1));
   const comparison = await page.evaluate(() => {
-    const c = document.querySelector<HTMLCanvasElement>('[aria-label="9 by 9 tensor neighborhood"]')!;
+    const c = document.querySelector<HTMLCanvasElement>('[aria-label="9 by 9 matrix neighborhood"]')!;
     const bytes = c.getContext('2d')!.getImageData(0, 0, 9, 9).data;
     let maximumDifference = 0;
     for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) {
