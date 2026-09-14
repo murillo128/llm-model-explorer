@@ -10,7 +10,7 @@ test('frozen prompt pixels and geometry', async ({ page }) => {
     const path = new URL(route.request().url()).pathname;
     if (path === '/models') return route.fulfill({ json: { models } });
     if (path === '/sessions') return route.fulfill({ status: 201, json: sessionA });
-    if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors: [] } });
+    if (path.endsWith('/tensors')) return route.fulfill({ json: { coverage: 'complete', diagnostics: [], tensors: [] } });
     if (path.endsWith('/tokenize')) {
       const { text } = route.request().postDataJSON() as { text: string };
       return route.fulfill({ json: { text, add_special_tokens: true, tokens: text ? [
