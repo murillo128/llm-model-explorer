@@ -39,6 +39,12 @@ wait for two layout frames before beginning a subsequent drag. The local referen
 smoke explicitly selects native scale for its existing scalar oracle; dedicated
 camera scenarios separately validate fit-width and enlarged cells.
 
+Headed production tests use one worker to isolate native window/pointer input:
+parallel CI runs intermittently lost transient inspection/selection while serial
+rechecks passed. Port isolation alone does not isolate native input. This is a
+test-execution constraint, not a new product behavior. Component browser tests
+retain their existing parallelism.
+
 The extended fixture adds four 20×20 float32 matrices: near-zero concentration,
 398 zeros between −1000/+3000 outliers, constant 2, and all-nonfinite values. The
 existing 3×4 scientific tensor supplies the asymmetric −2/+6 domain with zero at

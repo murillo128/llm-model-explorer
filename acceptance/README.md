@@ -26,6 +26,12 @@ is not a hardware claim. This tests browser GL behavior, not physical GPU
 performance. The backend computes fixture results on CPU. Dependency installation
 may use the network; the acceptance application runs with `HF_HUB_OFFLINE=1`.
 
+The headed product suite uses one worker in both local runs and CI to isolate
+native window/pointer interactions. Parallel runs on the shared X display showed
+intermittent loss of transient inspection/drag state, while the same scenarios
+passed serially. Separate ports do not isolate native input. Component browser
+parallelism is unchanged.
+
 The runner writes JUnit, JSON counts, measurements and version information to a
 new `/tmp/lmex-evidence-*` directory. Set `LMEX_EVIDENCE_DIR` for a stable output
 location. Browser screenshots and failure-only traces go to ignored
