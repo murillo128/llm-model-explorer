@@ -477,7 +477,7 @@ runtime import of PyTorch or Transformers. Packaged family adapters explicitly
 register a `Description` with reviewed model-type/architecture discriminators,
 option/storage validation (`supports`), semantic producer revisions, and a `build`
 callback. Consumers register packaged family descriptions explicitly; V-JEPA 2
-registration is documented below.
+and dense language registration are documented below.
 
 Builders append full typed nodes, edges, parameters, symbols and repetitions;
 `record_id(kind, semantic_key)` identifies an actual instance independently of its
@@ -526,3 +526,16 @@ weights as partial coverage. Registration is a startup consumer seam; it does no
 add HTTP or cache lifecycle. See [source review and fixture evidence](evidence/vjepa2-description.md)
 for the exact revisions, described path, reproduction, reusable no-tokenizer
 fixtures and the distinction from later full-local-checkpoint acceptance.
+
+### Dense language architecture descriptions
+
+`architecture_analysis.register_dense_descriptions(registry)` registers the
+reviewed Qwen3 dense and SmolLM2/Llama descriptions in a caller-owned
+`DescriptionRegistry`. Pass guarded `AnalysisInput.from_source(...)` metadata;
+these descriptions do not own startup, HTTP, or artifact-cache orchestration.
+They expand all configured decoder instances and preserve native, tied, and
+GPTQ parameter relationships. Unknown structural options return unavailable;
+missing/incompatible parameters or unexplained storage yield explicit partial
+coverage. Numeric inspection remains separate from architecture completeness.
+See [dense description evidence](evidence/dense-language-descriptions.md) for
+reviewed source/configuration revisions, supported variants, and validation limits.

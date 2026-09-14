@@ -10,6 +10,7 @@ from .core import (
     parse_graph,
     serialize_graph,
 )
+from .dense import register_dense_descriptions
 from .validation import BindingContext, GraphError, NumericTensor
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "Producer",
     "parse_graph",
     "serialize_graph",
+    "register_dense_descriptions",
 ]

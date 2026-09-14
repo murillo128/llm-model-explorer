@@ -1,0 +1,433 @@
+{
+  "qwen3": {
+    "repository": "JunHowie/Qwen3-0.6B-GPTQ-Int4",
+    "revision": "b9d87006067b0c0c2dea836370d6288e14f112ab",
+    "config": {
+      "architectures": [
+        "Qwen3ForCausalLM"
+      ],
+      "attention_bias": false,
+      "attention_dropout": 0.0,
+      "bos_token_id": 151643,
+      "eos_token_id": 151645,
+      "head_dim": 128,
+      "hidden_act": "silu",
+      "hidden_size": 1024,
+      "initializer_range": 0.02,
+      "intermediate_size": 3072,
+      "layer_types": [
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention",
+        "full_attention"
+      ],
+      "max_position_embeddings": 40960,
+      "max_window_layers": 28,
+      "model_type": "qwen3",
+      "num_attention_heads": 16,
+      "num_hidden_layers": 28,
+      "num_key_value_heads": 8,
+      "quantization_config": {
+        "bits": 4,
+        "checkpoint_format": "gptq",
+        "desc_act": false,
+        "group_size": 128,
+        "hyb_act": false,
+        "lm_head": false,
+        "meta": {
+          "damp_auto_increment": 0.01,
+          "damp_percent": 0.05,
+          "mse": 0.0,
+          "quantizer": [
+            "gptqmodel:4.0.0"
+          ],
+          "static_groups": false,
+          "true_sequential": true,
+          "uri": "https://github.com/modelcloud/gptqmodel",
+          "v2": false,
+          "v2_alpha": 0.25
+        },
+        "pack_dtype": "int32",
+        "quant_method": "gptq",
+        "sym": true
+      },
+      "rms_norm_eps": 1e-06,
+      "rope_scaling": null,
+      "rope_theta": 1000000,
+      "sliding_window": null,
+      "tie_word_embeddings": true,
+      "torch_dtype": "bfloat16",
+      "transformers_version": "4.55.4",
+      "use_cache": true,
+      "use_sliding_window": false,
+      "vocab_size": 151936
+    },
+    "physical_count": 898,
+    "layer_storage": {
+      "mlp.down_proj.g_idx": [
+        "I32",
+        [
+          3072
+        ]
+      ],
+      "mlp.down_proj.qweight": [
+        "I32",
+        [
+          384,
+          1024
+        ]
+      ],
+      "mlp.down_proj.qzeros": [
+        "I32",
+        [
+          24,
+          128
+        ]
+      ],
+      "mlp.gate_proj.g_idx": [
+        "I32",
+        [
+          1024
+        ]
+      ],
+      "mlp.gate_proj.qweight": [
+        "I32",
+        [
+          128,
+          3072
+        ]
+      ],
+      "mlp.gate_proj.qzeros": [
+        "I32",
+        [
+          8,
+          384
+        ]
+      ],
+      "mlp.up_proj.g_idx": [
+        "I32",
+        [
+          1024
+        ]
+      ],
+      "mlp.up_proj.qweight": [
+        "I32",
+        [
+          128,
+          3072
+        ]
+      ],
+      "mlp.up_proj.qzeros": [
+        "I32",
+        [
+          8,
+          384
+        ]
+      ],
+      "self_attn.k_proj.g_idx": [
+        "I32",
+        [
+          1024
+        ]
+      ],
+      "self_attn.k_proj.qweight": [
+        "I32",
+        [
+          128,
+          1024
+        ]
+      ],
+      "self_attn.k_proj.qzeros": [
+        "I32",
+        [
+          8,
+          128
+        ]
+      ],
+      "self_attn.o_proj.g_idx": [
+        "I32",
+        [
+          2048
+        ]
+      ],
+      "self_attn.o_proj.qweight": [
+        "I32",
+        [
+          256,
+          1024
+        ]
+      ],
+      "self_attn.o_proj.qzeros": [
+        "I32",
+        [
+          16,
+          128
+        ]
+      ],
+      "self_attn.q_proj.g_idx": [
+        "I32",
+        [
+          1024
+        ]
+      ],
+      "self_attn.q_proj.qweight": [
+        "I32",
+        [
+          128,
+          2048
+        ]
+      ],
+      "self_attn.q_proj.qzeros": [
+        "I32",
+        [
+          8,
+          256
+        ]
+      ],
+      "self_attn.v_proj.g_idx": [
+        "I32",
+        [
+          1024
+        ]
+      ],
+      "self_attn.v_proj.qweight": [
+        "I32",
+        [
+          128,
+          1024
+        ]
+      ],
+      "self_attn.v_proj.qzeros": [
+        "I32",
+        [
+          8,
+          128
+        ]
+      ],
+      "input_layernorm.weight": [
+        "BF16",
+        [
+          1024
+        ]
+      ],
+      "post_attention_layernorm.weight": [
+        "BF16",
+        [
+          1024
+        ]
+      ],
+      "self_attn.k_norm.weight": [
+        "BF16",
+        [
+          128
+        ]
+      ],
+      "self_attn.q_norm.weight": [
+        "BF16",
+        [
+          128
+        ]
+      ],
+      "mlp.down_proj.scales": [
+        "F16",
+        [
+          24,
+          1024
+        ]
+      ],
+      "mlp.gate_proj.scales": [
+        "F16",
+        [
+          8,
+          3072
+        ]
+      ],
+      "mlp.up_proj.scales": [
+        "F16",
+        [
+          8,
+          3072
+        ]
+      ],
+      "self_attn.k_proj.scales": [
+        "F16",
+        [
+          8,
+          1024
+        ]
+      ],
+      "self_attn.o_proj.scales": [
+        "F16",
+        [
+          16,
+          1024
+        ]
+      ],
+      "self_attn.q_proj.scales": [
+        "F16",
+        [
+          8,
+          2048
+        ]
+      ],
+      "self_attn.v_proj.scales": [
+        "F16",
+        [
+          8,
+          1024
+        ]
+      ]
+    },
+    "global_storage": {
+      "model.embed_tokens.weight": [
+        "BF16",
+        [
+          151936,
+          1024
+        ]
+      ],
+      "model.norm.weight": [
+        "BF16",
+        [
+          1024
+        ]
+      ]
+    }
+  },
+  "smollm2": {
+    "repository": "HuggingFaceTB/SmolLM2-135M",
+    "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+    "config": {
+      "architectures": [
+        "LlamaForCausalLM"
+      ],
+      "attention_bias": false,
+      "attention_dropout": 0.0,
+      "bos_token_id": 0,
+      "eos_token_id": 0,
+      "hidden_act": "silu",
+      "hidden_size": 576,
+      "initializer_range": 0.041666666666666664,
+      "intermediate_size": 1536,
+      "is_llama_config": true,
+      "max_position_embeddings": 8192,
+      "model_type": "llama",
+      "num_attention_heads": 9,
+      "num_hidden_layers": 30,
+      "num_key_value_heads": 3,
+      "pretraining_tp": 1,
+      "rms_norm_eps": 1e-05,
+      "rope_interleaved": false,
+      "rope_scaling": null,
+      "rope_theta": 100000,
+      "tie_word_embeddings": true,
+      "torch_dtype": "bfloat16",
+      "transformers_version": "4.40.1",
+      "use_cache": true,
+      "vocab_size": 49152
+    },
+    "physical_count": 272,
+    "layer_storage": {
+      "input_layernorm.weight": [
+        "BF16",
+        [
+          576
+        ]
+      ],
+      "mlp.down_proj.weight": [
+        "BF16",
+        [
+          576,
+          1536
+        ]
+      ],
+      "mlp.gate_proj.weight": [
+        "BF16",
+        [
+          1536,
+          576
+        ]
+      ],
+      "mlp.up_proj.weight": [
+        "BF16",
+        [
+          1536,
+          576
+        ]
+      ],
+      "post_attention_layernorm.weight": [
+        "BF16",
+        [
+          576
+        ]
+      ],
+      "self_attn.k_proj.weight": [
+        "BF16",
+        [
+          192,
+          576
+        ]
+      ],
+      "self_attn.o_proj.weight": [
+        "BF16",
+        [
+          576,
+          576
+        ]
+      ],
+      "self_attn.q_proj.weight": [
+        "BF16",
+        [
+          576,
+          576
+        ]
+      ],
+      "self_attn.v_proj.weight": [
+        "BF16",
+        [
+          192,
+          576
+        ]
+      ]
+    },
+    "global_storage": {
+      "model.embed_tokens.weight": [
+        "BF16",
+        [
+          49152,
+          576
+        ]
+      ],
+      "model.norm.weight": [
+        "BF16",
+        [
+          576
+        ]
+      ]
+    }
+  }
+}
