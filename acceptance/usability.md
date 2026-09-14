@@ -33,6 +33,12 @@ backend/.venv/bin/python -m pytest acceptance/test_distribution_scales.py
 | Tokenizer | Embedding zoom/rectangle/scroll/reset preserves prompt rectangle, scroll and caret; delayed real tokenizer response retains mapped brackets/IDs and old canvas; animation-frame sampling detects blank annotations/matrix; matching result promotion and disabled/restored generation linkage | Real duplicate IDs/inserted BOS row uploads, A→B→A response reordering, Unicode/IME/history, unsupported embeddings and repeated resource cleanup |
 | Lifecycle | Existing progressive DATA/publication barriers, cancellation, failures, source replacements, reader/GPU/CPU cleanup, fixed document geometry | Explicit WebGL2 unsupported/context-loss/reconstruction checks and scalar ownership tests |
 
+The streaming header check uses the existing 32×32 fixture so chrome validation
+does not depend on large-tensor software-rendering throughput. Gesture helpers
+wait for two layout frames before beginning a subsequent drag. The local reference
+smoke explicitly selects native scale for its existing scalar oracle; dedicated
+camera scenarios separately validate fit-width and enlarged cells.
+
 The extended fixture adds four 20×20 float32 matrices: near-zero concentration,
 398 zeros between −1000/+3000 outliers, constant 2, and all-nonfinite values. The
 existing 3×4 scientific tensor supplies the asymmetric −2/+6 domain with zero at

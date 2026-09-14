@@ -28,6 +28,11 @@ export async function zoom(page: Page, rows: number, columns: number, cssCellSiz
     }));
   }, { delta, steps });
   await expect.poll(async () => (await camera(page, rows, columns)).scaleX / current.dpr).toBeCloseTo(cssCellSize, 4);
+  // Scrollbar/layout notifications can cancel an in-flight drag. Let the
+  // requested camera settle before starting the next independent gesture.
+  await page.evaluate(() => new Promise<void>(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }));
 }
 
 export async function drag(page: Page, a: { x: number; y: number }, b: { x: number; y: number }) {

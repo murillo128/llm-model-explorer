@@ -341,6 +341,7 @@ test('local reference Base opens normalization, both MLP orientations and embedd
   for (const tensor of referenceSamples.selected) {
     await (await revealTensor(page.getByRole('button', { includeHidden: true, name: new RegExp(tensor.name.replaceAll('.', '\\.')) }))).click();
     await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
+    await nativeCamera(page);
     await expect(page.locator('[data-result=tensor]')).toHaveCount(0, { timeout: 180_000 });
     if (tensor.shape.length === 2) {
       const canvas = page.locator('.matrix-scroll canvas');
@@ -636,12 +637,13 @@ test('production prompt pixels, selection, history and composition survive embed
 });
 
 test('integrated inventory preferences and metadata preserve streaming panel geometry', async ({ page }, testInfo) => {
+  const name = 'layout.fits.weight';
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/fixture');
   await expect(page.locator('.tensor-tree').first()).toBeVisible();
   expect(await page.locator('.tensor-tree details').evaluateAll(nodes => nodes.every(node =>
     node.hasAttribute('open') === !node.parentElement!.closest('details')))).toBe(true);
   await control('arm', { kind: 'logical_tensor' });
-  await open(page);
+  await open(page, name);
   await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
   const initial = await panelGeometry(page);
   expect(initial['.matrix-panel-header']![3]).toBe(40);
@@ -679,7 +681,7 @@ test('integrated inventory preferences and metadata preserve streaming panel geo
   await expect(page.getByRole('button', { name: 'Show inventory' })).toBeVisible();
   await page.getByRole('button', { name: 'Show inventory' }).click();
   await expect(divider).toHaveAttribute('aria-valuenow', '480');
-  await expect(page.getByRole('button', { name: new RegExp(`^${matrix}`) })).toBeVisible();
+  await expect(page.getByRole('button', { name: new RegExp(`^${name}`) })).toBeVisible();
   await documentFits(page);
   await testInfo.attach('measurements', { body: JSON.stringify({ initial, reclaimedWidth: width + 16, restoredWidth: 480 }), contentType: 'application/json' });
   await closeSession(page);
