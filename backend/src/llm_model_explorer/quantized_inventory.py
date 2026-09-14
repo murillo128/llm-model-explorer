@@ -4,13 +4,21 @@ These rules validate physical encoding groups. They do not infer a semantic grap
 or manufacture logical parameters for packed storage. See evidence/quantized-admission.md.
 """
 
+from collections.abc import Mapping, Sequence
 from fnmatch import fnmatchcase
-from typing import Literal
+from typing import Literal, Protocol
 
 from .model_files import ModelError, invalid
 from .tensor_source import DTYPES, PhysicalTensor, TensorLocation, native_location, safe_integer
 
 Encoding = Literal["native", "gptq-int4", "nvfp4"]
+
+
+class StorageMetadata(Protocol):
+    @property
+    def dtype(self) -> str: ...
+    @property
+    def shape(self) -> Sequence[int]: ...
 
 
 def unsupported() -> ModelError:
@@ -72,10 +80,10 @@ def encoding(config: dict[str, object]) -> Encoding:
 
 
 def _expect(
-    tensors: dict[str, PhysicalTensor], name: str, dtype: str, shape: tuple[int, ...]
+    tensors: Mapping[str, StorageMetadata], name: str, dtype: str, shape: tuple[int, ...]
 ) -> None:
     tensor = tensors.get(name)
-    if tensor is None or tensor.dtype != dtype or tensor.shape != shape:
+    if tensor is None or tensor.dtype != dtype or tuple(tensor.shape) != shape:
         raise invalid("Incomplete or inconsistent quantized storage group.")
 
 
@@ -99,7 +107,10 @@ def _gptq(tensors: dict[str, PhysicalTensor]) -> set[str]:
     return excluded
 
 
-def _nvfp4(tensors: dict[str, PhysicalTensor], config: dict[str, object]) -> set[str]:
+def nvfp4_storage_names(
+    tensors: Mapping[str, StorageMetadata], config: dict[str, object]
+) -> set[str]:
+    """Validate admitted NVFP4 metadata without requiring file locations or tensor reads."""
     excluded: set[str] = set()
     quant = config["quantization_config"]
     assert isinstance(quant, dict)
@@ -131,7 +142,7 @@ def logical_locations(
         # Never filter/rename baseline native tensors, including scalars and buffers.
         return tuple(native_location(tensor) for tensor in physical)
     tensors = {tensor.name: tensor for tensor in physical}
-    excluded = _gptq(tensors) if layout == "gptq-int4" else _nvfp4(tensors, config)
+    excluded = _gptq(tensors) if layout == "gptq-int4" else nvfp4_storage_names(tensors, config)
     if not excluded:
         raise invalid("Quantized checkpoint has no supported packed storage groups.")
     locations = []
