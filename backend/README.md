@@ -539,3 +539,26 @@ missing/incompatible parameters or unexplained storage yield explicit partial
 coverage. Numeric inspection remains separate from architecture completeness.
 See [dense description evidence](evidence/dense-language-descriptions.md) for
 reviewed source/configuration revisions, supported variants, and validation limits.
+
+### Prepared architecture lifecycle and retrieval
+
+`open_services` registers the reviewed dense, Qwen3.5, and V-JEPA 2 descriptions
+and prepares the discovered catalogue sequentially before yielding application
+services. The CLI logs each logical model's terminal outcome and separate hashing,
+analysis, cache-read, and total preparation times. A warm startup still hashes
+checkpoint content; valid structured artifacts avoid graph construction.
+
+`GET /sessions/{session_id}/architecture` retrieves only the startup result for
+the session's exact snapshot, including valid sessions without a tokenizer. It
+returns complete/partial graphs or the contract's unavailable capability response.
+Changed pinned content returns 409; newly admitted content requires restart;
+missing/corrupt prepared cache returns `cache_unavailable` without generation.
+Model-local preparation failures permit later models to finish. An unusable cache
+or ambiguous catalogue prevents readiness.
+
+The CLI's `ApplicationServer` forwards shutdown during startup to the preparation
+stop flag and lifespan task. Preparation settles its current blocking work and
+aborts unpublished writers before releasing services. Custom ASGI hosts must
+cancel a pending startup lifespan when requesting shutdown during preparation.
+Existing numerical streams keep their own operation and cancellation lifecycle.
+See [lifecycle validation evidence](evidence/prepared-architecture-lifecycle.md).

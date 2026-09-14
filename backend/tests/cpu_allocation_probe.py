@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import torch
+from cache_helpers import numeric_manifests
 from fastapi.testclient import TestClient
 from test_models import make_model, write_weights
 from test_tensor_data import address, frames
@@ -50,7 +51,7 @@ def main() -> None:
                     status=response.status_code,
                     frame_types=[kind for kind, _ in result],
                     error=json.loads(result[-1][1]),
-                    complete_artifacts=len(list(settings.cache_dir.glob("*/manifest.json"))),
+                    complete_artifacts=len(numeric_manifests(settings.cache_dir)),
                     temporary_artifacts=len(list(settings.cache_dir.glob(".tmp-*"))),
                 )
             )

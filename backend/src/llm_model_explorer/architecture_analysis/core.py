@@ -360,30 +360,34 @@ class DescriptionRegistry:
         description.producer.provenance()
         self._descriptions[name] = description
 
+    def select(self, inputs: AnalysisInput) -> Description | None:
+        """Resolve the semantic producer before graph construction or cache lookup."""
+        model_type = inputs.configuration.get("model_type")
+        architectures = inputs.configuration.get("architectures")
+        candidates = []
+        for description in self._descriptions.values():
+            if (
+                isinstance(model_type, str)
+                and model_type in description.model_types
+                and isinstance(architectures, list)
+                and architectures
+                and all(
+                    isinstance(a, str) and a in description.architectures for a in architectures
+                )
+                and description.supports(inputs)
+            ):
+                candidates.append(description)
+        return candidates[0] if len(candidates) == 1 else None
+
     def analyze(self, inputs: AnalysisInput, *, byte_limit: int = MAX_BYTES) -> AnalysisResult:
         try:
-            model_type = inputs.configuration.get("model_type")
-            architectures = inputs.configuration.get("architectures")
-            candidates = []
-            for description in self._descriptions.values():
-                if (
-                    isinstance(model_type, str)
-                    and model_type in description.model_types
-                    and isinstance(architectures, list)
-                    and architectures
-                    and all(
-                        isinstance(a, str) and a in description.architectures for a in architectures
-                    )
-                    and description.supports(inputs)
-                ):
-                    candidates.append(description)
-            if len(candidates) != 1:
+            selected = self.select(inputs)
+            if selected is None:
                 return unavailable(
                     "unsupported_architecture",
                     "description_selection",
                     "No unique verified architecture description matches this metadata.",
                 )
-            selected = candidates[0]
             builder = GraphBuilder(inputs, selected.producer, selected.scope, byte_limit=byte_limit)
             selected.build(inputs, builder)
             graph = builder.finish()

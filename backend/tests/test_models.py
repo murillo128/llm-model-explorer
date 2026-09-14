@@ -524,11 +524,22 @@ def test_symlink_swapped_after_resolution_is_never_read(
 def test_real_identity_collision_has_path_free_http_error(settings: Settings) -> None:
     directory = make_model(settings.model_root)
     duplicate = settings.model_root / "copy"
-    shutil.copytree(directory, duplicate)
-    mutate_last_byte(duplicate / "model.safetensors")
     with TestClient(create_app(settings)) as client:
+        shutil.copytree(directory, duplicate)
+        mutate_last_byte(duplicate / "model.safetensors")
         response = client.get("/models")
     assert response.status_code == 422
     assert response.json()["code"] == "validation_error"
     assert str(settings.model_root) not in response.text
     assert response.headers["cache-control"] == "no-store"
+
+
+def test_identity_collision_at_startup_prevents_readiness(settings: Settings) -> None:
+    directory = make_model(settings.model_root)
+    duplicate = settings.model_root / "copy"
+    shutil.copytree(directory, duplicate)
+    mutate_last_byte(duplicate / "model.safetensors")
+    app = create_app(settings)
+    with pytest.raises(ModelError, match="Ambiguous model identity"), TestClient(app):
+        pytest.fail("ambiguous catalogue became ready")
+    assert not hasattr(app.state, "services")

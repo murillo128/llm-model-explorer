@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import torch
+from cache_helpers import numeric_cache_entries, numeric_manifests
 from fastapi.testclient import TestClient
 from test_models import make_model, mutate_last_byte, replace_header, write_weights
 from test_operations import run, spec
@@ -78,7 +79,7 @@ def test_exact_shapes_and_native_source_unchanged(
                 "<" + "f" * len(values), *values
             )
     assert path.read_bytes() == before
-    assert len(list(settings.cache_dir.glob("*/manifest.json"))) == (0 if dtype == "F32" else 1)
+    assert len(numeric_manifests(settings.cache_dir)) == (0 if dtype == "F32" else 1)
 
 
 @pytest.mark.parametrize("dtype,width", [("F32", 4), ("F16", 2), ("BF16", 2)])
@@ -227,7 +228,7 @@ def test_tall_progressive_reuse_and_independent_cancellation(
                     kind, first = await fa.next()
                     assert kind == 2 and first and len(first) < count * 4
                     if dtype != "F32":
-                        assert not list(settings.cache_dir.glob("*/manifest.json"))
+                        assert not numeric_manifests(settings.cache_dir)
                     other_url = await setup_stream(client)
                     async with client.stream("GET", other_url) as b:
                         fb = Frames(b)
@@ -250,7 +251,7 @@ def test_tall_progressive_reuse_and_independent_cancellation(
                 assert len(calls) == (3 if dtype == "F32" else 1)
                 assert not runtime.scheduler._devices
         assert max(bounds) <= CHUNK_ELEMENTS
-        assert len(list(settings.cache_dir.glob("*/manifest.json"))) == (0 if dtype == "F32" else 1)
+        assert len(numeric_manifests(settings.cache_dir)) == (0 if dtype == "F32" else 1)
 
     run(scenario())
 
@@ -299,7 +300,7 @@ def test_partial_production_never_commits(
                         )
                         assert b"/private" not in data
                     await reader.end()
-        assert not list(settings.cache_dir.iterdir())
+        assert not numeric_cache_entries(settings.cache_dir)
 
     run(scenario())
 
@@ -389,7 +390,7 @@ def test_real_producer_faults(
         assert json.loads(result[-1][1])["code"] == expected
         assert b"/private" not in response.content
         assert all(kind != 4 for kind, _ in result)
-    assert not list(settings.cache_dir.iterdir())
+    assert not numeric_cache_entries(settings.cache_dir)
 
 
 @pytest.mark.parametrize("dtype", ["F32", "BF16"])
@@ -460,6 +461,6 @@ def test_direct_session_deletion_closes_source(
             assert closed == [True]
             with pytest.raises(OperationCancelled):
                 await consumer.read()
-        assert not list(settings.cache_dir.iterdir())
+        assert not numeric_cache_entries(settings.cache_dir)
 
     run(scenario())
