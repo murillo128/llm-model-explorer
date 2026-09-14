@@ -273,7 +273,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
     this.render(view);
   }
 
-  private render(view: ViewGeometry) {
+  private render(view: ViewGeometry, selection = this.selection) {
     if (!view.width || !view.height || this._state === 'empty') return;
     const gl = this.gl;
     gl.viewport(0, 0, view.width, view.height);
@@ -285,7 +285,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
     gl.useProgram(this.program);
     gl.activeTexture(gl.TEXTURE0);
     const u = this.uniforms;
-    gl.uniform2i(u.selection!, this.selection?.column ?? -1, this.selection?.row ?? -1);
+    gl.uniform2i(u.selection!, selection?.column ?? -1, selection?.row ?? -1);
     gl.uniform2f(u.guideOpacity!, ...this.strengths);
     gl.uniform1i(u.weights!, 0);
     gl.uniform1i(u.viewHeight!, view.height);
@@ -351,7 +351,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
       gl.disable(gl.SCISSOR_TEST);
       gl.clearColor(46 / 255, 61 / 255, 76 / 255, 1);
       gl.clear(gl.COLOR_BUFFER_BIT);
-      this.render({ ...this._view, x: column - 4, y: row - 4, width: 9, height: 9, scaleX: 1, scaleY: 1 });
+      this.render({ ...this._view, x: column - 4, y: row - 4, width: 9, height: 9, scaleX: 1, scaleY: 1 }, null);
       gl.readPixels(0, 0, 9, 9, gl.RGBA, gl.UNSIGNED_BYTE, this.inspection.pixels);
       const output = target.createImageData(9, 9);
       for (let y = 0; y < 9; y++) output.data.set(this.inspection.pixels.subarray((8 - y) * 36, (9 - y) * 36), y * 36);

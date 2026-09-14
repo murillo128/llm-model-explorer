@@ -12,7 +12,19 @@ import { nativeCamera } from '../tests/native-camera';
 import { revealTensor } from '../tests/tensor-tree-helpers';
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
-const backend = 'http://127.0.0.1:8765';
+const componentPort = Number(process.env.UI_TEST_PORT ?? 4173);
+const isolatedPorts = Boolean(process.env.UI_TEST_PORT);
+function acceptancePorts(project: string) {
+  if (project === 'dpr2') return {
+    ui: isolatedPorts ? componentPort + 4 : 4177,
+    backend: isolatedPorts ? componentPort + 5 : 8767,
+  };
+  return {
+    ui: isolatedPorts ? componentPort + 2 : 4175,
+    backend: isolatedPorts ? componentPort + 3 : 8765,
+  };
+}
+let backend = 'http://127.0.0.1:8765';
 const matrix = 'model.layers.0.mlp.down_proj.weight';
 const value = (index: number) => ((index * 17) % 257 - 128) / 128;
 let service: ReturnType<typeof spawn>;
@@ -52,17 +64,20 @@ function luminance(rgb: number[]) {
 
 test.beforeEach(async ({ page }, testInfo) => {
   log = '';
+  const ports = acceptancePorts(testInfo.project.name);
+  backend = `http://127.0.0.1:${ports.backend}`;
+  const uiOrigin = `http://127.0.0.1:${ports.ui}`;
   const isReference = testInfo.title.startsWith('local reference');
   test.skip(isReference && !process.env.LMEX_REFERENCE_MODEL_DIR,
     'LMEX_REFERENCE_MODEL_DIR not supplied; local SmolLM2-135M Base UI not tested');
-  let command = ['-m', 'acceptance.server'];
+  let command = ['-m', 'acceptance.server', '--port', String(ports.backend), '--origin', uiOrigin];
   if (isReference) {
     const directory = process.env.LMEX_REFERENCE_MODEL_DIR!;
     referenceSamples = JSON.parse(execFileSync(`${repo}backend/.venv/bin/python`,
       ['-m', 'acceptance.reference', directory], { cwd: repo, encoding: 'utf8' }));
     referenceRoot = mkdtempSync(join(tmpdir(), 'lmex-reference-'));
     command = ['-m', 'llm_model_explorer', '--model-root', dirname(directory),
-      '--cache-dir', referenceRoot, '--port', '8765', '--cors-origin', 'http://127.0.0.1:4175',
+      '--cache-dir', referenceRoot, '--port', String(ports.backend), '--cors-origin', uiOrigin,
       '--device', process.env.LMEX_REFERENCE_DEVICE ?? 'cpu'];
   }
   service = spawn(`${repo}backend/.venv/bin/python`, command, {
@@ -133,6 +148,9 @@ test('production UI renders before producer completes; native geometry, inspecti
   // Main extent must preserve 1536 columns and 576 rows regardless of viewport/DPR.
   expect(parseFloat(geometry.extentWidth) * limits.dpr).toBe(1536);
   expect(parseFloat(geometry.extentHeight) * limits.dpr).toBe(576);
+  // Reserve room for the full card at DPR 1. At DPR 2 the original pane
+  // already fits it and retains the vertical overflow asserted below.
+  if (limits.dpr === 1) await page.setViewportSize({ width: 1000, height: 700 });
   await canvas.scrollIntoViewIfNeeded();
   await page.locator('.matrix-scroll').evaluate((node) => { node.scrollLeft = 53; node.scrollTop = 27; });
   await expect.poll(async () => canvas.getAttribute('data-origin')).not.toBe('0,0');
@@ -142,6 +160,8 @@ test('production UI renders before producer completes; native geometry, inspecti
   expect(origin[0]).toBeGreaterThan(0);
   expect(origin[1]).toBeGreaterThan(0);
   const neutral = await pixel(page, 8, 8);
+  const neutralNeighborhood = await page.evaluate(() => Array.from({ length: 81 }, (_, i) =>
+    (window as any).__acceptance.pixel('.matrix-scroll canvas', i % 9 + 4, Math.floor(i / 9) + 4)));
   const profileBefore = await page.evaluate(() => ['.row-distributions canvas', '.column-distributions canvas']
     .map(selector => (window as any).__acceptance.pixel(selector, 8, 8)));
   for (const rgb of profileBefore) {
@@ -175,18 +195,18 @@ test('production UI renders before producer completes; native geometry, inspecti
   const neighborhood = page.getByLabel('9 by 9 matrix neighborhood');
   expect(await neighborhood.evaluate((c) => [(c as HTMLCanvasElement).width, (c as HTMLCanvasElement).height])).toEqual([9, 9]);
   const center = await neighborhood.evaluate((c) => [...(c as HTMLCanvasElement).getContext('2d')!.getImageData(4, 4, 1, 1).data]);
-  center.forEach((v, i) => expect(Math.abs(v - selected[i])).toBeLessThanOrEqual(1));
-  const comparison = await page.evaluate(() => {
+  center.forEach((v, i) => expect(Math.abs(v - neutral[i])).toBeLessThanOrEqual(1));
+  const comparison = await page.evaluate((neutralNeighborhood) => {
     const c = document.querySelector<HTMLCanvasElement>('[aria-label="9 by 9 matrix neighborhood"]')!;
     const bytes = c.getContext('2d')!.getImageData(0, 0, 9, 9).data;
     let maximumDifference = 0;
     for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) {
-      const expected = (window as any).__acceptance.pixel('.matrix-scroll canvas', x + 4, y + 4);
+      const expected = neutralNeighborhood[y * 9 + x];
       for (let channel = 0; channel < 4; channel++) maximumDifference = Math.max(maximumDifference,
         Math.abs(bytes[(y * 9 + x) * 4 + channel]! - expected[channel]));
     }
     return maximumDifference;
-  });
+  }, neutralNeighborhood);
   expect(comparison).toBeLessThanOrEqual(1);
   await page.screenshot({ path: testInfo.outputPath('matrix-inspection.png') });
   await testInfo.attach('measurements', { body: JSON.stringify({ browser: context.browser()!.version(), viewport: page.viewportSize(), backendDevice: 'cpu', limits, firstUploadMs: first.firstUpload - started,
