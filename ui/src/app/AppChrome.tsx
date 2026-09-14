@@ -16,11 +16,11 @@ export function AppBar({ state, controller, model, backend }: {
   return <header className="app-bar">
     <span className="product-name" title="LLM Model Explorer">LLM Model Explorer</span>
     <nav className="explorer-nav" aria-label="Explorers">
-      {(['Tensor Explorer', 'Tokenizer Explorer'] as const).map((name) =>
+      {(['Tensor Explorer', 'Tokenizer Explorer', 'Architecture Explorer'] as const).map((name) =>
         <button key={name} type="button" className="explorer-link" aria-label={name}
           aria-current={state.explorer === name ? 'page' : undefined}
           onClick={() => controller.switchExplorer(name)}>
-          {name.replace(' Explorer', '')}<span className="explorer-suffix"> Explorer</span>
+          {name === 'Architecture Explorer' ? <><span className="architecture-nav-label">Architecture</span><span className="architecture-nav-short">Graph</span></> : name.replace(' Explorer', '')}<span className="explorer-suffix"> Explorer</span>
         </button>)}
     </nav>
     <label className="model-label"><span className="visually-hidden">Model</span>
