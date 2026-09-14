@@ -36,3 +36,14 @@ creation/disposal, and component tests reject obsolete session/model responses.
 Reproduction commands are in [README.md](README.md). Browser runs attach the raw
 compact JSON measurements and expanded-graph screenshots to the Playwright report;
 bulky traces, reports, model files and generated graph copies are not committed.
+
+## Regression-helper correction
+
+The first CI candidate passed 327 browser cases but timed out in the existing
+1440 × 900, DPR-2 native-scrollbar case. Its native-camera setup dispatched 20
+zoom-out events per tensor even after reaching the native lower bound. Each event
+still invoked synchronous scientific redraws. The helper now stops when the
+display extent no longer shrinks, retaining the same bounded maximum and every
+downstream pixel/geometry assertion. No production camera behavior was changed.
+All ten native-scrollbar cases then passed locally in 34.5 seconds; the previously
+timed-out case completed in 7.5 seconds. Typecheck and lint also passed.
