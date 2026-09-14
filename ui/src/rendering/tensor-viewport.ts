@@ -22,7 +22,7 @@ export class TensorViewport {
   constructor(readonly host: HTMLElement, descriptor: TensorDescriptor, private readonly options: ViewportOptions = {}) {
     if (host.childNodes.length) throw new Error('TensorViewport requires an empty host.');
     this.originalStyle = host.getAttribute('style');
-    Object.assign(host.style, { overflow: 'auto', position: 'relative', padding: '0' });
+    Object.assign(host.style, { overflowX: 'auto', overflowY: host.style.overflowY || 'auto', position: 'relative', padding: '0' });
     Object.assign(this.extent.style, { position: 'relative', pointerEvents: 'none' });
     Object.assign(this.canvas.style, { position: 'absolute', display: 'block' });
     // Clip the canvas's untransformed layout box so it cannot enlarge native scroll.

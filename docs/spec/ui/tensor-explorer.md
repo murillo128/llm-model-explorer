@@ -102,7 +102,32 @@ The matrix must be usable before distribution/statistics results have completed.
 
 ## Scroll synchronization
 
-When the matrix exceeds the available UI area, the exact data surfaces remain aligned while normal page/panel scrolling is used:
+Tensor Explorer is a bounded workspace inside the fixed application shell. The
+inventory owns its vertical overflow independently from the selected tensor's
+scientific pane. Neither inventory navigation nor scientific scrolling moves the
+document, contextual header, or application bars. The default rank-2 view has one
+inventory scroller and one matrix scroller; the scientific pane and its wrappers
+do not add nested scroll surfaces. Transient notices and on-demand metadata may
+retain their own bounded overflow.
+
+At desktop widths the inventory uses 200–280 CSS pixels and the scientific pane
+has a 360 CSS-pixel minimum. Below 760 CSS pixels the panes stack: the inventory
+receives 24% of workspace height (at least 64 CSS pixels), and the scientific pane
+receives the remainder. This preserves usable scientific chrome instead of
+collapsing a side-by-side matrix pane. Native data geometry never shrinks to fit.
+
+The matrix viewport receives the scientific pane's remaining height after context,
+transient feedback, distribution depth, and gaps. Reserve its vertical scrollbar
+gutter deterministically, including that gutter in the native-width layout track.
+The baseline keeps the native vertical scrollbar track present even for short
+tensors, avoiding changes to content width when vertical overflow changes.
+Use the viewport's actual client dimensions, excluding scrollbars, for rendering.
+A tall tensor whose native width fits must not gain horizontal overflow merely
+because a vertical scrollbar appears. Genuine excess width retains horizontal
+scrolling. Short matrices and rank-1 strips retain their full data height in
+addition to any horizontal scrollbar chrome.
+
+When the matrix exceeds its viewport, native matrix scrolling preserves alignment:
 
 - vertical scrolling of the main matrix keeps the right-hand row-distribution panel on the same rows;
 - horizontal scrolling of the main matrix keeps the bottom column-distribution panel on the same columns;
