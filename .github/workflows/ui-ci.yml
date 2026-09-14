@@ -19,6 +19,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ui-ci-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   ui:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
@@ -55,10 +59,18 @@ jobs:
       - name: Run browser tests
         shell: bash
         run: |
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            browser_command=(npm run test:browser)
+          else
+            # PR and epic-branch validation keeps the canonical desktop coverage and
+            # the native-scrollbar project; main retains the duplicate narrow pass.
+            browser_command=(npm run test:browser -- --project=desktop --project=native-scrollbars)
+          fi
+
           if command -v xvfb-run >/dev/null 2>&1; then
-            xvfb-run -a npm run test:browser
+            xvfb-run -a "${browser_command[@]}"
           elif [ -n "${DISPLAY:-}" ]; then
-            npm run test:browser
+            "${browser_command[@]}"
           else
             echo "xvfb-run is required once on the self-hosted CI runner for the headful scrollbar test." >&2
             exit 1

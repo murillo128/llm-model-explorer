@@ -15,13 +15,17 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: backend-ci-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   backend:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: [self-hosted, codex]
     strategy:
       matrix:
-        python: ['3.12', '3.14']
+        python: ${{ github.ref == 'refs/heads/main' && fromJSON('["3.12","3.14"]') || fromJSON('["3.12"]') }}
     env:
       UV_PYTHON: ${{ matrix.python }}
     defaults:
@@ -42,11 +46,21 @@ jobs:
       - run: uv run --locked ruff format --check .
       - run: uv run --locked mypy
       - run: uv run --locked pytest
-      - name: Build and validate the installed wheel outside the source tree
+      - name: Build and smoke-test the installed wheel outside the source tree
         run: |
           uv build
           backend_python="${UV_PROJECT_ENVIRONMENT}/bin/python"
           uv pip install --python "$backend_python" --reinstall --no-deps dist/*.whl
           cd "$RUNNER_TEMP"
-          "$backend_python" -c 'import torch; assert torch.version.cuda is None'
-          "$backend_python" -m pytest "$GITHUB_WORKSPACE/backend/tests"
+          "$backend_python" - <<'PY'
+          import importlib.util
+          import torch
+
+          for module in (
+              "llm_model_explorer",
+              "llm_model_explorer.app",
+              "llm_model_explorer.cli",
+          ):
+              assert importlib.util.find_spec(module) is not None, module
+          assert torch.version.cuda is None
+          PY

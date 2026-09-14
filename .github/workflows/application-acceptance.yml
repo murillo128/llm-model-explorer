@@ -7,9 +7,6 @@ on:
       - 'ui/**'
       - 'api/**'
       - 'acceptance/**'
-      - 'docs/spec/**'
-      - 'README.md'
-      - 'AGENTS.md'
       - '.github/workflows/application-acceptance.yml'
   push:
     branches: [main, 'codex/epic-issue-*']
@@ -18,7 +15,6 @@ on:
       - 'ui/**'
       - 'api/**'
       - 'acceptance/**'
-      - 'docs/spec/**'
       - '.github/workflows/application-acceptance.yml'
   workflow_dispatch:
 
@@ -32,7 +28,7 @@ jobs:
     runs-on: [self-hosted, codex]
     concurrency:
       group: application-acceptance-${{ github.repository }}-${{ github.ref }}
-      cancel-in-progress: false
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     timeout-minutes: 25
     env:
       LMEX_EVIDENCE_DIR: /tmp/lmex-evidence-${{ github.run_id }}-${{ github.run_attempt }}
@@ -79,7 +75,14 @@ jobs:
         run: npm ci --prefix ui
       - name: Ensure the locked Chromium build is available
         run: cd ui && npx playwright install chromium
-      - run: acceptance/check.sh
+      - name: Run application acceptance
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            bash acceptance/check.sh
+          else
+            bash acceptance/check-integration.sh
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
