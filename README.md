@@ -11,11 +11,11 @@ The initial reference model is `HuggingFaceTB/SmolLM2-135M` Base.
 The implemented proof of concept has two user-facing capabilities:
 
 - **Tensor Explorer**: discover model tensors through a hierarchical list and open complete 1D or 2D tensors for progressive visualization.
-- **Tokenizer Explorer**: run the real Hugging Face tokenizer associated with the selected model and inspect its result.
+- **Tokenizer Explorer**: run the real Hugging Face tokenizer associated with the selected model, inspect its inline annotations, and progressively view the exact input-embedding rows for the current token sequence.
 
 The detailed behavior of both explorers lives in their dedicated specifications. The general architecture must already support the later move to step-by-step inference without replacing the backend model, API boundary, session model, streaming mechanism, artifact cache, or renderer boundary.
 
-Future work will extend the same architecture to embeddings, transformer layers, attention, matrix/vector operations, activations, token generation, KV cache, sampling, and other intermediate inference state. Execution remains UI-driven: even a continuous Play mode is conceptually a sequence of explicit steps requested by the UI rather than an autonomous backend process.
+Future work will extend the same architecture to transformer layers, attention, matrix/vector operations, activations, token generation, KV cache, sampling, and other intermediate inference state. Execution remains UI-driven: even a continuous Play mode is conceptually a sequence of explicit steps requested by the UI rather than an autonomous backend process.
 
 ## System architecture
 
@@ -31,7 +31,7 @@ Large numeric payloads are binary and progressive. The UI must be able to consum
 
 The backend owns physical model-format knowledge. The main visualization path exposes logical tensor values in canonical `float32`, so the UI does not need to implement NF4, INT8, or other quantization decoders. Model values remain authoritative and visualization must not mutate them.
 
-The proof-of-concept tensor renderer follows an exact spatial rule: **one weight equals one rendered pixel**. Matrices are not fit to the viewport, resampled, or aggregated; oversized content uses normal scrolling. Weight value is encoded through luminosity using a configurable nonlinear sigmoid-like transfer based on robust tensor statistics. Color remains an independent semantic channel; current hover selection preserves scalar luminosity.
+The proof-of-concept tensor renderer follows an exact spatial rule: **one weight equals one rendered pixel**. Matrices are not fit to the viewport, resampled, or aggregated; oversized content uses normal scrolling. Weight value is encoded through luminosity using a configurable nonlinear sigmoid-like transfer based on robust tensor statistics. Scientific surfaces use sequential green brightness. Amber inspection guides are composited over that display without changing the scalar transfer or stored values.
 
 ## Sessions and artifact cache
 
@@ -120,7 +120,7 @@ api/.venv/bin/python api/validate_contract.py
 (cd backend && uv run --locked ruff check . && uv run --locked ruff format --check . && uv run --locked mypy && uv run --locked pytest)
 (cd ui && npm run check && xvfb-run -a npm run test:browser)
 backend/.venv/bin/python -m pytest acceptance -ra
-(cd ui && npm run build && npm run test:acceptance)
+(cd ui && npm run build && xvfb-run -a npm run test:acceptance)
 ```
 
 [The reproducibility report](acceptance/evidence.md) distinguishes fixture evidence
@@ -128,9 +128,12 @@ from optional operator-supplied `HuggingFaceTB/SmolLM2-135M` Base and CUDA evide
 A missing reference directory or CUDA capability is reported as **SKIP**. No
 reference weights are downloaded by the harness.
 
-Local discovery, all ten API operations, sessions, complete artifact caching,
-progressive tensor/statistics/distribution delivery, both explorers and matrix
-inspection are implemented. Inference, attention, KV cache, matrix multiplication,
+Local discovery, all eleven API operations, sessions, complete artifact caching,
+progressive tensor/statistics/distribution delivery, both explorers, input-embedding
+row lookup, and matrix inspection are implemented. The compact shell keeps inventory and scientific
+scrolling inside the workspace. See the [integrated improvement evidence](acceptance/improvements.md)
+for native scrollbar, prompt-regression, embedding-value, and lifecycle checks.
+Inference, attention, KV cache, matrix multiplication,
 FFT/SVD, clustering, and quantization inspection remain future work. Final epic
 acceptance and default-branch integration are separate workflow decisions.
 See [backend](backend/README.md), [UI](ui/README.md), and [API](api/README.md)

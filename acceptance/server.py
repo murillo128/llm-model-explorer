@@ -13,15 +13,17 @@ from collections import Counter
 from contextlib import asynccontextmanager
 from pathlib import Path
 from unittest.mock import patch
+from weakref import WeakSet
 
 import torch
 import uvicorn
 from fastapi import APIRouter
 from llm_model_explorer.app import create_app
-from llm_model_explorer.operations import ProducerContext
+from llm_model_explorer.operations import Consumer, ProducerContext
 from llm_model_explorer.services import open_services
 from llm_model_explorer.settings import Settings
 from llm_model_explorer.tensor_analysis import TensorAnalysis
+from llm_model_explorer.tensor_source import ModelSource
 
 from acceptance.fixtures import generate
 
@@ -33,6 +35,32 @@ def application(root: Path, origin: str, device: str = "cpu"):
     release = asyncio.Event()
     append = ProducerContext.append
     calculate = TensorAnalysis._calculate
+    read = Consumer.read
+    iter_rows = ModelSource.iter_rows
+    iter_tensor = ModelSource.iter_tensor
+    started = WeakSet()
+    source_reads = {"row_elements": 0, "max_row_block": 0, "full_tensors": []}
+
+    async def observed_read(consumer, *args, **kwargs):
+        if json.loads(consumer._flight.spec.canonical)["operation"] == "input_embeddings":
+            if consumer in started and control["kind"] == "input_embeddings":
+                await barrier(consumer)
+            started.add(consumer)
+        return await read(consumer, *args, **kwargs)
+
+    def observed_rows(source, *args, **kwargs):
+        with_iterator = iter_rows(source, *args, **kwargs)
+        try:
+            for block in with_iterator:
+                source_reads["row_elements"] += block.numel()
+                source_reads["max_row_block"] = max(source_reads["max_row_block"], block.numel())
+                yield block
+        finally:
+            with_iterator.close()
+
+    def observed_tensor(source, tensor_id, **kwargs):
+        source_reads["full_tensors"].append(tensor_id)
+        yield from iter_tensor(source, tensor_id, **kwargs)
 
     async def barrier(context):
         control["entered"] = True
@@ -69,6 +97,9 @@ def application(root: Path, origin: str, device: str = "cpu"):
 
             with (
                 patch.object(ProducerContext, "append", observed_append),
+                patch.object(Consumer, "read", observed_read),
+                patch.object(ModelSource, "iter_rows", observed_rows),
+                patch.object(ModelSource, "iter_tensor", observed_tensor),
                 patch.object(TensorAnalysis, "_calculate", observed_calculate),
                 patch.object(store, "begin_write", begin_write),
             ):
@@ -119,6 +150,7 @@ def application(root: Path, origin: str, device: str = "cpu"):
             "artifacts": artifacts,
             "temporary": len(list((root / "cache").glob(".tmp-*"))),
             "device": runtime.device,
+            "source_reads": source_reads,
         }
 
     settings = Settings(
@@ -143,7 +175,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="lmex-acceptance-") as temporary:
         root = args.root or Path(temporary)
         if not (root / "models").exists():
-            generate(root / "models")
+            generate(root / "models", extended=True)
         uvicorn.run(
             application(root, args.origin, args.device),
             host="127.0.0.1",

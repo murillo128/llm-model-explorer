@@ -1,6 +1,7 @@
 """Deterministic local HF assets; generated only in an operator/test temporary root."""
 
 import json
+import shutil
 from pathlib import Path
 
 import torch
@@ -27,7 +28,7 @@ def values(shape: tuple[int, ...]) -> torch.Tensor:
     return ((torch.arange(count) * SEED % 257 - 128) / 128).reshape(shape)
 
 
-def generate(root: Path) -> Path:
+def generate(root: Path, *, extended: bool = False) -> Path:
     directory = root / "fixture"
     directory.mkdir(parents=True)
     (directory / "config.json").write_text(
@@ -36,6 +37,8 @@ def generate(root: Path) -> Path:
                 "model_type": "llama",
                 "_name_or_path": MODEL_ID,
                 "architectures": ["LlamaForCausalLM"],
+                "vocab_size": 1025,
+                "hidden_size": 576,
             }
         )
     )
@@ -48,6 +51,16 @@ def generate(root: Path) -> Path:
         ]
     )
     tensors["empty.weight"] = torch.empty(0, 4)
+    if extended:
+        for name, shape in {
+            "fits": (32, 32),
+            "tall": (1200, 32),
+            "wide": (32, 1600),
+            "both": (1200, 1600),
+        }.items():
+            tensors[f"layout.{name}.weight"] = values(shape).half()
+        for i in range(80):
+            tensors[f"inventory.{i:02}.weight"] = torch.zeros(1)
     save_file(tensors, directory / "model.safetensors")
     # Explicit byte alphabet and no training remove randomized trainer ordering.
     vocab = {
@@ -70,4 +83,13 @@ def generate(root: Path) -> Path:
         additional_special_tokens=["<special>"],
     )
     tokenizer.save_pretrained(directory)
+    if extended:
+        unsupported = root / "unsupported"
+        unsupported.mkdir()
+        for asset in directory.glob("*.json"):
+            shutil.copyfile(asset, unsupported / asset.name)
+        config = json.loads((unsupported / "config.json").read_text())
+        config.update(_name_or_path="acceptance/unsupported", architectures=["UnknownModel"])
+        (unsupported / "config.json").write_text(json.dumps(config))
+        save_file({"model.norm.weight": torch.zeros(576)}, unsupported / "model.safetensors")
     return directory
