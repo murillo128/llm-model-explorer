@@ -6,6 +6,7 @@ import type { components } from '../api/generated/types';
 import { ArchitectureCanvas } from './ArchitectureCanvas';
 import type { ArchitectureSelection } from './ArchitectureCanvas';
 import { GraphViews } from './graph';
+import { ArchitectureInspection } from './ArchitectureInspection';
 
 type Response = components['schemas']['ArchitectureResponse'];
 const unavailable = {
@@ -15,10 +16,16 @@ const unavailable = {
   unsupported_size: 'This architecture exceeds the supported response size.',
   cache_unavailable: 'The prepared architecture cache is unavailable.',
 };
-export function ArchitectureExplorer({ client, session, selection, views, tokenizerAvailable, onInspect }: ExplorerContextValue & {
+type Props = ExplorerContextValue & {
   views: GraphViews; tokenizerAvailable: boolean; onInspect?: ((selection: ArchitectureSelection) => void) | undefined;
-}) {
-  const [result, setResult] = useState<{ response?: Response; error?: string }>({});
+};
+export function ArchitectureExplorer(props: Props) {
+  return <SessionArchitectureExplorer key={JSON.stringify([props.session.id, props.session.model_id])} {...props} />;
+}
+function SessionArchitectureExplorer(props: Props) {
+  const { client, session, selection, views, tokenizerAvailable, onInspect } = props;
+  const [inspected, setInspected] = useState<ArchitectureSelection | null>(null);
+  const [result, setResult] = useState<{ response?: Response; inventory?: components['schemas']['TensorInventory']; error?: string }>({});
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     const request = new Lifetime();
@@ -30,7 +37,7 @@ export function ArchitectureExplorer({ client, session, selection, views, tokeni
     void client.listTensors(session.id, request.signal).then(request.guard(async (inventory) => {
       try {
         const response = await client.getArchitecture(session.id, { modelId: session.model_id, inventory, tokenizerAvailable }, request.signal);
-        if (request.isCurrent()) setResult({ response });
+        if (request.isCurrent()) setResult({ response, inventory });
       } catch (error) {
         if (request.isCurrent()) setResult({ error: error instanceof ApiFailure && error.detail?.code === 'model_content_changed'
           ? 'Model content changed. Close this session and open a fresh session.' : 'Architecture retrieval failed or returned an invalid graph. Retry retrieval.' });
@@ -48,6 +55,9 @@ export function ArchitectureExplorer({ client, session, selection, views, tokeni
   return <>
     {response.diagnostics.map((d, i) => <p key={i} role="status">{d.message}</p>)}
     <ArchitectureCanvas key={JSON.stringify([session.id, response.model_id, response.graph.graph_id])} graph={response.graph}
-      modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onInspect={onInspect} />
+      modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onInspect={(value) => { setInspected(value); onInspect?.(value); }} />
+    {inspected && result.inventory && inspected.sessionId === session.id && inspected.modelId === response.model_id && inspected.graphId === response.graph.graph_id &&
+      <ArchitectureInspection key={JSON.stringify([inspected.sessionId, inspected.graphId, inspected.node.id])} context={props}
+        graph={response.graph} diagnostics={response.diagnostics} inventory={result.inventory} selected={inspected} onClose={() => setInspected(null)} />}
   </>;
 }

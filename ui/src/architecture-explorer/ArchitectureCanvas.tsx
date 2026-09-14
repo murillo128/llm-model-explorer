@@ -184,7 +184,9 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
       <ReactFlow<CanvasNode> nodes={nodes} edges={edges} nodeTypes={nodeTypes} onlyRenderVisibleElements
         nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
         minZoom={0.00001} maxZoom={4} defaultViewport={view.viewport ?? { x: 0, y: 0, zoom: 1 }} panOnDrag zoomOnScroll
-        onMoveEnd={(_, viewport) => { view.update({ viewport }); }} onNodeClick={(_, node) => select(node.id)}
+        onMoveEnd={(_, viewport) => { view.update({ viewport }); }} onNodeClick={(event, node) => {
+          if (inspect) inspect(node.data.record, event.currentTarget as HTMLElement); else select(node.id);
+        }}
         onNodeDoubleClick={(event, node) => inspect?.(node.data.record, event.currentTarget as HTMLElement)}
         onNodesChange={(changes) => { for (const change of changes) if (change.type === 'select' && change.selected) select(change.id); }}
         aria-label="Architecture canvas" />
