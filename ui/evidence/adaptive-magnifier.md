@@ -5,6 +5,7 @@ Reproduce with Node 24.14.0 and the locked UI dependencies:
 ```sh
 npm run check --prefix ui
 UI_TEST_PORT=22630 npm run test:browser --prefix ui -- matrix-inspection.spec.ts magnifier-adaptation.spec.ts matrix-explorer.spec.ts matrix-zoom.spec.ts matrix-zoom-pixels.spec.ts --project=desktop --project=narrow
+UI_TEST_PORT=22630 xvfb-run -a npm run test:acceptance --prefix ui -- --grep 'production UI renders before producer completes'
 ```
 
 `inspection-layout.test.ts` checks four corners, right/bottom panel adjacency,
@@ -25,5 +26,9 @@ Browser screenshots and pixel attachments remain generated test artifacts outsid
 Git. The neighborhood still reads only 324 display bytes from the existing scalar
 bands; the warm-orange border/guides are separate DOM overlays. The full card may
 fall back to its compact readout if protected geometry leaves insufficient space.
-This evidence covers synthetic UI fixtures; the PR's application-acceptance check
-owns integrated backend/product validation.
+The focused production acceptance case also checks all 81 neighborhood pixels
+against the pre-selection scalar display, while independently checking linked
+selection on the main matrix/profiles. It retains native scrolling at both DPRs
+and reserves sufficient pane space for the full card. This check needs the locked
+backend environment; the PR application-acceptance check runs the full integrated
+backend/product suite.
