@@ -2,11 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 const port = Number(process.env.UI_TEST_PORT ?? 4173);
 const baseURL = `http://127.0.0.1:${port}`;
+const workers = process.env.PLAYWRIGHT_WORKERS
+  ? Number(process.env.PLAYWRIGHT_WORKERS)
+  : process.env.CI ? 4 : undefined;
 
 export default defineConfig({
   testDir: './tests',
-  // A deployment test edits dist/runtime-config.json and restores it afterward.
-  workers: 1,
+  workers,
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,

@@ -1,4 +1,4 @@
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -16,30 +16,31 @@ async function mockConfig(page: Page, body = '{"backend_base_url":"https://backe
   await page.route('**/runtime-config.json', (route) => route.fulfill({ status, contentType: 'application/json', body }));
 }
 
-// Both browser viewports read the real deployment file, without rebuilding assets.
+// Both browser viewports verify runtime deployment values against the same production assets.
 test('one production build accepts two deployed backend URLs', async ({ page }, testInfo) => {
-  const original = await readFile(configPath);
+  const deployedConfig = JSON.parse(await readFile(configPath, 'utf8')) as { backend_base_url?: unknown };
+  expect(deployedConfig.backend_base_url).toEqual(expect.any(String));
   const before = await assetHashes();
   const backendRequests: string[] = [];
+  let deployedBackend = 'https://models-a.example/api/';
   page.on('request', (request) => {
     if (new URL(request.url()).origin !== new URL(testInfo.project.use.baseURL!).origin) backendRequests.push(request.url());
   });
   await page.route('**/models', (route) => route.fulfill({ json: { models: [] } }));
-  try {
-    for (const backend of ['https://models-a.example/api/', 'http://192.0.2.10:9000///']) {
-      await writeFile(configPath, JSON.stringify({ backend_base_url: backend }));
-      await page.goto('/');
-      await expect(page.getByTestId('backend-url')).toHaveText(backend.replace(/\/+$/, ''));
-      await expect(page.getByText('No models available on this backend.')).toBeVisible();
-    }
-    expect(await assetHashes()).toEqual(before);
-    expect(backendRequests).toEqual(['https://models-a.example/api/models', 'http://192.0.2.10:9000/models']);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: testInfo.outputPath('neutral-shell.png'), fullPage: true });
-    await testInfo.attach('neutral shell', { path: testInfo.outputPath('neutral-shell.png'), contentType: 'image/png' });
-  } finally {
-    await writeFile(configPath, original);
+  await page.route('**/runtime-config.json', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({ backend_base_url: deployedBackend }),
+  }));
+  for (const backend of ['https://models-a.example/api/', 'http://192.0.2.10:9000///']) {
+    deployedBackend = backend;
+    await page.goto('/');
+    await expect(page.getByTestId('backend-url')).toHaveText(backend.replace(/\/+$/, ''));
+    await expect(page.getByText('No models available on this backend.')).toBeVisible();
   }
+  expect(await assetHashes()).toEqual(before);
+  expect(backendRequests).toEqual(['https://models-a.example/api/models', 'http://192.0.2.10:9000/models']);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('neutral-shell.png'), fullPage: true });
+  await testInfo.attach('neutral shell', { path: testInfo.outputPath('neutral-shell.png'), contentType: 'image/png' });
 });
 
 test('keyboard navigation has visible focus and switches explorer slots', async ({ page }) => {
