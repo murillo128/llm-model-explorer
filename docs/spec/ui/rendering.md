@@ -107,7 +107,10 @@ For normalized scalar intensity `t`, the green linear-sRGB color is
 All components and luminance increase monotonically, and green is the largest
 component throughout. Luminance uses `Y = 0.2126 R + 0.7152 G + 0.0722 B`.
 Distribution intensity uses its separately owned density normalization before
-this same display curve. Constant finite tensors use `t=0.5`; all-nonfinite and
+this same display curve. It changes density brightness only, never value-bin
+coordinates. Distribution numeric rulers and neutral zero references are
+display-only chrome owned by `tensor-explorer.md`; they do not update scalar or
+count storage. Constant finite tensors use `t=0.5`; all-nonfinite and
 pending regions retain their explicit status colors instead of this curve.
 
 The active row and column each receive one device pixel of amber overlay,

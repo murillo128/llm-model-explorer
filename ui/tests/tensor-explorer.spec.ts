@@ -74,7 +74,8 @@ for (const dpr of [1, 2]) test(`asymmetric progressive surfaces, independent res
   await expect(page.getByText('Complete', { exact: true })).toHaveCount(0);
   await expect(page.getByText(/One value per device pixel|Focus the matrix/)).toHaveCount(0);
   const overhead = await page.evaluate(() => document.querySelector('.matrix-surfaces')!.getBoundingClientRect().top - document.querySelector('.working-surface')!.getBoundingClientRect().top);
-  expect(overhead).toBeLessThanOrEqual(50);
+  // Required range metadata adds one 16px line plus the 8px composition gap.
+  expect(overhead).toBeLessThanOrEqual(74);
   const path = testInfo.outputPath(`asymmetric-dpr-${dpr}.png`);
   await page.screenshot({ path, fullPage: true });
   await testInfo.attach('asymmetric scientific layout', { path, contentType: 'image/png' });
@@ -110,6 +111,7 @@ for (const dpr of [1, 2]) test(`reference geometry and synchronized scrolling ac
   });
   await expect(status(page, 'tensor')).toHaveCount(0);
   await expect(status(page, 'distributions')).toHaveCount(0);
+  const scaleLabels = await page.locator('.distribution-scale').evaluateAll(elements => elements.map(e => e.outerHTML));
   for (const [x, y] of [[0, 0], [127 / dpr, 127 / dpr], [128 / dpr, 128 / dpr], [256 / dpr, 256 / dpr], [1e6, 1e6]]) {
     await page.locator('.matrix-scroll').evaluate((host, point) => { host.scrollLeft = point[0]!; host.scrollTop = point[1]!; }, [x!, y!]);
     await expect.poll(() => page.evaluate(() => {
@@ -140,6 +142,7 @@ for (const dpr of [1, 2]) test(`reference geometry and synchronized scrolling ac
     expect(aligned.rowPixel).toBe(color(Math.log1p(aligned.rowExpected) / Math.log1p(1536))[0]);
     expect(aligned.columnPixel).toBe(color(Math.log1p(aligned.columnExpected) / Math.log1p(576))[0]);
     expect(aligned.right).toBe(true); expect(aligned.bottom).toBe(true);
+    expect(await page.locator('.distribution-scale').evaluateAll(elements => elements.map(e => e.outerHTML))).toEqual(scaleLabels);
   }
   const path = testInfo.outputPath(`reference-dpr-${dpr}.png`);
   await page.screenshot({ path, fullPage: true });

@@ -4,6 +4,9 @@ import { DistributionRenderer } from './tensor-renderer';
 import type { RendererOptions } from './tensor-renderer';
 import { TensorViewport } from './tensor-viewport';
 import type { TensorDescriptor, ViewGeometry } from './geometry';
+import { DistributionScale } from './distribution-scale';
+import type { DistributionDomain } from './distribution-scale';
+import './distribution-scale.css';
 
 export interface MatrixViewportOptions extends RendererOptions {
   readonly distributions?: boolean;
@@ -21,6 +24,8 @@ export class MatrixViewport {
   private readonly originalStyle: string | null;
   private disposed = false;
   private inspection?: MatrixInspection;
+  private rowScale?: DistributionScale;
+  private columnScale?: DistributionScale;
   private readonly observer: ResizeObserver;
 
   constructor(readonly host: HTMLElement, descriptor: TensorDescriptor, options: MatrixViewportOptions = {}) {
@@ -54,14 +59,22 @@ export class MatrixViewport {
         }
         this.rows = new DistributionRenderer(this.rowHost.firstChild as HTMLCanvasElement, [descriptor.shape[0]!, 100], descriptor.shape[1]!, options);
         this.columns = new DistributionRenderer(this.columnHost.firstChild as HTMLCanvasElement, [100, descriptor.shape[1]!], descriptor.shape[0]!, options);
+        this.rowScale = new DistributionScale('rows', this.rowHost);
+        this.columnScale = new DistributionScale('columns', this.columnHost);
+        host.append(this.rowScale.ruler, this.columnScale.ruler);
+        this.main.style.gridRow = this.rowHost.style.gridRow = '2';
+        this.columnHost.style.gridRow = '3';
       }
       const layout = () => {
         const dpr = window.devicePixelRatio;
         // The host receives the pane's remaining content height. Reserve profile
         // depth and gap here; TensorViewport still measures the actual client box.
         const depth = this.rows ? 100 / dpr : 0;
+        host.style.setProperty('--distribution-depth', `${depth}px`);
+        host.style.setProperty('--distribution-pixel', `${1 / dpr}px`);
         const gap = this.rows ? parseFloat(getComputedStyle(host).rowGap) : 0;
-        host.style.setProperty('--matrix-height', `${Math.max(0, host.clientHeight - depth - gap)}px`);
+        const scaleHeight = this.rowScale ? this.rowScale.ruler.offsetHeight + gap : 0;
+        host.style.setProperty('--matrix-height', `${Math.max(0, host.clientHeight - depth - gap - scaleHeight)}px`);
         // The vertical scrollbar reserves space even without overflow. Include it in
         // the native-width track so a tall, otherwise fitting tensor stays fitting.
         const gutter = this.main.offsetWidth - this.main.clientWidth;
@@ -108,6 +121,10 @@ export class MatrixViewport {
   }
 
   refresh() { this.matrix.refresh(); }
+  setDistributionDomain(domain: DistributionDomain) {
+    this.rowScale?.setDomain(domain);
+    this.columnScale?.setDomain(domain);
+  }
   setLinkedRow(row: number | null) { this.inspection?.setLinkedRow(row); }
 
   private restoreHost() {

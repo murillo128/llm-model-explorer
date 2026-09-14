@@ -112,6 +112,32 @@ All row profiles in one tensor use the same bin boundaries, and all column profi
 
 The density/intensity normalization may be chosen to keep profiles readable, but it must be stable for the open tensor and must not silently change on hover.
 
+Both orientations expose a compact numeric ruler for the actual shared bin
+domain: low to high runs left to right for rows and top to bottom for columns.
+Use the distribution metadata's endpoints, never the matrix's robust luminosity
+anchors. The current API uses the full finite range; label it as full-range bins
+and show the authoritative true finite `min` and `max` in compact secondary
+metadata. Rounded display values retain exact endpoints in accessible ruler
+names and endpoint tooltips. A narrow profile with extreme outliers can correctly
+reflect concentration near zero; do not stretch its numeric coordinates to fill
+the panel. If a later accepted bin domain is clipped, describe its endpoints as
+bin/clipped bounds and keep true extrema separate.
+
+For a distinct domain containing zero, place a quiet neutral zero reference at
+`(0 - low) / (high - low)` of its bin depth, including at either boundary.
+Graphite rulers/text and a subtle neutral guide remain materially quieter than
+amber inspection guides. Keep rulers outside the data rectangles and retain the
+100-device-pixel profile depth. Constant finite data reports both equal endpoints
+and explicitly states that samples occupy bin 50 with no numeric span; do not
+invent a zero location. All-nonfinite data reports no finite domain/extrema and
+has no numeric ticks. Before distribution metadata arrives, the domain is
+unavailable; valid metadata can label a progressive prefix without claiming that
+the operation is complete. Statistics arrival/failure does not change this scale.
+
+Hover, native scrolling, and any separately accepted camera navigation change
+only inspected/visible matrix coordinates; they must not rescale value bins or
+their labels. Auxiliary operation status remains independent from these labels.
+
 The matrix must be usable before distribution/statistics results have completed. Distribution panels may progressively become available after the tensor itself; they must not block first render. The production and transport of these statistics remain owned by the backend/API specifications.
 
 ## Scroll synchronization

@@ -21,7 +21,7 @@ it('streams exact split words with one allocation, restarts at zero on remount a
   const { client, requests } = harness();
   const signal = new AbortController();
   const states: EmbeddingState[] = [];
-  const updates: MatrixUpdates = { values: vi.fn(), transfer: vi.fn(), distribution: vi.fn() };
+  const updates: MatrixUpdates = { values: vi.fn(), transfer: vi.fn(), distribution: vi.fn(), distributionDomain: vi.fn() };
   let detach!: () => void;
   const controller = new EmbeddingController(client, 's', [2, 0, 2], signal.signal, (state, allocate) => {
     states.push(state);

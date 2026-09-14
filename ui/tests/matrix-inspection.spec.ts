@@ -133,8 +133,10 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
     await page.addStyleTag({ content: '.app-bar, .app-status-bar { visibility: hidden; }' });
     for (const [right, bottom] of [[false, false], [true, false], [false, true], [true, true]]) {
       await page.locator('.matrix-surfaces').evaluate((host: HTMLElement, [right, bottom]) => {
+        const main = window.explorerFixture.renderers[0]!.canvas.getBoundingClientRect();
+        const offsetY = main.top - host.getBoundingClientRect().top;
         Object.assign(host.style, { position: 'fixed', width: `${119 / devicePixelRatio + 10}px`, zIndex: '10', left: `${right ? innerWidth - 19 / devicePixelRatio - 2 : 2}px`,
-          top: `${bottom ? innerHeight - 17 / devicePixelRatio - 2 : 2}px` });
+          top: `${(bottom ? innerHeight - 17 / devicePixelRatio - 2 : 2) - offsetY}px` });
       }, [right!, bottom!]);
       await hover(page, 8, 8);
       const geometry = await page.evaluate(() => {
