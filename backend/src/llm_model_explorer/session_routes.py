@@ -82,7 +82,11 @@ async def delete_session(session_id: UUID, sessions: Sessions) -> Response:
 async def list_tensors(session_id: UUID, sessions: Sessions) -> JSONResponse:
     tensors = await sessions.tensors(session_id)
     return JSONResponse(
-        {"tensors": [tensor.model_dump(mode="json") for tensor in tensors]},
+        {
+            "tensors": [tensor.model_dump(mode="json") for tensor in tensors],
+            "coverage": "complete",
+            "diagnostics": [],
+        },
         headers={"Cache-Control": "no-store"},
     )
 

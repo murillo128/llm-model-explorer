@@ -2,7 +2,7 @@
 
 ## Status and ownership
 
-This is the accepted target contract for the static Architecture Explorer increment, pending implementation. [contract.md](contract.md) retains shared API/error/session semantics. Before runtime consumers ship, the API contract-publication child must express these records and responses in `openapi.yaml`, add cross-field conformance fixtures, and regenerate UI bindings together. The currently published OpenAPI/bindings are intentionally unchanged by documentation-only adoption; this is not a second API version or evidence that an endpoint already exists.
+The static Architecture Explorer contract is published in `openapi.yaml` with shared conformance fixtures and generated UI types/runtime schemas. [contract.md](contract.md) retains shared API/error/session semantics. Architecture analysis and the runtime retrieval route remain pending their implementation children; contract publication does not mean that the endpoint exists.
 
 The graph describes architecture, not execution. [Backend analysis](../backend/architecture-analysis.md) owns semantic truth and [UI behavior](../ui/architecture-explorer.md) owns layout and interaction. JSON contains bounded structural metadata only. Weights continue to use the existing progressive binary endpoints.
 

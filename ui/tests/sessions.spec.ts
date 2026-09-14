@@ -21,7 +21,7 @@ async function fixture(context: BrowserContext) {
       deletes.push(id); sessions.delete(id); return route.fulfill({ status: 204 });
     }
     if (!sessions.has(id)) return route.fulfill({ status: 404, json: { code: 'session_not_found', message: 'Session not found' } });
-    if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors } });
+    if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors, coverage: 'complete', diagnostics: [] } });
     gets.push(id); return route.fulfill({ json: sessions.get(id) });
   });
   return { sessions, deletes, gets };

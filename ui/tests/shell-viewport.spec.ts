@@ -54,7 +54,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1000, height: 840
         expect(request.postDataJSON()).toEqual({ model_id: models[0]!.id });
         return route.fulfill({ status: 201, json: sessionA });
       }
-      if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors: Array.from({ length: 40 }, (_, i) =>
+      if (path.endsWith('/tensors')) return route.fulfill({ json: { coverage: 'complete', diagnostics: [], tensors: Array.from({ length: 40 }, (_, i) =>
         ({ ...tensors[2], id: `cube-${i}`, name: `layer-${i}.cube`, path: [`layer-${i}`, 'cube'] })) } });
       if (path.endsWith('/tokenize')) return route.fulfill({ json: { ...request.postDataJSON(), tokens: [] } });
       return route.fulfill({ json: sessionA });

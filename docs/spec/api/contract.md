@@ -8,7 +8,7 @@ The API is a first-class, contract-first project boundary. It is not generated c
 
 The proof of concept does not expose public API versions such as `/v1` and does not require backwards compatibility with older contract revisions. Backend and UI evolve together against the current accepted contract. The `version: current` field required by OpenAPI is document metadata, not a public protocol version.
 
-The accepted, pending Architecture Explorer increment is specified in [architecture-explorer.md](architecture-explorer.md). Its contract-publication child must integrate the endpoint/records and inventory capability extension into OpenAPI, conformance fixtures, and generated bindings together before consumers ship. This documentation adoption does not claim that the new route is currently served or change existing generated bindings independently of their source contract.
+The Architecture Explorer endpoint/records and inventory capability extension are published in OpenAPI, conformance fixtures, and generated UI bindings together. [architecture-explorer.md](architecture-explorer.md) owns the graph semantics. The runtime architecture route remains pending implementation.
 
 ## Design rules
 
@@ -38,7 +38,7 @@ The currently published API includes the proof-of-concept operations and the acc
 | Look up input embeddings | `POST /sessions/{session_id}/embeddings` | Binary stream |
 | Cancel long operation | `DELETE /operations/{operation_id}` | Empty |
 
-The accepted next addition is `GET /sessions/{session_id}/architecture` (`getArchitecture`), returning the prepared structural result under the [architecture contract](architecture-explorer.md#prepared-architecture-endpoint). It is read-only retrieval, not an analysis trigger or a numerical long operation. No generic operation endpoint is introduced.
+The published architecture addition is `GET /sessions/{session_id}/architecture` (`getArchitecture`), returning the prepared structural result under the [architecture contract](architecture-explorer.md#prepared-architecture-endpoint). It is read-only retrieval, not an analysis trigger or a numerical long operation. No generic operation endpoint is introduced.
 
 ## Models and sessions
 
