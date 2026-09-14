@@ -6,6 +6,7 @@ import { Button } from '../components/Button';
 import { AppBar, AppStatusBar } from './AppChrome';
 import { TensorHeader } from '../components/TensorHeader';
 import { TensorTree } from '../components/TensorTree';
+import { TensorWorkspace } from '../components/TensorWorkspace';
 import { WorkingSurface } from '../components/WorkingSurface';
 import { ExplorerContext } from './explorer-context';
 import type { ExplorerContextValue, ExplorerSlots } from './explorer-context';
@@ -51,15 +52,14 @@ function BackendApp({ config, slots }: Required<AppProps>) {
           {state.sessionStatus === 'failed' && <Button onClick={() => controller.retrySession()}>Retry session</Button>}
           {!state.storageAvailable && <p>Tab storage is unavailable. This session cannot be recovered after refresh.</p>}
         </div>
-        <main id="workspace" tabIndex={-1} className={state.explorer === 'Tensor Explorer' && state.session ? 'tensor-layout' : undefined}>
-          {state.explorer === 'Tensor Explorer' && state.session && <aside aria-label="Tensor inventory">
-            <h2>Tensors</h2>
+        <TensorWorkspace enabled={state.explorer === 'Tensor Explorer' && !!state.session} inventory={<>
             {state.inventory === 'loading' && <p role="status">Loading tensor inventory…</p>}
             {state.inventory === 'failed' && <Button onClick={controller.loadInventory}>Retry tensor inventory</Button>}
             {state.inventory === 'complete' && !state.tensors.length && <p>No tensors available.</p>}
             <TensorTree tensors={state.tensors} selectedId={tensor?.id} onSelect={controller.selectTensor} />
-          </aside>}
-          <WorkingSurface title={`${state.explorer} workspace`} showTitle={false}>
+          </>}>
+          {(restoreInventory) => <WorkingSurface title={`${state.explorer} workspace`} showTitle={false}>
+            {restoreInventory}
             {state.explorer === 'Tensor Explorer' && tensor && <>
               <TensorHeader key={tensor.id} tensor={tensor} />
               {!supported && <p>Direct viewing supports complete rank-1 and rank-2 tensors. This rank-{tensor.rank} tensor is available for metadata inspection only.</p>}
@@ -71,8 +71,8 @@ function BackendApp({ config, slots }: Required<AppProps>) {
               {state.viewStatus !== 'idle' && <p role="status" data-state={state.viewStatus}>{state.viewStatus === 'failed' ? 'Operation failed.' : `Operation ${state.viewStatus}.`}</p>}
             </ExplorerContext.Provider> : !tensor || state.explorer === 'Tokenizer Explorer' ?
               <p>{state.session ? 'Select a tensor to inspect.' : 'Open a model session to use this explorer.'}</p> : null}
-          </WorkingSurface>
-        </main>
+          </WorkingSurface>}
+        </TensorWorkspace>
       </div>
       <AppStatusBar state={state} model={model} />
     </div>
