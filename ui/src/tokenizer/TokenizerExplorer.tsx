@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import type { ReactNode } from 'react';
 import type { ApiClient } from '../api/client';
@@ -20,12 +20,13 @@ interface Props {
 
 /** The prompt subtree keeps its original layout, source, and native history. */
 export function TokenizerWorkspace({ client, sessionId, ...props }: Props) {
+  const [linkedSignal, setLinkedSignal] = useState<AbortSignal>();
   const [link, setLink] = useState<{
     signal: AbortSignal; tokenRow: number | null; matrixRow: number | null;
     revealRow: { row: number } | null;
   }>();
   function selectTokenRow(row: number | null, current: CurrentTokenization | undefined, activate = false) {
-    if (!current || current.signal.aborted) { setLink(undefined); return; }
+    if (!current || current.signal.aborted || linkedSignal !== current.signal) { setLink(undefined); return; }
     setLink(previous => ({ signal: current.signal, tokenRow: row,
       matrixRow: row !== null || previous?.signal !== current.signal ? null : previous.matrixRow,
       revealRow: activate && row !== null ? { row } : previous?.signal === current.signal ? previous.revealRow : null,
@@ -41,14 +42,14 @@ export function TokenizerWorkspace({ client, sessionId, ...props }: Props) {
   return <div className="tokenizer-workspace">
     <PromptTokenizer {...props} client={client} sessionId={sessionId}
       header={<PanelHeader identity={<h2>Prompt / Tokens</h2>} />}
-      activeRow={link ? { signal: link.signal, row: link.matrixRow ?? link.tokenRow } : undefined}
+      activeRow={link && linkedSignal === link.signal ? { signal: link.signal, row: link.matrixRow ?? link.tokenRow } : undefined}
       onRowSelect={selectTokenRow} onRowActivate={(row, current) => selectTokenRow(row, current, true)}
       downstream={current => <section className="input-embeddings" aria-label="Input embeddings">
-        {current ? <EmbeddingRegion client={client} sessionId={sessionId} current={current}
-          highlightedRow={link?.signal === current.signal ? link.tokenRow : null}
-          revealRow={link?.signal === current.signal ? link.revealRow : null}
-          onRowSelect={row => selectMatrixRow(row, current)} />
-          : <EmbeddingHeader status="Waiting for current tokenization." />}
+        <EmbeddingRegion client={client} sessionId={sessionId} current={current}
+          highlightedRow={link && link.signal === current?.signal ? link.tokenRow : null}
+          revealRow={link && link.signal === current?.signal ? link.revealRow : null}
+          onLinkedGeneration={setLinkedSignal}
+          onRowSelect={row => { if (current) selectMatrixRow(row, current); }} />
       </section>} />
   </div>;
 }
@@ -58,35 +59,76 @@ function EmbeddingHeader({ summary, status, actions }: { summary?: ReactNode; st
     status={status && <span role="status">{status}</span>} actions={actions} />;
 }
 
-function EmbeddingRegion({ client, sessionId, current, highlightedRow, revealRow, onRowSelect }: {
-  client: ApiClient; sessionId: string; current: CurrentTokenization;
+interface EmbeddingSnapshot {
+  generation: number;
+  signal: AbortSignal;
+  state: EmbeddingState;
+  renderingFailed: () => void;
+}
+
+function EmbeddingRegion({ client, sessionId, current, highlightedRow, revealRow, onRowSelect, onLinkedGeneration }: {
+  client: ApiClient; sessionId: string; current: CurrentTokenization | undefined;
   revealRow: { row: number } | null;
   highlightedRow: number | null; onRowSelect: (row: number | null) => void;
+  onLinkedGeneration: (signal: AbortSignal | undefined) => void;
 }) {
-  const { data, signal } = current;
-  const [result, setResult] = useState<{ data: typeof data; signal: AbortSignal; state: EmbeddingState }>();
+  const data = current?.data, signal = current?.signal;
+  const generation = useRef(0);
+  const [result, setResult] = useState<{ latest?: EmbeddingSnapshot; complete?: EmbeddingSnapshot }>({});
   useEffect(() => {
-    if (!data.tokens.length) return;
+    if (!data?.tokens.length || !signal) return;
+    const identity = ++generation.current;
     const controller = new EmbeddingController(client, sessionId, data.tokens.map(token => token.id), signal, (state, allocate) => {
-      const update = () => setResult({ data, signal, state });
+      const snapshot = { generation: identity, signal, state, renderingFailed: controller.renderingFailed };
+      const update = () => setResult(previous => ({ latest: snapshot,
+        ...(state.status === 'complete' && state.source ? { complete: snapshot }
+          : previous.complete ? { complete: previous.complete } : {}),
+      }));
       if (allocate) flushSync(update); else update();
     });
     queueMicrotask(controller.start);
     return controller.dispose;
   }, [client, sessionId, data, signal]);
-  const state = result?.data === data && result.signal === signal && !signal.aborted ? result.state : undefined;
-  const status = !data.tokens.length ? 'No tokens to embed.'
+  const latest = result.latest?.signal === signal && !signal?.aborted ? result.latest : undefined;
+  const state = latest?.state;
+  // Keep the completed renderer mounted. A replacement receives progressive
+  // DATA in a hidden sibling, then becomes visible in the same commit that
+  // disposes the old renderer. At most two matrix allocations are live.
+  const visible = result.complete ?? (state?.source ? latest : undefined);
+  const staging = state?.source && latest !== visible ? latest : undefined;
+  const linked = visible?.signal === signal && !!signal && !signal.aborted
+    && (state?.status === 'streaming' || state?.status === 'complete');
+  useLayoutEffect(() => { onLinkedGeneration(linked ? signal : undefined); }, [linked, signal, onLinkedGeneration]);
+  const status = !data ? 'Waiting for current tokenization.'
+    : !data.tokens.length ? 'No tokens to embed.'
     : state?.status === 'complete' ? ''
     : state?.status === 'unsupported' ? 'Input embeddings are unavailable for this model. Tokenization remains usable.'
     : state?.status === 'failed' ? 'Could not load input embeddings. Edit the prompt or retry tokenization.'
     : state?.status === 'cancelled' ? 'Input embedding lookup cancelled.'
     : state?.status === 'streaming' ? 'Streaming input embeddings…' : 'Loading input embeddings…';
-  const source = state?.source;
-  const summary = source ? <span className="embedding-shape">[{source.descriptor.shape.join(' × ')}] · {source.descriptor.logical_dtype}</span> : undefined;
-  return source ? <MatrixExplorer source={source} highlightedRow={highlightedRow} revealRow={revealRow} onRowSelect={onRowSelect}
-    header={controls => <EmbeddingHeader summary={summary} status={status} actions={controls} />}
-    label="Input embeddings; rows are token sequence positions, columns are hidden dimensions" />
-    : <EmbeddingHeader status={status} />;
+  const stale = !!visible && !linked;
+  const message = status + (stale ? ' Previous matrix is stale; token linkage is disabled.' : '');
+  return <div className="embedding-layers" data-embeddings={stale ? 'stale' : 'current'}>
+    {!visible && <EmbeddingHeader status={message} />}
+    {[visible, staging].map(snapshot => {
+      const source = snapshot?.state.source;
+      if (!snapshot || !source) return null;
+      const hidden = snapshot === staging;
+      const summary = <span className="embedding-shape">[{source.descriptor.shape.join(' × ')}] · {source.descriptor.logical_dtype}</span>;
+      return <div key={snapshot.generation} className="embedding-layer" data-staging={hidden || undefined}
+        aria-hidden={hidden || undefined} inert={hidden || undefined}>
+        <MatrixExplorer source={source} highlightedRow={!hidden && linked ? highlightedRow : null}
+          revealRow={!hidden && linked ? revealRow : null}
+          onRowSelect={row => { if (!hidden && linked) onRowSelect(row); }}
+          onRenderingStateChange={state => {
+            if (hidden && ['failed', 'lost', 'needs-reconstruction'].includes(state)) snapshot.renderingFailed();
+          }}
+          header={controls => <EmbeddingHeader summary={summary} status={message} actions={controls} />}
+          label={stale ? 'Previous input embeddings (stale); token linkage disabled'
+            : 'Input embeddings; rows are token sequence positions, columns are hidden dimensions'} />
+      </div>;
+    })}
+  </div>;
 }
 
 export function TokenizerExplorer({ client, sessionId, selection, tokenizerAvailable = true }: ExplorerContextValue & { tokenizerAvailable?: boolean }) {

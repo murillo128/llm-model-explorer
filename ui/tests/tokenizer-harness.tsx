@@ -76,13 +76,14 @@ function Harness() {
   const [session, setSession] = useState('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
   const [special, setSpecial] = useState(true);
   const [available, setAvailable] = useState(true);
+  const [mounted, setMounted] = useState(true);
   const embeddings = new URLSearchParams(location.search).has('embeddings');
-  const controls = <div><button onClick={() => setSession((value) => value.startsWith('a') ? 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' : 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')}>Change session</button>
+  const controls = <div><button onClick={() => setMounted(false)}>Close workspace</button><button onClick={() => setSession((value) => value.startsWith('a') ? 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' : 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')}>Change session</button>
     <label><input type="checkbox" checked={special} onChange={(event) => setSpecial(event.target.checked)} />Add special tokens</label>
     <label><input type="checkbox" checked={available} onChange={(event) => setAvailable(event.target.checked)} />Tokenizer available</label></div>;
   const Surface = embeddings ? TokenizerWorkspace : PromptTokenizer;
   return <div className="app-shell"><div>{controls}</div><div className="workspace-frame"><main><section className="working-surface"><div className="surface-content">
-    <Surface client={client} sessionId={session} addSpecialTokens={special} tokenizerAvailable={available} />
+    {mounted && <Surface client={client} sessionId={session} addSpecialTokens={special} tokenizerAvailable={available} />}
   </div></section></main></div><footer>Fixture</footer></div>;
 }
 createRoot(document.getElementById('root')!).render(<StrictMode><Harness /></StrictMode>);

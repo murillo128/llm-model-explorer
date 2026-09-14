@@ -62,3 +62,20 @@ it.each(['unsupported_representation', 'internal_error'] as const)('removes part
   expect(changed).toHaveBeenLastCalledWith({ status: code === 'unsupported_representation' ? 'unsupported' : 'failed' });
   controller.dispose();
 });
+
+
+it('fences completion and cancels transport when a replacement renderer fails', async () => {
+  const { client, requests } = harness();
+  const changed = vi.fn();
+  const controller = new EmbeddingController(client, 's', [2, 0, 2], new AbortController().signal, changed);
+  controller.start();
+  requests[0]!.options.onMetadata!(metadata);
+  controller.renderingFailed();
+  expect(changed).toHaveBeenLastCalledWith({ status: 'failed' });
+  expect(requests[0]!.cancel).toHaveBeenCalledOnce();
+  requests[0]!.options.onData!(new Uint8Array(24), 0);
+  requests[0]!.done.resolve({ kind: 'complete', metadata, byteLength: 24 });
+  await Promise.resolve();
+  expect(changed).toHaveBeenLastCalledWith({ status: 'failed' });
+  controller.dispose();
+});

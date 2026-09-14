@@ -7,3 +7,8 @@
 .input-embeddings .matrix-panel-status { font-size: 11px; color: var(--ui-text-muted); }
 [data-token-index][data-active-token] { background: var(--ui-accent-soft); outline: 1px solid var(--ui-accent); }
 .source-annotation[data-active-token] { text-decoration: underline; text-decoration-color: var(--ui-accent); text-underline-offset: 3px; }
+
+.embedding-layers { position: relative; display: flex; flex: 1; min-width: 0; min-height: 0; }
+.embedding-layer { display: flex; flex: 1; min-width: 0; min-height: 0; }
+.embedding-layer[data-staging] { position: absolute; inset: 0; visibility: hidden; pointer-events: none; }
+[data-embeddings="stale"] .embedding-layer:not([data-staging]) .matrix-scroll { opacity: 0.65; }
