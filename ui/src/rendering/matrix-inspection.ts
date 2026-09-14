@@ -75,7 +75,11 @@ export class MatrixInspection {
     matrix.renderer.setSelection(cell);
     rows?.setSelection(cell ? { row: cell.row, column: -1 } : null);
     columns?.setSelection(cell ? { row: -1, column: cell.column } : null);
-    for (const r of [matrix.renderer, rows, columns]) if (r?.state === 'ready' && r.view) r.draw();
+    // Pointer leave/blur may precede the DPR resize notification. Keep selection
+    // current, but let the viewport refresh draw once its geometry matches.
+    for (const r of [matrix.renderer, rows, columns]) {
+      if (r?.state === 'ready' && r.view?.dpr === window.devicePixelRatio) r.draw();
+    }
   }
 
   /** External row context is display-only; it never moves focus or invents a cell. */

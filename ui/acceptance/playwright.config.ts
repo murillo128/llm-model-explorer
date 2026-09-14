@@ -10,9 +10,11 @@ const dpr2 = {
   ui: isolatedPorts ? componentPort + 4 : 4177,
   backend: isolatedPorts ? componentPort + 5 : 8767,
 };
+// Isolate native window/pointer interactions on the shared X display. Parallel
+// headed runs showed intermittent loss of transient inspection/drag state.
 const workers = process.env.PLAYWRIGHT_ACCEPTANCE_WORKERS
   ? Number(process.env.PLAYWRIGHT_ACCEPTANCE_WORKERS)
-  : process.env.CI ? 2 : 1;
+  : 1;
 
 export default defineConfig({
   testDir: '.',

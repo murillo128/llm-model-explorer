@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { installProbe } from './probe';
+import { camera, zoom, drag, panelGeometry, promptViewport } from './usability';
 import { nativeCamera } from '../tests/native-camera';
 import { revealTensor } from '../tests/tensor-tree-helpers';
 
@@ -340,6 +341,7 @@ test('local reference Base opens normalization, both MLP orientations and embedd
   for (const tensor of referenceSamples.selected) {
     await (await revealTensor(page.getByRole('button', { includeHidden: true, name: new RegExp(tensor.name.replaceAll('.', '\\.')) }))).click();
     await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
+    await nativeCamera(page);
     await expect(page.locator('[data-result=tensor]')).toHaveCount(0, { timeout: 180_000 });
     if (tensor.shape.length === 2) {
       const canvas = page.locator('.matrix-scroll canvas');
@@ -529,7 +531,7 @@ test.describe('production native pane geometry', () => {
       await page.getByRole('button', { name: 'Refresh models', exact: true }).click(); await refreshed;
       await expect(page.locator('.tensor-identity')).toHaveCount(1);
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(0);
-      await expect(page.locator('.tensor-leaf-name')).toHaveText(Array(90).fill('weight'));
+      await expect(page.locator('.tensor-leaf-name')).toHaveText(Array(94).fill('weight'));
       await expect(page.locator('.tensor-choice summary, .tensor-choice details')).toHaveCount(0);
       const info = page.getByRole('button', { name: 'Tensor information' });
       await info.focus(); await info.press('Enter');
@@ -631,5 +633,276 @@ test('production prompt pixels, selection, history and composition survive embed
   await expect(page.locator('.tokenizer-status')).toContainText('current prompt');
   await embeddingDone(page, 7);
   expect(duringComposition).toEqual(['日本']);
+  await closeSession(page);
+});
+
+test('integrated inventory preferences and metadata preserve streaming panel geometry', async ({ page }, testInfo) => {
+  const name = 'layout.fits.weight';
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/fixture');
+  await expect(page.locator('.tensor-tree').first()).toBeVisible();
+  expect(await page.locator('.tensor-tree details').evaluateAll(nodes => nodes.every(node =>
+    node.hasAttribute('open') === !node.parentElement!.closest('details')))).toBe(true);
+  await control('arm', { kind: 'logical_tensor' });
+  await open(page, name);
+  await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
+  const initial = await panelGeometry(page);
+  expect(initial['.matrix-panel-header']![3]).toBe(40);
+  const info = page.getByRole('button', { name: 'Tensor information', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Tensor information' });
+  const close = page.getByRole('button', { name: 'Close tensor information' });
+  await info.hover(); await expect(dialog).toBeVisible(); await expect(close).toHaveCount(0);
+  const icon = (await info.boundingBox())!;
+  expect((await dialog.boundingBox())!.y).toBe(icon.y + icon.height);
+  await info.click(); await expect(close).toBeFocused();
+  await page.mouse.move(0, 0); await expect(dialog).toBeVisible();
+  await expect(dialog.locator('dt')).toHaveText(['Logical path', 'Rank', 'Elements', 'Storage dtype', 'Storage format', 'Logical dtype']);
+  expect(await panelGeometry(page)).toEqual(initial);
+  await page.keyboard.press('Escape'); await expect(info).toBeFocused();
+  await control('release', {}); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  expect(await panelGeometry(page)).toEqual(initial);
+  const canvas = await page.locator('.matrix-scroll canvas').elementHandle();
+  const resources = await metrics(page);
+  const pane = page.getByRole('region', { name: 'Tensor Explorer workspace', exact: true });
+  const inventory = page.getByRole('complementary', { name: 'Tensor inventory' });
+  const before = (await pane.boundingBox())!, width = (await inventory.boundingBox())!.width;
+  await page.getByRole('button', { name: 'Hide inventory' }).click();
+  await expect(page.getByRole('button', { name: 'Show inventory' })).toBeFocused();
+  expect((await pane.boundingBox())!.width - before.width).toBe(width + 16);
+  expect(await pane.boundingBox()).toEqual(await page.locator('#workspace').boundingBox());
+  await page.getByRole('button', { name: 'Show inventory' }).click();
+  const divider = page.getByRole('separator', { name: 'Resize tensor inventory' });
+  await divider.focus(); await divider.press('End');
+  await expect(divider).toHaveAttribute('aria-valuenow', '480');
+  expect(await canvas!.evaluate(node => node === document.querySelector('.matrix-scroll canvas'))).toBe(true);
+  expect(await metrics(page)).toMatchObject({ uploads: resources.uploads, createdTextures: resources.createdTextures });
+  await page.getByRole('button', { name: 'Hide inventory' }).click();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Show inventory' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show inventory' }).click();
+  await expect(divider).toHaveAttribute('aria-valuenow', '480');
+  await expect(page.getByRole('button', { name: new RegExp(`^${name}`) })).toBeVisible();
+  await documentFits(page);
+  await testInfo.attach('measurements', { body: JSON.stringify({ initial, reclaimedWidth: width + 16, restoredWidth: 480 }), contentType: 'application/json' });
+  await closeSession(page);
+});
+
+test('integrated camera gestures, exact selection, aligned scales and adaptive inspection retain scalar storage', async ({ page }, testInfo) => {
+  await open(page, 'layout.fits.weight'); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  let c = await camera(page, 32, 32);
+  expect(c.scaleX).toBeCloseTo(Math.max(1, Math.floor(c.width * c.dpr) / 32));
+  expect(c.scaleY).toBeCloseTo(c.scaleX);
+  await open(page); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await nativeCamera(page);
+  expect((await camera(page, 576, 1536)).scaleX).toBe(1);
+  const resource = await metrics(page);
+  const rulers = await page.locator('.distribution-scale').evaluateAll(nodes => nodes.map(n => n.getAttribute('aria-label')));
+  const canvas = await page.locator('.matrix-scroll canvas').elementHandle();
+  await zoom(page, 576, 1536, 3);
+  c = await camera(page, 576, 1536);
+  const focal = { x: c.rect.left + 91, y: c.rect.top + 71 };
+  await page.mouse.move(focal.x, focal.y); await page.mouse.wheel(0, -180);
+  await expect.poll(async () => (await camera(page, 576, 1536)).scaleX).toBeGreaterThan(c.scaleX);
+  const after = await camera(page, 576, 1536);
+  expect(Math.abs(c.x + 91 * c.dpr / c.scaleX - after.x - 91 * c.dpr / after.scaleX)).toBeLessThanOrEqual(2 * c.dpr / after.scaleX);
+  expect(Math.abs(c.y + 71 * c.dpr / c.scaleY - after.y - 71 * c.dpr / after.scaleY)).toBeLessThanOrEqual(2 * c.dpr / after.scaleY);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: focal.x - 20, y: focal.y }, { x: focal.x + 20, y: focal.y }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: focal.x - 40, y: focal.y }, { x: focal.x + 40, y: focal.y }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect.poll(async () => (await camera(page, 576, 1536)).scaleX).toBeGreaterThan(after.scaleX);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false }); await cdp.detach();
+  for (const axis of ['matrix', 'rows', 'columns'] as const) {
+    await page.getByRole('button', { name: 'Fit width', exact: true }).click();
+    await zoom(page, 576, 1536, 6);
+    c = await camera(page, 576, 1536);
+    const selector = axis === 'matrix' ? '.matrix-scroll canvas' : axis === 'rows' ? '.row-distributions canvas' : '.column-distributions canvas';
+    const box = (await page.locator(selector).boundingBox())!;
+    await drag(page, { x: box.x + 12, y: box.y + 12 },
+      { x: box.x + (axis === 'rows' ? 12 : 72), y: box.y + (axis === 'columns' ? 12 : 42) });
+    const bounds = axis === 'matrix' ? { columns: [2, 12], rows: [2, 7] } : { [axis]: [2, axis === 'rows' ? 7 : 12] };
+    await expect(page.locator('.matrix-zoom-preview')).toHaveAttribute('data-bounds', JSON.stringify(bounds));
+    expect(await page.locator('.matrix-zoom-preview').evaluate(n => getComputedStyle(n).borderTopColor)).toBe('rgb(245, 154, 56)');
+    expect((await camera(page, 576, 1536)).scaleX).toBeCloseTo(c.scaleX);
+    await page.mouse.up(); await expect(page.locator('.matrix-zoom-preview')).toHaveCount(0);
+    const selected = await camera(page, 576, 1536);
+    const expected = axis === 'matrix' ? Math.min(selected.width * c.dpr / 10, selected.height * c.dpr / 5)
+      : axis === 'rows' ? selected.height * c.dpr / 5 : selected.width * c.dpr / 10;
+    expect(selected.scaleX).toBeCloseTo(expected); expect(selected.scaleY).toBeCloseTo(expected);
+    if (axis !== 'matrix') {
+      const horizontal = axis === 'columns';
+      const oldCenter = horizontal ? c.y + c.height * c.dpr / c.scaleY / 2 : c.x + c.width * c.dpr / c.scaleX / 2;
+      const span = (horizontal ? selected.height : selected.width) * c.dpr / expected;
+      const wanted = Math.max(0, Math.min((horizontal ? 576 : 1536) - span, oldCenter - span / 2));
+      expect(Math.abs((horizontal ? selected.y : selected.x) - wanted)).toBeLessThanOrEqual(2 * c.dpr / expected);
+    }
+    await expect(page.locator('.row-distributions canvas')).toHaveAttribute('data-origin', `0,${selected.y}`);
+    await expect(page.locator('.column-distributions canvas')).toHaveAttribute('data-origin', `${selected.x},0`);
+    const row = (await page.locator('.row-distributions canvas').boundingBox())!;
+    const column = (await page.locator('.column-distributions canvas').boundingBox())!;
+    expect(row.width * c.dpr).toBe(100); expect(column.height * c.dpr).toBe(100);
+    expect(row.y).toBe(selected.rect.top); expect(column.x).toBe(selected.rect.left);
+    expect(row.height).toBe(selected.rect.height); expect(column.width).toBe(selected.rect.width);
+  }
+  await page.getByRole('button', { name: 'Fit width', exact: true }).click();
+  for (const [size, visible] of [[7, true], [9, true], [10.1, false], [9, false], [7, true]] as const) {
+    await zoom(page, 576, 1536, size);
+    c = await camera(page, 576, 1536);
+    await page.mouse.click(c.rect.left + 3.5 * size, c.rect.top + 3.5 * size);
+    await expect(page.locator('.inspection-readout')).toHaveText(`row 3 · column 3${value(3 * 1536 + 3)}`);
+    await expect(page.locator('.magnifier-card')).toHaveCount(visible ? 1 : 0);
+    if (visible) {
+      const card = (await page.locator('.matrix-inspection').boundingBox())!;
+      const pane = (await page.locator('.matrix-surfaces').boundingBox())!;
+      expect(card.x).toBeGreaterThanOrEqual(pane.x); expect(card.y).toBeGreaterThanOrEqual(pane.y);
+      expect(card.x + card.width).toBeLessThanOrEqual(pane.x + pane.width);
+      expect(card.y + card.height).toBeLessThanOrEqual(pane.y + pane.height);
+      for (const panel of await page.locator('.row-distributions, .column-distributions').all()) {
+        const p = (await panel.boundingBox())!;
+        expect(card.x + card.width <= p.x || card.x >= p.x + p.width || card.y + card.height <= p.y || card.y >= p.y + p.height).toBe(true);
+      }
+      expect(await page.locator('.magnifier-guide-horizontal').evaluate(n => n.getBoundingClientRect().height)).toBe(1);
+      expect(await page.locator('.magnifier-guide-vertical').evaluate(n => n.getBoundingClientRect().width)).toBe(1);
+    }
+  }
+  expect(await page.locator('.distribution-scale').evaluateAll(nodes => nodes.map(n => n.getAttribute('aria-label')))).toEqual(rulers);
+  expect(await metrics(page)).toMatchObject({ uploads: resource.uploads, createdTextures: resource.createdTextures, gpuBytes: resource.gpuBytes, errors: [] });
+  expect(await canvas!.evaluate(node => node === document.querySelector('.matrix-scroll canvas'))).toBe(true);
+  await documentFits(page);
+  await testInfo.attach('measurements', { body: JSON.stringify({ fit: c, focalBefore: after, resources: await metrics(page), rulers }), contentType: 'application/json' });
+  await closeSession(page);
+});
+
+for (const [name, low, high] of [
+  ['science', -2, 6], ['scale.concentrated', Math.fround(-.0001), Math.fround(.0002)],
+  ['scale.outliers', -1000, 3000], ['scale.constant', 2, 2], ['scale.nonfinite', null, null],
+] as const) test(`production distribution scale is truthful for ${name}`, async ({ page }) => {
+  await open(page, `${name}.weight`); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  for (const ruler of await page.locator('.distribution-scale').all()) {
+    if (low === null) {
+      await expect(ruler).toHaveAttribute('aria-label', /no finite values/);
+      await expect(ruler.locator('.distribution-endpoint')).toHaveCount(0);
+    } else {
+      await expect(ruler).toHaveAttribute('data-minimum', String(low));
+      await expect(ruler).toHaveAttribute('data-maximum', String(high));
+      if (low === high) await expect(ruler).toHaveAttribute('aria-label', /constant, samples in bin 50/);
+      else expect(await ruler.evaluate(n => parseFloat((n as HTMLElement).style.getPropertyValue('--distribution-zero'))))
+        .toBeCloseTo(-low / (high! - low) * 100);
+    }
+  }
+  const range = page.getByRole('region', { name: 'Distribution range' });
+  if (low === null) await expect(range).toContainText('No finite');
+  else {
+    await expect(range).toContainText('min'); await expect(range).toContainText('max');
+    await expect(range.locator('[title]').first()).toHaveAttribute('title', `True finite minimum: ${low}`);
+    await expect(range.locator('[title]').last()).toHaveAttribute('title', `True finite maximum: ${high}`);
+  }
+  const stable = await range.textContent();
+  await page.locator('.matrix-scroll').dispatchEvent('wheel', { deltaY: -100, ctrlKey: true });
+  expect(await range.textContent()).toBe(stable);
+  await closeSession(page);
+});
+
+test('production stale results remain visible and generation-fenced while embedding camera leaves prompt intact', async ({ page }, testInfo) => {
+  const editor = await tokenizer(page);
+  await editor.fill('AAA'); await embeddingDone(page, 4);
+  await editor.press('End');
+  const prompt = await promptViewport(page);
+  const canvas = await page.locator('.matrix-scroll canvas').elementHandle();
+  const resource = await metrics(page);
+  await zoom(page, 4, 576, 6);
+  let c = await camera(page, 4, 576);
+  await drag(page, { x: c.rect.left + 12, y: c.rect.top + 6 }, { x: c.rect.left + 72, y: c.rect.top + 18 });
+  await expect(page.locator('.matrix-zoom-preview')).toHaveAttribute('data-bounds', JSON.stringify({ columns: [2, 12], rows: [1, 3] }));
+  await page.mouse.up();
+  await page.locator('.matrix-scroll').evaluate(n => { n.scrollLeft = 100; });
+  expect(await promptViewport(page)).toEqual(prompt);
+  await page.getByRole('button', { name: 'Fit width', exact: true }).click();
+  expect(await promptViewport(page)).toEqual(prompt);
+  expect(await metrics(page)).toMatchObject({ uploads: resource.uploads, createdTextures: resource.createdTextures });
+  const oldIds = await page.locator('.token-ids').allTextContents();
+  await page.evaluate(() => {
+    const frames = { count: 0, missing: 0, running: true };
+    (window as any).__continuity = frames;
+    const sample = () => {
+      if (!frames.running) return;
+      frames.count++;
+      if (!document.querySelector('.token-opening') || !document.querySelector('.token-ids')
+        || !document.querySelector('.embedding-layer:not([data-staging]) canvas')) frames.missing++;
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  let release!: () => void, entered = false;
+  const barrier = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/tokenize', async route => {
+    const response = await route.fetch();
+    if (route.request().postDataJSON().text === 'AAAB') { entered = true; await barrier; }
+    await route.fulfill({ response });
+  });
+  await editor.focus(); await editor.press('End'); await editor.press('B');
+  await expect.poll(() => entered).toBe(true);
+  await expect(page.locator('.cm-editor')).toHaveAttribute('data-annotations', 'stale');
+  await expect(page.locator('.token-ids')).toHaveText(oldIds);
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  expect(await canvas!.evaluate(n => n === document.querySelector('.matrix-scroll canvas'))).toBe(true);
+  await page.locator('[data-token-index="1"]').hover();
+  await expect(page.locator('[data-token-index][data-active-token]')).toHaveCount(0);
+  await control('arm', { kind: 'input_embeddings' });
+  await editor.focus(); await editor.press('End'); await editor.press('C');
+  await expect.poll(async () => (await control()).control.entered).toBe(true);
+  await expect(page.locator('.cm-editor')).toHaveAttribute('data-annotations', 'current');
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  expect(await canvas!.evaluate(n => n === document.querySelector('.embedding-layer:not([data-staging]) .matrix-scroll canvas'))).toBe(true);
+  await page.locator('.matrix-scroll:visible').focus();
+  await expect(page.locator('[data-token-index][data-active-token]')).toHaveCount(0);
+  const newIds = await page.locator('.token-ids').allTextContents();
+  release(); await page.unrouteAll({ behavior: 'wait' });
+  await expect(page.locator('.token-ids')).toHaveText(newIds);
+  await control('release', {}); await embeddingDone(page, 6);
+  expect(await canvas!.evaluate(n => n.isConnected)).toBe(false);
+  await page.locator('.matrix-scroll').focus();
+  await expect(page.locator('[data-token-index="0"]')).toHaveAttribute('data-active-token', '');
+  c = await camera(page, 6, 576);
+  const frames = await page.evaluate(() => { const frames = (window as any).__continuity; frames.running = false; return frames; });
+  expect(frames.count).toBeGreaterThan(2); expect(frames.missing).toBe(0);
+  await documentFits(page);
+  await testInfo.attach('measurements', { body: JSON.stringify({ prompt, camera: c, frames, resources: await metrics(page) }), contentType: 'application/json' });
+  await closeSession(page);
+});
+
+test('production inspection tolerates DPR change before viewport resize notification', async ({ page }) => {
+  await open(page); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await page.locator('.matrix-scroll').focus();
+  await expect(page.locator('.inspection-readout')).toContainText('row 0 · column 0');
+  const before = await metrics(page);
+  // A monitor/browser DPR change can precede resize/media-query notification.
+  // Force that event order, rather than relying on a timing-sensitive real move.
+  const errors = await page.evaluate(() => {
+    const messages: string[] = [];
+    const record = (event: ErrorEvent) => { messages.push(event.message); };
+    window.addEventListener('error', record);
+    const original = devicePixelRatio;
+    try {
+      Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: original === 1 ? 2 : 1 });
+      document.querySelector('.matrix-scroll canvas')!.dispatchEvent(new PointerEvent('pointerleave'));
+      window.dispatchEvent(new Event('resize'));
+    } finally {
+      Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: original });
+      window.dispatchEvent(new Event('resize'));
+      window.removeEventListener('error', record);
+    }
+    return messages;
+  });
+  expect(errors).toEqual([]);
+  await expect(page.locator('.inspection-readout')).toHaveCount(0);
+  await page.locator('.matrix-scroll').press('ArrowRight');
+  await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 1${value(1)}`);
+  expect(await metrics(page)).toMatchObject({ uploads: before.uploads, createdTextures: before.createdTextures });
   await closeSession(page);
 });
