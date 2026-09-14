@@ -1,4 +1,6 @@
 import type { components, operations } from './generated/types';
+import { validateArchitecture } from './architecture-validation';
+import type { ArchitectureContext } from './architecture-validation';
 import { ApiFailure, requireProtocol } from './errors';
 import { LmexDecoder } from './lmex-decoder';
 import type { DecoderCallbacks, StreamOutcome } from './lmex-decoder';
@@ -27,17 +29,34 @@ function transportFailure(error: unknown, signal?: AbortSignal): ApiFailure {
   if (error instanceof ApiFailure) return error;
   return new ApiFailure(signal?.aborted ? 'cancelled' : 'transport', signal?.aborted ? 'Request cancelled' : 'HTTP transport interrupted', undefined, undefined, { cause: error });
 }
-async function readJson(response: Response): Promise<unknown> {
+export const architectureByteLimit = 33_554_432;
+async function readJson(response: Response, limit?: number): Promise<unknown> {
   requireProtocol(mediaType(response) === 'application/json', 'Expected application/json');
-  try { return JSON.parse(await response.text()); }
+  try {
+    if (limit === undefined) return JSON.parse(await response.text());
+    requireProtocol(response.body, 'Missing architecture response body');
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8', { fatal: true });
+    let size = 0, text = '';
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        requireProtocol(size <= limit, 'Architecture exceeds the 32 MiB limit');
+        text += decoder.decode(value, { stream: true });
+      }
+      return JSON.parse(text + decoder.decode());
+    } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+  }
   catch (cause) {
     if (cause instanceof SyntaxError) throw new ApiFailure('protocol', 'Invalid HTTP JSON', undefined, undefined, { cause });
     throw cause;
   }
 }
-async function checkStatus(response: Response, expected: number): Promise<void> {
+async function checkStatus(response: Response, expected: number, limit?: number): Promise<void> {
   if (!response.ok) {
-    const detail = validateSchema('Error', await readJson(response));
+    const detail = validateSchema('Error', await readJson(response, limit));
     throw new ApiFailure('http', detail.message, response.status, detail);
   }
   requireProtocol(response.status === expected, `Unexpected HTTP status ${response.status}`);
@@ -61,9 +80,9 @@ export class ApiClient {
         headers: { Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
-      await checkStatus(response, status);
+      await checkStatus(response, status, schema === 'getArchitecture' ? architectureByteLimit : undefined);
       if (!schema) return undefined as T;
-      const result = await readJson(response);
+      const result = await readJson(response, schema === 'getArchitecture' ? architectureByteLimit : undefined);
       validateResponse(schema, result);
       return result as T;
     } catch (error) { throw transportFailure(error, signal); }
@@ -84,6 +103,10 @@ export class ApiClient {
   }
   listTensors(id: string, signal?: AbortSignal) {
     return this.request<Schemas['TensorInventory']>(`${this.sessionPath(id)}/tensors`, 'GET', 200, 'listTensors', undefined, signal);
+  }
+  async getArchitecture(id: string, context: ArchitectureContext, signal?: AbortSignal) {
+    const response = await this.request<Schemas['ArchitectureResponse']>(`${this.sessionPath(id)}/architecture`, 'GET', 200, 'getArchitecture', undefined, signal);
+    return validateArchitecture(response, context);
   }
   tokenize(id: string, body: Schemas['TokenizeRequest'], signal?: AbortSignal) {
     validateSchema('TokenizeRequest', body);
