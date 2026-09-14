@@ -476,7 +476,8 @@ and numeric inventory descriptors through `AnalysisInput.from_source`. It has no
 runtime import of PyTorch or Transformers. Packaged family adapters explicitly
 register a `Description` with reviewed model-type/architecture discriminators,
 option/storage validation (`supports`), semantic producer revisions, and a `build`
-callback. No family descriptions are registered by this core increment.
+callback. Consumers register packaged family descriptions explicitly; V-JEPA 2
+registration is documented below.
 
 Builders append full typed nodes, edges, parameters, symbols and repetitions;
 `record_id(kind, semantic_key)` identifies an actual instance independently of its
@@ -504,3 +505,24 @@ without truncation. A response producer must reserve its own envelope bytes via
 publication, HTTP retrieval, and family semantics remain their consumers' work.
 See [graph-core evidence](evidence/architecture-graph-core.md) for the independent
 oracle and the limits of this fixture-only validation.
+
+### V-JEPA 2 packaged description
+
+The shared registry can now register the bounded `visual_encoder_predictor`
+description explicitly, without importing Transformers or constructing a model:
+
+```python
+from llm_model_explorer.architecture_analysis import AnalysisInput, DescriptionRegistry
+from llm_model_explorer.architecture_analysis.vjepa2 import register_vjepa2
+
+registry = DescriptionRegistry()
+register_vjepa2(registry)
+result = registry.analyze(AnalysisInput.from_source(source, tokenizer_available=False))
+```
+
+It expands the selected Transformers V-JEPA 2 encoder and predictor, preserves
+native parameter identities and higher-rank metadata, and diagnoses missing
+weights as partial coverage. Registration is a startup consumer seam; it does not
+add HTTP or cache lifecycle. See [source review and fixture evidence](evidence/vjepa2-description.md)
+for the exact revisions, described path, reproduction, reusable no-tokenizer
+fixtures and the distinction from later full-local-checkpoint acceptance.

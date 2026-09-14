@@ -521,6 +521,7 @@ class Forbid:
             raise AssertionError(fullname)
 sys.meta_path.insert(0, Forbid())
 import llm_model_explorer.architecture_analysis
+import llm_model_explorer.architecture_analysis.vjepa2
 """,
         ],
         capture_output=True,
