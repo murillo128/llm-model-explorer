@@ -80,9 +80,9 @@ async def delete_session(session_id: UUID, sessions: Sessions) -> Response:
 
 @router.get("/sessions/{session_id}/tensors")
 async def list_tensors(session_id: UUID, sessions: Sessions) -> JSONResponse:
-    tensors = await sessions.tensors(session_id)
+    inventory = await sessions.inventory(session_id)
     return JSONResponse(
-        {"tensors": [tensor.model_dump(mode="json") for tensor in tensors]},
+        inventory,
         headers={"Cache-Control": "no-store"},
     )
 

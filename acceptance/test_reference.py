@@ -6,6 +6,7 @@ import struct
 from pathlib import Path
 
 import pytest
+from safetensors import safe_open
 from transformers import AutoTokenizer
 
 from acceptance.fixtures import TEXT
@@ -16,6 +17,8 @@ from acceptance.test_network import Frames, Service
 def test_local_smollm2_base(tmp_path):
     supplied = os.environ.get("LMEX_REFERENCE_MODEL_DIR")
     if not supplied:
+        if os.environ.get("LMEX_REQUIRE_ARCHITECTURE_REFERENCES") == "1":
+            pytest.fail("LMEX_REFERENCE_MODEL_DIR is required for the SmolLM2 regression gate")
         pytest.skip("LMEX_REFERENCE_MODEL_DIR not supplied; local SmolLM2-135M Base not tested")
     directory = Path(supplied).resolve(strict=True)
     expected = samples(directory)
@@ -59,6 +62,30 @@ def test_local_smollm2_base(tmp_path):
         actual = service.client.post(f"/sessions/{session}/tokenize", json={"text": TEXT}).json()
         tokenizer = AutoTokenizer.from_pretrained(directory, local_files_only=True)
         assert [t["id"] for t in actual["tokens"]] == tokenizer(TEXT)["input_ids"]
+        ids = [actual["tokens"][0]["id"], actual["tokens"][-1]["id"], 0, actual["tokens"][0]["id"]]
+        # Independent local row slices verify the actual Base embedding table,
+        # preserving order and duplicates without loading the complete table.
+        embedding = next(
+            t for t in expected["selected"] if t["name"].endswith("embed_tokens.weight")
+        )
+        rows = None
+        for shard in directory.rglob("*.safetensors"):
+            with safe_open(shard, framework="pt", device="cpu") as weights:
+                if embedding["name"] in weights.keys():
+                    view = weights.get_slice(embedding["name"])
+                    rows = b"".join(view[i : i + 1].float().numpy().tobytes() for i in ids)
+                    break
+        assert rows is not None
+        with service.client.stream(
+            "POST", f"/sessions/{session}/embeddings", json={"token_ids": ids}
+        ) as response:
+            frames = Frames(response)
+            kind, data = frames.next()
+            assert kind == 1 and json.loads(data)["token_ids"] == ids
+            records = frames.rest()
+            assert records[-1] == (4, b"")
+            assert all(kind == 2 for kind, _ in records[:-1])
+            assert b"".join(data for _, data in records[:-1]) == rows
         assert service.client.delete(f"/sessions/{session}").status_code == 204
     finally:
         service.stop()

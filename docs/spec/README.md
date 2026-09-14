@@ -25,7 +25,7 @@ The specification is split along the three system boundaries: backend, API contr
 
 ## Authority and delivery status
 
-These documents describe accepted design. `api/openapi.yaml` remains authoritative for the published HTTP schemas; `api/binary-streaming.md` owns streaming bytes. `api/contract.md` owns their shared semantics. The Architecture Explorer extension is accepted but pending implementation. Its dedicated API document defines the target contract; the contract-publication child must incorporate it into OpenAPI together with conformance fixtures and generated bindings before backend/UI consumers ship. This documentation-only adoption does not claim that the new endpoint already exists or silently invalidate the current generated bindings.
+These documents describe accepted design. `api/openapi.yaml` remains authoritative for the published HTTP schemas; `api/binary-streaming.md` owns streaming bytes. `api/contract.md` owns their shared semantics. The Architecture Explorer extension is published in OpenAPI together with conformance fixtures and generated UI bindings. Its dedicated API document owns graph semantics and capability separation. Runtime architecture analysis, prepared retrieval, and the global canvas/modal are implemented. Observed checkpoint support and validation limits are recorded in [integrated acceptance evidence](../../acceptance/architecture-evidence.md); implementation alone does not establish reference acceptance.
 
 Architecture Explorer is a separate increment, not an expansion of an already executing issue. Existing matrix-camera and tokenizer-continuity requirements remain in force. Its graph camera does not replace or constrain the Matrix Explorer camera.
 

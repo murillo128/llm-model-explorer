@@ -79,9 +79,24 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "tensors"
+          "tensors",
+          "coverage",
+          "diagnostics"
         ],
         "properties": {
+          "coverage": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial"
+            ]
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InventoryDiagnostic"
+            }
+          },
           "tensors": {
             "type": "array",
             "items": {
@@ -792,6 +807,1085 @@
           }
         },
         "description": "Advisory PROGRESS_JSON payload. When total is present, completed <= total. Does not change metadata."
+      },
+      "ArchitectureId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256,
+        "pattern": "^(?!\\.{1,2}$)[A-Za-z0-9._~-]+$",
+        "description": "Opaque graph-scoped identity; never a path, route, or executable expression."
+      },
+      "ArchitectureName": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      },
+      "ArchitectureText": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 16384
+      },
+      "ArchitectureDiagnostic": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "message": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          },
+          "node_id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "parameter_id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          }
+        }
+      },
+      "InventoryDiagnostic": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "message": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          }
+        }
+      },
+      "ArchitectureProvenance": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "source"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "configuration",
+              "storage",
+              "description"
+            ]
+          },
+          "source": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          }
+        }
+      },
+      "ArchitectureConstantDimension": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "value"
+        ],
+        "properties": {
+          "kind": {
+            "const": "constant",
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/SafeInteger"
+          }
+        }
+      },
+      "ArchitectureSymbolDimension": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "name"
+        ],
+        "properties": {
+          "kind": {
+            "const": "symbol",
+            "type": "string"
+          },
+          "name": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          }
+        }
+      },
+      "ArchitectureExpressionDimension": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "text",
+          "symbols"
+        ],
+        "properties": {
+          "kind": {
+            "const": "expression",
+            "type": "string"
+          },
+          "text": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          },
+          "symbols": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureName"
+            }
+          }
+        }
+      },
+      "ArchitectureUnknownDimension": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "reason"
+        ],
+        "properties": {
+          "kind": {
+            "const": "unknown",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          }
+        }
+      },
+      "ArchitectureDimension": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ArchitectureConstantDimension"
+          },
+          {
+            "$ref": "#/components/schemas/ArchitectureSymbolDimension"
+          },
+          {
+            "$ref": "#/components/schemas/ArchitectureExpressionDimension"
+          },
+          {
+            "$ref": "#/components/schemas/ArchitectureUnknownDimension"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "constant": "#/components/schemas/ArchitectureConstantDimension",
+            "symbol": "#/components/schemas/ArchitectureSymbolDimension",
+            "expression": "#/components/schemas/ArchitectureExpressionDimension",
+            "unknown": "#/components/schemas/ArchitectureUnknownDimension"
+          }
+        }
+      },
+      "ArchitectureShape": {
+        "oneOf": [
+          {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureDimension"
+            }
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Ordered logical dimensions. [] is scalar; null means unknown rank. Expressions are display-only."
+      },
+      "ArchitectureSymbol": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "meaning"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "meaning": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          }
+        }
+      },
+      "ArchitecturePort": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "direction",
+          "label",
+          "shape"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "input",
+              "output"
+            ]
+          },
+          "label": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "shape": {
+            "$ref": "#/components/schemas/ArchitectureShape"
+          }
+        }
+      },
+      "ArchitectureModuleReference": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "name"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "module"
+          },
+          "name": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          }
+        }
+      },
+      "ArchitectureParameterReference": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "parameter_id"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "parameter"
+          },
+          "parameter_id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          }
+        }
+      },
+      "ArchitectureTokenizerReference": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "tokenizer"
+          }
+        }
+      },
+      "ArchitectureReference": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ArchitectureModuleReference"
+          },
+          {
+            "$ref": "#/components/schemas/ArchitectureParameterReference"
+          },
+          {
+            "$ref": "#/components/schemas/ArchitectureTokenizerReference"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "module": "#/components/schemas/ArchitectureModuleReference",
+            "parameter": "#/components/schemas/ArchitectureParameterReference",
+            "tokenizer": "#/components/schemas/ArchitectureTokenizerReference"
+          }
+        }
+      },
+      "ArchitectureAttribute": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "value",
+          "provenance"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "value": {
+            "oneOf": [
+              {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ],
+                "maxLength": 16384
+              },
+              {
+                "type": "array",
+                "maxItems": 33554432,
+                "items": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ],
+                  "maxLength": 16384
+                }
+              }
+            ]
+          },
+          "provenance": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureProvenance"
+            }
+          }
+        }
+      },
+      "ArchitectureLeafNode": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "label",
+          "ports",
+          "parameter_ids",
+          "references",
+          "attributes",
+          "provenance"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "operation",
+              "input",
+              "output",
+              "context",
+              "state"
+            ]
+          },
+          "label": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "ports": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitecturePort"
+            }
+          },
+          "parameter_ids": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureId"
+            }
+          },
+          "references": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureReference"
+            }
+          },
+          "attributes": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureAttribute"
+            }
+          },
+          "provenance": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureProvenance"
+            }
+          },
+          "parent_id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "description": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          },
+          "formula": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          }
+        }
+      },
+      "ArchitectureGroupNode": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "label",
+          "ports",
+          "parameter_ids",
+          "references",
+          "attributes",
+          "provenance",
+          "children"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "kind": {
+            "type": "string",
+            "const": "group"
+          },
+          "label": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "ports": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitecturePort"
+            }
+          },
+          "parameter_ids": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureId"
+            }
+          },
+          "references": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureReference"
+            }
+          },
+          "attributes": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureAttribute"
+            }
+          },
+          "provenance": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureProvenance"
+            }
+          },
+          "parent_id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "description": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          },
+          "formula": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          },
+          "children": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureId"
+            }
+          }
+        }
+      },
+      "ArchitectureNode": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ArchitectureLeafNode"
+          },
+          {
+            "$ref": "#/components/schemas/ArchitectureGroupNode"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "operation": "#/components/schemas/ArchitectureLeafNode",
+            "input": "#/components/schemas/ArchitectureLeafNode",
+            "output": "#/components/schemas/ArchitectureLeafNode",
+            "context": "#/components/schemas/ArchitectureLeafNode",
+            "state": "#/components/schemas/ArchitectureLeafNode",
+            "group": "#/components/schemas/ArchitectureGroupNode"
+          }
+        }
+      },
+      "ArchitectureEndpoint": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "node_id",
+          "port_id"
+        ],
+        "properties": {
+          "node_id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "port_id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          }
+        }
+      },
+      "ArchitectureEdge": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source",
+          "target",
+          "kind",
+          "provenance"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ArchitectureEndpoint"
+          },
+          "target": {
+            "$ref": "#/components/schemas/ArchitectureEndpoint"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "data",
+              "state",
+              "context"
+            ]
+          },
+          "provenance": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureProvenance"
+            }
+          },
+          "label": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          }
+        }
+      },
+      "ArchitectureRepetitionInstance": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "node_id",
+          "index",
+          "variant"
+        ],
+        "properties": {
+          "node_id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "index": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "variant": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          }
+        }
+      },
+      "ArchitectureRepetition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "parent_id",
+          "label",
+          "instances"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "parent_id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "label": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "instances": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureRepetitionInstance"
+            }
+          }
+        }
+      },
+      "ArchitectureStorage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "dtype",
+          "shape"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "dtype": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "shape": {
+            "$ref": "#/components/schemas/TensorShape"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          }
+        }
+      },
+      "ArchitectureRegion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "storage_name",
+          "description"
+        ],
+        "properties": {
+          "storage_name": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "description": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          }
+        }
+      },
+      "ArchitectureAvailableInspection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "tensor_id"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "available"
+          },
+          "tensor_id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          }
+        }
+      },
+      "ArchitectureUnavailableInspection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "reason",
+          "message"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "unavailable"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "unsupported_representation",
+              "unsupported_rank",
+              "requires_view",
+              "unresolved_binding"
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/ArchitectureText"
+          }
+        }
+      },
+      "ArchitectureInspection": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ArchitectureAvailableInspection"
+          },
+          {
+            "$ref": "#/components/schemas/ArchitectureUnavailableInspection"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "status",
+          "mapping": {
+            "available": "#/components/schemas/ArchitectureAvailableInspection",
+            "unavailable": "#/components/schemas/ArchitectureUnavailableInspection"
+          }
+        }
+      },
+      "ArchitectureDirectParameter": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "logical_shape",
+          "binding",
+          "storage",
+          "inspection",
+          "provenance"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "name": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "logical_shape": {
+            "$ref": "#/components/schemas/ArchitectureShape"
+          },
+          "binding": {
+            "type": "string",
+            "enum": [
+              "native",
+              "quantized",
+              "unresolved"
+            ]
+          },
+          "storage": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureStorage"
+            }
+          },
+          "inspection": {
+            "$ref": "#/components/schemas/ArchitectureInspection"
+          },
+          "provenance": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureProvenance"
+            }
+          }
+        }
+      },
+      "ArchitectureAliasParameter": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "logical_shape",
+          "binding",
+          "storage",
+          "inspection",
+          "provenance",
+          "alias_of"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "name": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "logical_shape": {
+            "$ref": "#/components/schemas/ArchitectureShape"
+          },
+          "binding": {
+            "type": "string",
+            "const": "alias"
+          },
+          "storage": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureStorage"
+            }
+          },
+          "inspection": {
+            "$ref": "#/components/schemas/ArchitectureInspection"
+          },
+          "provenance": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureProvenance"
+            }
+          },
+          "alias_of": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          }
+        }
+      },
+      "ArchitectureFusedParameter": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "logical_shape",
+          "binding",
+          "storage",
+          "inspection",
+          "provenance",
+          "region"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "name": {
+            "$ref": "#/components/schemas/ArchitectureName"
+          },
+          "logical_shape": {
+            "$ref": "#/components/schemas/ArchitectureShape"
+          },
+          "binding": {
+            "type": "string",
+            "const": "fused_region"
+          },
+          "storage": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureStorage"
+            }
+          },
+          "inspection": {
+            "$ref": "#/components/schemas/ArchitectureInspection"
+          },
+          "provenance": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureProvenance"
+            }
+          },
+          "region": {
+            "$ref": "#/components/schemas/ArchitectureRegion"
+          }
+        }
+      },
+      "ArchitectureParameter": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ArchitectureDirectParameter"
+          },
+          {
+            "$ref": "#/components/schemas/ArchitectureAliasParameter"
+          },
+          {
+            "$ref": "#/components/schemas/ArchitectureFusedParameter"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "binding",
+          "mapping": {
+            "native": "#/components/schemas/ArchitectureDirectParameter",
+            "quantized": "#/components/schemas/ArchitectureDirectParameter",
+            "unresolved": "#/components/schemas/ArchitectureDirectParameter",
+            "alias": "#/components/schemas/ArchitectureAliasParameter",
+            "fused_region": "#/components/schemas/ArchitectureFusedParameter"
+          }
+        }
+      },
+      "ArchitectureGraph": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "graph_id",
+          "scope",
+          "coverage",
+          "symbols",
+          "nodes",
+          "edges",
+          "repetitions",
+          "parameters",
+          "diagnostics"
+        ],
+        "properties": {
+          "graph_id": {
+            "$ref": "#/components/schemas/ArchitectureId"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "language_model",
+              "visual_encoder_predictor"
+            ]
+          },
+          "coverage": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial"
+            ]
+          },
+          "symbols": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureSymbol"
+            }
+          },
+          "nodes": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureNode"
+            },
+            "minItems": 1
+          },
+          "edges": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureEdge"
+            }
+          },
+          "repetitions": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureRepetition"
+            }
+          },
+          "parameters": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureParameter"
+            }
+          },
+          "diagnostics": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureDiagnostic"
+            }
+          }
+        }
+      },
+      "ArchitectureAvailableResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "model_id",
+          "diagnostics",
+          "graph"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "available"
+          },
+          "model_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "diagnostics": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureDiagnostic"
+            }
+          },
+          "graph": {
+            "$ref": "#/components/schemas/ArchitectureGraph"
+          }
+        }
+      },
+      "ArchitectureUnavailableResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "model_id",
+          "diagnostics",
+          "reason",
+          "requires_restart"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "unavailable"
+          },
+          "model_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "diagnostics": {
+            "type": "array",
+            "maxItems": 33554432,
+            "items": {
+              "$ref": "#/components/schemas/ArchitectureDiagnostic"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "unsupported_architecture",
+              "analysis_failed",
+              "restart_required",
+              "unsupported_size",
+              "cache_unavailable"
+            ]
+          },
+          "requires_restart": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ArchitectureResponse": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ArchitectureAvailableResponse"
+          },
+          {
+            "$ref": "#/components/schemas/ArchitectureUnavailableResponse"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "status",
+          "mapping": {
+            "available": "#/components/schemas/ArchitectureAvailableResponse",
+            "unavailable": "#/components/schemas/ArchitectureUnavailableResponse"
+          }
+        },
+        "description": "Prepared static metadata, limited to 33554432 decoded UTF-8 JSON bytes. Bound reads and serialization before allocation; overflow yields unavailable/unsupported_size, never truncation. Requires graph closure, containment, repetition, alias, dimension and session-inventory checks described in architecture-explorer.md. No numerical operation is created.",
+        "x-max-decoded-bytes": 33554432
       }
     }
   },
@@ -815,6 +1909,9 @@
     },
     "getSession": {
       "$ref": "#/components/schemas/Session"
+    },
+    "getArchitecture": {
+      "$ref": "#/components/schemas/ArchitectureResponse"
     },
     "listTensors": {
       "$ref": "#/components/schemas/TensorInventory"

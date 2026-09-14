@@ -116,6 +116,6 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
           {domain.minimum === domain.maximum && <span>Constant · samples in bin 50; no value span</span>}</>}
     </div>}
     <div ref={host} />
-    {inspection && <InspectionCard inspection={inspection} />}
+    {inspection && <InspectionCard inspection={inspection} host={host} />}
   </div>;
 }

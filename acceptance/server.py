@@ -130,9 +130,12 @@ def application(root: Path, origin: str, device: str = "cpu"):
         consumers = runtime._consumers
         artifacts = {}
         for manifest in sorted((root / "cache").glob("*/manifest.json")):
+            metadata = json.loads(manifest.read_text())
+            if metadata["format"] != 1:
+                continue  # This observer measures numerical production, not startup graphs.
             payload = manifest.parent / "payload.bin"
             artifacts[manifest.parent.name] = {
-                "manifest": json.loads(manifest.read_text()),
+                "manifest": metadata,
                 "inode": payload.stat().st_ino,
                 "mtime_ns": payload.stat().st_mtime_ns,
             }

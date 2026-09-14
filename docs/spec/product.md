@@ -25,7 +25,7 @@ Matrix exploration supports viewport zoom and navigation while preserving exact 
 
 Architecture Explorer adds a static, exhaustive, navigable description of supported local checkpoints. It explains components, recognizable mathematical operations, their data dependencies, known/symbolic dimensions, and references to weights. It reuses the existing explorers rather than replacing them. Its domain rules belong in [architecture analysis](backend/architecture-analysis.md), its transport in the [architecture API contract](api/architecture-explorer.md), and its interaction in the [Architecture Explorer specification](ui/architecture-explorer.md).
 
-This accepted architecture increment is pending implementation and reference-checkpoint validation. It performs no inference, tracing, activation capture, token generation, or interactive execution. Future links to other explorers are represented by semantic resource references, not fictional execution results or unimplemented endpoints.
+Implementation and reference-checkpoint validation status are recorded in [integrated acceptance evidence](../../acceptance/architecture-evidence.md). It performs no inference, tracing, activation capture, token generation, or interactive execution. Future links to other explorers are represented by semantic resource references, not fictional execution results or unimplemented endpoints.
 
 ## Architecture reference checkpoints and bounded coverage
 

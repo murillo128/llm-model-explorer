@@ -468,3 +468,106 @@ reads only requested row ranges and checks the pinned snapshot throughout.
 
 See [input embedding evidence](evidence/input-embeddings.md) for fixture coverage
 and a reproducible optional local SmolLM2 comparison.
+
+## Static architecture graph core
+
+`llm_model_explorer.architecture_analysis` accepts guarded configuration and physical
+and numeric inventory descriptors through `AnalysisInput.from_source`. It has no
+runtime import of PyTorch or Transformers. Packaged family adapters explicitly
+register a `Description` with reviewed model-type/architecture discriminators,
+option/storage validation (`supports`), semantic producer revisions, and a `build`
+callback. Consumers register packaged family descriptions explicitly; V-JEPA 2
+and dense language registration are documented below.
+
+Builders append full typed nodes, edges, parameters, symbols and repetitions;
+`record_id(kind, semantic_key)` identifies an actual instance independently of its
+label or insertion order. Adapters supply ordered group children and explicit
+edges, including boundary ports. `unknown` and missing native bindings produce
+localized diagnostics and partial coverage. `finish` checks the complete graph
+against the admitted inventory. Registry analysis returns complete, partial or
+unavailable without an HTTP/model/session envelope. Filesystem handles, loading
+capabilities, and numerical tensors are not passed to description callbacks.
+Adapters select architectural facts from configuration rather than copying raw
+checkpoint strings into public records.
+
+The API specification remains authoritative. `architecture_analysis/records.py`
+is generated from the published OpenAPI, with no runtime schema-file dependency:
+
+```sh
+uv run --locked python scripts/generate_architecture_records.py
+uv run --locked python scripts/generate_architecture_records.py --check
+uv run --locked pytest tests/test_architecture_analysis.py
+```
+
+Construction and serialization enforce a 32 MiB maximum and reject overflow
+without truncation. A response producer must reserve its own envelope bytes via
+`byte_limit` and bound the entire response. File reads, startup scheduling, cache
+publication, HTTP retrieval, and family semantics remain their consumers' work.
+See [graph-core evidence](evidence/architecture-graph-core.md) for the independent
+oracle and the limits of this fixture-only validation.
+
+### V-JEPA 2 packaged description
+
+The shared registry can now register the bounded `visual_encoder_predictor`
+description explicitly, without importing Transformers or constructing a model:
+
+```python
+from llm_model_explorer.architecture_analysis import AnalysisInput, DescriptionRegistry
+from llm_model_explorer.architecture_analysis.vjepa2 import register_vjepa2
+
+registry = DescriptionRegistry()
+register_vjepa2(registry)
+result = registry.analyze(AnalysisInput.from_source(source, tokenizer_available=False))
+```
+
+It expands the selected Transformers V-JEPA 2 encoder and predictor, preserves
+native parameter identities and higher-rank metadata, and diagnoses missing
+weights as partial coverage. Registration is a startup consumer seam; it does not
+add HTTP or cache lifecycle. See [source review and fixture evidence](evidence/vjepa2-description.md)
+for the exact revisions, described path, reproduction, reusable no-tokenizer
+fixtures and the distinction from later full-local-checkpoint acceptance.
+
+### Dense language architecture descriptions
+
+`architecture_analysis.register_dense_descriptions(registry)` registers the
+reviewed Qwen3 dense and SmolLM2/Llama descriptions in a caller-owned
+`DescriptionRegistry`. Pass guarded `AnalysisInput.from_source(...)` metadata;
+these descriptions do not own startup, HTTP, or artifact-cache orchestration.
+They expand all configured decoder instances and preserve native, tied, and
+GPTQ parameter relationships. Unknown structural options return unavailable;
+missing/incompatible parameters or unexplained storage yield explicit partial
+coverage. Numeric inspection remains separate from architecture completeness.
+See [dense description evidence](evidence/dense-language-descriptions.md) for
+reviewed source/configuration revisions, supported variants, and validation limits.
+
+### Prepared architecture lifecycle and retrieval
+
+`open_services` registers the reviewed dense, Qwen3.5, and V-JEPA 2 descriptions
+and prepares the discovered catalogue sequentially before yielding application
+services. The CLI logs each logical model's terminal outcome and separate hashing,
+analysis, cache-read, and total preparation times. A warm startup still hashes
+checkpoint content; valid structured artifacts avoid graph construction.
+
+`GET /sessions/{session_id}/architecture` retrieves only the startup result for
+the session's exact snapshot, including valid sessions without a tokenizer. It
+returns complete/partial graphs or the contract's unavailable capability response.
+Changed pinned content returns 409; newly admitted content requires restart;
+missing/corrupt prepared cache returns `cache_unavailable` without generation.
+Model-local preparation failures permit later models to finish. An unusable cache
+or ambiguous catalogue prevents readiness.
+
+The CLI's `ApplicationServer` forwards shutdown during startup to the preparation
+stop flag and lifespan task. Preparation settles its current blocking work and
+aborts unpublished writers before releasing services. Custom ASGI hosts must
+cancel a pending startup lifespan when requesting shutdown during preparation.
+Existing numerical streams keep their own operation and cancellation lifecycle.
+See [lifecycle validation evidence](evidence/prepared-architecture-lifecycle.md).
+
+## Integrated architecture acceptance
+
+The implemented descriptions, startup retrieval, global graph and native weight
+modal are exercised together over real HTTP and the built UI. See
+[architecture acceptance](../acceptance/architecture.md) for fixture coverage,
+operator-supplied reference manifests, measured evidence and the
+full-reference gate. Fixture and source-review success alone do not validate a
+complete installed reference checkpoint.

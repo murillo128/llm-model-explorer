@@ -1,0 +1,3120 @@
+{
+  "inventory_cases": [
+    {
+      "name": "native-complete",
+      "value": {
+        "coverage": "complete",
+        "diagnostics": [],
+        "tensors": [
+          {
+            "id": "tensor_native",
+            "name": "linear.weight",
+            "path": [
+              "linear",
+              "weight"
+            ],
+            "shape": [
+              2,
+              3
+            ],
+            "rank": 2,
+            "numel": 6,
+            "storage_dtype": "F16",
+            "logical_dtype": "float32"
+          },
+          {
+            "id": "tensor_volume",
+            "name": "patch.weight",
+            "path": [
+              "patch",
+              "weight"
+            ],
+            "shape": [
+              2,
+              3,
+              4
+            ],
+            "rank": 3,
+            "numel": 24,
+            "storage_dtype": "F32",
+            "logical_dtype": "float32"
+          }
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "partial-empty",
+      "value": {
+        "tensors": [],
+        "coverage": "partial",
+        "diagnostics": []
+      },
+      "valid": true
+    },
+    {
+      "name": "coverage-required",
+      "value": {
+        "tensors": [],
+        "diagnostics": []
+      },
+      "valid": false
+    },
+    {
+      "name": "coverage-closed",
+      "value": {
+        "tensors": [],
+        "coverage": "unknown",
+        "diagnostics": []
+      },
+      "valid": false
+    },
+    {
+      "name": "diagnostics-required",
+      "value": {
+        "tensors": [],
+        "coverage": "complete"
+      },
+      "valid": false
+    },
+    {
+      "name": "diagnostics-not-graph-local",
+      "value": {
+        "tensors": [],
+        "coverage": "partial",
+        "diagnostics": [
+          {
+            "code": "excluded",
+            "message": "Descriptive only.",
+            "node_id": "foreign"
+          }
+        ]
+      },
+      "valid": false
+    }
+  ],
+  "response": {
+    "status": "available",
+    "model_id": "test/architecture",
+    "diagnostics": [],
+    "graph": {
+      "graph_id": "graph_synthetic",
+      "scope": "language_model",
+      "coverage": "complete",
+      "symbols": [
+        {
+          "name": "B",
+          "meaning": "batch"
+        },
+        {
+          "name": "T",
+          "meaning": "token sequence"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "root",
+          "kind": "group",
+          "label": "root",
+          "ports": [],
+          "parameter_ids": [],
+          "references": [],
+          "attributes": [],
+          "provenance": [],
+          "children": [
+            "layer0",
+            "layer1",
+            "tokens"
+          ]
+        },
+        {
+          "id": "layer0",
+          "kind": "group",
+          "label": "layer0",
+          "ports": [
+            {
+              "id": "in",
+              "direction": "input",
+              "label": "in",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "direction": "output",
+              "label": "out",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [],
+          "references": [],
+          "attributes": [],
+          "provenance": [],
+          "parent_id": "root",
+          "children": [
+            "linear0"
+          ]
+        },
+        {
+          "id": "layer1",
+          "kind": "group",
+          "label": "layer1",
+          "ports": [
+            {
+              "id": "in",
+              "direction": "input",
+              "label": "in",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "direction": "output",
+              "label": "out",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [],
+          "references": [],
+          "attributes": [],
+          "provenance": [],
+          "parent_id": "root",
+          "children": [
+            "linear1"
+          ]
+        },
+        {
+          "id": "linear0",
+          "kind": "operation",
+          "label": "linear0",
+          "ports": [
+            {
+              "id": "in",
+              "direction": "input",
+              "label": "in",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "direction": "output",
+              "label": "out",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [
+            "weight",
+            "alias"
+          ],
+          "references": [
+            {
+              "kind": "parameter",
+              "parameter_id": "weight"
+            },
+            {
+              "kind": "module",
+              "name": "linear"
+            }
+          ],
+          "attributes": [],
+          "provenance": [],
+          "parent_id": "layer0",
+          "operation": "linear"
+        },
+        {
+          "id": "linear1",
+          "kind": "operation",
+          "label": "linear1",
+          "ports": [
+            {
+              "id": "in",
+              "direction": "input",
+              "label": "in",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "direction": "output",
+              "label": "out",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [
+            "weight",
+            "alias"
+          ],
+          "references": [
+            {
+              "kind": "parameter",
+              "parameter_id": "weight"
+            },
+            {
+              "kind": "module",
+              "name": "linear"
+            }
+          ],
+          "attributes": [],
+          "provenance": [],
+          "parent_id": "layer1",
+          "operation": "linear"
+        },
+        {
+          "id": "tokens",
+          "kind": "context",
+          "label": "tokens",
+          "ports": [
+            {
+              "id": "symbols",
+              "direction": "output",
+              "label": "symbols",
+              "shape": [
+                {
+                  "kind": "symbol",
+                  "name": "B"
+                },
+                {
+                  "kind": "expression",
+                  "text": "T + 1",
+                  "symbols": [
+                    "T"
+                  ]
+                },
+                {
+                  "kind": "unknown",
+                  "reason": "Static rank known only."
+                }
+              ]
+            },
+            {
+              "id": "scalar",
+              "direction": "output",
+              "label": "scalar",
+              "shape": []
+            },
+            {
+              "id": "unknown_rank",
+              "direction": "output",
+              "label": "unknown_rank",
+              "shape": null
+            }
+          ],
+          "parameter_ids": [],
+          "references": [
+            {
+              "kind": "tokenizer"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "heads",
+              "value": 2,
+              "provenance": [
+                {
+                  "kind": "configuration",
+                  "source": "/num_heads"
+                }
+              ]
+            },
+            {
+              "name": "notes",
+              "value": [
+                "display only",
+                true,
+                null
+              ],
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "reviewed_rule"
+                }
+              ]
+            }
+          ],
+          "provenance": [],
+          "parent_id": "root"
+        }
+      ],
+      "edges": [
+        {
+          "id": "between",
+          "source": {
+            "node_id": "layer0",
+            "port_id": "out"
+          },
+          "target": {
+            "node_id": "layer1",
+            "port_id": "in"
+          },
+          "kind": "data",
+          "provenance": []
+        },
+        {
+          "id": "enter",
+          "source": {
+            "node_id": "layer0",
+            "port_id": "in"
+          },
+          "target": {
+            "node_id": "linear0",
+            "port_id": "in"
+          },
+          "kind": "data",
+          "provenance": []
+        },
+        {
+          "id": "leave",
+          "source": {
+            "node_id": "linear0",
+            "port_id": "out"
+          },
+          "target": {
+            "node_id": "layer0",
+            "port_id": "out"
+          },
+          "kind": "data",
+          "provenance": []
+        }
+      ],
+      "repetitions": [
+        {
+          "id": "layers",
+          "parent_id": "root",
+          "label": "Layers",
+          "instances": [
+            {
+              "node_id": "layer0",
+              "index": 0,
+              "variant": "attention"
+            },
+            {
+              "node_id": "layer1",
+              "index": 1,
+              "variant": "state_space"
+            }
+          ]
+        }
+      ],
+      "parameters": [
+        {
+          "id": "weight",
+          "name": "linear.weight",
+          "logical_shape": [
+            {
+              "kind": "constant",
+              "value": 2
+            },
+            {
+              "kind": "constant",
+              "value": 3
+            }
+          ],
+          "binding": "native",
+          "storage": [
+            {
+              "name": "linear.weight",
+              "dtype": "F16",
+              "shape": [
+                2,
+                3
+              ]
+            }
+          ],
+          "inspection": {
+            "status": "available",
+            "tensor_id": "tensor_native"
+          },
+          "provenance": [
+            {
+              "kind": "storage",
+              "source": "linear.weight"
+            }
+          ]
+        },
+        {
+          "id": "alias",
+          "name": "tied.weight",
+          "logical_shape": [
+            {
+              "kind": "constant",
+              "value": 2
+            },
+            {
+              "kind": "constant",
+              "value": 3
+            }
+          ],
+          "binding": "alias",
+          "storage": [
+            {
+              "name": "linear.weight",
+              "dtype": "F16",
+              "shape": [
+                2,
+                3
+              ]
+            }
+          ],
+          "inspection": {
+            "status": "available",
+            "tensor_id": "tensor_native"
+          },
+          "provenance": [],
+          "alias_of": "weight"
+        },
+        {
+          "id": "quantized",
+          "name": "packed.weight",
+          "logical_shape": [
+            {
+              "kind": "constant",
+              "value": 8
+            },
+            {
+              "kind": "constant",
+              "value": 8
+            }
+          ],
+          "binding": "quantized",
+          "storage": [
+            {
+              "name": "packed.qweight",
+              "dtype": "I32",
+              "shape": [
+                1,
+                8
+              ],
+              "role": "packed_data"
+            },
+            {
+              "name": "packed.scales",
+              "dtype": "F16",
+              "shape": [
+                1,
+                8
+              ],
+              "role": "scales"
+            }
+          ],
+          "inspection": {
+            "status": "unavailable",
+            "reason": "unsupported_representation",
+            "message": "Numeric inspection unavailable."
+          },
+          "provenance": []
+        },
+        {
+          "id": "fused",
+          "name": "q.weight",
+          "logical_shape": [
+            {
+              "kind": "constant",
+              "value": 2
+            },
+            {
+              "kind": "constant",
+              "value": 3
+            }
+          ],
+          "binding": "fused_region",
+          "storage": [
+            {
+              "name": "qkv.weight",
+              "dtype": "F16",
+              "shape": [
+                6,
+                3
+              ]
+            }
+          ],
+          "region": {
+            "storage_name": "qkv.weight",
+            "description": "First two rows along output axis."
+          },
+          "inspection": {
+            "status": "unavailable",
+            "reason": "requires_view",
+            "message": "Numeric inspection unavailable."
+          },
+          "provenance": []
+        },
+        {
+          "id": "unresolved",
+          "name": "unknown.weight",
+          "logical_shape": null,
+          "binding": "unresolved",
+          "storage": [],
+          "inspection": {
+            "status": "unavailable",
+            "reason": "unresolved_binding",
+            "message": "Numeric inspection unavailable."
+          },
+          "provenance": []
+        },
+        {
+          "id": "volume",
+          "name": "patch.weight",
+          "logical_shape": [
+            {
+              "kind": "constant",
+              "value": 2
+            },
+            {
+              "kind": "constant",
+              "value": 3
+            },
+            {
+              "kind": "constant",
+              "value": 4
+            }
+          ],
+          "binding": "native",
+          "storage": [
+            {
+              "name": "patch.weight",
+              "dtype": "F32",
+              "shape": [
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "inspection": {
+            "status": "unavailable",
+            "reason": "unsupported_rank",
+            "message": "Numeric inspection unavailable."
+          },
+          "provenance": []
+        }
+      ],
+      "diagnostics": []
+    }
+  },
+  "context": {
+    "session": {
+      "id": "12345678-1234-4234-8234-123456789abc",
+      "model_id": "test/architecture"
+    },
+    "tokenizer_available": true,
+    "inventory": {
+      "coverage": "complete",
+      "diagnostics": [],
+      "tensors": [
+        {
+          "id": "tensor_native",
+          "name": "linear.weight",
+          "path": [
+            "linear",
+            "weight"
+          ],
+          "shape": [
+            2,
+            3
+          ],
+          "rank": 2,
+          "numel": 6,
+          "storage_dtype": "F16",
+          "logical_dtype": "float32"
+        },
+        {
+          "id": "tensor_volume",
+          "name": "patch.weight",
+          "path": [
+            "patch",
+            "weight"
+          ],
+          "shape": [
+            2,
+            3,
+            4
+          ],
+          "rank": 3,
+          "numel": 24,
+          "storage_dtype": "F32",
+          "logical_dtype": "float32"
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "name": "complete-native-alias-fused-quantized-rank-limited-symbolic",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [],
+      "context_edits": []
+    },
+    {
+      "name": "url-safe-opaque-id",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "graph_id"
+          ],
+          "value": "analysis.1~revision"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "partial-architecture",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "coverage"
+          ],
+          "value": "partial"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "visual-no-tokenizer",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "scope"
+          ],
+          "value": "visual_encoder_predictor"
+        },
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "references"
+          ],
+          "value": []
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "tokenizer_available"
+          ],
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "explicit-partial-inventory",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "coverage"
+          ],
+          "value": "partial"
+        },
+        {
+          "path": [
+            "inventory",
+            "diagnostics"
+          ],
+          "value": [
+            {
+              "code": "excluded_quantized",
+              "message": "Packed parameters remain descriptive."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unavailable-unsupported_architecture",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "unavailable"
+        },
+        {
+          "path": [
+            "graph"
+          ],
+          "delete": true
+        },
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "unsupported_architecture"
+        },
+        {
+          "path": [
+            "requires_restart"
+          ],
+          "value": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unavailable-analysis_failed",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "unavailable"
+        },
+        {
+          "path": [
+            "graph"
+          ],
+          "delete": true
+        },
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "analysis_failed"
+        },
+        {
+          "path": [
+            "requires_restart"
+          ],
+          "value": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unavailable-restart_required",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "unavailable"
+        },
+        {
+          "path": [
+            "graph"
+          ],
+          "delete": true
+        },
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "restart_required"
+        },
+        {
+          "path": [
+            "requires_restart"
+          ],
+          "value": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unavailable-unsupported_size",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "unavailable"
+        },
+        {
+          "path": [
+            "graph"
+          ],
+          "delete": true
+        },
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "unsupported_size"
+        },
+        {
+          "path": [
+            "requires_restart"
+          ],
+          "value": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unavailable-cache_unavailable",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "unavailable"
+        },
+        {
+          "path": [
+            "graph"
+          ],
+          "delete": true
+        },
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "cache_unavailable"
+        },
+        {
+          "path": [
+            "requires_restart"
+          ],
+          "value": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "node-kind-input",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "kind"
+          ],
+          "value": "input"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "node-kind-output",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "kind"
+          ],
+          "value": "output"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "node-kind-state",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "kind"
+          ],
+          "value": "state"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "edge-kind-state",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "0",
+            "kind"
+          ],
+          "value": "state"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "edge-kind-context",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "0",
+            "kind"
+          ],
+          "value": "context"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "rank1-native",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "logical_shape"
+          ],
+          "value": [
+            {
+              "kind": "constant",
+              "value": 6
+            }
+          ]
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "logical_shape"
+          ],
+          "value": [
+            {
+              "kind": "constant",
+              "value": 6
+            }
+          ]
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "storage",
+            "0",
+            "shape"
+          ],
+          "value": [
+            6
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "0",
+            "shape"
+          ],
+          "value": [
+            6
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "0",
+            "rank"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "empty-partial-inventory",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters"
+          ],
+          "value": []
+        },
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "3",
+            "parameter_ids"
+          ],
+          "value": []
+        },
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "4",
+            "parameter_ids"
+          ],
+          "value": []
+        },
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "3",
+            "references"
+          ],
+          "value": []
+        },
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "4",
+            "references"
+          ],
+          "value": []
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": []
+        },
+        {
+          "path": [
+            "inventory",
+            "coverage"
+          ],
+          "value": "partial"
+        }
+      ]
+    },
+    {
+      "name": "display-text-is-inert",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "formula"
+          ],
+          "value": "<script>alert(1)</script>"
+        },
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "ports",
+            "0",
+            "shape",
+            "1",
+            "text"
+          ],
+          "value": "__import__(\"os\").system(\"false\")"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "zero-product",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "logical_shape"
+          ],
+          "value": [
+            {
+              "kind": "constant",
+              "value": 9007199254740991
+            },
+            {
+              "kind": "constant",
+              "value": 9007199254740991
+            },
+            {
+              "kind": "constant",
+              "value": 0
+            }
+          ]
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "shape"
+          ],
+          "value": [
+            9007199254740991,
+            9007199254740991,
+            0
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unavailable-unknown-reason",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "unavailable"
+        },
+        {
+          "path": [
+            "graph"
+          ],
+          "delete": true
+        },
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "pending"
+        },
+        {
+          "path": [
+            "requires_restart"
+          ],
+          "value": false
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unavailable-missing-restart",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "unavailable"
+        },
+        {
+          "path": [
+            "graph"
+          ],
+          "delete": true
+        },
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "analysis_failed"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-binding",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "binding"
+          ],
+          "value": "decoder"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-node-kind",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "kind"
+          ],
+          "value": "execute"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-edge-kind",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "0",
+            "kind"
+          ],
+          "value": "execute"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-provenance-kind",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "provenance",
+            "0",
+            "kind"
+          ],
+          "value": "trace"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-direction",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "ports",
+            "0",
+            "direction"
+          ],
+          "value": "both"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "module-without-name",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "3",
+            "references",
+            "1",
+            "name"
+          ],
+          "delete": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "parameter-reference-without-id",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "3",
+            "references",
+            "0",
+            "parameter_id"
+          ],
+          "delete": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-response",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "pending"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "available-with-reason",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "analysis_failed"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "available-without-graph",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph"
+          ],
+          "delete": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unavailable-with-graph",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "unavailable"
+        },
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "analysis_failed"
+        },
+        {
+          "path": [
+            "requires_restart"
+          ],
+          "value": false
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-dimension",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "ports",
+            "0",
+            "shape",
+            "0",
+            "kind"
+          ],
+          "value": "runtime"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "constant-missing-value",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "logical_shape",
+            "0",
+            "value"
+          ],
+          "delete": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "constant-unsafe",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "logical_shape",
+            "0",
+            "value"
+          ],
+          "value": 9007199254740992
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "constant-negative",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "logical_shape",
+            "0",
+            "value"
+          ],
+          "value": -1
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "constant-boolean",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "logical_shape",
+            "0",
+            "value"
+          ],
+          "value": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "symbol-missing-name",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "ports",
+            "0",
+            "shape",
+            "0",
+            "name"
+          ],
+          "delete": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "expression-missing-symbols",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "ports",
+            "0",
+            "shape",
+            "1",
+            "symbols"
+          ],
+          "delete": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-missing-reason",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "ports",
+            "0",
+            "shape",
+            "2",
+            "reason"
+          ],
+          "delete": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "dimension-mixed-union",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "ports",
+            "0",
+            "shape",
+            "0",
+            "value"
+          ],
+          "value": 2
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-inspection",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "inspection",
+            "status"
+          ],
+          "value": "pending"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "available-missing-tensor",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "inspection",
+            "tensor_id"
+          ],
+          "delete": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unavailable-actionable-id",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "inspection",
+            "tensor_id"
+          ],
+          "value": "tensor_native"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-inspection-reason",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "inspection",
+            "reason"
+          ],
+          "value": "decode_now"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-reference",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "references",
+            "0",
+            "kind"
+          ],
+          "value": "url"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "cross-model-reference",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "references",
+            "0",
+            "model_id"
+          ],
+          "value": "other/model"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "reference-route",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "references",
+            "0",
+            "url"
+          ],
+          "value": "/tokenize"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "route-as-id",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "0",
+            "id"
+          ],
+          "value": "../sessions/other"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "executable-as-id",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "0",
+            "id"
+          ],
+          "value": "javascript:alert(1)"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "foreign-graph-field",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "model_id"
+          ],
+          "value": "other/model"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "node-runtime-operation",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "0",
+            "operation_id"
+          ],
+          "value": "runtime"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "empty-nodes",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes"
+          ],
+          "value": []
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "leaf-with-children",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "3",
+            "children"
+          ],
+          "value": []
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "group-without-children",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "0",
+            "children"
+          ],
+          "delete": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "alias-without-target",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "alias_of"
+          ],
+          "delete": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "fused-without-region",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "3",
+            "region"
+          ],
+          "delete": true
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "native-with-alias",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "alias_of"
+          ],
+          "value": "alias"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "nested-attribute-payload",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "attributes",
+            "0",
+            "value"
+          ],
+          "value": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ]
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "object-attribute",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "attributes",
+            "0",
+            "value"
+          ],
+          "value": {
+            "code": "run()"
+          }
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "edge-duplicate-shape",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "0",
+            "shape"
+          ],
+          "value": [
+            2
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "id-too-long",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "graph_id"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "label-too-long",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "0",
+            "label"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "text-too-long",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "0",
+            "description"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "cache-unavailable-needs-restart",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "unavailable"
+        },
+        {
+          "path": [
+            "graph"
+          ],
+          "delete": true
+        },
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "cache_unavailable"
+        },
+        {
+          "path": [
+            "requires_restart"
+          ],
+          "value": false
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "restart-required-needs-restart",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "unavailable"
+        },
+        {
+          "path": [
+            "graph"
+          ],
+          "delete": true
+        },
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "restart_required"
+        },
+        {
+          "path": [
+            "requires_restart"
+          ],
+          "value": false
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unavailable-diagnostic-target",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "status"
+          ],
+          "value": "unavailable"
+        },
+        {
+          "path": [
+            "graph"
+          ],
+          "delete": true
+        },
+        {
+          "path": [
+            "reason"
+          ],
+          "value": "analysis_failed"
+        },
+        {
+          "path": [
+            "requires_restart"
+          ],
+          "value": true
+        },
+        {
+          "path": [
+            "diagnostics"
+          ],
+          "value": [
+            {
+              "code": "failure",
+              "message": "Analysis failed.",
+              "node_id": "root"
+            }
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "cross-kind-id-duplicate",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "0",
+            "id"
+          ],
+          "value": "root"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "duplicate-repetition",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "repetitions"
+          ],
+          "value": [
+            {
+              "id": "layers",
+              "parent_id": "root",
+              "label": "Layers",
+              "instances": [
+                {
+                  "node_id": "layer0",
+                  "index": 0,
+                  "variant": "attention"
+                },
+                {
+                  "node_id": "layer1",
+                  "index": 1,
+                  "variant": "state_space"
+                }
+              ]
+            },
+            {
+              "id": "layers",
+              "parent_id": "root",
+              "label": "Layers",
+              "instances": [
+                {
+                  "node_id": "layer0",
+                  "index": 0,
+                  "variant": "attention"
+                },
+                {
+                  "node_id": "layer1",
+                  "index": 1,
+                  "variant": "state_space"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "duplicate-node",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "id"
+          ],
+          "value": "root"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "duplicate-port",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "ports",
+            "1",
+            "id"
+          ],
+          "value": "in"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "duplicate-edge",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "1",
+            "id"
+          ],
+          "value": "between"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "duplicate-parameter",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "id"
+          ],
+          "value": "weight"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "duplicate-symbol",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "symbols",
+            "1",
+            "name"
+          ],
+          "value": "B"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "missing-parent",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "parent_id"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "parent-not-group",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "parent_id"
+          ],
+          "value": "linear0"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "missing-child",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "0",
+            "children",
+            "0"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "parent-child-disagreement",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "0",
+            "children"
+          ],
+          "value": [
+            "layer1",
+            "tokens"
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "duplicate-child",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "0",
+            "children"
+          ],
+          "value": [
+            "layer0",
+            "layer0",
+            "layer1",
+            "tokens"
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "containment-cycle",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "0",
+            "parent_id"
+          ],
+          "value": "layer0"
+        },
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "children"
+          ],
+          "value": [
+            "linear0",
+            "root"
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "repetition-not-group",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "repetitions",
+            "0",
+            "instances",
+            "0",
+            "node_id"
+          ],
+          "value": "linear0"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "repetition-wrong-parent",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "repetitions",
+            "0",
+            "parent_id"
+          ],
+          "value": "layer0"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "repetition-out-of-order",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "repetitions",
+            "0",
+            "instances",
+            "0",
+            "node_id"
+          ],
+          "value": "layer1"
+        },
+        {
+          "path": [
+            "graph",
+            "repetitions",
+            "0",
+            "instances",
+            "1",
+            "node_id"
+          ],
+          "value": "layer0"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "repetition-index-order",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "repetitions",
+            "0",
+            "instances",
+            "0",
+            "index"
+          ],
+          "value": 2
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "repetition-duplicate",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "repetitions",
+            "0",
+            "instances",
+            "1",
+            "node_id"
+          ],
+          "value": "layer0"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "alias-cycle",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "alias_of"
+          ],
+          "value": "alias"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "alias-missing-target",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "alias_of"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "alias-wrong-geometry",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "logical_shape",
+            "0",
+            "value"
+          ],
+          "value": 3
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "alias-wrong-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "inspection",
+            "tensor_id"
+          ],
+          "value": "tensor_volume"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "node-parameter-closure",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "3",
+            "parameter_ids",
+            "0"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "reference-parameter-closure",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "3",
+            "references",
+            "0",
+            "parameter_id"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "diagnostic-closure",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "diagnostics"
+          ],
+          "value": [
+            {
+              "code": "unknown",
+              "message": "Unknown node.",
+              "node_id": "foreign"
+            }
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "edge-node-closure",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "0",
+            "source",
+            "node_id"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "edge-port-closure",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "0",
+            "source",
+            "port_id"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "edge-direction",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "0",
+            "source",
+            "port_id"
+          ],
+          "value": "in"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "edge-skips-group",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "0",
+            "source",
+            "node_id"
+          ],
+          "value": "linear0"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "connected-dimension-mismatch",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "2",
+            "ports",
+            "0",
+            "shape",
+            "0",
+            "value"
+          ],
+          "value": 3
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-symbol",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "ports",
+            "0",
+            "shape",
+            "0",
+            "name"
+          ],
+          "value": "X"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unknown-expression-symbol",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "ports",
+            "0",
+            "shape",
+            "1",
+            "symbols"
+          ],
+          "value": [
+            "X"
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unsafe-logical-product",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "logical_shape"
+          ],
+          "value": [
+            {
+              "kind": "constant",
+              "value": 9007199254740991
+            },
+            {
+              "kind": "constant",
+              "value": 2
+            }
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "unsafe-physical-product",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "shape"
+          ],
+          "value": [
+            9007199254740991,
+            2
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "physical-not-logical-geometry",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "storage",
+            "0",
+            "shape"
+          ],
+          "value": [
+            1,
+            6
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "packed-cannot-be-inspected",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "inspection"
+          ],
+          "value": {
+            "status": "available",
+            "tensor_id": "tensor_native"
+          }
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "fused-cannot-be-inspected",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "3",
+            "inspection"
+          ],
+          "value": {
+            "status": "available",
+            "tensor_id": "tensor_native"
+          }
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "rank3-cannot-be-inspected",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "5",
+            "inspection"
+          ],
+          "value": {
+            "status": "available",
+            "tensor_id": "tensor_volume"
+          }
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "region-storage-closure",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "3",
+            "region",
+            "storage_name"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "missing-inventory-tensor",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0",
+            "inspection",
+            "tensor_id"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "dimension-mismatch-diagnosed",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "2",
+            "ports",
+            "0",
+            "shape",
+            "0",
+            "value"
+          ],
+          "value": 3
+        },
+        {
+          "path": [
+            "graph",
+            "diagnostics"
+          ],
+          "value": [
+            {
+              "code": "shape_mismatch",
+              "message": "Known dimensions disagree.",
+              "node_id": "layer1"
+            }
+          ]
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "cross-session-model",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [],
+      "context_edits": [
+        {
+          "path": [
+            "session",
+            "model_id"
+          ],
+          "value": "other/model"
+        }
+      ]
+    },
+    {
+      "name": "no-tokenizer-reference",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [],
+      "context_edits": [
+        {
+          "path": [
+            "tokenizer_available"
+          ],
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "wrong-inventory-geometry",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "0",
+            "shape"
+          ],
+          "value": [
+            3,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "name": "wrong-inventory-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "0",
+            "name"
+          ],
+          "value": "other.weight"
+        }
+      ]
+    }
+  ],
+  "byte_cases": [
+    {
+      "name": "exact-limit",
+      "chunk_bytes": 4096,
+      "repeat": 8192,
+      "tail_bytes": 0,
+      "valid": true
+    },
+    {
+      "name": "one-byte-over",
+      "chunk_bytes": 4096,
+      "repeat": 8192,
+      "tail_bytes": 1,
+      "valid": false
+    }
+  ],
+  "http_cases": [
+    {
+      "status": 409,
+      "value": {
+        "code": "model_content_changed",
+        "message": "Pinned model content changed."
+      }
+    }
+  ]
+}

@@ -14,6 +14,7 @@ from uuid import uuid4
 
 import pytest
 import torch
+from cache_helpers import numeric_manifests
 from fastapi.testclient import TestClient
 from test_models import make_model, mutate_last_byte, write_weights
 from test_operations import run
@@ -204,7 +205,7 @@ def test_endpoints_and_disk_reuse(
                 assert metadata["domain_maximum"] == (max(finite) if finite else None)
                 assert metadata["byte_length"] == len(data)
                 assert metadata["sections"][1]["offset"] == shape[0] * 400
-        assert len(list(settings.cache_dir.glob("*/manifest.json"))) == 2
+        assert len(numeric_manifests(settings.cache_dir)) == 2
 
     # New app/session proves persistent cache reuse without resident result state.
     async def forbidden(self: TensorAnalysis, context: ProducerContext) -> None:
@@ -226,7 +227,7 @@ def test_analysis_uses_logical_float32(settings: Settings, dtype: str) -> None:
         url = address(client).removesuffix("data")
         for endpoint in ["statistics", "distributions"]:
             assert frames(client.get(url + endpoint).content)[-1] == (4, b"")
-    assert len(list(settings.cache_dir.glob("*/manifest.json"))) == 3
+    assert len(numeric_manifests(settings.cache_dir)) == 3
 
 
 def test_preflight_and_content_invalidation(settings: Settings) -> None:
@@ -251,7 +252,7 @@ def test_preflight_and_content_invalidation(settings: Settings) -> None:
         new_url = address(client).removesuffix("data")
         for endpoint in ["statistics", "distributions"]:
             assert frames(client.get(new_url + endpoint).content)[-1] == (4, b"")
-    assert len(list(settings.cache_dir.glob("*/manifest.json"))) == 4
+    assert len(numeric_manifests(settings.cache_dir)) == 4
 
 
 @pytest.mark.parametrize("shape,values", [([], [1.0]), ([2], [1.0, 2.0]), ([1, 1, 1], [1.0])])
@@ -286,7 +287,7 @@ def test_allocation_failure_is_clean(
         assert result[0][0] == 5
         assert json.loads(result[0][1])["code"] == "resource_exhausted"
         assert b"private" not in response.content
-    assert not list(settings.cache_dir.glob("*/manifest.json"))
+    assert not numeric_manifests(settings.cache_dir)
     assert not list(settings.cache_dir.glob(".tmp-*"))
 
 
@@ -341,7 +342,7 @@ def test_unrelated_runtime_errors_remain_internal(
         result = frames(response.content)
         assert [kind for kind, _ in result] == [5]
         assert json.loads(result[0][1])["code"] == "internal_error"
-    assert not list(settings.cache_dir.glob("*/manifest.json"))
+    assert not numeric_manifests(settings.cache_dir)
 
 
 @pytest.mark.parametrize("cancel_all", [False, True])
@@ -411,7 +412,7 @@ def test_shared_cancellation_and_tensor_first_data(
                         assert await payload(c) == histogram_oracle([2, 3], [1.0] * 6)
             await forgotten(runtime)
             assert calls == 2 and conversions == 1
-            assert len(list(settings.cache_dir.glob("*/manifest.json"))) == (1 if cancel_all else 3)
+            assert len(numeric_manifests(settings.cache_dir)) == (1 if cancel_all else 3)
             assert not list(settings.cache_dir.glob(".tmp-*"))
 
     run(scenario())
@@ -495,7 +496,7 @@ def test_device_queue_dependency_and_mid_materialization_cancellation(
                     a, b, c = Frames(first), Frames(second), Frames(third)
                     assert (await c.next())[0] == 1
                     assert (await c.next()) == (2, struct.pack("<6f", *([1.0] * 6)))
-                    assert not list(settings.cache_dir.glob("*/manifest.json"))
+                    assert not numeric_manifests(settings.cache_dir)
                     if cancel_all:
                         for response, reader in [(first, a), (second, b), (third, c)]:
                             await client.delete("/operations/" + response.headers["x-operation-id"])
@@ -514,7 +515,7 @@ def test_device_queue_dependency_and_mid_materialization_cancellation(
                         await c.end()
             await forgotten(runtime)
             assert conversions == 1
-            assert len(list(settings.cache_dir.glob("*/manifest.json"))) == (0 if cancel_all else 2)
+            assert len(numeric_manifests(settings.cache_dir)) == (0 if cancel_all else 2)
             assert not list(settings.cache_dir.glob(".tmp-*"))
 
     run(scenario())
@@ -539,7 +540,7 @@ def test_source_change_during_analysis_leaves_no_artifact(
         result = frames(client.get(address(client).removesuffix("data") + endpoint).content)
         assert result[0][0] == 5
         assert json.loads(result[0][1])["code"] == "model_content_changed"
-    assert not list(settings.cache_dir.glob("*/manifest.json"))
+    assert not numeric_manifests(settings.cache_dir)
 
 
 def test_unsafe_distribution_output_rejected_before_allocation(
@@ -601,7 +602,7 @@ def test_partial_derived_spool_never_publishes(
                 url = (await setup_stream(client)).removesuffix("data")
                 async with client.stream("GET", url + endpoint) as response:
                     await appended.wait()
-                    assert not list(settings.cache_dir.glob("*/manifest.json"))
+                    assert not numeric_manifests(settings.cache_dir)
                     if cancel:
                         await client.delete("/operations/" + response.headers["x-operation-id"])
                     reader = Frames(response)
@@ -614,7 +615,7 @@ def test_partial_derived_spool_never_publishes(
                         assert b"private" not in block
                     await reader.end()
             await forgotten(runtime)
-            assert not list(settings.cache_dir.glob("*/manifest.json"))
+            assert not numeric_manifests(settings.cache_dir)
             assert not list(settings.cache_dir.glob(".tmp-*"))
 
     run(scenario())

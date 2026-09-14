@@ -15,13 +15,18 @@ import re
 import shutil
 import stat
 import tempfile
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import RLock
 from types import TracebackType
 from typing import BinaryIO, Self
+
+from .architecture_analysis import BindingContext, Producer, parse_graph
+from .architecture_analysis.core import Scope, identity
+from .architecture_analysis.records import ArchitectureGraph
+from .architecture_analysis.validation import MAX_BYTES, json_chunks, preflight
 
 _MANIFEST_LIMIT = 64 * 1024
 _DIGEST = re.compile(r"[0-9a-f]{64}")
@@ -114,6 +119,81 @@ class ArtifactConflict(RuntimeError):
     """A competing producer committed different bytes for the same identity."""
 
 
+@dataclass(frozen=True, init=False)
+class ArchitectureArtifactSpec:
+    """Precomputable graph identity; neither output length nor public envelopes.
+
+    Empty options use the existing Producer/GraphBuilder identity. For meaningful
+    options, construction must use graph_id before allocating graph-local IDs.
+    Serializer changes invalidate structured entries only.
+    """
+
+    canonical: str
+    key: str
+    graph_id: str
+
+    def __init__(
+        self,
+        *,
+        model_fingerprint: str,
+        producer: Producer,
+        scope: Scope,
+        analysis_options: Mapping[str, object],
+        serializer_revision: str = "architecture-json-1",
+    ) -> None:
+        fields = {
+            "kind": "architecture_graph",
+            "media_type": "application/json",
+            "model_fingerprint": model_fingerprint,
+            "description": producer.description,
+            "description_revision": producer.revision,
+            "source_revision": producer.source_revision,
+            "analyzer_revision": producer.analyzer_revision,
+            "schema_revision": producer.schema_revision,
+            "serializer_revision": serializer_revision,
+            "scope": scope,
+        }
+        if any(not isinstance(value, str) or not value for value in fields.values()):
+            raise ValueError("architecture identity fields must be nonempty strings")
+        if scope not in ("language_model", "visual_encoder_predictor"):
+            raise ValueError("invalid architecture scope")
+        options = _canonical(dict(analysis_options))
+        canonical = _canonical(dict(fields, analysis_options=json.loads(options)))
+        if len(canonical.encode()) > _MANIFEST_LIMIT // 2:
+            raise ValueError("artifact specification is too large")
+        graph_id = producer.graph_id(model_fingerprint, scope)
+        if options != "{}":
+            graph_id = identity("architecture-graph-options", graph_id, options)
+        object.__setattr__(self, "canonical", canonical)
+        object.__setattr__(self, "key", hashlib.sha256(canonical.encode()).hexdigest())
+        object.__setattr__(self, "graph_id", graph_id)
+
+
+def _validate_graph_payload(
+    payload: BinaryIO,
+    spec: ArchitectureArtifactSpec,
+    context: BindingContext,
+    length: int,
+    digest: str,
+) -> None:
+    """Read at most the contract bound, including on corrupt or growing files."""
+    if not 0 < length <= MAX_BYTES:
+        raise ValueError("architecture payload exceeds its byte bounds")
+    raw = payload.read(length + 1)
+    if len(raw) != length or hashlib.sha256(raw).hexdigest() != digest:
+        raise ValueError("architecture payload length or digest changed")
+    graph = parse_graph(json.loads(raw.decode("utf-8")), context)
+    if graph.graph_id != spec.graph_id or graph.scope != json.loads(spec.canonical)["scope"]:
+        raise ValueError("architecture graph identity differs from its inputs")
+    # A single serializer gives same-key producers a deterministic byte identity.
+    canonical_digest = hashlib.sha256()
+    for chunk in json_chunks(graph.document()):
+        canonical_digest.update(chunk)
+    if canonical_digest.hexdigest() != digest:
+        raise ValueError("architecture payload is not canonical JSON")
+    payload.seek(0)
+
+
 @dataclass
 class _Progress:
     available: int = 0
@@ -130,7 +210,9 @@ class ArtifactReader:
     belongs to the operation runtime. Existing handles survive rename and abort.
     """
 
-    def __init__(self, payload: BinaryIO, spec: ArtifactSpec, progress: _Progress) -> None:
+    def __init__(
+        self, payload: BinaryIO, spec: ArtifactSpec | ArchitectureArtifactSpec, progress: _Progress
+    ) -> None:
         self._payload = payload
         self.spec = spec
         self._progress = progress
@@ -200,7 +282,9 @@ class ArtifactStore:
         finally:
             os.close(descriptor)
 
-    def _open_valid(self, spec: ArtifactSpec) -> tuple[BinaryIO, str] | None:
+    def _open_valid(
+        self, spec: ArtifactSpec | ArchitectureArtifactSpec, context: BindingContext | None = None
+    ) -> tuple[BinaryIO, str] | None:
         """Open fixed names relative to a non-symlink directory, validating lengths."""
         if not _DIGEST.fullmatch(spec.key):
             raise ValueError("invalid artifact key")
@@ -229,14 +313,17 @@ class ArtifactStore:
                 "sha256",
             }:
                 return None
+            structured = isinstance(spec, ArchitectureArtifactSpec)
+            length = metadata["byte_length"]
             if (
                 type(metadata["format"]) is not int
-                or metadata["format"] != 1
+                or metadata["format"] != (2 if structured else 1)
                 or metadata["key"] != spec.key
                 or _canonical(metadata["spec"]) != spec.canonical
                 or metadata["payload"] != "payload.bin"
-                or type(metadata["byte_length"]) is not int
-                or metadata["byte_length"] != spec.expected_bytes
+                or type(length) is not int
+                or (isinstance(spec, ArtifactSpec) and length != spec.expected_bytes)
+                or (structured and not 0 < length <= MAX_BYTES)
                 or not isinstance(metadata["sha256"], str)
                 or not _DIGEST.fullmatch(metadata["sha256"])
             ):
@@ -245,9 +332,13 @@ class ArtifactStore:
             if payload is None:
                 return None
             info = os.fstat(payload.fileno())
-            if info.st_size != spec.expected_bytes:
+            if info.st_size != length:
                 payload.close()
                 return None
+            if isinstance(spec, ArchitectureArtifactSpec):
+                if context is None:
+                    raise ValueError("architecture lookup requires binding context")
+                _validate_graph_payload(payload, spec, context, length, metadata["sha256"])
             return payload, metadata["sha256"]
         except (OSError, ValueError, TypeError, RecursionError) as exc:
             if payload is not None:
@@ -272,11 +363,37 @@ class ArtifactStore:
     def begin_write(self, spec: ArtifactSpec) -> ArtifactWriter:
         return ArtifactWriter(self, spec)
 
+    def lookup_graph(
+        self, spec: ArchitectureArtifactSpec, context: BindingContext
+    ) -> ArtifactReader | None:
+        """Validate prepared bytes without analysis or an expected output length."""
+        valid = self._open_valid(spec, context)
+        if valid is None:
+            return None
+        payload, _ = valid
+        return ArtifactReader(
+            payload, spec, _Progress(os.fstat(payload.fileno()).st_size, complete=True)
+        )
+
+    def begin_graph_write(
+        self,
+        spec: ArchitectureArtifactSpec,
+        context: BindingContext,
+        *,
+        check_source: Callable[[], None],
+    ) -> ArchitectureArtifactWriter:
+        """The caller owns source hashing/cancellation; check_source must raise on change.
+
+        Pass a final pinned-source check (including rehash when required) that
+        also checks cancellation. Blocking work must settle before context exit.
+        """
+        return ArchitectureArtifactWriter(self, spec, context, check_source=check_source)
+
 
 class ArtifactWriter:
     """One producer; use a context to abort automatically on errors/cancellation."""
 
-    def __init__(self, store: ArtifactStore, spec: ArtifactSpec) -> None:
+    def __init__(self, store: ArtifactStore, spec: ArtifactSpec | ArchitectureArtifactSpec) -> None:
         self.store = store
         self.spec = spec
         self._progress = _Progress()
@@ -302,7 +419,10 @@ class ArtifactWriter:
         with self._progress.lock:
             self._require_writing()
             try:
-                if self._progress.available + len(data) > self.spec.expected_bytes:
+                limit = (
+                    self.spec.expected_bytes if isinstance(self.spec, ArtifactSpec) else MAX_BYTES
+                )
+                if self._progress.available + len(data) > limit:
                     raise ValueError("payload exceeds declared length")
                 view = memoryview(data)
                 while view:
@@ -326,22 +446,33 @@ class ArtifactWriter:
                 self._progress,
             )
 
+    def _validate_payload(self) -> None:
+        if not isinstance(self.spec, ArtifactSpec):
+            raise TypeError("structured artifacts require begin_graph_write")
+        if self._progress.available != self.spec.expected_bytes:
+            raise ValueError("payload is incomplete")
+        if os.fstat(self._payload.fileno()).st_size != self._progress.available:
+            raise ValueError("payload length changed externally")
+
+    def _existing(self) -> tuple[BinaryIO, str] | None:
+        return self.store._open_valid(self.spec)
+
+    def _check_publication(self) -> None:
+        """Numeric producers already check pinned sources in their operation runtime."""
+
     def commit(self) -> None:
         with self._progress.lock:
             self._require_writing()
             try:
-                if self._progress.available != self.spec.expected_bytes:
-                    raise ValueError("payload is incomplete")
-                if os.fstat(self._payload.fileno()).st_size != self.spec.expected_bytes:
-                    raise ValueError("payload length changed externally")
+                self._validate_payload()
                 os.fsync(self._payload.fileno())
                 digest = self._hash.hexdigest()
                 metadata = {
-                    "format": 1,
+                    "format": 1 if isinstance(self.spec, ArtifactSpec) else 2,
                     "key": self.spec.key,
                     "spec": json.loads(self.spec.canonical),
                     "payload": "payload.bin",
-                    "byte_length": self.spec.expected_bytes,
+                    "byte_length": self._progress.available,
                     "sha256": digest,
                 }
                 with (self._temporary / "manifest.json").open("xb") as manifest:
@@ -354,14 +485,16 @@ class ArtifactWriter:
                 finally:
                     os.close(temporary_fd)
                 with self.store._publication_lock():
-                    existing = self.store._open_valid(self.spec)
+                    existing = self._existing()
                     if existing is not None:
                         payload, existing_digest = existing
                         payload.close()
                         if digest != existing_digest:
                             raise ArtifactConflict("same artifact key produced different bytes")
+                        self._check_publication()
                         shutil.rmtree(self._temporary)
                     else:
+                        self._check_publication()
                         target = self.store.root / self.spec.key
                         # Only invalid entries are removed, under the publication lock.
                         # Never follow links from corrupt cache entries.
@@ -400,3 +533,70 @@ class ArtifactWriter:
         traceback: TracebackType | None,
     ) -> None:
         self.abort()
+
+
+class ArchitectureArtifactWriter(ArtifactWriter):
+    """Full graph publication using the numeric store's writer/reader ownership.
+
+    append may accept incremental serialization, but commit always validates the
+    complete bytes. write_graph is the bounded, deterministic typed entry point.
+    """
+
+    spec: ArchitectureArtifactSpec
+
+    def __init__(
+        self,
+        store: ArtifactStore,
+        spec: ArchitectureArtifactSpec,
+        context: BindingContext,
+        *,
+        check_source: Callable[[], None],
+    ) -> None:
+        self._context = context
+        self._check_source = check_source
+        super().__init__(store, spec)
+
+    def write_graph(self, graph: ArchitectureGraph) -> None:
+        with self._progress.lock:
+            self._require_writing()
+            try:
+                if self.available_bytes:
+                    raise ValueError("graph serialization has already started")
+                preflight(graph)
+                # Buffer small encoder fragments, without retaining the whole output.
+                buffer = bytearray()
+                for chunk in json_chunks(graph.document()):
+                    buffer.extend(chunk)
+                    if len(buffer) >= 64 * 1024:
+                        self.append(bytes(buffer))
+                        buffer.clear()
+                if buffer:
+                    self.append(bytes(buffer))
+            except BaseException:
+                self.abort()
+                raise
+
+    def _validate_payload(self) -> None:
+        if os.fstat(self._payload.fileno()).st_size != self.available_bytes:
+            raise ValueError("payload length changed externally")
+        directory = os.open(self._temporary, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            payload = _open_regular(directory, "payload.bin")
+            if payload is None:
+                raise ValueError("architecture payload must be a regular file")
+            with payload:
+                if not os.path.samestat(
+                    os.fstat(payload.fileno()), os.fstat(self._payload.fileno())
+                ):
+                    raise ValueError("architecture payload was replaced")
+                _validate_graph_payload(
+                    payload, self.spec, self._context, self.available_bytes, self._hash.hexdigest()
+                )
+        finally:
+            os.close(directory)
+
+    def _existing(self) -> tuple[BinaryIO, str] | None:
+        return self.store._open_valid(self.spec, self._context)
+
+    def _check_publication(self) -> None:
+        self._check_source()

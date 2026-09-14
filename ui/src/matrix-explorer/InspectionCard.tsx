@@ -1,12 +1,19 @@
 import { createPortal } from 'react-dom';
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 import type { Inspection } from '../rendering/matrix-inspection';
 
-export function InspectionCard({ inspection }: { inspection: Inspection }) {
+export function InspectionCard({ inspection, host }: { inspection: Inspection; host: RefObject<HTMLElement | null> }) {
+  const [container, setContainer] = useState<Element>(document.body);
+  useLayoutEffect(() => {
+    // Keep the readout in the native modal top layer when composed there.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setContainer(host.current?.closest('dialog') ?? document.body);
+  }, [host]);
   const canvas = useRef<HTMLCanvasElement>(null);
   useLayoutEffect(() => {
     if (canvas.current) inspection.draw(canvas.current);
-  }, [inspection]);
+  }, [inspection, container]);
   return createPortal(<aside className="matrix-inspection" style={{ left: inspection.left, top: inspection.top, width: inspection.width }} aria-label="Cell inspection">
       {inspection.magnifier && <div className="magnifier-card">
         <canvas width={9} height={9} ref={canvas} aria-label="9 by 9 matrix neighborhood" />
@@ -18,5 +25,5 @@ export function InspectionCard({ inspection }: { inspection: Inspection }) {
         <span>row {inspection.row} · column {inspection.column}</span>
         <span>{inspection.value}</span>
       </output>
-    </aside>, document.body);
+    </aside>, container);
 }

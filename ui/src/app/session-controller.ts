@@ -7,7 +7,7 @@ type Schemas = components['schemas'];
 export type TensorDescriptor = Schemas['TensorDescriptor'];
 export type ModelSummary = Schemas['ModelSummary'];
 export type Session = Schemas['Session'];
-export type Explorer = 'Tensor Explorer' | 'Tokenizer Explorer';
+export type Explorer = 'Tensor Explorer' | 'Tokenizer Explorer' | 'Architecture Explorer';
 export type ViewStatus = 'idle' | 'loading' | 'streaming' | 'complete' | 'cancelled' | 'failed' | 'expired-session';
 export type SessionStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 export const sessionStorageKey = (backend: string) => `llm-model-explorer:session:${backend}`;
@@ -19,6 +19,8 @@ export interface ShellState {
   sessionStatus: 'idle' | 'loading' | 'ready' | 'closing' | 'failed' | 'expired-session';
   message: string;
   tensors: TensorDescriptor[];
+  inventoryCoverage: 'complete' | 'partial';
+  inventoryDiagnostics: Schemas['TensorInventory']['diagnostics'];
   inventory: 'idle' | 'loading' | 'complete' | 'failed';
   selected: TensorDescriptor | null;
   explorer: Explorer;
@@ -43,7 +45,7 @@ function failureMessage(error: unknown, action: string) {
 export class SessionController {
   private state: ShellState = {
     models: [], catalogue: 'loading', session: null, sessionStatus: 'idle', message: '',
-    tensors: [], inventory: 'idle', selected: null, explorer: 'Tensor Explorer',
+    tensors: [], inventoryCoverage: 'complete', inventoryDiagnostics: [], inventory: 'idle', selected: null, explorer: 'Tensor Explorer',
     view: new Lifetime(), viewRevision: 0, viewStatus: 'idle', storageAvailable: true,
   };
   private readonly listeners = new Set<() => void>();
@@ -99,7 +101,7 @@ export class SessionController {
     this.sessionRequest.dispose();
     this.inventoryRequest.dispose();
     const request = this.sessionRequest = new Lifetime();
-    this.replaceView({ session: null, sessionStatus: 'loading', selected: null, tensors: [], inventory: 'idle', message: '' });
+    this.replaceView({ session: null, sessionStatus: 'loading', selected: null, tensors: [], inventoryCoverage: 'complete', inventoryDiagnostics: [], inventory: 'idle', message: '' });
     return request;
   }
   private acceptSession(session: Session) {
@@ -141,9 +143,9 @@ export class SessionController {
     if (!session || this.state.sessionStatus !== 'ready') return;
     this.inventoryRequest.dispose();
     const request = this.inventoryRequest = new Lifetime();
-    this.replaceView({ selected: null, tensors: [], inventory: 'loading', message: '' });
-    void this.client.listTensors(session.id, request.signal).then(request.guard(({ tensors }) => {
-      this.update({ tensors, inventory: 'complete' });
+    this.replaceView({ selected: null, tensors: [], inventoryCoverage: 'complete', inventoryDiagnostics: [], inventory: 'loading', message: '' });
+    void this.client.listTensors(session.id, request.signal).then(request.guard(({ tensors, coverage, diagnostics }) => {
+      this.update({ tensors, inventoryCoverage: coverage, inventoryDiagnostics: diagnostics, inventory: 'complete' });
     }), request.guard((error: unknown) => {
       if (isExpired(error)) this.expire();
       else this.update({ inventory: 'failed', message: failureMessage(error, 'Could not load tensors') });
@@ -165,7 +167,7 @@ export class SessionController {
     this.sessionRequest.dispose();
     this.inventoryRequest.dispose();
     this.remember(null);
-    this.replaceView({ session: null, sessionStatus: 'expired-session', selected: null, tensors: [], inventory: 'idle',
+    this.replaceView({ session: null, sessionStatus: 'expired-session', selected: null, tensors: [], inventoryCoverage: 'complete', inventoryDiagnostics: [], inventory: 'idle',
       message: 'Session expired. Select a model to start a fresh session; runtime state was not restored.' });
   }
   closeSession = () => {

@@ -14,7 +14,7 @@ function mockBackend() {
     const url = String(input);
     if (url.endsWith('/models')) return json({ models });
     if (url.endsWith('/tokenize')) return json({ ...JSON.parse(options!.body as string), tokens: [] });
-    if (url.endsWith('/tensors')) return json({ tensors });
+    if (url.endsWith('/tensors')) return json({ tensors, coverage: 'complete', diagnostics: [] });
     if (options?.method === 'DELETE') return new Response(null, { status: 204 });
     if (options?.method === 'POST') return json(JSON.parse(options.body as string).model_id === models[1]!.id ? sessionB : sessionA, 201);
     return json(sessionA);
@@ -87,7 +87,7 @@ it('recovers then expires a session honestly and allows fresh creation', async (
   fetcher.mockImplementation(async (input, options) => {
     if (String(input).endsWith('/models')) return json({ models });
     if (options?.method === 'POST') return json(sessionA, 201);
-    if (String(input).endsWith('/tensors')) return json({ tensors });
+    if (String(input).endsWith('/tensors')) return json({ tensors, coverage: 'complete', diagnostics: [] });
     return json({ code: 'session_not_found', message: '/srv/private/models' }, 404);
   });
   render(<App config={config} />);
@@ -123,7 +123,7 @@ it('backend replacement disposes the old view, fences old inventory, and uses ba
   await screen.findByText('Loading tensor inventory…');
   rerender(<App config={{ backendBaseUrl: 'https://second.example' }} />);
   await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
-  await act(async () => { pending.resolve(json({ tensors })); });
+  await act(async () => { pending.resolve(json({ tensors, coverage: 'complete', diagnostics: [] })); });
   expect(screen.queryByRole('button', { name: /left.weight/ })).not.toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('');
   expect(sessionStorage.getItem(sessionStorageKey(config.backendBaseUrl))).toBe(sessionA.id);

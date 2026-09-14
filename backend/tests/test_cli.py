@@ -80,7 +80,7 @@ def test_cli_passes_network_settings(
     model_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     run = Mock()
-    monkeypatch.setattr("uvicorn.run", run)
+    monkeypatch.setattr("llm_model_explorer.app.ApplicationServer", run)
     main(
         [
             "--model-root",

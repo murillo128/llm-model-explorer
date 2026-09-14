@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '../src/app/App';
 import { ApiClient, streamMediaType } from '../src/api/client';
@@ -5,9 +6,11 @@ import type { StreamOptions } from '../src/api/client';
 import type { TensorDescriptor } from '../src/app/session-controller';
 import { DistributionRenderer, GridRenderer } from '../src/rendering/tensor-renderer';
 import type { Metadata } from '../src/api/validation';
-import { models, sessionA } from '../src/test/shell-fixtures';
+import { inspectionFixture } from './architecture-inspection-fixture';
+import { models, sessionA, sessionB } from '../src/test/shell-fixtures';
 import '../src/app/styles.css';
 
+const architectureMode = new URLSearchParams(location.search).has('architecture');
 const tensors: TensorDescriptor[] = [
   ['distribution-outliers', [2, 100]], ['inspection', [17, 19]], ['A', [2, 3]], ['B', [3, 2]], ['reference', [576, 1536]], ['vector', [5]], ['wide-vector', [1536]], ['short-matrix', [2, 1536]], ['empty', [0, 3]], ['unsupported', [2, 2, 2]],
 ].map(([name, dimensions]) => {
@@ -79,8 +82,9 @@ window.fetch = async (input, options) => {
     if (catalogue.paused) await new Promise<void>((resolve) => { releaseCatalogue = resolve; });
     return json({ models });
   }
-  if (path === '/sessions') return json(sessionA, 201);
-  if (path.endsWith('/tensors')) return json({ tensors });
+  if (path === '/sessions') return json(architectureMode && JSON.parse(String(options?.body)).model_id === sessionB.model_id ? sessionB : sessionA, 201);
+  if (architectureMode && path.endsWith('/architecture')) return json(inspectionFixture(tensors, path.includes(sessionB.id) ? sessionB.model_id : sessionA.model_id));
+  if (path.endsWith('/tensors')) return json({ tensors, coverage: architectureMode ? 'partial' : 'complete', diagnostics: architectureMode ? [{ code: 'partial', message: 'Packed weights are metadata only.' }] : [] });
   if (path === `/sessions/${sessionA.id}`) return json(sessionA);
   const id = `aaaaaaaa-aaaa-4aaa-8aaa-${String(requests.length + 1).padStart(12, '0')}`;
   const body = new ReadableStream<Uint8Array>({ start(stream) { requests.push({ id, tensor: path.split('/').at(-2)!, kind: path.split('/').at(-1)!, stream }); } });
@@ -126,7 +130,8 @@ function pixels(renderer: GridRenderer) {
   return Array.from({ length: height }, (_, y) => Array.from({ length: width }, (_, x) => Array.from(bytes.slice(((height - 1 - y) * width + x) * 4, ((height - 1 - y) * width + x) * 4 + 4))));
 }
 const root = createRoot(document.getElementById('root')!);
-root.render(<App config={{ backendBaseUrl: 'https://fixture.example' }} />);
+const app = <App config={{ backendBaseUrl: 'https://fixture.example' }} />;
+root.render(new URLSearchParams(location.search).has('strict') ? <StrictMode>{app}</StrictMode> : app);
 window.explorerFixture = { catalogue, DistributionRenderer, tensors, metrics, renderers, requests, cancelled, callbacks, emit, end, metadata, data, pixels, unmount: () => root.unmount() };
 declare global { interface Window { explorerFixture: {
   catalogue: typeof catalogue; DistributionRenderer: typeof DistributionRenderer; tensors: typeof tensors; metrics: typeof metrics; renderers: typeof renderers; requests: typeof requests;

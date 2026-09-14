@@ -3,11 +3,11 @@ import type { TensorDescriptor } from '../app/session-controller';
 import { PanelHeader } from '../matrix-explorer/PanelHeader';
 import { InfoPopover } from '../matrix-explorer/InfoPopover';
 
-export function TensorHeader({ tensor, status, actions }: { tensor: TensorDescriptor; status?: ReactNode; actions?: ReactNode }) {
+export function TensorHeader({ tensor, status, actions, showInformation = true }: { tensor: TensorDescriptor; status?: ReactNode; actions?: ReactNode; showInformation?: boolean | undefined }) {
   const path = tensor.path.join(' › ') || tensor.name;
   return <PanelHeader
     identity={<h2 className="tensor-identity" title={path}>{path}</h2>}
-    information={<InfoPopover label="Tensor information">
+    information={showInformation && <InfoPopover label="Tensor information">
       <dl className="tensor-metadata metadata">
         <dt>Logical path</dt><dd>{path}</dd>
         <dt>Rank</dt><dd>{tensor.rank}</dd>

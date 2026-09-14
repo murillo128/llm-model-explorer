@@ -69,6 +69,9 @@ test.beforeEach(async ({ page }, testInfo) => {
   backend = `http://127.0.0.1:${ports.backend}`;
   const uiOrigin = `http://127.0.0.1:${ports.ui}`;
   const isReference = testInfo.title.startsWith('local reference');
+  if (isReference && process.env.LMEX_REQUIRE_ARCHITECTURE_REFERENCES === '1') {
+    expect(process.env.LMEX_REFERENCE_MODEL_DIR, 'SmolLM2 regression checkpoint is required').toBeTruthy();
+  }
   test.skip(isReference && !process.env.LMEX_REFERENCE_MODEL_DIR,
     'LMEX_REFERENCE_MODEL_DIR not supplied; local SmolLM2-135M Base UI not tested');
   let command = ['-m', 'acceptance.server', '--port', String(ports.backend), '--origin', uiOrigin];
