@@ -14,6 +14,8 @@ The UI consumes the tokenizer result defined by the API contract. It does not re
 
 The prompt/tokenization surface defined here is a reusable UI component. The standalone Tokenizer Explorer uses it directly, and later inference-oriented views may embed the same component above downstream stages without creating a second tokenizer presentation.
 
+Tokenizer Explorer also supports inspection of the model input embeddings corresponding to the latest successful token sequence, as defined in the accepted input-embedding extension below.
+
 ## Visual reference
 
 The current wireframe is the `Inference Explorer` frame in the Miro dashboard:
@@ -70,63 +72,16 @@ Token identity is not encoded by assigning a different color to every token. The
 
 ## Accepted input-embedding extension
 
-The post-PoC Tokenizer Explorer may consume the input-embedding lookup defined
-in `../api/contract.md` for the latest successful tokenizer result. Submit its
-real token IDs in sequence order, including special tokens and duplicates,
-under the same session. Associate each matrix row with that sequence position
-using the echoed IDs; never infer IDs from displayed text or download the full
-vocabulary embedding table to gather rows in the browser.
+After the latest successful tokenization, Tokenizer Explorer may inspect the session model's input embedding matrix for that exact token sequence. For `N` tokens, the matrix has shape `[N, hidden_size]`; row `i` corresponds to token sequence position `i`, including inserted special tokens and repeated token IDs.
 
-The matrix must correspond to the current editor result and session. An older
-lookup must not replace a newer one; while tokenization/lookup is pending or
-fails, an older matrix must not be presented as current. Empty input and
-unsupported lookup are explicit states. Consume the float32 matrix progressively
-using the common rules in `rendering.md`, preserving one weight per rendered
-pixel.
+The embedding state must always correspond to the current editor text, tokenizer options, session, and model. A result associated with an older state must never replace or be presented as the current embedding matrix. Empty token sequences and models for which input-embedding lookup is unavailable are explicit states, and tokenization remains usable when embedding lookup is unavailable or fails.
 
-The existing prompt/tokenization region is frozen: retain its editor, helper
-copy, token annotations, empty state, geometry, resize behavior, and native
-selection/caret/history/IME behavior. Invisible interaction/accessibility wiring
-may connect its existing annotations to the downstream matrix. Do not compact,
-reorder, replace, or repeat the prompt or add a second token strip.
+Token inspection and embedding-matrix inspection are linked by sequence position: identifying token position `i` identifies embedding row `i`, and identifying an embedding row identifies the corresponding token position. This linkage must not change the editable prompt content or the tokenizer result.
 
-Place the shared Matrix Explorer directly below the prompt in the same bounded
-Tokenizer workspace. The workspace owns internal overflow when the prompt and
-matrix exceed available height; the document remains fixed. Preserve the prompt's
-accepted size and the matrix's native `[token count, hidden width]` orientation.
-The matrix is matrix-only unless authoritative distribution artifacts exist;
-do not fabricate statistics or distributions. Use the common green scalar
-palette, provisional scalar transfer, and amber inspection semantics.
-
-Existing annotation IDs are individually focusable by sequence position,
-including IDs sharing an overlapping source span. Hover/focus/activation of ID
-`i` highlights matrix row `i`; a source span shared by several tokens links its
-first sequence position, while each existing ID independently addresses its own
-row. Hover/focus of a matrix cell highlights the associated existing annotation
-without changing editor text or selection. Duplicate IDs at different positions
-remain distinct links. Exact cell inspection retains row, hidden-dimension
-column, and float32 value. The latest token or matrix interaction takes precedence, including token hover
-or activation while the matrix retains keyboard focus. A token interaction
-clears the previous cell readout without moving focus or editor selection; a
-subsequent matrix interaction resumes exact cell inspection. Linked row state
-changes display uniforms only.
-
-Fence each lookup with the tokenizer editor generation and session/options
-identity, not text equality alone, including A→B→A changes. Invalidate the old
-matrix as soon as that tokenization stops being current, abort superseded
-transport, and cancel known operation handles. Delayed metadata, DATA, errors,
-and completion cannot populate a later generation. Pending/streaming feedback
-is compact and confined to the new embedding region; the prompt stays editable.
-Unsupported lookup leaves tokenization usable with a bounded explanation.
-An empty token sequence shows an explicit empty embedding state without a
-lookup or invented values. Failed/cancelled embedding results invalidate any
-partial matrix. No positional encoding or later inference stage is included.
+The input-embedding extension does not change the existing prompt/tokenization behavior and does not add positional encoding, transformer execution, logits, generation, or another later inference stage.
 
 ## Reuse in later inference views
 
 Later inference exploration may place the tokenizer component directly above embeddings or other model stages. That composition must reuse this same live prompt/tokenization component rather than introducing a parallel tokenizer UI with different interaction or visual semantics.
 
-Beyond the accepted input-embedding row lookup above, this document does not
-define downstream computation stages. Tensor rendering rules remain in
-`rendering.md`; positional encoding, transformer execution, logits, and
-generation require future design.
+Beyond the accepted input-embedding row lookup above, this document does not define downstream computation stages. Tensor rendering rules remain in `rendering.md`; positional encoding, transformer execution, logits, and generation require future design.

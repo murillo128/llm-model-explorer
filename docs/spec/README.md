@@ -12,13 +12,13 @@ The specification is split along the three system boundaries: backend, API contr
 - [`backend/sessions-and-execution.md`](backend/sessions-and-execution.md): sessions, UI-driven execution, long operations, cancellation, concurrency, and GPU scheduling.
 - [`backend/artifact-cache.md`](backend/artifact-cache.md): persistent disk artifacts, deduplication, publication, and invalidation.
 - [`api/openapi.yaml`](api/openapi.yaml): machine-readable HTTP endpoint, schema, identifier, and status-code contract.
-- [`api/contract.md`](api/contract.md): API ownership and the normative semantics connecting HTTP, tensors, tokenizer results, long operations, statistics, and distributions.
+- [`api/contract.md`](api/contract.md): API ownership and the normative semantics connecting HTTP, tensors, tokenizer results, long operations, statistics, distributions, and input embeddings.
 - [`api/binary-streaming.md`](api/binary-streaming.md): exact binary streaming framing, frame types, payload layouts, and terminal behavior.
 - [`ui/architecture.md`](ui/architecture.md): React application architecture and separation from the WebGL2 renderer.
 - [`ui/rendering.md`](ui/rendering.md): common tensor rendering rules and visual encoding.
 - [`ui/visual-language.md`](ui/visual-language.md): cross-cutting UI visual language, shared composition rules, typography, spacing, neutral surfaces, and interaction styling.
 - [`ui/tensor-explorer.md`](ui/tensor-explorer.md): accepted Tensor Explorer behavior, Matrix Inspector geometry, hover/selection, magnifier, and scientific-view guardrails.
-- [`ui/tokenizer-explorer.md`](ui/tokenizer-explorer.md): accepted Tokenizer Explorer behavior and the reusable live prompt/tokenization surface.
+- [`ui/tokenizer-explorer.md`](ui/tokenizer-explorer.md): accepted live prompt/tokenization behavior and inspection of the current token sequence's input-embedding matrix.
 
 ## Authority
 
