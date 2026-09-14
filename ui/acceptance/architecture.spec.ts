@@ -38,11 +38,17 @@ async function released(page: Page) {
   await expect.poll(async () => { const m = await metrics(page); return [m.textures, m.readers]; }).toEqual([0, 0]);
 }
 async function selectGraph(page: Page): Promise<Graph> {
-  const response = page.waitForResponse((r) => r.url().endsWith('/architecture'));
+  const response = page.waitForResponse((r) => r.url().startsWith(backend) &&
+    r.url().endsWith('/architecture') && r.request().method() === 'GET' && r.status() === 200);
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(modelId);
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
-  const body = await (await response).json();
+  // The bounded browser reader can release the DevTools response body. Read the
+  // same immutable prepared graph over real HTTP and require the UI to match it.
+  const prepared = await fetch((await response).url());
+  expect(prepared.ok).toBe(true);
+  const body = await prepared.json();
   expect(body.status).toBe('available');
+  expect(body.model_id).toBe(modelId);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-graph-id', body.graph.graph_id);
   return body.graph;
 }
