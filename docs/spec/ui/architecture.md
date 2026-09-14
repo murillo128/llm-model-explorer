@@ -32,8 +32,9 @@ Shell dimensions, responsive controls, and presentation are owned by
 The same viewport frame also bounds configuration loading and recovery.
 
 The document does not scroll during normal application use. The workspace takes
-the height left by the two bars, and its inventory and working panels own normal
-content scrolling. Explorer switching replaces the workspace without duplicating
+the height left by the two bars, and each explorer owns its bounded pane/scroll
+composition (see [Tensor Explorer](tensor-explorer.md#scroll-synchronization)).
+Explorer switching replaces the workspace without duplicating
 page headings or model identity. This containment must preserve renderer-native
 data geometry and progressive consumption; it does not alter explorer internals.
 Session creation, recovery, refresh, deletion, and consumer lifetimes continue to

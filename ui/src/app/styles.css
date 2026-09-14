@@ -66,8 +66,8 @@ select { font: inherit; color: var(--ui-text); background: var(--ui-surface); bo
 dl { margin: 0; }
 dd { margin: 0; overflow-wrap: anywhere; }
 .model-metadata, .tensor-metadata { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; }
-.tensor-layout { display: grid; grid-template-columns: minmax(200px, 300px) minmax(0, 1fr); gap: 20px; }
-.tensor-layout > aside { min-width: 0; min-height: 0; overflow: auto; padding: 6px; }
+.tensor-layout { display: grid; grid-template-columns: minmax(200px, 280px) minmax(360px, 1fr); gap: 16px; }
+.tensor-layout > aside { min-width: 0; min-height: 0; overflow: auto; scrollbar-gutter: stable; overscroll-behavior: contain; padding: 6px; }
 .tensor-navigator { container-type: inline-size; }
 .tensor-tree { list-style: none; padding: 0; margin: 0; }
 .tensor-tree summary { cursor: pointer; padding: 2px 4px; height: 28px; white-space: nowrap; font-size: 13px; line-height: 24px; }
@@ -80,18 +80,24 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .tensor-leaf-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .tensor-leaf-metadata { flex-shrink: 0; font-size: 11px; white-space: nowrap; }
 @container (max-width: 230px) { .tensor-leaf-metadata { display: none; } }
-.tensor-layout .surface-content { padding: 12px; gap: 8px; }
+.tensor-layout > .working-surface { display: flex; overflow: hidden; }
+.tensor-layout .surface-content { --tensor-pane-padding: 12px; position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: var(--tensor-pane-padding); gap: 8px; }
+.tensor-layout .surface-content > :not(.tensor-explorer) { flex-shrink: 0; }
 .tensor-header { position: relative; display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 28px; }
+.tensor-layout .tensor-header { position: static; }
 .tensor-identity { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 13px/20px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .tensor-info { flex-shrink: 0; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--ui-text); font-size: 18px; line-height: 20px; cursor: pointer; }
 .tensor-info:hover { background: var(--ui-accent-soft); }
 .tensor-summary { flex-shrink: 0; font-size: 12px; white-space: nowrap; }
 .tensor-details { position: absolute; z-index: 20; top: 36px; right: 0; width: min(440px, 100%); max-height: min(400px, 50dvh); overflow: auto; display: grid; gap: 12px; padding: 12px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-surface); box-shadow: var(--ui-shadow-float); font-size: 13px; line-height: 20px; }
+.tensor-layout .tensor-details { top: calc(var(--tensor-pane-padding) + 36px); right: var(--tensor-pane-padding); width: min(440px, calc(100% - 2 * var(--tensor-pane-padding))); max-height: min(400px, 50dvh, calc(100% - 2 * var(--tensor-pane-padding) - 36px)); }
 .tensor-details .button { padding: 4px 8px; }
 .tensor-details .tensor-metadata { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 4px 8px; font-size: 12px; }
 .working-surface { min-width: 0; }
 @media (max-width: 760px) {
-  .tensor-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 2fr); }
+  .tensor-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(64px, 24%) minmax(0, 1fr); gap: 8px; }
+  .tensor-layout .surface-content { --tensor-pane-padding: 8px; }
+  .tensor-summary { max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
 }
 
 .app-bar { display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--ui-border); background: var(--ui-surface-soft); min-width: 0; z-index: 30; }
@@ -130,7 +136,9 @@ dd { margin: 0; overflow-wrap: anywhere; }
   .status-metadata { display: none; }
 }
 
-.tensor-explorer { display: grid; gap: 8px; min-width: 0; }
+.tensor-explorer { display: flex; flex-direction: column; flex: 1; gap: 8px; min-width: 0; min-height: 0; }
+.tensor-explorer > :not(.matrix-surfaces) { flex-shrink: 0; }
+.tensor-explorer > .matrix-surfaces { flex: 1; min-height: 0; }
 .tensor-results { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; line-height: 20px; color: var(--ui-text-muted); }
 .tensor-results:empty { display: none; }
 .tensor-results p { display: flex; align-items: center; gap: 4px; }

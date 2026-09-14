@@ -66,4 +66,17 @@ test('compact deep navigator and contextual metadata remain accessible in narrow
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('compact-tensor-navigation.png') });
   await testInfo.attach('compact tensor navigation', { path: testInfo.outputPath('compact-tensor-navigation.png'), contentType: 'image/png' });
+  // Pane containment must not clip the bottom of the on-demand metadata dialog.
+  await page.setViewportSize({ width: 280, height: 400 });
+  await info.click();
+  await expect(dialog).toBeVisible();
+  expect(await dialog.evaluate((node) => {
+    const pane = node.closest('.working-surface')!.getBoundingClientRect();
+    const rect = node.getBoundingClientRect();
+    return rect.top >= pane.top && rect.bottom <= pane.bottom && rect.left >= pane.left && rect.right <= pane.right;
+  })).toBe(true);
+  await dialog.evaluate((node) => { node.scrollTop = node.scrollHeight; });
+  await expect(dialog.getByText(/Oversized tensors scroll/)).toBeInViewport({ ratio: 1 });
+  await page.keyboard.press('Escape');
+  await expect(info).toBeFocused();
 });
