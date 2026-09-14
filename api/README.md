@@ -102,3 +102,35 @@ The generator constructs frames and asserts small numeric reference results;
 it does **not** parse streams or claim that a future codec passes these cases.
 Codec behavior, incremental memory use, HTTP/CORS headers, session cancellation,
 and error redaction need implementation tests in their owning issues.
+
+## Static architecture extension
+
+[`fixtures/architecture.json`](fixtures/architecture.json) contains one small synthetic
+response/context and deterministic mutation cases. It is a structural oracle, not
+acceptance evidence for a real checkpoint or a runtime architecture route. The
+context pins the session model, logical inventory and tokenizer availability.
+`edits` and `context_edits` contain string-key paths (array indices are decimal),
+with either a replacement `value` or `delete: true`.
+
+`schema_valid` tests the generated closed unions and local bounds independently
+in Python and the UI's Ajv runtime. `valid` additionally requires the graph/context
+checks in `architecture_conformance.py`: identity/reference closure, containment,
+repetition order, directional group ports, declared symbols, alias termination,
+physical versus logical geometry, and real native inspection membership. Schema
+success alone does not establish graph conformance. Runtime implementation children
+must consume the contextual cases when adding retrieval and graph consumers; this
+publication adds no client request method or backend architecture route.
+
+`byte_cases` describe repeated 4 KiB chunks plus a tail, exercising the exact 32 MiB
+boundary and early rejection without allocating a large response. `bounded_size`
+stops consuming at overflow; `serialized_size` counts UTF-8 JSON incrementally.
+Runtime producers must bound construction/serialization and consumers must bound
+reads before parsing, returning localized `unavailable/unsupported_size` without
+truncation. These fixture helpers do not claim runtime enforcement has shipped.
+`http_cases` preserve pinned-content mutation as HTTP 409 `model_content_changed`.
+
+Baseline native inventory responses now include `coverage: complete` and empty
+`diagnostics`, preserving every existing descriptor and numeric golden byte. Partial
+inventories (including empty ones) are explicit; their quantized producer belongs
+to the checkpoint-admission child. The validator regenerates all three fixture
+files together; existing tensor/tokenizer/embedding golden files remain unchanged.

@@ -10,7 +10,7 @@ const backend = 'https://backend.example';
 function setup(storage = memoryStorage(), url = backend) {
   const client = new ApiClient({ backendBaseUrl: url }, vi.fn());
   vi.spyOn(client, 'listModels').mockResolvedValue({ models });
-  vi.spyOn(client, 'listTensors').mockResolvedValue({ tensors });
+  vi.spyOn(client, 'listTensors').mockResolvedValue({ tensors, coverage: 'complete', diagnostics: [] });
   vi.spyOn(client, 'createSession').mockResolvedValue(sessionA);
   vi.spyOn(client, 'getSession').mockImplementation(async (id) => id === sessionB.id ? sessionB : sessionA);
   vi.spyOn(client, 'deleteSession').mockResolvedValue();
@@ -69,17 +69,17 @@ it('distinguishes expiration from transport errors and permits fresh creation or
 
 it('fences late inventories across session changes even when abort is ignored', async () => {
   const { controller, client } = setup();
-  const first = deferred<{ tensors: typeof tensors }>();
+  const first = deferred<{ coverage: 'complete'; diagnostics: []; tensors: typeof tensors }>();
   vi.mocked(client.listTensors).mockReturnValueOnce(first.promise);
   await tick();
   controller.chooseModel(models[0]!.id);
   await tick();
   const oldSignal = vi.mocked(client.listTensors).mock.calls[0]![1];
   vi.mocked(client.createSession).mockResolvedValue(sessionB);
-  vi.mocked(client.listTensors).mockResolvedValue({ tensors: [tensors[1]!] });
+  vi.mocked(client.listTensors).mockResolvedValue({ coverage: 'complete', diagnostics: [], tensors: [tensors[1]!] });
   controller.chooseModel(models[1]!.id);
   await tick();
-  first.resolve({ tensors: [tensors[0]!] });
+  first.resolve({ coverage: 'complete', diagnostics: [], tensors: [tensors[0]!] });
   await tick();
   expect(oldSignal?.aborted).toBe(true);
   expect(controller.getSnapshot().tensors).toEqual([tensors[1]]);
