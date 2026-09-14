@@ -11,7 +11,7 @@ test('production shell model A→B→A never revives another model embedding res
     if (route.request().method() === 'DELETE') return route.fulfill({ status: 204 });
     if (path === '/models') return route.fulfill({ json: { models: models.map(model => ({ ...model, tokenizer_available: true })) } });
     if (path === '/sessions') return route.fulfill({ status: 201, json: route.request().postDataJSON().model_id === models[0]!.id ? sessionA : sessionB });
-    if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors: [] } });
+    if (path.endsWith('/tensors')) return route.fulfill({ json: { coverage: 'complete', diagnostics: [], tensors: [] } });
     if (path.endsWith('/tokenize')) return route.fulfill({ json: { ...route.request().postDataJSON(), tokens: [
       { index: 0, id: path.includes(sessionA.id) ? 2 : 1, token: '<bos>', decoded: '', special: true },
     ] } });

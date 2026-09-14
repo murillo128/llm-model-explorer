@@ -80,7 +80,7 @@ window.fetch = async (input, options) => {
     return json({ models });
   }
   if (path === '/sessions') return json(sessionA, 201);
-  if (path.endsWith('/tensors')) return json({ tensors });
+  if (path.endsWith('/tensors')) return json({ tensors, coverage: 'complete', diagnostics: [] });
   if (path === `/sessions/${sessionA.id}`) return json(sessionA);
   const id = `aaaaaaaa-aaaa-4aaa-8aaa-${String(requests.length + 1).padStart(12, '0')}`;
   const body = new ReadableStream<Uint8Array>({ start(stream) { requests.push({ id, tensor: path.split('/').at(-2)!, kind: path.split('/').at(-1)!, stream }); } });

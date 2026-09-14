@@ -54,6 +54,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{session_id}/architecture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Retrieve the prepared static architecture for the pinned session model
+         * @description Read-only prepared-result retrieval. Does not start or retry analysis, execute a model, or create a long operation. Contract published ahead of runtime route implementation.
+         */
+        get: operations["getArchitecture"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sessions/{session_id}/tensors": {
         parameters: {
             query?: never;
@@ -241,6 +263,9 @@ export interface components {
             model_id: string;
         };
         TensorInventory: {
+            /** @enum {string} */
+            coverage: "complete" | "partial";
+            diagnostics: components["schemas"]["InventoryDiagnostic"][];
             tensors: components["schemas"]["TensorDescriptor"][];
         };
         /** @description rank equals shape.length; numel equals product(shape), with product([]) = 1. Validate all products before allocation. */
@@ -423,6 +448,273 @@ export interface components {
             total?: number;
             unit: string;
         };
+        /** @description Opaque graph-scoped identity; never a path, route, or executable expression. */
+        ArchitectureId: string;
+        ArchitectureName: string;
+        ArchitectureText: string;
+        ArchitectureDiagnostic: {
+            code: components["schemas"]["ArchitectureName"];
+            message: components["schemas"]["ArchitectureText"];
+            node_id?: components["schemas"]["ArchitectureId"];
+            parameter_id?: components["schemas"]["ArchitectureId"];
+        };
+        InventoryDiagnostic: {
+            code: components["schemas"]["ArchitectureName"];
+            message: components["schemas"]["ArchitectureText"];
+        };
+        ArchitectureProvenance: {
+            /** @enum {string} */
+            kind: "configuration" | "storage" | "description";
+            source: components["schemas"]["ArchitectureName"];
+            revision?: components["schemas"]["ArchitectureName"];
+            rule?: components["schemas"]["ArchitectureText"];
+        };
+        ArchitectureConstantDimension: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "constant";
+            value: components["schemas"]["SafeInteger"];
+        };
+        ArchitectureSymbolDimension: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "symbol";
+            name: components["schemas"]["ArchitectureName"];
+        };
+        ArchitectureExpressionDimension: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "expression";
+            text: components["schemas"]["ArchitectureText"];
+            symbols: components["schemas"]["ArchitectureName"][];
+        };
+        ArchitectureUnknownDimension: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "unknown";
+            reason: components["schemas"]["ArchitectureText"];
+        };
+        ArchitectureDimension: components["schemas"]["ArchitectureConstantDimension"] | components["schemas"]["ArchitectureSymbolDimension"] | components["schemas"]["ArchitectureExpressionDimension"] | components["schemas"]["ArchitectureUnknownDimension"];
+        /** @description Ordered logical dimensions. [] is scalar; null means unknown rank. Expressions are display-only. */
+        ArchitectureShape: components["schemas"]["ArchitectureDimension"][] | null;
+        ArchitectureSymbol: {
+            name: components["schemas"]["ArchitectureName"];
+            meaning: components["schemas"]["ArchitectureText"];
+        };
+        ArchitecturePort: {
+            id: components["schemas"]["ArchitectureId"];
+            /** @enum {string} */
+            direction: "input" | "output";
+            label: components["schemas"]["ArchitectureName"];
+            shape: components["schemas"]["ArchitectureShape"];
+        };
+        ArchitectureModuleReference: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "module";
+            name: components["schemas"]["ArchitectureName"];
+        };
+        ArchitectureParameterReference: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "parameter";
+            parameter_id: components["schemas"]["ArchitectureId"];
+        };
+        ArchitectureTokenizerReference: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "tokenizer";
+        };
+        ArchitectureReference: components["schemas"]["ArchitectureModuleReference"] | components["schemas"]["ArchitectureParameterReference"] | components["schemas"]["ArchitectureTokenizerReference"];
+        ArchitectureAttribute: {
+            name: components["schemas"]["ArchitectureName"];
+            value: (string | number | boolean | null) | (string | number | boolean | null)[];
+            provenance: components["schemas"]["ArchitectureProvenance"][];
+        };
+        ArchitectureLeafNode: {
+            id: components["schemas"]["ArchitectureId"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "operation" | "input" | "output" | "context" | "state";
+            label: components["schemas"]["ArchitectureName"];
+            ports: components["schemas"]["ArchitecturePort"][];
+            parameter_ids: components["schemas"]["ArchitectureId"][];
+            references: components["schemas"]["ArchitectureReference"][];
+            attributes: components["schemas"]["ArchitectureAttribute"][];
+            provenance: components["schemas"]["ArchitectureProvenance"][];
+            parent_id?: components["schemas"]["ArchitectureId"];
+            operation?: components["schemas"]["ArchitectureName"];
+            description?: components["schemas"]["ArchitectureText"];
+            formula?: components["schemas"]["ArchitectureText"];
+        };
+        ArchitectureGroupNode: {
+            id: components["schemas"]["ArchitectureId"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "group";
+            label: components["schemas"]["ArchitectureName"];
+            ports: components["schemas"]["ArchitecturePort"][];
+            parameter_ids: components["schemas"]["ArchitectureId"][];
+            references: components["schemas"]["ArchitectureReference"][];
+            attributes: components["schemas"]["ArchitectureAttribute"][];
+            provenance: components["schemas"]["ArchitectureProvenance"][];
+            parent_id?: components["schemas"]["ArchitectureId"];
+            operation?: components["schemas"]["ArchitectureName"];
+            description?: components["schemas"]["ArchitectureText"];
+            formula?: components["schemas"]["ArchitectureText"];
+            children: components["schemas"]["ArchitectureId"][];
+        };
+        ArchitectureNode: components["schemas"]["ArchitectureLeafNode"] | components["schemas"]["ArchitectureGroupNode"];
+        ArchitectureEndpoint: {
+            node_id: components["schemas"]["ArchitectureId"];
+            port_id: components["schemas"]["ArchitectureId"];
+        };
+        ArchitectureEdge: {
+            id: components["schemas"]["ArchitectureId"];
+            source: components["schemas"]["ArchitectureEndpoint"];
+            target: components["schemas"]["ArchitectureEndpoint"];
+            /** @enum {string} */
+            kind: "data" | "state" | "context";
+            provenance: components["schemas"]["ArchitectureProvenance"][];
+            label?: components["schemas"]["ArchitectureName"];
+        };
+        ArchitectureRepetitionInstance: {
+            node_id: components["schemas"]["ArchitectureId"];
+            index: components["schemas"]["SafeInteger"];
+            variant: components["schemas"]["ArchitectureId"];
+        };
+        ArchitectureRepetition: {
+            id: components["schemas"]["ArchitectureId"];
+            parent_id: components["schemas"]["ArchitectureId"];
+            label: components["schemas"]["ArchitectureName"];
+            instances: components["schemas"]["ArchitectureRepetitionInstance"][];
+        };
+        ArchitectureStorage: {
+            name: components["schemas"]["ArchitectureName"];
+            dtype: components["schemas"]["ArchitectureName"];
+            shape: components["schemas"]["TensorShape"];
+            role?: components["schemas"]["ArchitectureName"];
+        };
+        ArchitectureRegion: {
+            storage_name: components["schemas"]["ArchitectureName"];
+            description: components["schemas"]["ArchitectureText"];
+        };
+        ArchitectureAvailableInspection: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "available";
+            tensor_id: components["schemas"]["ArchitectureId"];
+        };
+        ArchitectureUnavailableInspection: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "unavailable";
+            /** @enum {string} */
+            reason: "unsupported_representation" | "unsupported_rank" | "requires_view" | "unresolved_binding";
+            message: components["schemas"]["ArchitectureText"];
+        };
+        ArchitectureInspection: components["schemas"]["ArchitectureAvailableInspection"] | components["schemas"]["ArchitectureUnavailableInspection"];
+        ArchitectureDirectParameter: {
+            id: components["schemas"]["ArchitectureId"];
+            name: components["schemas"]["ArchitectureName"];
+            logical_shape: components["schemas"]["ArchitectureShape"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            binding: "native" | "quantized" | "unresolved";
+            storage: components["schemas"]["ArchitectureStorage"][];
+            inspection: components["schemas"]["ArchitectureInspection"];
+            provenance: components["schemas"]["ArchitectureProvenance"][];
+        };
+        ArchitectureAliasParameter: {
+            id: components["schemas"]["ArchitectureId"];
+            name: components["schemas"]["ArchitectureName"];
+            logical_shape: components["schemas"]["ArchitectureShape"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            binding: "alias";
+            storage: components["schemas"]["ArchitectureStorage"][];
+            inspection: components["schemas"]["ArchitectureInspection"];
+            provenance: components["schemas"]["ArchitectureProvenance"][];
+            alias_of: components["schemas"]["ArchitectureId"];
+        };
+        ArchitectureFusedParameter: {
+            id: components["schemas"]["ArchitectureId"];
+            name: components["schemas"]["ArchitectureName"];
+            logical_shape: components["schemas"]["ArchitectureShape"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            binding: "fused_region";
+            storage: components["schemas"]["ArchitectureStorage"][];
+            inspection: components["schemas"]["ArchitectureInspection"];
+            provenance: components["schemas"]["ArchitectureProvenance"][];
+            region: components["schemas"]["ArchitectureRegion"];
+        };
+        ArchitectureParameter: components["schemas"]["ArchitectureDirectParameter"] | components["schemas"]["ArchitectureAliasParameter"] | components["schemas"]["ArchitectureFusedParameter"];
+        ArchitectureGraph: {
+            graph_id: components["schemas"]["ArchitectureId"];
+            /** @enum {string} */
+            scope: "language_model" | "visual_encoder_predictor";
+            /** @enum {string} */
+            coverage: "complete" | "partial";
+            symbols: components["schemas"]["ArchitectureSymbol"][];
+            nodes: components["schemas"]["ArchitectureNode"][];
+            edges: components["schemas"]["ArchitectureEdge"][];
+            repetitions: components["schemas"]["ArchitectureRepetition"][];
+            parameters: components["schemas"]["ArchitectureParameter"][];
+            diagnostics: components["schemas"]["ArchitectureDiagnostic"][];
+        };
+        ArchitectureAvailableResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "available";
+            model_id: string;
+            diagnostics: components["schemas"]["ArchitectureDiagnostic"][];
+            graph: components["schemas"]["ArchitectureGraph"];
+        };
+        ArchitectureUnavailableResponse: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "unavailable";
+            model_id: string;
+            diagnostics: components["schemas"]["ArchitectureDiagnostic"][];
+            /** @enum {string} */
+            reason: "unsupported_architecture" | "analysis_failed" | "restart_required" | "unsupported_size" | "cache_unavailable";
+            requires_restart: boolean;
+        };
+        /** @description Prepared static metadata, limited to 33554432 decoded UTF-8 JSON bytes. Bound reads and serialization before allocation; overflow yields unavailable/unsupported_size, never truncation. Requires graph closure, containment, repetition, alias, dimension and session-inventory checks described in architecture-explorer.md. No numerical operation is created. */
+        ArchitectureResponse: components["schemas"]["ArchitectureAvailableResponse"] | components["schemas"]["ArchitectureUnavailableResponse"];
     };
     responses: {
         /** @description Progressive binary long-operation result */
@@ -637,6 +929,34 @@ export interface operations {
                 content?: never;
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["Unprocessable"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ResourceExhausted"];
+        };
+    };
+    getArchitecture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Prepared architecture capability */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchitectureResponse"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModelChanged"];
             422: components["responses"]["Unprocessable"];
             500: components["responses"]["InternalError"];
             503: components["responses"]["ResourceExhausted"];

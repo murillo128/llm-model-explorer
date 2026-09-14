@@ -9,6 +9,7 @@ async function openInventory(page: Page) {
   await page.route('https://backend.example/**', (route) => route.fulfill({
     status: route.request().method() === 'POST' ? 201 : 200,
     json: route.request().url().endsWith('/models') ? { models } : route.request().url().endsWith('/tensors') ? {
+      coverage: 'complete', diagnostics: [],
       tensors: [
         { ...tensors[2], id: 'deep', name: path.join('.'), path },
         { ...tensors[2], id: 'second-layer', path: ['model', 'layers', '1', 'self_attn', 'q_proj', 'weight'] },

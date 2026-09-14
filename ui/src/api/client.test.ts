@@ -119,7 +119,7 @@ it('uses explicit typed endpoint methods and checks JSON responses', async () =>
   expect(await client.createSession({ model_id: 'model' })).toEqual({ id, model_id: 'model' });
   json({ id, model_id: 'model' });
   await client.getSession(id);
-  json({ tensors: [] });
+  json({ coverage: 'complete', diagnostics: [], tensors: [] });
   await client.listTensors(id);
   const tokenized = fixtures.schema_cases.find(c => c.name === 'unicode-overlapping-specials')!.value;
   json(tokenized);

@@ -175,7 +175,7 @@ test('standalone explorer displays successful endpoint results in the existing s
     const path = new URL(route.request().url()).pathname;
     if (path === '/models') return route.fulfill({ json: { models } });
     if (path === '/sessions') return route.fulfill({ status: 201, json: sessionA });
-    if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors } });
+    if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors, coverage: 'complete', diagnostics: [] } });
     if (path.endsWith('/tokenize')) {
       const body = route.request().postDataJSON() as { text: string };
       return route.fulfill({ json: body.text === 'Hello, world!' ? { text: body.text, add_special_tokens: true, tokens: [
@@ -204,7 +204,7 @@ test('standalone shell calls the typed endpoint and reports tokenizer unavailabi
     const path = new URL(route.request().url()).pathname;
     if (path === '/models') return route.fulfill({ json: { models } });
     if (path === '/sessions') return route.fulfill({ status: 201, json: sessionA });
-    if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors } });
+    if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors, coverage: 'complete', diagnostics: [] } });
     if (path.endsWith('/tokenize')) {
       requests.push(route.request().postDataJSON());
       return route.fulfill({ status: 422, json: { code: 'unsupported_representation', message: 'No tokenizer' } });

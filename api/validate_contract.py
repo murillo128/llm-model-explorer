@@ -15,10 +15,14 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from openapi_spec_validator import OpenAPIV31SpecValidator
 import yaml
 
+from architecture_conformance import (apply_edits, bounded_size, fixtures as architecture_fixtures,
+                                      validate_architecture)
+
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / 'docs/spec/api/openapi.yaml'
 GOLDEN = ROOT / 'api/fixtures/conformance.json'
 EMBEDDINGS_GOLDEN = ROOT / 'api/fixtures/embeddings.json'
+ARCHITECTURE_GOLDEN = ROOT / 'api/fixtures/architecture.json'
 SAFE = 2**53 - 1
 U32 = 2**32 - 1
 
@@ -71,6 +75,11 @@ def semantics(schema, value):
             require(offset <= SAFE and offset == value['byte_length'], 'section total')
             if value['domain_minimum'] is not None:
                 require(value['domain_minimum'] <= value['domain_maximum'], 'domain order')
+    elif schema == 'ArchitectureResponse':
+        validate_architecture(value)
+    elif schema == 'TensorInventory':
+        for tensor in value['tensors']:
+            semantics('TensorDescriptor', tensor)
     elif schema == 'TensorDescriptor':
         require(value['rank'] == len(value['shape']) and value['numel'] == product(value['shape']),
                 'descriptor shape/rank/numel')
@@ -519,13 +528,60 @@ def main():
         Draft202012Validator.check_schema(schema)
     expected_operations = {'listModels', 'createSession', 'getSession', 'deleteSession',
                            'listTensors', 'streamTensor', 'streamTensorStatistics',
-                           'streamTensorDistributions', 'streamInputEmbeddings', 'tokenize', 'cancelOperation'}
+                           'streamTensorDistributions', 'streamInputEmbeddings', 'tokenize', 'cancelOperation', 'getArchitecture'}
     operations = [op for item in document['paths'].values() for method, op in item.items()
                   if method in ('get', 'post', 'delete')]
-    require(len(operations) == 11 and {op['operationId'] for op in operations} == expected_operations,
+    require(len(operations) == 12 and {op['operationId'] for op in operations} == expected_operations,
             'operation set changed')
     golden = fixtures()
     embeddings = embedding_fixtures(document)
+    architecture = architecture_fixtures()
+    for case in architecture['cases']:
+        value = apply_edits(architecture['response'], case['edits'])
+        context = apply_edits(architecture['context'], case['context_edits'])
+        validator = Draft202012Validator(
+            {'$ref': '#/components/schemas/ArchitectureResponse', 'components': document['components']})
+        require(validator.is_valid(value) == case['schema_valid'],
+                f"architecture schema expectation: {case['name']}")
+        try:
+            validator.validate(value)
+            validate_instance(document, 'Session', context['session'])
+            validate_instance(document, 'TensorInventory', context['inventory'])
+            validate_architecture(value, context)
+        except (ValidationError, ValueError):
+            require(not case['valid'], f"valid architecture rejected: {case['name']}")
+        else:
+            require(case['valid'], f"invalid architecture accepted: {case['name']}")
+    for case in architecture['inventory_cases']:
+        try:
+            validate_instance(document, 'TensorInventory', case['value'])
+        except (ValidationError, ValueError):
+            require(not case['valid'], f"valid inventory rejected: {case['name']}")
+        else:
+            require(case['valid'], f"invalid inventory accepted: {case['name']}")
+    for case in architecture['byte_cases']:
+        def chunks():
+            chunk = b'x' * case['chunk_bytes']
+            for _ in range(case['repeat']):
+                yield chunk
+            yield b'x' * case['tail_bytes']
+            if not case['valid']:
+                raise AssertionError('oversized input was consumed past rejection')
+        try:
+            bounded_size(chunks())
+        except ValueError:
+            require(not case['valid'], 'valid size rejected')
+        else:
+            require(case['valid'], 'oversize accepted')
+    endpoint = document['paths']['/sessions/{session_id}/architecture']['get']
+    require(set(endpoint['responses']) == {'200', '404', '409', '422', '503', '500'},
+            'architecture HTTP response set')
+    require('requestBody' not in endpoint and endpoint['operationId'] == 'getArchitecture',
+            'architecture retrieval contract')
+    for case in architecture['http_cases']:
+        response = document['components']['responses']['ModelChanged']
+        Draft202012Validator({**response['content']['application/json']['schema'],
+                              'components': document['components']}).validate(case['value'])
     for case in golden['schema_cases'] + embeddings['schema_cases']:
         try:
             validate_instance(document, case['schema'], case['value'])
@@ -537,7 +593,8 @@ def main():
             golden['numeric_cases']['uint32']['little_endian_hex'], 'uint32 endian oracle')
     # Literal framing oracle independent from struct.pack arguments.
     require(frame(6).hex() == '4c4d45580600000000000000', 'header oracle')
-    for path, fixture in [(GOLDEN, golden), (EMBEDDINGS_GOLDEN, embeddings)]:
+    for path, fixture in [(GOLDEN, golden), (EMBEDDINGS_GOLDEN, embeddings),
+                          (ARCHITECTURE_GOLDEN, architecture)]:
         rendered = json.dumps(fixture, ensure_ascii=False, allow_nan=False, indent=2) + '\n'
         if args.write:
             path.write_text(rendered)
@@ -546,6 +603,7 @@ def main():
                     f'{path.name} differs; run api/validate_contract.py --write')
     print(f"OpenAPI 3.1 valid; {references} references resolved; "
           f"{len(golden['schema_cases']) + len(embeddings['schema_cases'])} instance cases checked; "
+          f"{len(architecture['cases'])} architecture cases checked; "
           f"{len(golden['wire_cases']) + len(embeddings['wire_cases'])} wire fixtures "
           f"{'written' if args.write else 'reproducible'}.")
 
