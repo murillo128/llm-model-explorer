@@ -2,9 +2,9 @@
 
 ## Purpose
 
-LLM Model Explorer is a browser-based interactive application for understanding transformer models by exposing their tensors and, in later phases, the individual computation steps involved in inference.
+LLM Model Explorer is a browser-based interactive application for understanding models through their tensors, navigable architecture, and, in later phases, individual inference computations. The initial focus is transformer language models; the explicitly selected V-JEPA 2 checkpoint is a bounded non-language architecture reference, not generic world-model support.
 
-The product has three independent system boundaries: a backend that owns local model access and mathematical computation, an API contract that defines all communication between backend and UI, and a browser UI that owns visualization and interaction.
+The product has three independent system boundaries: a backend that owns local model access and mathematical computation, an API contract that defines communication, and a browser UI that owns visualization and interaction.
 
 The initial reference model is `HuggingFaceTB/SmolLM2-135M` Base.
 
@@ -12,37 +12,46 @@ The initial reference model is `HuggingFaceTB/SmolLM2-135M` Base.
 
 The first proof of concept contains two user-facing capabilities:
 
-1. Tensor exploration: discover the tensors in a local Hugging Face model through a hierarchical list and open complete 1D or 2D tensors for visualization.
+1. Tensor exploration: discover tensors in a local Hugging Face model and open complete 1D or 2D tensors for visualization.
 2. Tokenizer exploration: run the real Hugging Face tokenizer associated with the selected model and inspect its result.
 
-The detailed behavior and visual design of both explorers are intentionally delegated to their dedicated specifications.
-
-The proof of concept must establish the architecture that later inference exploration will use. It must not be a disposable implementation that requires replacing the backend, API model, session model, streaming mechanism, artifact cache, or renderer boundary when inference is added.
+Their detailed behavior belongs in their dedicated specifications. The proof of concept must remain evolvable without replacing the backend, API boundary, session model, streaming mechanism, artifact cache, or renderer boundary.
 
 ## Accepted post-PoC capabilities
 
-Tokenizer Explorer also exposes the model input embedding matrix for its latest successful token sequence. For a sequence of `N` token IDs, the result has shape `[N, hidden_size]`; row `i` is the model input embedding for token sequence position `i`. Token order, repeated token IDs, and inserted special tokens are preserved.
+Tokenizer Explorer exposes the input embedding matrix for its latest successful token sequence. For `N` token IDs, the result has shape `[N, hidden_size]`; row `i` is the input embedding for sequence position `i`. Preserve order, duplicate IDs, and inserted special tokens. This is embedding lookup only, not positional encoding, a transformer forward pass, logits, or generation.
 
-This capability is limited to input embedding lookup. It does not include positional encoding, transformer forward execution, logits, generation, or any later inference stage.
+Matrix exploration supports viewport zoom and navigation while preserving exact logical values, row/column identity, native order, and square cells. Navigation changes the view, never the tensor.
 
-Matrix exploration also supports viewport zoom and navigation while preserving exact logical tensor values, row/column identity, native order, and square matrix cells. Navigation changes only the view of a matrix; it never changes the tensor itself.
+Architecture Explorer adds a static, exhaustive, navigable description of supported local checkpoints. It explains components, recognizable mathematical operations, their data dependencies, known/symbolic dimensions, and references to weights. It reuses the existing explorers rather than replacing them. Its domain rules belong in [architecture analysis](backend/architecture-analysis.md), its transport in the [architecture API contract](api/architecture-explorer.md), and its interaction in the [Architecture Explorer specification](ui/architecture-explorer.md).
 
-## Future direction
+This accepted architecture increment is pending implementation and reference-checkpoint validation. It performs no inference, tracing, activation capture, token generation, or interactive execution. Future links to other explorers are represented by semantic resource references, not fictional execution results or unimplemented endpoints.
 
-A later phase will extend the same architecture to step-by-step inference: embeddings, transformer layers, attention, matrix/vector operations, activations, generation, KV cache, sampling, and other intermediate state. Execution remains driven by the UI: even a continuous Play mode is conceptually a sequence of steps requested by the UI rather than an autonomous backend process.
+## Architecture reference checkpoints and bounded coverage
 
-Reusable matrix and vector visualization primitives are expected to become building blocks for those later views.
+| Local HF checkpoint variant | Required role |
+| --- | --- |
+| `JunHowie/Qwen3-0.6B-GPTQ-Int4` | Compact Qwen3 language architecture; selected GPTQ Int4 storage. |
+| `AxionML/Qwen3.5-0.8B-NVFP4` | Compact hybrid Qwen3.5 language architecture; selected NVFP4 storage. |
+| `facebook/vjepa2-vitl-fpc64-256` | V-JEPA 2 encoder and predictor architecture; Transformers Safetensors variant. |
+| `HuggingFaceTB/SmolLM2-135M` Base | Existing-capability regression and a small native-weight architecture/inspection reference. |
+
+The two compact Qwen checkpoints replace the exploratory requirement to use the latest Qwen and DeepSeek releases. They do not establish MoE or DeepSeek coverage. Minimize installed checkpoint storage; do not require an extra unquantized copy. Repository size estimates are not acceptance evidence: record the exact revisions and local bytes actually used.
+
+A complete local checkpoint means its configuration, all weight shards of the chosen variant, and the local assets required for advertised capabilities. It does not mean downloading all alternative formats, quantizations, or the V-JEPA 2 `original` weight copy. Metadata-only model directories, GGUF, remote-ID onboarding, automatic downloads, and execution of checkpoint Python code remain excluded.
+
+For Qwen, detail only the language component. Other modalities may appear as identified context blocks with verified connections. V-JEPA 2 is the sole explicit exception: both its visual encoder and predictor must be expandable to the agreed mathematical level. An encoder-only graph does not meet that reference. A text tokenizer, vocabulary embedding, decoder stack, or language head is not required for every model.
+
+The JEPA exception does not introduce video/image upload, playback or processing, visual inference, representation prediction, training losses, actions, planning, simulation, V-JEPA 2-AC, or generic JEPA/LeJEPA support. Do not add training or planning components absent from the selected model.
 
 ## Product invariants
 
-Tensor and weight values remain exact unless an explicit operation produces a different logical representation. Visualization must not mutate model values.
+Tensor and weight values remain exact unless an explicit operation produces a different logical representation. Visualization never mutates model values. The backend owns mathematical truth and storage-format knowledge; the frontend owns presentation; the API remains an independent contract.
 
-The backend owns mathematical truth and model-format knowledge. The frontend owns visual representation and interaction. The API is an independent contract between them.
+Large numeric payloads are binary and progressive. Structural graphs contain metadata, not numeric tensor values. Multiple UI sessions may be active independently. Architecture availability, semantic completeness, tokenizer availability, and numeric-weight inspection are separate capabilities; unsupported architecture or quantization must not disable an otherwise supported existing capability.
 
-Large numeric payloads are binary and stream progressively. The UI must be able to start consuming and displaying a result before the complete payload has arrived.
+## Future direction and exclusions
 
-Multiple UI sessions may be active concurrently and independently.
+Later work may extend the same system to step-by-step inference, attention, matrix/vector computations, activations, generation, KV cache, sampling, and intermediate state. Inference remains UI-driven, including a future Play mode requesting successive steps. Static startup analysis is not such an inference step.
 
-## Out of scope for the proof of concept
-
-The initial proof of concept does not implement transformer inference, attention visualization, KV cache inspection, model execution timelines, interactive matrix multiplication, authentication, remote model downloads, non-Hugging-Face model formats, automatic cache garbage collection, or backwards-compatible API versioning.
+Inference, runtime attention maps, execution timelines, interactive matrix multiplication, authentication, remote model downloads, automatic cache garbage collection, public backwards-compatible API versioning, and non-HF formats are not added by the architecture increment. A diagram of attention is not a calculated attention map. No new quantization decoder or arbitrary-rank numeric slicing is required merely to describe architecture.
