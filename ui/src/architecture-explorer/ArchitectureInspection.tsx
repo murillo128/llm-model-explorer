@@ -13,6 +13,20 @@ function Provenance({ records }: { records: S['ArchitectureProvenance'][] }) {
   return <ul>{records.map((p, i) => <li key={i}>{p.kind}: {p.source}{p.revision && ` · revision ${p.revision}`}{p.rule && ` · rule ${p.rule}`}</li>)}</ul>;
 }
 
+/** Publish only effect-owned generations, including a fresh one after StrictMode replay. */
+function useChildLifetime(parent: Lifetime) {
+  const [lifetime, setLifetime] = useState<Lifetime | null>(null);
+  useLayoutEffect(() => {
+    const current = new Lifetime();
+    const detach = parent.onDispose(current.dispose);
+    // Children may subscribe only after their effect-owned lifetime is installed.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLifetime(current);
+    return () => { current.dispose(); detach(); };
+  }, [parent]);
+  return lifetime;
+}
+
 /** One modal generation; numeric children never own the graph's selection lifetime. */
 export function ArchitectureInspection({ context, graph, inventory, selected, onClose, diagnostics: responseDiagnostics = [] }: {
   context: ExplorerContextValue; graph: Graph; inventory: S['TensorInventory'];
@@ -21,7 +35,7 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const title = useId();
-  const [lifetime] = useState(() => new Lifetime());
+  const lifetime = useChildLifetime(context.selection);
   const [choice, setChoice] = useState('');
   const { node } = selected;
   const ids = new Set([...node.parameter_ids, ...node.references.flatMap((r) => r.kind === 'parameter' ? [r.parameter_id] : [])]);
@@ -31,16 +45,15 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
   const tensor = inspection?.status === 'available'
     ? inventory.tensors.find((t) => t.id === inspection.tensor_id) : undefined;
   const diagnostics = [...graph.diagnostics, ...responseDiagnostics].filter((d) => d.node_id === node.id || (parameter && d.parameter_id === parameter.id));
-  const close = () => { lifetime.dispose(); onClose(); };
+  const close = () => { lifetime?.dispose(); onClose(); };
   useLayoutEffect(() => {
     const element = dialog.current!;
     element.showModal();
-    const detach = context.selection.onDispose(lifetime.dispose);
     return () => {
-      lifetime.dispose(); detach(); element.close();
+      element.close();
       if (selected.trigger.isConnected) selected.trigger.focus({ preventScroll: true });
     };
-  }, [context.selection, lifetime, selected.trigger]);
+  }, [selected.trigger]);
   return createPortal(<dialog ref={dialog} className="architecture-inspection" aria-labelledby={title}
     onCancel={(event) => { event.preventDefault(); close(); }}
     onKeyDownCapture={(event) => {
@@ -76,15 +89,11 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
       </>}
       {diagnostics.map((d, i) => <p key={i} role="status">{d.message}</p>)}
     </div>
-    {tensor && (tensor.rank === 1 || tensor.rank === 2) && <InspectionWeight key={choice} context={context} tensor={tensor} parent={lifetime} />}
+    {lifetime?.isCurrent() && tensor && (tensor.rank === 1 || tensor.rank === 2) && <InspectionWeight key={choice} context={context} tensor={tensor} parent={lifetime} />}
   </dialog>, document.body);
 }
 
 function InspectionWeight({ context, tensor, parent }: { context: ExplorerContextValue; tensor: S['TensorDescriptor']; parent: Lifetime }) {
-  const [selection] = useState(() => new Lifetime());
-  useLayoutEffect(() => {
-    const detach = parent.onDispose(selection.dispose);
-    return () => { selection.dispose(); detach(); };
-  }, [parent, selection]);
-  return <TensorExplorer {...context} selectedTensor={tensor} selection={selection} showInformation={false} />;
+  const selection = useChildLifetime(parent);
+  return selection?.isCurrent() && <TensorExplorer {...context} selectedTensor={tensor} selection={selection} showInformation={false} />;
 }

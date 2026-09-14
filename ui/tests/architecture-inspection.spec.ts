@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { nativeCamera } from './native-camera';
 
-async function open(page: Page, model = 'lab/alpha') {
-  await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html?architecture`);
+async function open(page: Page, model = 'lab/alpha', strict = false) {
+  await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html?architecture${strict ? '&strict' : ''}`);
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(model);
   await expect(page.getByText('Partial tensor inventory:', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
@@ -173,6 +173,40 @@ test('model replacement during loading removes the modal and cancels its old ses
   await inspect(page); await page.getByLabel('Inspect parameter').selectOption('second'); await requests(page, 6);
   const uploads = await page.evaluate(() => window.explorerFixture.metrics.uploads);
   await page.evaluate(() => { for (const callback of window.explorerFixture.callbacks.slice(0, 3)) callback.onData?.(new Uint8Array(4), 0); });
+  expect(await page.evaluate(() => window.explorerFixture.metrics.uploads)).toBe(uploads);
+  await page.keyboard.press('Escape'); await released(page);
+});
+
+test('development StrictMode streams after replay, replaces weights, and releases every generation', async ({ page }) => {
+  await open(page, 'lab/alpha', true);
+  for (const parameter of ['second', 'vector-weight', 'second']) {
+    if (!(await page.getByRole('dialog').count())) await inspect(page);
+    await page.getByLabel('Inspect parameter').selectOption(parameter);
+    const value = parameter === 'second' ? 2 : -2;
+    // StrictMode can start and cancel replayed subscriptions. Deliver only to the
+    // latest tensor operation and inspect the live renderer, never assume indices.
+    await expect.poll(() => page.evaluate(() => window.explorerFixture.renderers.filter((r) => r.state === 'ready').length)).toBe(parameter === 'second' ? 3 : 1);
+    await page.evaluate((value) => {
+      const f = window.explorerFixture;
+      const index = f.requests.findLastIndex((request) => request.kind === 'data');
+      f.emit(index, 1, f.metadata(index)); f.data(index, [value], 3);
+    }, value);
+    await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', 'streaming');
+    expect(await page.evaluate(() => window.explorerFixture.renderers.findLast((r) => r.state === 'ready' && r.geometry.columns !== 100 && r.geometry.rows !== 100)!.readCell(0, 0))).toMatchObject({ value });
+    if (parameter === 'second') {
+      await page.locator('.matrix-scroll').focus();
+      await expect(page.locator('.inspection-readout span').last()).toHaveText(String(value));
+    }
+  }
+  await page.keyboard.press('Escape'); await released(page);
+  await expect(page.getByRole('button', { name: 'Inspect selected', exact: true })).toBeFocused();
+  await inspect(page); await page.getByLabel('Inspect parameter').selectOption('second');
+  await expect.poll(() => page.evaluate(() => window.explorerFixture.renderers.filter((r) => r.state === 'ready').length)).toBe(3);
+  const uploads = await page.evaluate(() => window.explorerFixture.metrics.uploads);
+  await page.evaluate(() => {
+    const f = window.explorerFixture;
+    for (const callback of f.callbacks.slice(0, -3)) callback.onData?.(new Uint8Array(new Float32Array([99]).buffer), 0);
+  });
   expect(await page.evaluate(() => window.explorerFixture.metrics.uploads)).toBe(uploads);
   await page.keyboard.press('Escape'); await released(page);
 });

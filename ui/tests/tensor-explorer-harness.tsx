@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '../src/app/App';
 import { ApiClient, streamMediaType } from '../src/api/client';
@@ -129,7 +130,8 @@ function pixels(renderer: GridRenderer) {
   return Array.from({ length: height }, (_, y) => Array.from({ length: width }, (_, x) => Array.from(bytes.slice(((height - 1 - y) * width + x) * 4, ((height - 1 - y) * width + x) * 4 + 4))));
 }
 const root = createRoot(document.getElementById('root')!);
-root.render(<App config={{ backendBaseUrl: 'https://fixture.example' }} />);
+const app = <App config={{ backendBaseUrl: 'https://fixture.example' }} />;
+root.render(new URLSearchParams(location.search).has('strict') ? <StrictMode>{app}</StrictMode> : app);
 window.explorerFixture = { catalogue, DistributionRenderer, tensors, metrics, renderers, requests, cancelled, callbacks, emit, end, metadata, data, pixels, unmount: () => root.unmount() };
 declare global { interface Window { explorerFixture: {
   catalogue: typeof catalogue; DistributionRenderer: typeof DistributionRenderer; tensors: typeof tensors; metrics: typeof metrics; renderers: typeof renderers; requests: typeof requests;

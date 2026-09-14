@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react';
+import { StrictMode, useLayoutEffect } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import fixture from '../../../api/fixtures/architecture.json';
@@ -104,4 +104,34 @@ it('synchronously cancels a disposed session and rejects late callbacks', () => 
   handles[0]!.options.onData!(new Uint8Array(4), 0);
   expect(sinks[0]!.values).not.toHaveBeenCalled();
   view.unmount(); trigger.remove();
+});
+
+it('streams values through StrictMode effect replay and fences replaced/closed generations', () => {
+  const { props, handles, trigger } = setup();
+  const view = render(<StrictMode><ArchitectureInspection {...props} /></StrictMode>);
+  fireEvent.change(screen.getByLabelText('Inspect parameter'), { target: { value: 'weight' } });
+  const live = () => handles.filter((h) => !h.cancel.mock.calls.length);
+  expect(live()).toHaveLength(3);
+  const previous = live();
+  const previousSink = sinks.at(-1)!;
+  const bytes = new Uint8Array(new Float32Array([-2, 0, 2]).buffer);
+  act(() => previous[0]!.options.onData!(bytes, 0));
+  expect(previousSink.values).toHaveBeenCalledWith(new Float32Array([-2, 0, 2]), 0);
+  fireEvent.change(screen.getByLabelText('Inspect parameter'), { target: { value: 'alias' } });
+  expect(live()).toHaveLength(3);
+  expect(previous.every((h) => h.cancel.mock.calls.length === 1)).toBe(true);
+  const replacement = live();
+  const replacementSink = sinks.at(-1)!;
+  act(() => {
+    previous[0]!.options.onData!(bytes, 0);
+    replacement[0]!.options.onData!(bytes, 0);
+  });
+  expect(previousSink.values).toHaveBeenCalledOnce();
+  expect(replacementSink.values).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole('button', { name: 'Close inspection' }));
+  expect(live()).toHaveLength(0);
+  act(() => replacement[0]!.options.onData!(bytes, 0));
+  expect(replacementSink.values).toHaveBeenCalledOnce();
+  expect(props.context.selection.isCurrent()).toBe(true);
+  view.unmount(); expect(trigger).toHaveFocus(); trigger.remove();
 });
