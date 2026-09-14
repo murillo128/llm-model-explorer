@@ -2,46 +2,34 @@
 
 ## Pixel mapping
 
-The fundamental proof-of-concept rule is exact spatial mapping: **one tensor weight equals one rendered pixel**.
+The fundamental rendering rule is exact logical mapping: every displayed matrix cell refers to exactly one tensor value, with native row/column identity and ordering preserved.
 
-A 2D tensor of width `W` and height `H` therefore occupies `W × H` rendered pixels. The renderer must not fit the matrix to the viewport, resample it, aggregate weights, or use zoom as a substitute for the one-to-one mapping.
+For a 2D tensor of width `W` and height `H`, native data geometry is `W × H` logical cells. Rank-2 `[rows, columns]` uses columns on X and rows on Y, with row zero at the top. Matrix cells remain square under every view scale. Zoom is a view transformation only: it may enlarge a logical cell uniformly in X and Y, but it must not interpolate, average, merge, reorder, or rewrite tensor values.
 
-Here a rendered pixel means one framebuffer/device pixel, not one CSS pixel. At
-devicePixelRatio `d`, the complete data extent is `W/d × H/d` CSS pixels. Rank-2
-`[rows, columns]` uses columns on X and rows on Y, with row zero at the top. The
-rank-1 baseline is a horizontal `N × 1` device-pixel strip. Empty tensors show an
-explicit empty state and allocate no scalar textures.
+The native scale is one logical cell per framebuffer/device pixel. The Matrix Explorer may enlarge an underfilled matrix so its width uses the available viewport; it does not minify below native scale. A matrix wider than the viewport therefore remains at native scale until the user zooms in further and uses horizontal navigation rather than aggregating logical cells. At devicePixelRatio `d` and uniform device-pixel scale `s >= 1`, the complete rank-2 data extent is `W*s/d × H*s/d` CSS pixels. The rank-1 baseline remains a horizontal `N × 1` logical-cell strip. Empty tensors show an explicit empty state and allocate no scalar textures.
 
-Visible framebuffer dimensions and data scroll origins are integers. Convert the
-browser's actual native scroll offsets to data origins with `round(offset * d)`;
-hit testing uses `origin + floor(localCSSCoordinate * d)` and excludes coordinates
-outside the visible surface. Native browsers may round requested scroll offsets
-before this conversion. Snap the canvas's screen position to device pixels too.
-Account for browser compositing: fractional canvas CSS dimensions must not cause
-rounding/interpolation. Integer canvas dimensions with a DPR-only presentation
-transform and a constrained layout box are one valid implementation.
-A DPR change explicitly recomputes canvas dimensions, CSS extent and hit-test
-geometry; it never enlarges a scalar into a multi-pixel block. A separate inspection
-magnifier does not change the main surface's mapping.
+Visible framebuffer dimensions and data scroll origins remain aligned to exact logical cell coordinates. Hit testing at any zoom level must resolve the exact logical row and column beneath the pointer; zoom must not introduce nearest-cell ambiguity or averaged hit regions. Native browsers may round requested scroll offsets, and the displayed camera must remain consistent with the coordinates used for sampling and inspection.
 
-If the rendered dimensions exceed the available viewport, the containing UI uses normal horizontal and/or vertical scrolling.
+A DPR change recomputes display geometry while preserving the same logical camera position and square-cell scale semantics. A separate inspection magnifier does not change the main matrix camera.
 
-If a tensor dimension exceeds a WebGL2 texture or render-target limit, the renderer may partition the representation internally into multiple textures/bands. This is an implementation detail and must preserve the visible one-weight-to-one-pixel mapping and the logical identity of one complete matrix.
+If the scaled matrix extent exceeds the available viewport, the containing UI uses horizontal and/or vertical navigation while preserving exact logical coordinates.
+
+If a tensor dimension exceeds a WebGL2 texture or render-target limit, the renderer may partition the representation internally into multiple textures/bands. This is an implementation detail and must preserve exact logical cell identity, ordering, sampling, and the identity of one complete matrix.
 
 Query actual texture, renderbuffer and viewport limits. Use a bounded visible
-framebuffer over the complete native scroll extent rather than requiring a giant
+framebuffer over the complete data extent rather than requiring a giant
 canvas. Disjoint texture bands are needed only when a dimension exceeds the
 effective texture ceiling (the hardware limit or an explicitly lower resource
 ceiling). Band edges must neither omit nor duplicate cells. Report unsupported
 WebGL2, allocation failure or an unrepresentable browser scroll extent explicitly;
-never silently scale the data to fit a limit. This partitioning does not change
+never alter logical tensor values or ordering to fit a limit. This partitioning does not change
 complete-tensor downloading or introduce API tiles/prefetch.
 
 ## Numeric representation
 
 The renderer consumes the logical visualization representation supplied by the backend. The initial representation is one `float32` logical value per weight regardless of the model's physical storage representation.
 
-The tensor value remains authoritative. The renderer must not rewrite tensor values in order to change color, brightness, selection state, or another visual property.
+The tensor value remains authoritative. The renderer must not rewrite tensor values in order to change color, brightness, selection state, zoom, or another visual property.
 
 Store one authoritative scalar GPU representation using single-channel R32F
 textures with exact indexed sampling (`texelFetch`, nearest filtering, one mip
@@ -83,7 +71,7 @@ CPU array and the visible framebuffer. Context loss invalidates GPU storage and
 stops drawing; context restoration alone does not mark old textures valid.
 An explicit reconstruction/retry allocates new resources and reuploads the retained
 prefix, or restarts the prefix at zero when no CPU copy exists. Ordinary drawing,
-hover, scrolling and transfer changes do not take this reconstruction path.
+hover, scrolling, zooming and transfer changes do not take this reconstruction path.
 
 ## Color
 
@@ -98,7 +86,7 @@ Thin inspection guides may change final composited luminance, as defined below.
 
 ## Interaction scope
 
-The proof of concept does not require zoom or pan. Detailed Tensor Explorer interaction behavior is owned by `tensor-explorer.md` and must not be inferred from this common rendering specification.
+Matrix views support a local uniform camera for zoom and navigation while preserving square logical cells and exact row/column identity. The accepted user interactions and synchronization with row/column distributions are defined by `tensor-explorer.md`. Camera changes affect only the Matrix Explorer instance in which they occur and never mutate tensor values.
 
 ### Concrete linear-sRGB scalar and guide transfer
 
