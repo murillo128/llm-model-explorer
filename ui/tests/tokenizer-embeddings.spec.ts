@@ -1,3 +1,4 @@
+import { nativeCamera } from './native-camera';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Tokenization } from '../src/tokenizer/annotations';
@@ -65,6 +66,7 @@ for (const dpr of [1, 2]) test(`exact progressive rows, linked annotations and f
       await expect(page.locator(`[data-token-index="${row}"]`)).toHaveAttribute('data-active-token', '');
     }
   }
+  await nativeCamera(page);
   const canvas = matrix.locator('canvas');
   const box = (await canvas.boundingBox())!;
   expect(box.width * dpr).toBeCloseTo(7, 5); expect(box.height * dpr).toBeCloseTo(3, 5);
@@ -222,6 +224,7 @@ test('token hover and activation take over keyboard matrix inspection without mo
   await expect(token).toHaveAttribute('data-active-token', '');
   await expect(page.locator('.inspection-readout')).toHaveCount(0);
   await expect(matrix).toBeFocused();
+  await nativeCamera(page);
   const pixels = await page.evaluate(() => {
     const r = window.embeddingHarness.renderers.at(-1)!; r.draw();
     const gl = r.canvas.getContext('webgl2')!;

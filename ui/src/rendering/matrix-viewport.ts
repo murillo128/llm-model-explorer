@@ -34,7 +34,7 @@ export class MatrixViewport {
     host.classList.add('matrix-surfaces');
     Object.assign(host.style, { display: 'grid', gap: '10px', alignItems: 'start', alignContent: 'start', minWidth: '0' });
     this.main.className = 'matrix-scroll';
-    Object.assign(this.main.style, { gridColumn: '1', gridRow: '1', minWidth: '0', minHeight: '0', height: 'auto', overflowY: 'scroll', overscrollBehavior: 'contain' });
+    Object.assign(this.main.style, { gridColumn: '1', gridRow: '1', minWidth: '0', minHeight: '0', height: descriptor.rank === 2 ? 'var(--matrix-height)' : 'auto', overflowY: 'scroll', overscrollBehavior: 'contain' });
     this.main.setAttribute('role', 'region');
     this.main.setAttribute('aria-label', 'Tensor matrix; scroll to inspect all values');
     this.main.tabIndex = 0;
@@ -78,10 +78,11 @@ export class MatrixViewport {
         // The vertical scrollbar reserves space even without overflow. Include it in
         // the native-width track so a tall, otherwise fitting tensor stays fitting.
         const gutter = this.main.offsetWidth - this.main.clientWidth;
-        host.style.gridTemplateColumns = `minmax(0, ${descriptor.shape.at(-1)! / dpr + gutter}px)${this.rows ? ` ${depth}px` : ''}`;
+        host.style.gridTemplateColumns = `${descriptor.rank === 2 ? 'minmax(0, 1fr)' : `minmax(0, ${descriptor.shape.at(-1)! / dpr + gutter}px)`}${this.rows ? ` ${depth}px` : ''}`;
+        host.style.gridTemplateRows = this.rows ? `36px var(--matrix-height) ${depth}px` : 'var(--matrix-height)';
       };
       layout();
-      this.matrix = new TensorViewport(this.main, descriptor, { ...options, onStateChange: (state) => {
+      this.matrix = new TensorViewport(this.main, descriptor, { ...options, zoom: descriptor.rank === 2, onStateChange: (state) => {
         if (state !== 'ready') this.inspection?.clear();
         options.onStateChange?.(state);
       }, onViewChange: (view) => {
@@ -104,23 +105,24 @@ export class MatrixViewport {
   private align(view: ViewGeometry) {
     if (!this.rows || !this.columns) return;
     const pairs = [
-      [this.rows, this.rowHost, 100 / view.dpr, view.cssHeight, 0, view.y / view.dpr],
-      [this.columns, this.columnHost, view.cssWidth, 100 / view.dpr, view.x / view.dpr, 0],
+      [this.rows, this.rowHost, 100 / view.dpr, view.cssHeight, 0, view.y * view.scaleY / view.dpr, 1, view.scaleY],
+      [this.columns, this.columnHost, view.cssWidth, 100 / view.dpr, view.x * view.scaleX / view.dpr, 0, view.scaleX, 1],
     ] as const;
-    for (const [renderer, host, width, height, x, y] of pairs) {
+    for (const [renderer, host, width, height, x, y, scaleX, scaleY] of pairs) {
       host.style.width = `${width}px`;
       host.style.height = `${height}px`;
       if (renderer.state !== 'ready') continue;
       const rect = host.getBoundingClientRect();
       renderer.canvas.style.left = `${Math.round(rect.left * view.dpr) / view.dpr - rect.left}px`;
       renderer.canvas.style.top = `${Math.round(rect.top * view.dpr) / view.dpr - rect.top}px`;
-      const panelView = renderer.setView(width, height, x, y, view.dpr);
+      const panelView = renderer.setView(width, height, x, y, view.dpr, scaleX, scaleY);
       renderer.canvas.dataset.origin = `${panelView.x},${panelView.y}`;
       renderer.draw();
     }
   }
 
   refresh() { this.matrix.refresh(); }
+  fitWidth() { this.matrix.fitWidth(); }
   setDistributionDomain(domain: DistributionDomain) {
     this.rowScale?.setDomain(domain);
     this.columnScale?.setDomain(domain);

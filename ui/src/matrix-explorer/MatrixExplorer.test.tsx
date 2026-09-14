@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { MatrixViewportOptions } from '../rendering/matrix-viewport';
 import type { Inspection } from '../rendering/matrix-inspection';
@@ -7,7 +7,7 @@ import type { MatrixSource, MatrixUpdates } from './types';
 
 const fake = vi.hoisted(() => ({ fail: false, transferFails: false, views: [] as {
   options: MatrixViewportOptions; upload: ReturnType<typeof vi.fn>; transfer: ReturnType<typeof vi.fn>;
-  dispose: ReturnType<typeof vi.fn>;
+  fitWidth: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn>;
 }[] }));
 vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
   matrix;
@@ -19,8 +19,9 @@ vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
     const transfer = vi.fn(() => { if (fake.transferFails) throw new Error('Invalid transfer'); });
     this.matrix = { renderer: { upload, setTransfer: transfer } };
     this.dispose = vi.fn(() => { options.onInspection?.(null); host.replaceChildren(); });
-    fake.views.push({ options, upload, transfer, dispose: this.dispose });
+    fake.views.push({ options, upload, transfer, fitWidth: this.fitWidth, dispose: this.dispose });
   }
+  fitWidth = vi.fn();
   refresh = vi.fn();
   setLinkedRow = vi.fn();
   setDistributionDomain = vi.fn();
@@ -109,4 +110,13 @@ it('releases the viewport and fences callbacks when a parent subscription throws
   expect(fake.views.every((v) => v.dispose.mock.calls.length === 1)).toBe(true);
   sink!.values(new Float32Array([1]), 0);
   expect(fake.views.every((v) => v.upload.mock.calls.length === 0)).toBe(true);
+});
+
+it('composes Fit width into the header action slot without resubscribing or uploading', () => {
+  const data = source();
+  render(<MatrixExplorer source={data} header={(controls) => <header>Result {controls}</header>} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Fit width' }));
+  expect(fake.views[0]!.fitWidth).toHaveBeenCalledOnce();
+  expect(fake.views[0]!.upload).not.toHaveBeenCalled();
+  expect(data.updates).toHaveLength(1);
 });

@@ -147,7 +147,7 @@ For a rank-2 tensor, the visual composition is:
 
 The lower-right corner is not a fourth dashboard panel. It may remain empty; if a tiny bin-count note is genuinely useful, render it as quiet microcopy rather than a boxed control.
 
-The matrix itself is not styled using ordinary CSS palette tokens. Each value maps to exactly one rendered pixel and scalar value controls luminosity. The page, borders, labels, and histogram chrome use the neutral UI system around that surface.
+The matrix itself is not styled using ordinary CSS palette tokens. Each value maps to one exact logical square cell under the common renderer camera and scalar value controls luminosity. The page, borders, labels, and histogram chrome use the neutral UI system around that surface.
 
 ## Hover, selection, and magnification
 
@@ -187,10 +187,10 @@ Avoid dense overlays on the matrix. Inspection UI should move or flip sides when
 
 ## Do not
 
-Do not use a dark terminal-style application shell around the scientific view. Do not add saturated card backgrounds, gradient chrome, large decorative icons, or heavy shadows. Do not assign arbitrary colors to tokens. Do not rescale matrices to fit cards. Do not use general zoom/pan as a substitute for scrolling. Do not draw opaque row/column guide lines across tensor data. Do not modify tensor values to implement visual state. Do not maintain a second recolored tensor merely for hover/selection.
+Do not use a dark terminal-style application shell around the scientific view. Do not add saturated card backgrounds, gradient chrome, large decorative icons, or heavy shadows. Do not assign arbitrary colors to tokens. Use the Matrix Explorer camera defined in `tensor-explorer.md`; do not introduce independent CSS matrix scaling or replace native scroll navigation. Do not draw opaque row/column guide lines across tensor data. Do not modify tensor values to implement visual state. Do not maintain a second recolored tensor merely for hover/selection.
 
 ## Implementation boundary
 
 React owns composition, semantic HTML, controls, text, and panel layout. The reusable WebGL2 renderer owns exact tensor pixels and shader-based visual transformations. The visual tokens in this document style the application shell; they must not leak into authoritative tensor mathematics.
 
-Semantic interaction colors should reach the renderer as small state/uniform parameters. The renderer derives the final chroma at draw time while continuing to read the same immutable scalar tensor representation. This keeps the visual system consistent with the project's memory and one-value-to-one-pixel invariants.
+Semantic interaction colors should reach the renderer as small state/uniform parameters. The renderer derives the final chroma at draw time while continuing to read the same immutable scalar tensor representation. This keeps the visual system consistent with the project's memory and exact scalar-cell invariants.

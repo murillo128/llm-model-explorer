@@ -36,7 +36,7 @@ export interface MatrixSource {
 export interface MatrixExplorerProps {
   readonly source: MatrixSource;
   readonly label?: string;
-  readonly header?: ReactNode;
+  readonly header?: ReactNode | ((cameraControls: ReactNode) => ReactNode);
   readonly onRenderingStateChange?: (state: RendererState) => void;
   /** Display-only row context from a linked view; does not select a cell or move focus. */
   readonly highlightedRow?: number | null;

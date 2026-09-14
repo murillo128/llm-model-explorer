@@ -2,31 +2,34 @@
 
 ## Pixel mapping
 
-The fundamental proof-of-concept rule is exact spatial mapping: **one tensor weight equals one rendered pixel**.
+The durable spatial invariant is **one authoritative logical scalar per matrix cell**.
+A rank-2 `[rows, columns]` matrix uses columns on X and rows on Y, with row zero
+at the top. Its camera applies one uniform scale `s >= 1` device pixels per cell
+to both axes, so cells remain square. Enlarged cells use exact indexed/nearest
+sampling; interpolation, aggregation and subpixel minification are forbidden.
+Zoom never changes ordering, scalar storage or the logical identity of a complete
+matrix. Rank-1 retains the horizontal `N × 1` device-pixel strip. Empty tensors
+show an explicit empty state and allocate no scalar textures.
 
-A 2D tensor of width `W` and height `H` therefore occupies `W × H` rendered pixels. The renderer must not fit the matrix to the viewport, resample it, aggregate weights, or use zoom as a substitute for the one-to-one mapping.
+At devicePixelRatio `d`, the complete matrix extent is `W*s/d × H*s/d` CSS pixels.
+Visible framebuffer dimensions and screen scroll offsets are device-pixel integers.
+The logical camera origin is `round(nativeCSSScroll*d)/s`, which may be fractional.
+Hit testing resolves the logical cell containing the device pixel on each axis
+and excludes coordinates outside the visible surface. CPU hit testing and GPU
+sampling use the same float32 rasterized cell edges (`ceil(cellOffset*s -
+fractionalOriginPixels)`), with an integer logical origin kept separately.
+This avoids division rounding choosing a neighboring cell at exact edges or
+texture-band seams, including at large scroll origins. Native browsers may round requested CSS scroll offsets; focal
+preservation is subject to that rounding and matrix bounds.
 
-Here a rendered pixel means one framebuffer/device pixel, not one CSS pixel. At
-devicePixelRatio `d`, the complete data extent is `W/d × H/d` CSS pixels. Rank-2
-`[rows, columns]` uses columns on X and rows on Y, with row zero at the top. The
-rank-1 baseline is a horizontal `N × 1` device-pixel strip. Empty tensors show an
-explicit empty state and allocate no scalar textures.
+Snap the canvas screen position to device pixels. Integer canvas dimensions with
+a DPR-only presentation transform and a constrained layout box avoid browser
+compositing interpolation. Zoom is a shader camera transform, never CSS scaling
+of a previously rasterized tensor. DPR changes recompute framebuffer/CSS extents
+while preserving logical camera origins as far as native scroll bounds permit.
 
-Visible framebuffer dimensions and data scroll origins are integers. Convert the
-browser's actual native scroll offsets to data origins with `round(offset * d)`;
-hit testing uses `origin + floor(localCSSCoordinate * d)` and excludes coordinates
-outside the visible surface. Native browsers may round requested scroll offsets
-before this conversion. Snap the canvas's screen position to device pixels too.
-Account for browser compositing: fractional canvas CSS dimensions must not cause
-rounding/interpolation. Integer canvas dimensions with a DPR-only presentation
-transform and a constrained layout box are one valid implementation.
-A DPR change explicitly recomputes canvas dimensions, CSS extent and hit-test
-geometry; it never enlarges a scalar into a multi-pixel block. A separate inspection
-magnifier does not change the main surface's mapping.
-
-If the rendered dimensions exceed the available viewport, the containing UI uses normal horizontal and/or vertical scrolling.
-
-If a tensor dimension exceeds a WebGL2 texture or render-target limit, the renderer may partition the representation internally into multiple textures/bands. This is an implementation detail and must preserve the visible one-weight-to-one-pixel mapping and the logical identity of one complete matrix.
+Oversized content uses normal scrollbars. Internal texture/band partitioning may
+accommodate WebGL2 limits but must preserve exact scalar identity and sampling.
 
 Query actual texture, renderbuffer and viewport limits. Use a bounded visible
 framebuffer over the complete native scroll extent rather than requiring a giant
@@ -98,7 +101,7 @@ Thin inspection guides may change final composited luminance, as defined below.
 
 ## Interaction scope
 
-The proof of concept does not require zoom or pan. Detailed Tensor Explorer interaction behavior is owned by `tensor-explorer.md` and must not be inferred from this common rendering specification.
+Matrix Explorer fit-width defaults, focal-point wheel/pinch zoom and scroll navigation are owned by `tensor-explorer.md`. Each instance owns its camera; these transforms never affect other explorers.
 
 ### Concrete linear-sRGB scalar and guide transfer
 
@@ -114,7 +117,7 @@ count storage. Constant finite tensors use `t=0.5`; all-nonfinite and
 pending regions retain their explicit status colors instead of this curve.
 
 The active row and column each receive one device pixel of amber overlay,
-computed from exact integer logical coordinates, including texture-band origins.
+centered on the active logical row/column at the current camera scale, including texture-band origins. The guide thickness stays one device pixel when cells enlarge.
 Blend in linear sRGB: `C = (1-alpha)*G(t) + alpha*(1, 0.32, 0.015)`.
 Default guide alpha is `0.65`; the intersection uses `0.9`. This makes guides
 visible even at both scalar endpoints and keeps underlying variation visible.

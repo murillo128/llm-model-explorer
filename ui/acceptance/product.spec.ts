@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { installProbe } from './probe';
+import { nativeCamera } from '../tests/native-camera';
 import { revealTensor } from '../tests/tensor-tree-helpers';
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
@@ -195,6 +196,7 @@ test('production UI renders before producer completes; native geometry, inspecti
   for (const name of ['model.norm.weight', 'model.layers.0.mlp.up_proj.weight', 'model.embed_tokens.weight']) {
     await (await revealTensor(page.getByRole('button', { includeHidden: true, name: new RegExp(name.replaceAll('.', '\\.')) }))).click();
     await complete(page);
+    await nativeCamera(page);
     const dimensions = name === 'model.norm.weight' ? [576, 1] : name.includes('up_proj') ? [576, 1536] : [576, 1025];
     expect(await canvas.evaluate((c) => {
       const extent = c.closest('.matrix-scroll')!.firstElementChild as HTMLElement;
@@ -501,6 +503,7 @@ test.describe('production native pane geometry', () => {
         const leaf = page.getByRole('button', { includeHidden: true, name: new RegExp(`^layout\\.${name}\\.weight`) });
         await revealTensor(leaf); await leaf.focus(); await leaf.press('Enter'); await expect(leaf).toHaveAttribute('aria-pressed', 'true');
         await complete(page); await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+        await nativeCamera(page);
         const geometry = () => page.evaluate(() => {
           const m = document.querySelector<HTMLElement>('.matrix-scroll')!;
           const rect = (s: string) => { const r = document.querySelector(s)!.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; };

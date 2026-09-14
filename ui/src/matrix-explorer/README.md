@@ -73,3 +73,11 @@ local selection is reported. Clearing the external row does not clear a newer
 local cell.
 
 `PanelHeader` composes identity, information, summary, status, and right-side actions in a fixed 40px scientific toolbar. Pass it through `MatrixExplorer.header`; status changes do not restart the source. `InfoPopover` supplies hover/focus previews and click/tap/keyboard pinning, with pinned-only close, outside/Escape dismissal, and focus restoration. Neither primitive depends on tensor transport or tokenizer state.
+
+Every rank-2 instance owns a fit-width camera with wheel/pinch zoom and native
+scroll navigation. `Fit width` resets its scale/origins; replacing `source` starts
+a fresh camera. A plain `header` is placed in PanelHeader beside this action.
+For an existing contextual header, pass `header={(cameraControls) => ...}` and
+compose `cameraControls` into its action slot. Header changes do not resubscribe.
+Distribution thickness and value-bin rulers remain independent of camera scale;
+their data axes share the matrix transform exactly. Rank-1 remains a native strip.
