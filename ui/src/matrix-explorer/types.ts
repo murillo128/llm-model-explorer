@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { TensorDescriptor } from '../rendering/geometry';
 import type { TransferParameters } from '../rendering/transfer';
 import type { RendererState } from '../rendering/tensor-renderer';
+import type { DistributionDomain } from '../rendering/distribution-scale';
 
 /** Native zero-based coordinates; no viewport, texture-band or domain indices. */
 export interface MatrixCell { readonly row: number; readonly column: number }
@@ -15,6 +16,8 @@ export interface MatrixUpdates {
   transfer(parameters: TransferParameters): void;
   /** Authoritative uint32 counts: rows [rows, 100], columns [100, columns]. */
   distribution(axis: 'rows' | 'columns', counts: Uint32Array, offset: number): void;
+  /** Shared bin endpoints from the distribution producer, never percentile anchors. */
+  distributionDomain(domain: DistributionDomain): void;
 }
 
 /** Keep this object stable for one generation. Replacement detaches the old

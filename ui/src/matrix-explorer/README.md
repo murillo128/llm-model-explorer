@@ -35,6 +35,11 @@ set `distributions: true` and deliver `updates.distribution('rows', counts, offs
 for `[rows, 100]` counts and `'columns'` for `[100, columns]`. Profiles use the
 existing shared-domain, 100-bin uint32 count contract; the parent validates and
 splits transport metadata/sections. Missing counts stay visibly unavailable.
+Deliver `updates.distributionDomain({ minimum, maximum })` from the authoritative
+distribution metadata to label both rulers and true finite extrema. The current
+contract bins the complete finite range. Null endpoints mean no finite values;
+omitting domain delivery leaves the scale explicitly unavailable. Domain labels
+are independent from `updates.transfer(...)` and are fenced with their source.
 Do not compute substitute statistics or distributions in the browser.
 
 An optional initial `source.transfer` and subsequent `updates.transfer(...)`

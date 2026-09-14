@@ -2,6 +2,8 @@ import { useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
 import { MatrixViewport } from '../rendering/matrix-viewport';
 import type { Inspection } from '../rendering/matrix-inspection';
 import type { RendererState } from '../rendering/tensor-renderer';
+import { compactValue } from '../rendering/distribution-scale';
+import type { DistributionDomain } from '../rendering/distribution-scale';
 import { InspectionCard } from './InspectionCard';
 import type { MatrixExplorerProps, MatrixUpdates } from './types';
 import './matrix-explorer.css';
@@ -13,6 +15,8 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
   const currentViewport = useRef<MatrixViewport | null>(null);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [failed, setFailed] = useState(false);
+  const [domainState, setDomainState] = useState<{ source: typeof source; domain: DistributionDomain }>();
+  const domain = domainState?.source === source ? domainState.domain : undefined;
   const selected = useRef<{ row: number; column: number } | null>(null);
   const inspect = useEffectEvent((value: Inspection | null) => {
     setInspection(value);
@@ -29,6 +33,9 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
   });
   useLayoutEffect(() => {
     let active = true;
+    // A reused source object still starts a fresh delivery after A → B → A.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDomainState(undefined);
     let allocated: MatrixViewport | undefined;
     let viewport: MatrixViewport;
     try {
@@ -42,7 +49,6 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
     } catch {
       allocated?.dispose();
       // Report synchronous allocation failure before paint, like renderer state callbacks.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       rendering('failed');
       return;
     }
@@ -64,6 +70,11 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
         if (!target) throw new Error('This source has no distribution surfaces.');
         target.upload(counts, offset);
         viewport.refresh();
+      },
+      distributionDomain(domain) {
+        if (!active) return;
+        viewport.setDistributionDomain(domain);
+        setDomainState({ source, domain });
       },
     };
     let detach: () => void;
@@ -87,6 +98,13 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
   return <div className="matrix-explorer">
     {header && <div className="matrix-explorer-header">{header}</div>}
     {failed && <p role="alert">Exact rendering is unavailable. WebGL2 resources could not be allocated or were lost. Reopen this view to retry.</p>}
+    {source.distributions && <div className="distribution-range" aria-label="Distribution range">
+      {!domain ? 'Bin domain unavailable' : domain.minimum === null || domain.maximum === null
+        ? 'No finite values · bin domain and true min/max unavailable'
+        : <><span>Full-range bins</span><span title={`True finite minimum: ${domain.minimum}`}>min {compactValue(domain.minimum)}</span>
+          <span title={`True finite maximum: ${domain.maximum}`}>max {compactValue(domain.maximum)}</span>
+          {domain.minimum === domain.maximum && <span>Constant · samples in bin 50; no value span</span>}</>}
+    </div>}
     <div ref={host} />
     {inspection && <InspectionCard inspection={inspection} />}
   </div>;
