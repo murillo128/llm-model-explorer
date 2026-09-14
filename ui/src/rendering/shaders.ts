@@ -10,19 +10,16 @@ void main() {
 const selectionShader = `
 uniform ivec2 bandOrigin;
 uniform ivec2 selection;
-uniform vec2 chromaStrength;
+uniform vec2 guideOpacity;
 vec3 semanticColor(float y, ivec2 cell) {
   ivec2 logical = cell + bandOrigin;
   bool row = selection.y >= 0 && logical.y == selection.y;
   bool column = selection.x >= 0 && logical.x == selection.x;
-  float t = row && column ? chromaStrength.y : row || column ? chromaStrength.x : 0.0;
-  vec3 displacement = vec3(${amber.join(', ')});
-  // Shrink the entire chroma vector, never clip individual RGB channels.
-  for (int i = 0; i < 3; ++i) {
-    if (displacement[i] > 0.0) t = min(t, (1.0 - y) / displacement[i]);
-    if (displacement[i] < 0.0) t = min(t, -y / displacement[i]);
-  }
-  vec3 linear = vec3(y) + t * displacement;
+  float opacity = row && column ? guideOpacity.y : row || column ? guideOpacity.x : 0.0;
+  vec3 green = vec3(0.001 + 0.819 * y * y * y,
+    0.006 + 0.994 * pow(y, 1.5), 0.002 + 0.858 * y * y * y);
+  // One-device-pixel guides blend over the unchanged scalar display transfer.
+  vec3 linear = mix(green, vec3(${amber.join(', ')}), opacity);
   // RGBA8 canvas storage is display encoded; WebGL performs no extra encoding.
   return mix(1.055 * pow(max(linear, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055,
     12.92 * linear, lessThanEqual(linear, vec3(0.0031308)));

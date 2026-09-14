@@ -95,7 +95,7 @@ export class MatrixInspection {
     const { row, column } = this.cell;
     const value = renderer.readCell(row, column);
     if (!value) { this.leave(); return; }
-    this.select(this.cell);
+    this.select(value.state === 'pending' ? null : this.cell);
     const view = renderer.view!;
     const x = this.pointer?.x ?? rect.left + (column - view.x + 0.5) / view.dpr;
     const y = this.pointer?.y ?? rect.top + (row - view.y + 0.5) / view.dpr;

@@ -1,7 +1,6 @@
+import { color, green } from './scalar-oracle';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-
-const display = (y: number) => 255 * (y <= 0.0031308 ? 12.92 * y : 1.055 * y ** (1 / 2.4) - 0.055);
 
 async function open(page: Page, name = 'A') {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);
@@ -61,8 +60,8 @@ for (const dpr of [1, 2]) test(`asymmetric progressive surfaces, independent res
   });
   expect(distribution.row.map((cell) => cell && 'value' in cell ? cell.value : null)).toEqual([1, 1, 1]);
   expect(distribution.column.map((cell) => cell && 'value' in cell ? cell.value : cell?.state)).toEqual([1, 1, 1, 'pending']);
-  expect(distribution.rowPixel![0]).toBe(Math.round(display(Math.log1p(1) / Math.log1p(3))));
-  expect(distribution.columnPixel![0]).toBe(Math.round(display(Math.log1p(1) / Math.log1p(2))));
+  expect(distribution.rowPixel).toEqual([...color(Math.log1p(1) / Math.log1p(3)), 255]);
+  expect(distribution.columnPixel).toEqual([...color(Math.log1p(1) / Math.log1p(2)), 255]);
   await page.evaluate(() => {
     const f = window.explorerFixture;
     const tail = Array<number>(147).fill(0); tail[225 - 153] = 1; tail[299 - 153] = 1;
@@ -135,11 +134,11 @@ for (const dpr of [1, 2]) test(`reference geometry and synchronized scrolling ac
     });
     expect(aligned.top).toBeLessThan(0.01); expect(aligned.left).toBeLessThan(0.01);
     expect(aligned.cell).toMatchObject({ value: aligned.expected });
-    expect(aligned.pixel).toBeCloseTo(display(1 / (1 + Math.exp(-8 * aligned.expected))), 0);
+    expect(aligned.pixel).toBeCloseTo(color(1 / (1 + Math.exp(-12 * aligned.expected)))[0]!, 0);
     expect(aligned.rowCount).toMatchObject({ value: aligned.rowExpected });
     expect(aligned.columnCount).toMatchObject({ value: aligned.columnExpected });
-    expect(aligned.rowPixel).toBe(Math.round(display(Math.log1p(aligned.rowExpected) / Math.log1p(1536))));
-    expect(aligned.columnPixel).toBe(Math.round(display(Math.log1p(aligned.columnExpected) / Math.log1p(576))));
+    expect(aligned.rowPixel).toBe(color(Math.log1p(aligned.rowExpected) / Math.log1p(1536))[0]);
+    expect(aligned.columnPixel).toBe(color(Math.log1p(aligned.columnExpected) / Math.log1p(576))[0]);
     expect(aligned.right).toBe(true); expect(aligned.bottom).toBe(true);
   }
   const path = testInfo.outputPath(`reference-dpr-${dpr}.png`);
@@ -226,9 +225,9 @@ test('uint32 density storage preserves large counts and defines zero-axis intens
     return { values, pixels, zeroPixel, live: f.metrics.live.size, integer: f.metrics.integerAllocations, scalar: f.metrics.scalarAllocations };
   });
   expect(result.values.map((cell) => cell && 'value' in cell ? cell.value : null)).toEqual([0, 16777217, 0xffffffff]);
-  expect(result.pixels[0]![0]).toEqual([0, 0, 0, 255]);
-  expect(result.pixels[0]![2]).toEqual([255, 255, 255, 255]);
-  expect(result.zeroPixel).toEqual([0, 0, 0, 255]);
+  expect(result.pixels[0]![0]).toEqual(green(-1));
+  expect(result.pixels[0]![2]).toEqual(green(1));
+  expect(result.zeroPixel).toEqual(green(-1));
   expect(result.live).toBe(0); expect(result.integer).toBe(2); expect(result.scalar).toBe(0);
 });
 

@@ -1,3 +1,4 @@
+import { green } from './scalar-oracle';
 import { expect, test } from '@playwright/test';
 
 // This project runs headed under Xvfb in CI. The positive scrollbar-thickness
@@ -35,7 +36,7 @@ for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () =>
       expect(await page.evaluate(() => {
         const f = window.explorerFixture;
         return f.pixels(f.renderers[0]!)[0]![0];
-      })).toEqual([0, 0, 0, 255]);
+      })).toEqual(green(-1));
       await page.locator('.matrix-scroll').evaluate((host) => { host.scrollLeft = 1e9; });
       await expect.poll(async () => { const view = await geometry(); return view.x + view.width; }).toBe(1536);
       expect((await geometry()).height).toBe(rows);
@@ -46,7 +47,7 @@ for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () =>
           profiles: f.renderers.slice(1).map((r) => r.view), requests: f.requests.map((r) => r.kind) };
       }, rows);
       expect(last.cell).toMatchObject({ value: 2 });
-      expect(last.pixel).toEqual([255, 255, 255, 255]);
+      expect(last.pixel).toEqual(green(1));
       if (rows === 1) expect(last.requests).toEqual(['data', 'statistics']);
       else {
         expect(last.profiles[0]!.height).toBe(rows);

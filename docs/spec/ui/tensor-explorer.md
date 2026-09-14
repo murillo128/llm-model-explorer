@@ -171,47 +171,34 @@ The magnifier:
 
 The proof-of-concept product rule that there is no general zoom/pan remains unchanged. The magnifier does not change matrix scale, scroll position, or the one-weight-to-one-pixel main surface.
 
-## Selection encoding: luminosity is data, chroma is interaction
+## Selection encoding: green data and amber inspection guides
 
-The common renderer already defines weight/scalar value through luminosity and reserves color for semantic information. Tensor Explorer makes that separation concrete for hover/selection.
+Unselected matrix and distribution pixels use the common renderer's sequential
+green scalar family. The underlying scalar transfer remains independent of
+selection. Hover/focus on a populated cell links exactly one active coordinate:
 
-Conceptually, the shader treats the displayed color as a luminance/chrominance representation:
+- a thin high-contrast amber horizontal guide through the matrix row;
+- a thin amber vertical guide through the matrix column;
+- a stronger amber intersection at the exact active cell;
+- the same row guide across the right distribution scanline;
+- the same column guide across the lower distribution scanline.
 
-- `Y` is the scalar-data luminosity produced by the common renderer transfer function;
-- `U/V` (or an equivalent two-dimensional chroma representation) encode interaction state.
+Guides normally occupy one device pixel. They blend over the scientific display
+at draw time, retaining underlying variation; they are not opaque replacement
+lines. The common renderer owns concrete palette, opacity and display encoding.
+Pending/nonfinite pixels retain explicit status colors. Pending-cell inspection
+may expose unavailable text but does not activate linked guides until populated.
 
-`Y` must remain unchanged when a cell, row, or column is highlighted.
-
-The standard hover state uses a warm orange/amber chroma vector. `U` and `V` are used together to select the desired hue; the design must not assume that one chroma axis alone can express the required semantic color.
-
-The intended behavior is:
-
-- unselected pixels: neutral/default semantic chroma;
-- hovered row: subtle selection chroma, original `Y` unchanged;
-- hovered column: subtle selection chroma, original `Y` unchanged;
-- hovered cell at the row/column intersection: stronger selection chroma, original `Y` unchanged;
-- matching scanline in the row-distribution panel: the same selection semantics;
-- matching scanline in the column-distribution panel: the same selection semantics.
-
-The selection channel is full resolution per displayed tensor pixel — semantically equivalent to 4:4:4 chroma. Chroma subsampling such as 4:2:0 is not acceptable for cell selection because it would smear interaction state into neighboring weights.
-
-`Y/U/V` here describe shader semantics, not a requirement to store tensor data in a YUV video/image format. The authoritative GPU tensor representation remains the scalar tensor representation defined by the common renderer. Selection color is computed at draw time.
-
-If a chosen chroma would push the final RGB conversion outside the displayable gamut, reduce/clamp chroma before altering `Y`; preserving the scalar-derived luminosity takes priority over maximum saturation.
-
-### No guide lines over tensor data
-
-Row/column selection must not be implemented by painting opaque horizontal or vertical guide lines across the matrix or distribution data. Such lines overwrite exactly the information the explorer is intended to inspect.
-
-If an additional geometric guide is ever needed for accessibility/contrast, it may appear only as short ticks protruding just outside the corresponding matrix/distribution edges. It must not cross the data surface.
-
-The chroma highlight is the primary row/column linkage mechanism.
+The small amber cursor and magnifier center marker remain available. The magnifier
+uses the same green transfer and active accent as the matrix. Exact coordinates,
+value text and a visible keyboard focus outline communicate state without relying
+on color alone. Arrow-key focus uses the same coordinate propagation as hover.
 
 ## GPU interaction-state constraint
 
 Hover and selection must not require a recolored copy of the tensor or a second copy of the weights in GPU memory.
 
-For the standard single-cell hover state, the renderer should be able to express selection with small interaction state such as the active row index, active column index, hover flag, and semantic-color parameters. The shader derives row/column/intersection chroma from that state while reading the same immutable scalar tensor representation.
+For the standard single-cell hover state, the renderer should be able to express selection with small interaction state such as the active row index, active column index, hover flag, and semantic-color parameters. The shader derives row/column/intersection overlays from that state while reading the same immutable scalar tensor representation.
 
 A per-pixel selection texture/mask is unnecessary for the normal one-cell hover case and should not be introduced merely to recolor a row and column.
 
@@ -325,9 +312,9 @@ A conforming current Matrix Inspector for rank-2 tensors has all of these proper
 - hover readout for the exact cell value and coordinates;
 - small orange cross cursor;
 - rounded-square pixel-preserving neighborhood magnifier, currently `9 × 9`;
-- row/column/intersection selection through full-resolution chroma while preserving luminosity;
+- green scalar transfer with thin amber row/column guides and a stronger intersection;
 - linked selection state in both distribution panels;
-- no guide line painted over tensor or histogram pixels;
+- guides blend over data without changing scalar transfer or stored values;
 - no recolored duplicate of the tensor in GPU memory;
 - light, minimal, editor-like UI shell;
 - no general zoom or pan in the proof of concept.
@@ -385,7 +372,6 @@ with the owning renderer, including context loss/reconstruction.
 
 The card/readout chooses among four pointer-relative placements and clamps within
 the viewport while excluding the inspected neighborhood where viewport dimensions
-permit a 170×212 CSS-pixel inspection surface. The thin center marker exists only
-on the magnified display; no guide lines cross the scientific data rectangles.
-Concrete luminance coefficients, gamut handling and display encoding are owned by
-[`rendering.md`](rendering.md#concrete-linear-srgb-selection-transfer).
+permit a 170×212 CSS-pixel inspection surface. The magnified display retains its thin center marker in addition to linked
+guides. Concrete palette, compositing and display encoding are owned by
+[`rendering.md`](rendering.md#concrete-linear-srgb-scalar-and-guide-transfer).

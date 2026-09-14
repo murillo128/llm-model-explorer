@@ -44,7 +44,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
   private uploads = 0;
   private generations = 0;
   private selection: Selection | null = null;
-  private strengths: readonly [number, number] = [0.08, 0.3];
+  private strengths: readonly [number, number] = [0.65, 0.9];
   private inspection: { framebuffer: WebGLFramebuffer; color: WebGLRenderbuffer; pixels: Uint8Array } | null = null;
   private _view: ViewGeometry | null = null;
 
@@ -145,7 +145,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
       }
       this.vao = gl.createVertexArray();
       if (!this.vao) throw new Error('WebGL2 vertex array allocation failed.');
-      for (const name of ['weights', 'bandOffset', 'bandOrigin', 'selection', 'chromaStrength', 'viewHeight', 'prefix', ...(this.densityAxisLength === undefined ? ['mode', 'slope', 'anchors', 'scale', 'span', 'correction'] : ['densityDenominator'])]) {
+      for (const name of ['weights', 'bandOffset', 'bandOrigin', 'selection', 'guideOpacity', 'viewHeight', 'prefix', ...(this.densityAxisLength === undefined ? ['mode', 'slope', 'anchors', 'scale', 'span', 'correction'] : ['densityDenominator'])]) {
         const location = gl.getUniformLocation(this.program!, name);
         if (location === null) throw new Error(`Missing renderer uniform: ${name}`);
         this.uniforms[name] = location;
@@ -234,10 +234,10 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
   }
 
   /** Negative row/column disables that axis, for linked distribution surfaces. */
-  setSelection(selection: Selection | null, strengths: readonly [number, number] = [0.08, 0.3]) {
+  setSelection(selection: Selection | null, strengths: readonly [number, number] = [0.65, 0.9]) {
     if (this._state === 'disposed') return;
     if (selection && ![selection.row, selection.column].every(Number.isSafeInteger)) throw new Error('Invalid selection coordinates.');
-    if (!strengths.every((v) => Number.isFinite(v) && v >= 0 && v <= 1)) throw new Error('Invalid chroma strength.');
+    if (!strengths.every((v) => Number.isFinite(v) && v >= 0 && v <= 1)) throw new Error('Invalid guide opacity.');
     this.selection = selection;
     this.strengths = strengths;
   }
@@ -286,7 +286,7 @@ export class GridRenderer<T extends Float32Array | Uint32Array = Float32Array | 
     gl.activeTexture(gl.TEXTURE0);
     const u = this.uniforms;
     gl.uniform2i(u.selection!, this.selection?.column ?? -1, this.selection?.row ?? -1);
-    gl.uniform2f(u.chromaStrength!, ...this.strengths);
+    gl.uniform2f(u.guideOpacity!, ...this.strengths);
     gl.uniform1i(u.weights!, 0);
     gl.uniform1i(u.viewHeight!, view.height);
     if (this.densityAxisLength === undefined) {

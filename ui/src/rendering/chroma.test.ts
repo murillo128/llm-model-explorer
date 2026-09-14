@@ -1,18 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { amber, chromaRGB, encodeSRGB, luminance } from './chroma';
+import { chromaRGB, scalarGreen, encodeSRGB, luminance } from './chroma';
 import { formatFloat32, inspectionPosition } from './matrix-inspection';
 
-describe('luminance-preserving amber', () => {
-  it('keeps Y in gamut across strengths including black/white', () => {
-    expect(amber.reduce((sum, v, i) => sum + v * luminance[i]!, 0)).toBeCloseTo(0, 15);
-    for (let i = 0; i <= 1000; i++) for (const strength of [0, 0.08, 0.3, 1]) {
-      const y = i / 1000;
-      const rgb = chromaRGB(y, strength);
-      expect(rgb.every((c) => c >= -1e-15 && c <= 1 + 1e-15)).toBe(true);
-      expect(rgb.reduce((sum, v, j) => sum + v * luminance[j]!, 0)).toBeCloseTo(y, 14);
+describe('green scalar and amber overlay', () => {
+  it('orders luminance throughout the green scale and keeps compositing in gamut', () => {
+    let previous = -1;
+    for (let i = 0; i <= 1000; i++) {
+      const t = i / 1000;
+      const green = scalarGreen(t);
+      expect(green[1]).toBeGreaterThan(green[0]!);
+      expect(green[1]).toBeGreaterThan(green[2]!);
+      const y = green.reduce((sum, v, j) => sum + v * luminance[j]!, 0);
+      expect(y).toBeGreaterThan(previous); previous = y;
+      for (const opacity of [0, 0.65, 0.9, 1]) {
+        const rgb = chromaRGB(t, opacity);
+        expect(rgb.every((c) => c >= 0 && c <= 1)).toBe(true);
+        if (opacity >= 0.65) expect(rgb[0]).toBeGreaterThan(rgb[1]!);
+      }
     }
-    expect(chromaRGB(0, 1)).toEqual([0, 0, 0]);
-    expect(chromaRGB(1, 1)).toEqual([1, 1, 1]);
     expect(encodeSRGB(0.5)).toBeCloseTo(0.735356983, 8);
   });
 });
