@@ -22,6 +22,7 @@ vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
     fake.views.push({ options, upload, transfer, dispose: this.dispose });
   }
   refresh = vi.fn();
+  setLinkedRow = vi.fn();
   dispose;
 } }));
 beforeEach(() => { fake.fail = false; fake.transferFails = false; fake.views.length = 0; });

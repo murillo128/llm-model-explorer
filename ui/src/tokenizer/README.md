@@ -33,3 +33,27 @@ keeps long prompts and annotations reachable.
 Only the backend tokenizes. Browser fixtures are synthetic contract examples,
 including deliberately non-concatenating decoded text; their IDs are not claims
 about any particular model. See `ui/evidence/tokenizer.md` for validation.
+
+
+## Downstream input embeddings
+
+`TokenizerWorkspace` composes the unchanged prompt subtree and a matrix region
+below it. `PromptTokenizer.downstream` receives only its current successful result
+and the request-generation abort signal. A pending/error/IME/session/options
+change removes that result immediately. `TokenizerExplorer` in
+`TokenizerExplorer.tsx` adapts the application's session lifetime to this workspace.
+
+`EmbeddingController` calls the shared typed `streamInputEmbeddings` method.
+Validated META synchronously mounts the Matrix Explorer before DATA can arrive
+in the same network chunk. `StreamWords` consumes split float32 words directly;
+only the renderer retains an inspection copy. No histogram/statistics are inferred.
+Resubscribing after any received bytes restarts the lookup at offset zero;
+StrictMode's synchronous pre-DATA detach/reattach can reuse the untouched stream.
+Every callback is fenced by the tokenizer abort signal and transport epoch.
+
+Existing ID text gets invisible per-sequence focus/interaction wiring; overlapping
+IDs remain separately addressable without repeating source text. Linked rows use
+`MatrixExplorer.highlightedRow`, and matrix inspection uses `onRowSelect` to mark
+the existing annotation. These interactions never dispatch editor document or
+selection transactions. `embeddings.css` styles only the new region and active
+annotation cues; the baseline `tokenizer.css` is unchanged.

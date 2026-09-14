@@ -8,8 +8,9 @@ import './matrix-explorer.css';
 
 /** Transport-free scientific composition. The parent owns operation status/errors. */
 export function MatrixExplorer({ source, header, label = 'Matrix; scroll to inspect all values',
-  onCellSelect, onRowSelect, onColumnSelect, onRenderingStateChange }: MatrixExplorerProps) {
+  onCellSelect, onRowSelect, onColumnSelect, onRenderingStateChange, highlightedRow = null }: MatrixExplorerProps) {
   const host = useRef<HTMLDivElement>(null);
+  const currentViewport = useRef<MatrixViewport | null>(null);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [failed, setFailed] = useState(false);
   const selected = useRef<{ row: number; column: number } | null>(null);
@@ -37,6 +38,7 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
         onStateChange: rendering,
       });
       if (source.transfer) viewport.matrix.renderer.setTransfer(source.transfer);
+      currentViewport.current = viewport;
     } catch {
       allocated?.dispose();
       // Report synchronous allocation failure before paint, like renderer state callbacks.
@@ -73,9 +75,11 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
     }
     return () => {
       active = false;
+      currentViewport.current = null;
       try { detach(); } finally { viewport.dispose(); }
     };
   }, [source]);
+  useLayoutEffect(() => { currentViewport.current?.setLinkedRow(highlightedRow); }, [highlightedRow, source]);
   // Context/slot/callback changes do not restart subscriptions or upload weights.
   useLayoutEffect(() => {
     host.current?.querySelector('.matrix-scroll')?.setAttribute('aria-label', label);

@@ -82,8 +82,41 @@ lookup must not replace a newer one; while tokenization/lookup is pending or
 fails, an older matrix must not be presented as current. Empty input and
 unsupported lookup are explicit states. Consume the float32 matrix progressively
 using the common rules in `rendering.md`, preserving one weight per rendered
-pixel. This contract establishes data association and scope; detailed matrix
-composition and interaction are owned by the separate UI implementation issue.
+pixel.
+
+The existing prompt/tokenization region is frozen: retain its editor, helper
+copy, token annotations, empty state, geometry, resize behavior, and native
+selection/caret/history/IME behavior. Invisible interaction/accessibility wiring
+may connect its existing annotations to the downstream matrix. Do not compact,
+reorder, replace, or repeat the prompt or add a second token strip.
+
+Place the shared Matrix Explorer directly below the prompt in the same bounded
+Tokenizer workspace. The workspace owns internal overflow when the prompt and
+matrix exceed available height; the document remains fixed. Preserve the prompt's
+accepted size and the matrix's native `[token count, hidden width]` orientation.
+The matrix is matrix-only unless authoritative distribution artifacts exist;
+do not fabricate statistics or distributions. Use the common green scalar
+palette, provisional scalar transfer, and amber inspection semantics.
+
+Existing annotation IDs are individually focusable by sequence position,
+including IDs sharing an overlapping source span. Hover/focus/activation of ID
+`i` highlights matrix row `i`; a source span shared by several tokens links its
+first sequence position, while each existing ID independently addresses its own
+row. Hover/focus of a matrix cell highlights the associated existing annotation
+without changing editor text or selection. Duplicate IDs at different positions
+remain distinct links. Exact cell inspection retains row, hidden-dimension
+column, and float32 value. Linked row state changes display uniforms only.
+
+Fence each lookup with the tokenizer editor generation and session/options
+identity, not text equality alone, including A→B→A changes. Invalidate the old
+matrix as soon as that tokenization stops being current, abort superseded
+transport, and cancel known operation handles. Delayed metadata, DATA, errors,
+and completion cannot populate a later generation. Pending/streaming feedback
+is compact and confined to the new embedding region; the prompt stays editable.
+Unsupported lookup leaves tokenization usable with a bounded explanation.
+An empty token sequence shows an explicit empty embedding state without a
+lookup or invented values. Failed/cancelled embedding results invalidate any
+partial matrix. No positional encoding or later inference stage is included.
 
 ## Reuse in later inference views
 
