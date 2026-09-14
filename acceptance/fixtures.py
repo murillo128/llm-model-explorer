@@ -59,6 +59,13 @@ def generate(root: Path, *, extended: bool = False) -> Path:
             "both": (1200, 1600),
         }.items():
             tensors[f"layout.{name}.weight"] = values(shape).half()
+        for name, samples in {
+            "concentrated": [-0.0001, 0.0, 0.0001, 0.0002] * 100,
+            "outliers": [-1000.0] + [0.0] * 398 + [3000.0],
+            "constant": [2.0] * 400,
+            "nonfinite": [float("nan"), float("inf")] * 200,
+        }.items():
+            tensors[f"scale.{name}.weight"] = torch.tensor(samples).reshape(20, 20)
         for i in range(80):
             tensors[f"inventory.{i:02}.weight"] = torch.zeros(1)
     save_file(tensors, directory / "model.safetensors")
