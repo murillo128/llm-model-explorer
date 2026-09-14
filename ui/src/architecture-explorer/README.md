@@ -11,10 +11,25 @@ protocol failures remain local. No tokenization, tensor stream, analysis job or
 polling request is started by the graph.
 
 `GraphViews` belongs to one backend shell and retains only camera, expansion IDs,
-dimensions and selection, keyed by model and graph identity. `onInspect` is the
-optional modal-child seam: it receives exact model/session/graph/node identity and
-the activating DOM element for focus restoration. The consumer owns its modal,
-request fencing and numeric subscriptions; the canvas owns no matrix resources.
+dimensions and selection, keyed by model and graph identity. The canvas's
+`onInspect` seam receives exact model/session/graph/node identity and the activating
+DOM element. `ArchitectureExplorer` connects it to `ArchitectureInspection`, one
+native modal outside the graph transform. The modal resolves parameter IDs and
+semantic references against the validated graph/inventory, displays provenance,
+formulas, storage and localized limitations, and composes the existing
+`TensorExplorer` consumer for available native vectors/matrices. Parameter choice
+never infers a layer or tensor ID from its name.
+
+Every modal and weight choice has a child `Lifetime`. Closing, replacing a weight,
+or disposing the session cancels only its own numeric handles; Matrix Explorer
+unsubscription releases the viewport's retained CPU/GPU resources. Existing
+controller and source guards reject late callbacks, including a return to the
+same tensor. Escape closes from any descendant, Tab stays inside, and close
+restores the activating element without altering graph camera or expansion.
+The shared cell readout portals into its enclosing dialog when present. Tensor
+metadata is already in the modal, so this composition omits the header popover
+instead of stacking dialogs. Unsupported representations, fused regions,
+unresolved bindings and high ranks have no numeric action.
 
 ## Graph implementation and dependencies
 
@@ -75,4 +90,10 @@ Reproduce from `ui/`:
 ```sh
 npm run check
 UI_TEST_PORT=18484 npm run test:browser -- tests/architecture.spec.ts tests/architecture-shell.spec.ts --project=desktop --project=narrow
+```
+
+Modal/browser reproduction (synthetic asymmetric streams, not checkpoint inference):
+
+```sh
+UI_TEST_PORT=18484 npm run test:browser -- tests/architecture-inspection.spec.ts --project=desktop --project=narrow
 ```

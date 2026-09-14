@@ -23,13 +23,13 @@ it('fences late model/session results and aborts the obsolete retrieval', async 
   const { props, retrieve, selection } = setup();
   let resolve!: (value: typeof response) => void;
   retrieve.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
-  const view = render(<ArchitectureExplorer key="a" {...props} />);
+  const view = render(<ArchitectureExplorer {...props} />);
   await waitFor(() => expect(retrieve).toHaveBeenCalledOnce());
   const signal = retrieve.mock.calls[0]![2]!;
   selection.dispose();
   const next = { ...props, session: { ...session, model_id: 'replacement' }, selection: new Lifetime() };
   retrieve.mockResolvedValueOnce({ status: 'unavailable', model_id: 'replacement', reason: 'cache_unavailable', requires_restart: true, diagnostics: [] });
-  view.rerender(<ArchitectureExplorer key="b" {...next} />);
+  view.rerender(<ArchitectureExplorer {...next} />);
   await screen.findByText('The prepared architecture cache is unavailable.');
   await act(() => resolve(response));
   expect(signal.aborted).toBe(true);
