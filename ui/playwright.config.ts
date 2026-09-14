@@ -4,7 +4,7 @@ const port = Number(process.env.UI_TEST_PORT ?? 4173);
 const baseURL = `http://127.0.0.1:${port}`;
 const workers = process.env.PLAYWRIGHT_WORKERS
   ? Number(process.env.PLAYWRIGHT_WORKERS)
-  : process.env.CI ? 4 : undefined;
+  : process.env.CI ? 4 : 1;
 
 export default defineConfig({
   testDir: './tests',
