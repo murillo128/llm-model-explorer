@@ -93,9 +93,14 @@ This changes no product behavior or numeric oracle.
 
 A native pointer placed within a quarter CSS pixel of the V-JEPA matrix origin
 rounded into row 1 on a fractional canvas boundary. Its reported value matched
-that row, not the intended row 0. The reference value oracle now uses native
-keyboard focus at scroll origin; existing pixel/pointer gates continue to cover
-hit testing. This is a test-coordinate correction, not a scalar/rendering change.
+that row, not the intended row 0. Reaching native scale/focusing also retained row 1, confirming that a fixed
+logical origin was not a valid acceptance assumption. The resolved oracle samples
+the displayed logical coordinate and its keyboard-selected neighbor, comparing
+each to an independent bounded Safetensors slice. This follows the accepted rule
+that focus exposes the first visible coordinate. Existing pixel/pointer gates
+continue to cover hit testing; no camera-reset behavior or scalar change is added.
+The validation clarification is recorded on issue #86 before the next correction
+cycle.
 
 ## Actual graph layout observations
 

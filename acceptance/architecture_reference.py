@@ -174,7 +174,7 @@ def measure(family, selection, output):
     return report
 
 
-def native_samples(directory, name):
+def native_samples(directory, name, *, row=None, column=None):
     """Independent safetensors slices of explicitly requested native values."""
     from safetensors import safe_open
 
@@ -190,6 +190,10 @@ def native_samples(directory, name):
             view = weights.get_slice(name)
             count = tensor.numel
             offsets = sorted({0, min(8, count - 1), count - 1})
+            if row is not None or column is not None:
+                assert tensor.rank == 2 and row is not None and column is not None
+                assert 0 <= row < tensor.shape[0] and 0 <= column < tensor.shape[1]
+                offsets = [row * tensor.shape[1] + column]
             values = []
             for offset in offsets:
                 if tensor.rank == 1:
@@ -206,9 +210,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("family", choices=REFERENCES)
     parser.add_argument("--tensor")
+    parser.add_argument("--row", type=int)
+    parser.add_argument("--column", type=int)
     args = parser.parse_args()
     directory, model_id, report = inventory(args.family, selections()[args.family])
     if args.tensor:
-        print(json.dumps(native_samples(directory, args.tensor)))
+        print(json.dumps(native_samples(directory, args.tensor, row=args.row, column=args.column)))
     else:
         print(json.dumps({"directory": str(directory), "model_id": model_id, "report": report}))

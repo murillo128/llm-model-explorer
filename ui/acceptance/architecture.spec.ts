@@ -146,17 +146,30 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     const size = (p: typeof parameter) => p.logical_shape!.reduce((total, d) => total * (d.kind === 'constant' ? d.value : 1), 1);
     const matrix = matrices.sort((a, b) => size(a) - size(b))[0]!;
     await page.evaluate(() => { (window as any).__acceptance.captureScalars = false; });
-    const firstValue = reference ? JSON.parse(execFileSync(python, ['-m', 'acceptance.architecture_reference', family, '--tensor', matrix.name], { cwd: repo, encoding: 'utf8' })).samples[0].value : -14 / 8;
     await openParameter(page, graph, matrix);
     const matrixCanvas = page.locator('.matrix-scroll canvas');
     await expect(matrixCanvas).toBeVisible();
     await nativeCamera(page);
-    // Native keyboard focus selects the exact viewport origin even when the
-    // canvas top lies between CSS pixels. Pointer fidelity has separate gates.
+    // The accepted camera may retain a nonzero/fractional logical origin.
+    // Validate the displayed coordinate and an adjacent keyboard-selected cell,
+    // independently of the renderer's value lookup. Do not impose a camera reset.
     await page.mouse.move(0, 0);
-    await page.locator('.matrix-scroll').evaluate((element) => { element.scrollLeft = 0; element.scrollTop = 0; });
-    await page.locator('.matrix-scroll').focus();
-    await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 0${firstValue}`);
+    const scroller = page.locator('.matrix-scroll');
+    await scroller.focus();
+    const coordinate = page.locator('.inspection-readout span').first();
+    const scalar = page.locator('.inspection-readout span').last();
+    await expect(coordinate).toHaveText(/^row \d+ · column \d+$/);
+    const match = /^row (\d+) · column (\d+)$/.exec((await coordinate.textContent())!)!;
+    const row = Number(match[1]), column = Number(match[2]);
+    const columns = (matrix.logical_shape![1] as { value: number }).value;
+    for (const selectedColumn of [column, Math.min(column + 1, columns - 1)]) {
+      if (selectedColumn !== column) await scroller.press('ArrowRight');
+      const expectedValue = reference ? JSON.parse(execFileSync(python,
+        ['-m', 'acceptance.architecture_reference', family, '--tensor', matrix.name, '--row', String(row), '--column', String(selectedColumn)],
+        { cwd: repo, encoding: 'utf8' })).samples[0].value : ((row * columns + selectedColumn) % 29 - 14) / 8;
+      await expect(coordinate).toHaveText(`row ${row} · column ${selectedColumn}`);
+      await expect.poll(async () => Number(await scalar.textContent())).toBe(expectedValue);
+    }
     await page.keyboard.press('Escape'); await released(page);
     const unavailable = graph.parameters.find((p) => p.inspection.status === 'unavailable');
     if (unavailable) {
