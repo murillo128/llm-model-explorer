@@ -247,6 +247,10 @@ def test_missing_parameter_retains_partial_structure(name: str) -> None:
     result = registry().analyze(metadata(f))
     assert result.status == "partial", result
     assert result.graph is not None and result.graph.diagnostics
+    if name == PREFIX + ".embed_tokens.weight":
+        head = next(p for p in result.graph.parameters if p.name == "lm_head.weight")
+        assert head.inspection.status == "unavailable"
+        assert head.inspection.reason == "unresolved_binding"
 
 
 @pytest.mark.parametrize(
@@ -377,3 +381,53 @@ def test_local_readonly_analysis_has_no_execution_network_or_weight_reads(
     result = registry().analyze(inputs)
     assert result.status == "complete", result
     forbidden.assert_not_called()
+
+
+def test_graph_identity_bounds_and_tokenizer_capability() -> None:
+    from dataclasses import replace
+
+    inputs = metadata()
+    baseline = graph(inputs)
+    assert serialize_graph(graph(inputs)) == serialize_graph(baseline)
+    changed = graph(replace(inputs, fingerprint="changed-content"))
+    assert changed.graph_id != baseline.graph_id
+    result = registry().analyze(inputs, byte_limit=4096)
+    assert result.status == "unavailable" and result.reason == "unsupported_size"
+    with_tokenizer = graph(
+        replace(inputs, bindings=replace(inputs.bindings, tokenizer_available=True))
+    )
+    assert any(
+        isinstance(ref, r.ArchitectureTokenizerReference)
+        for n in with_tokenizer.nodes
+        for ref in n.references
+    )
+    assert not any(
+        isinstance(ref, r.ArchitectureTokenizerReference)
+        for n in baseline.nodes
+        for ref in n.references
+    )
+
+
+def test_unequal_linear_key_value_widths_preserve_geometry() -> None:
+    f = copy.deepcopy(TINY)
+    f["configuration"]["text_config"]["linear_value_head_dim"] = 32
+    p = PREFIX + ".layers.0.linear_attn"
+    # Independent dimensions: key width 1*16; value width 2*32; QKV 96.
+    for suffix, dims in {
+        ".in_proj_qkv.weight": [96, 16],
+        ".in_proj_qkv.weight_scale": [96, 2],
+        ".in_proj_z.weight": [64, 16],
+        ".in_proj_z.weight_scale": [64, 2],
+        ".conv1d.weight": [96, 1, 4],
+        ".norm.weight": [32],
+        ".out_proj.weight": [32, 32],
+        ".out_proj.weight_scale": [32, 4],
+    }.items():
+        f["storage"][p + suffix]["shape"] = dims
+    g = graph(metadata(f))
+    state_shape = node(g, p + ".prior_recurrent").ports[0].shape
+    assert state_shape is not None
+    assert state_shape[-2:] == [
+        r.ArchitectureConstantDimension(kind="constant", value=16),
+        r.ArchitectureConstantDimension(kind="constant", value=32),
+    ]

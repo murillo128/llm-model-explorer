@@ -113,3 +113,35 @@ No model payload or actual checkpoint fingerprint was available for this issue's
 fixture run. Integrated acceptance must supply and validate the complete selected
 local assets and record timing/memory/fingerprint evidence. Static tests do not
 claim numeric equivalence, inference correctness, or decoder support.
+
+The initial complete candidate passed lint, formatting, strict typing and the
+full backend suite: **814 passed, 19 skipped** (optional CUDA; no device).
+The independent API validator passed 283 references, 88 instance cases, 112
+architecture cases and 76 wire fixtures. Both generated fixture responses also
+passed the published `ArchitectureResponse`/`TensorInventory` schemas and the
+independent `api/architecture_conformance.py` validator with numeric context.
+The reference metadata graph contains 947 nodes, 1,329 edges and 333 parameters,
+and its compact response is 2,066,304 bytes. Tiny: 89 nodes, 121 edges,
+30 parameters and 187,249 bytes. These are fixture metrics, not runtime benchmarks.
+
+An independent intermediate mathematical review of published commit
+`3bb8357d7994c2597c809c73358815f1196011e3` returned **PASS_WITH_NOTES**,
+final-capable: no. It independently matched all reference metadata and checked
+unequal key/value widths. Its note corrected the unavailable reason on the tied
+head when embedding storage is absent; the correction and an explicit regression
+assertion are included. No topology or mathematical fragment changed.
+
+Reproduction uses repository-pinned Python 3.12 CPU dependencies:
+
+```sh
+cd backend
+uv run --locked ruff check .
+uv run --locked ruff format --check .
+uv run --locked mypy
+uv run --locked pytest -q
+```
+
+The local run reused `/tmp/issue-43-venv` with `PYTHONPATH=src` to resolve this
+worktree. API validation uses its separate `api/requirements.txt` environment.
+Final PR-head CI and integration freshness are recorded on the PR, rather than
+hard-coding mutable final commit identities here.

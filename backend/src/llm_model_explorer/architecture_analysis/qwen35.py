@@ -328,7 +328,7 @@ class Graph:
                 else r.ArchitectureUnavailableInspection(
                     status="unavailable",
                     reason="unresolved_binding"
-                    if storage is None
+                    if embedding_storage is None
                     else "unsupported_representation",
                     message="Tied embedding has no admitted numeric view.",
                 ),
