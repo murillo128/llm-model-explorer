@@ -468,3 +468,39 @@ reads only requested row ranges and checks the pinned snapshot throughout.
 
 See [input embedding evidence](evidence/input-embeddings.md) for fixture coverage
 and a reproducible optional local SmolLM2 comparison.
+
+## Static architecture graph core
+
+`llm_model_explorer.architecture_analysis` accepts guarded configuration and physical
+and numeric inventory descriptors through `AnalysisInput.from_source`. It has no
+runtime import of PyTorch or Transformers. Packaged family adapters explicitly
+register a `Description` with reviewed model-type/architecture discriminators,
+option/storage validation (`supports`), semantic producer revisions, and a `build`
+callback. No family descriptions are registered by this core increment.
+
+Builders append full typed nodes, edges, parameters, symbols and repetitions;
+`record_id(kind, semantic_key)` identifies an actual instance independently of its
+label or insertion order. Adapters supply ordered group children and explicit
+edges, including boundary ports. `unknown` and missing native bindings produce
+localized diagnostics and partial coverage. `finish` checks the complete graph
+against the admitted inventory. Registry analysis returns complete, partial or
+unavailable without an HTTP/model/session envelope. Filesystem handles, loading
+capabilities, and numerical tensors are not passed to description callbacks.
+Adapters select architectural facts from configuration rather than copying raw
+checkpoint strings into public records.
+
+The API specification remains authoritative. `architecture_analysis/records.py`
+is generated from the published OpenAPI, with no runtime schema-file dependency:
+
+```sh
+uv run --locked python scripts/generate_architecture_records.py
+uv run --locked python scripts/generate_architecture_records.py --check
+uv run --locked pytest tests/test_architecture_analysis.py
+```
+
+Construction and serialization enforce a 32 MiB maximum and reject overflow
+without truncation. A response producer must reserve its own envelope bytes via
+`byte_limit` and bound the entire response. File reads, startup scheduling, cache
+publication, HTTP retrieval, and family semantics remain their consumers' work.
+See [graph-core evidence](evidence/architecture-graph-core.md) for the independent
+oracle and the limits of this fixture-only validation.
