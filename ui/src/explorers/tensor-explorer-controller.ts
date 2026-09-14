@@ -3,8 +3,7 @@ import { requireProtocol } from '../api/errors';
 import type { Metadata } from '../api/validation';
 import type { ExplorerContextValue } from '../app/explorer-context';
 import { Lifetime } from '../app/lifetime';
-import { MatrixViewport } from '../rendering/matrix-viewport';
-import type { MatrixViewportOptions } from '../rendering/matrix-viewport';
+import type { MatrixUpdates } from '../matrix-explorer';
 import { StreamWords } from './stream-words';
 
 export type ResultState = 'loading' | 'streaming' | 'complete' | 'failed' | 'cancelled' | 'unneeded';
@@ -12,36 +11,26 @@ export interface ExplorerStatus {
   tensor: ResultState;
   statistics: ResultState;
   distributions: ResultState;
-  rendering: 'ready' | 'failed';
 }
 type TensorExplorerInput = Pick<ExplorerContextValue, 'client' | 'sessionId' | 'selectedTensor' | 'selection'>;
 type Result = 'tensor' | 'statistics' | 'distributions';
 
 /** One selected descriptor and its three independently owned operation handles. */
 export class TensorExplorerController {
-  readonly viewport: MatrixViewport;
   private readonly lifetime = new Lifetime();
   private readonly handles = new Map<Result, StreamOperation>();
   private readonly detach: () => void;
   private cancelled = false;
-  private status: ExplorerStatus = { tensor: 'loading', statistics: 'loading', distributions: 'loading', rendering: 'ready' };
+  private status: ExplorerStatus = { tensor: 'loading', statistics: 'loading', distributions: 'loading' };
 
-  constructor(host: HTMLElement, context: TensorExplorerInput, private readonly changed: (status: ExplorerStatus) => void, options: MatrixViewportOptions = {}) {
+  constructor(private readonly updates: MatrixUpdates, context: TensorExplorerInput, private readonly changed: (status: ExplorerStatus) => void) {
     const tensor = context.selectedTensor!;
-    this.viewport = new MatrixViewport(host, tensor, { ...options, onStateChange: (state) => {
-      options.onStateChange?.(state);
-      if (['failed', 'lost', 'needs-reconstruction'].includes(state)) {
-        this.status = { ...this.status, rendering: 'failed' };
-        this.changed(this.status);
-      }
-    } });
     this.detach = context.selection.onDispose(() => this.dispose());
     if (!this.lifetime.isCurrent()) return;
     if (tensor.rank !== 2) this.update('distributions', 'unneeded');
     const current = () => this.lifetime.isCurrent() && context.selection.isCurrent() && !this.cancelled;
     const scalar = new StreamWords<Float32Array>('float32', (values, offset) => {
-      this.viewport.matrix.renderer.upload(values, offset);
-      this.viewport.refresh();
+      this.updates.values(values, offset);
       this.update('tensor', 'streaming');
     });
     let distributions: Extract<Metadata, { kind: 'tensor_distributions' }> | undefined;
@@ -53,10 +42,8 @@ export class TensorExplorerController {
         const from = Math.max(offset, start);
         const to = Math.min(offset + values.length, start + section.byte_length / 4);
         if (to <= from) continue;
-        const renderer = section.name === 'row_counts' ? this.viewport.rows! : this.viewport.columns!;
-        renderer.upload(values.subarray(from - offset, to - offset), from - start);
+        this.updates.distribution(section.name === 'row_counts' ? 'rows' : 'columns', values.subarray(from - offset, to - offset), from - start);
       }
-      this.viewport.refresh();
       this.update('distributions', 'streaming');
     });
     const start = (result: Result, run: (options: StreamOptions) => StreamOperation) => {
@@ -84,8 +71,7 @@ export class TensorExplorerController {
         if (!current()) return;
         if (outcome.kind === 'complete' && result === 'statistics') {
           requireProtocol(outcome.metadata.kind === 'tensor_statistics', 'Unexpected statistics result');
-          this.viewport.matrix.renderer.setTransfer({ statistics: outcome.metadata });
-          this.viewport.refresh();
+          this.updates.transfer({ statistics: outcome.metadata });
         }
         this.update(result, outcome.kind === 'backend' ? 'failed' : outcome.kind);
       }).catch(() => {
@@ -122,6 +108,5 @@ export class TensorExplorerController {
     this.detach?.();
     for (const handle of this.handles.values()) void handle.cancel().catch(() => {});
     this.handles.clear();
-    this.viewport.dispose();
   };
 }
