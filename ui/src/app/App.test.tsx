@@ -39,7 +39,7 @@ it('renders public model metadata and logical hierarchy, describes unsupported r
   await userEvent.click(screen.getByRole('button', { name: /left.weight/ }));
   expect(screen.getByText('Viewer: first')).toBeInTheDocument();
   expect(screen.queryByText('safetensors')).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: 'Tensor information and help' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Tensor information' }));
   expect(screen.getByText('safetensors')).toBeVisible();
   await userEvent.keyboard('{Escape}');
   await userEvent.click(screen.getByRole('button', { name: /right.weight/ }));

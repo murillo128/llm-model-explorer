@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { MatrixExplorer } from '../matrix-explorer';
 import type { MatrixSource } from '../matrix-explorer';
 import type { ExplorerContextValue } from '../app/explorer-context';
-import { Button } from '../components/Button';
+import { TensorHeader } from '../components/TensorHeader';
 import { TensorExplorerController } from './tensor-explorer-controller';
 import type { ExplorerStatus, ResultState } from './tensor-explorer-controller';
 
@@ -14,7 +14,7 @@ const stateText: Record<ResultState, string> = {
 export function TensorExplorer(context: ExplorerContextValue) {
   const tensor = context.selectedTensor;
   if (!tensor || (tensor.rank !== 1 && tensor.rank !== 2)) return <p>Direct viewing supports rank-1 and rank-2 tensors.</p>;
-  if (tensor.numel === 0) return <p role="status">Empty tensor — no values to render.</p>;
+  if (tensor.numel === 0) return <><TensorHeader tensor={tensor} /><p role="status">Empty tensor — no values to render.</p></>;
   return <LoadedTensorExplorer {...context} />;
 }
 
@@ -42,14 +42,14 @@ function LoadedTensorExplorer({ client, sessionId, selectedTensor, selection }: 
   }), [client, sessionId, selectedTensor, selection]);
   const active = [status.tensor, status.statistics, status.distributions].some((state) => state === 'loading' || state === 'streaming');
   return <section className="tensor-explorer" aria-label="Tensor scientific view">
-    {!allocationFailed && <div className="tensor-results" aria-label="Result status">
-      {(['tensor', 'statistics', 'distributions'] as const).filter((result) => status[result] !== 'unneeded' && status[result] !== 'complete').map((result) =>
-        <p key={result} role={status[result] === 'failed' ? 'alert' : 'status'} data-result={result} data-state={status[result]}>
-          {(status[result] === 'loading' || status[result] === 'streaming') && <span className="operation-spinner" aria-hidden="true" />}
-          <span>{result}</span> · {stateText[status[result]]}</p>)}
-      {active && <Button onClick={() => controller.current?.cancel()}>Cancel loading</Button>}
-    </div>}
     <MatrixExplorer source={source} label="Tensor matrix; scroll to inspect all values"
+      header={<TensorHeader tensor={selectedTensor!} status={!allocationFailed && <div className="tensor-results" aria-label="Result status">
+        {(['tensor', 'statistics', 'distributions'] as const).filter((result) => status[result] !== 'unneeded' && status[result] !== 'complete').map((result) =>
+          <p key={result} role={status[result] === 'failed' ? 'alert' : 'status'} data-result={result} data-state={status[result]}>
+            {(status[result] === 'loading' || status[result] === 'streaming') && <span className="operation-spinner" aria-hidden="true" />}
+            <span>{result}</span> · {stateText[status[result]]}</p>)}
+      </div>} actions={!allocationFailed && active && <button type="button" className="matrix-header-cancel"
+        aria-label="Cancel loading" title="Cancel loading" onClick={() => controller.current?.cancel()}>×</button>} />}
       onRenderingStateChange={(state) => setAllocationFailed(state === 'failed' && controller.current === null)} />
   </section>;
 }

@@ -113,8 +113,7 @@ Filesystem paths must never be shown. Model identity and tensor/module context
 come from public descriptors defined by the application contracts.
 
 Selected-item identity belongs to the owning workspace, with compact technical
-shape/type metadata beside it. Secondary descriptors and instructions use
-keyboard-accessible information popovers rather than permanent rows. The Tensor
+shape/type metadata beside it. Secondary descriptors use keyboard-accessible information popovers rather than permanent rows. The Tensor
 Explorer's exact hierarchy and feedback behavior are owned by
 [`tensor-explorer.md`](tensor-explorer.md#tensor-navigation-and-header).
 Secondary navigation panes may expose compact, labelled hide/restore controls and
@@ -136,6 +135,8 @@ When a compact inference layout needs less vertical space, compress this same co
 ## Matrix Explorer primitive
 
 The reusable Matrix Explorer is the central scientific surface for rank-2 data and inherits its behavioral contract from `tensor-explorer.md` and `rendering.md`.
+
+Scientific context uses a reusable compact panel header with identity, information, secondary metadata, reserved operation status, and a composable right-side action slot. Its single row is approximately 36–44 CSS pixels high with a subtle separator and remains stationary above scrolling data. Transient status must not insert content between the header and matrix or change their geometry. Information floats below its trigger; it does not reserve a permanent metadata column. Tensor-specific fields and preview/pinned dismissal behavior belong to `tensor-explorer.md`.
 
 For a rank-2 tensor, the visual composition is:
 

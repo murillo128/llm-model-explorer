@@ -17,6 +17,8 @@ for (const fixture of cases) test(`${fixture.name}: authoritative domain, bin pl
   await page.getByRole('combobox').selectOption('lab/alpha');
   await page.getByRole('button', { name: new RegExp(`^${fixture.tensor} \\[` ) }).click();
   await expect(page.getByLabel('Distribution range')).toHaveText('Bin domain unavailable');
+  const position = () => page.locator('.matrix-surfaces').evaluate(node => node.getBoundingClientRect().top);
+  const initialTop = await position();
   await page.evaluate((fixture) => {
     const f = window.explorerFixture;
     f.emit(0, 1, f.metadata(0)); f.data(0, fixture.values); f.end(0);
@@ -32,6 +34,7 @@ for (const fixture of cases) test(`${fixture.name}: authoritative domain, bin pl
     f.data(2, counts, 17); f.end(2);
   }, fixture);
   await expect(page.locator('[data-result="distributions"]')).toHaveCount(0);
+  expect(await position()).toBe(initialTop);
   const scales = page.locator('.distribution-scale');
   if (fixture.low === null) {
     await expect(page.getByLabel('Distribution range')).toContainText('No finite values');
@@ -86,6 +89,7 @@ for (const fixture of cases) test(`${fixture.name}: authoritative domain, bin pl
     f.end(1);
   }, fixture);
   await expect(page.locator('[data-result="statistics"]')).toHaveCount(0);
+  expect(await position()).toBe(initialTop);
   await page.locator('.matrix-scroll canvas').hover({ position: { x: 0.5, y: 0.5 } });
   await page.locator('.matrix-scroll').focus();
   await page.keyboard.press('ArrowRight');

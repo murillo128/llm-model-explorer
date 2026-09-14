@@ -71,3 +71,5 @@ and clears its cell readout. A subsequent local pointer/focus/key interaction
 can inspect a cell again; linked consumers clear their external row when that
 local selection is reported. Clearing the external row does not clear a newer
 local cell.
+
+`PanelHeader` composes identity, information, summary, status, and right-side actions in a fixed 40px scientific toolbar. Pass it through `MatrixExplorer.header`; status changes do not restart the source. `InfoPopover` supplies hover/focus previews and click/tap/keyboard pinning, with pinned-only close, outside/Escape dismissal, and focus restoration. Neither primitive depends on tensor transport or tokenizer state.

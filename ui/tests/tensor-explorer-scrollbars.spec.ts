@@ -103,7 +103,7 @@ for (const dpr of [1, 2]) test.describe(`workspace panes at DPR ${dpr}`, () => {
         const mr = m!.canvas.getBoundingClientRect(), rr = r!.canvas.getBoundingClientRect(), cr = c!.canvas.getBoundingClientRect();
         return { document: [document.documentElement.scrollWidth, document.documentElement.scrollHeight],
           body: [document.body.scrollWidth, document.body.scrollHeight], windowScroll: [scrollX, scrollY],
-          top: rect('.app-bar'), bottom: rect('.app-status-bar'), header: rect('.tensor-header'), pane: rect('.working-surface'),
+          top: rect('.app-bar'), bottom: rect('.app-status-bar'), header: rect('.matrix-panel-header'), pane: rect('.working-surface'),
           inventory: rect('.tensor-layout > aside'), inventoryScroll: document.querySelector('.tensor-layout > aside')!.scrollTop,
           outerOverflow: ['.working-surface', '.surface-content', '.tensor-explorer', '.matrix-surfaces'].map((s) => {
             const e = document.querySelector(s)!;
