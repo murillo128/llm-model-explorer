@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { loadRuntimeConfig } from '../api/runtime-config';
 import type { RuntimeConfig } from '../api/runtime-config';
 import { Button } from '../components/Button';
-import { ScreenHeader } from '../components/ScreenHeader';
 import { StatusText } from '../components/StatusText';
 import { WorkingSurface } from '../components/WorkingSurface';
 import { App } from './App';
@@ -28,8 +27,8 @@ function ConfigurationGate({ retry }: { retry: () => void }) {
   if (state.kind === 'ready') return <App config={state.config} />;
   return (
     <div className="app-shell">
-      <ScreenHeader title="Application setup">Runtime configuration</ScreenHeader>
-      <main>
+      <header className="app-bar"><span className="product-name">LLM Model Explorer</span></header>
+      <main className="startup-workspace">
         <WorkingSurface title="Startup">
           {state.kind === 'loading' ? (
             <StatusText kind="loading">Loading application configuration…</StatusText>
@@ -42,6 +41,7 @@ function ConfigurationGate({ retry }: { retry: () => void }) {
           )}
         </WorkingSurface>
       </main>
+      <footer className="app-status-bar">Application setup</footer>
     </div>
   );
 }

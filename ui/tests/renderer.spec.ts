@@ -2,14 +2,7 @@ import { expect, test } from '@playwright/test';
 import type {} from './renderer-harness';
 import { readFile } from 'node:fs/promises';
 
-// Independent double-precision oracle for the specified default anchored transfer.
-function gray(value: number, low = -1, high = 1, slope = 8) {
-  const u = Math.max(0, Math.min(1, (value - low) / (high - low)));
-  const logistic = (x: number) => 1 / (1 + Math.exp(-x));
-  const endpoint = logistic(-slope / 2);
-  const y = (logistic(slope * (u - 0.5)) - endpoint) / (1 - 2 * endpoint);
-  return Math.round(255 * (y <= 0.0031308 ? 12.92 * y : 1.055 * y ** (1 / 2.4) - 0.055));
-}
+import { color, green, intensity, luminance } from './scalar-oracle';
 
 test.beforeEach(async ({ page }) => {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/renderer.html`);
@@ -41,8 +34,8 @@ for (const dpr of [1, 2]) {
         window.renderer = r;
         return answer;
       });
-      expect(result.complete.map((row) => row.map((p) => p[0]))).toEqual([[-1, -0.5, 0].map((v) => gray(v)), [0.25, 0.5, 1].map((v) => gray(v))]);
-      for (const row of result.complete) for (const pixel of row) expect(pixel).toEqual([pixel[0], pixel[0], pixel[0], 255]);
+      expect(result.complete).toEqual([[-1, -0.5, 0].map((v) => green(v)), [0.25, 0.5, 1].map((v) => green(v))]);
+      for (const row of result.complete) for (const pixel of row) expect(pixel[1]).toBeGreaterThan(pixel[0]!);
       expect(result.partial[1]![1]).toEqual([46, 61, 76, 255]);
       expect(result.pending?.state).toBe('pending');
       expect(result.cell).toMatchObject({ state: 'finite', row: 1, column: 1, value: 0.5 });
@@ -72,7 +65,7 @@ for (const dpr of [1, 2]) {
         return { pixels: window.harness.pixels(v.renderer), diagnostics: v.renderer.diagnostics, view: v.renderer.view };
       });
       expect(initial.diagnostics).toMatchObject({ scalarTextures: 6, scalarBytes: 252, cpuBytes: 252 });
-      expect(initial.pixels[0]![0]![0]).toBe(gray(0, 0, 62));
+      expect(initial.pixels[0]![0]).toEqual(green(0, 0, 62));
       for (const origin of [[2, 2], [5, 3], [0, 0]]) {
         const result = await page.evaluate(async ([x, y]) => {
           const v = window.viewport;
@@ -93,7 +86,7 @@ for (const dpr of [1, 2]) {
         expect(result.physical.y).toBeCloseTo(Math.round(result.physical.y), 5);
         expect(result.hit).toEqual({ row: origin[1], column: origin[0] });
         for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
-          expect(result.pixels[y]![x]![0]).toBeCloseTo(gray((origin[1]! + y) * 9 + origin[0]! + x, 0, 62), 0);
+          expect(result.pixels[y]![x]![1]).toBeCloseTo(green((origin[1]! + y) * 9 + origin[0]! + x, 0, 62)[1]!, 0);
         }
       }
     });
@@ -124,7 +117,7 @@ test('vector, empty tensors, rejected descriptors and non-consecutive uploads', 
   });
   expect(result.vector).toHaveLength(1);
   expect(result.vector[0]).toHaveLength(5);
-  expect(result.vector[0]![1]).toEqual([188, 188, 188, 255]);
+  expect(result.vector[0]![1]).toEqual([...color(0.5), 255]);
   expect(result.vector[0]![3]).toEqual([46, 61, 76, 255]);
   expect(result.rejected).toHaveLength(5);
   expect(result.empties).toEqual(Array(3).fill({ state: 'empty', text: 'Empty tensor', textures: 0 }));
@@ -159,16 +152,16 @@ test('late robust statistics, constant/fallback/extreme values and transfer-only
     return { provisional, robust, extreme, fallback, constant, slope, closeOutside, closeInside, before, after };
   });
   expect(result.after).toEqual(result.before);
-  expect(result.robust[0]!.slice(0, 7).map((p) => p[0])).toEqual([-1, -1, -0.5, 0, 0.5, 1, 1].map((v) => gray(v)));
+  expect(result.robust[0]!.slice(0, 7)).toEqual([-1, -1, -0.5, 0, 0.5, 1, 1].map((v) => green(v)));
   expect(result.fallback).toEqual(result.robust);
-  expect(result.extreme[0]![0]).toEqual([0, 0, 0, 255]);
-  expect(result.extreme[0]![6]).toEqual([255, 255, 255, 255]);
-  expect(result.constant[0]!.slice(0, 7)).toEqual(Array(7).fill([188, 188, 188, 255]));
+  expect(result.extreme[0]![0]).toEqual(green(-1));
+  expect(result.extreme[0]![6]).toEqual(green(1));
+  expect(result.constant[0]!.slice(0, 7)).toEqual(Array(7).fill([...color(0.5), 255]));
   expect(result.robust[0]!.slice(7)).toEqual(Array(3).fill([178, 51, 140, 255]));
   expect(result.provisional[0]![2]).not.toEqual(result.robust[0]![2]);
-  expect(result.slope[0]![2]![0]).toBe(gray(-0.5, -1, 1, 2));
-  expect(result.closeOutside[0]![5]![0]).toBe(0);
-  expect(result.closeInside[0]![5]![0]).toBe(gray(1, 1 - 1e-8, 1 + 3e-8));
+  expect(result.slope[0]![2]).toEqual(green(-0.5, -1, 1, 2));
+  expect(result.closeOutside[0]![5]).toEqual(green(-1));
+  expect(result.closeInside[0]![5]).toEqual(green(1, 1 - 1e-8, 1 + 3e-8));
 });
 
 for (const retainValues of [true, false]) {
@@ -207,7 +200,7 @@ for (const retainValues of [true, false]) {
     expect(restored.generations).toBe(2);
     if (retainValues) {
       expect(restored.after).toBeGreaterThan(restored.before);
-      expect(restored.pixels[0]![1]).toEqual([188, 188, 188, 255]);
+      expect(restored.pixels[0]![1]).toEqual([...color(0.5), 255]);
     } else {
       expect(restored.after).toBe(restored.before);
       expect(restored.pixels[0]![1]).toEqual([46, 61, 76, 255]);
@@ -278,7 +271,7 @@ test('consecutive chunks cross both band axes without populating unseen cells', 
     for (let y = 0; y < 5; y++) for (let x = 0; x < 7; x++) {
       const index = y * 7 + x;
       if (index >= end) expect(pixels[y]![x]).toEqual([46, 61, 76, 255]);
-      else expect(pixels[y]![x]![0]).toBeCloseTo(gray(index, 0, 34), 0);
+      else expect(pixels[y]![x]![1]).toBeCloseTo(green(index, 0, 34)[1]!, 0);
     }
   }
 });
@@ -309,8 +302,8 @@ test('actual WebGL2 limits partition oversized dimensions and retain edge pixels
     const view = entry.view!;
     const columns = view.scrollWidth; // default test context DPR=1
     for (let y = 0; y < view.height; y++) for (let x = 0; x < view.width; x++) {
-      const value = ((view.y + y) * columns + view.x + x) % 2 ? 255 : 0;
-      expect(entry.pixels[y]![x]).toEqual([value, value, value, 255]);
+      const value = ((view.y + y) * columns + view.x + x) % 2 ? 1 : -1;
+      expect(entry.pixels[y]![x]).toEqual(green(value));
     }
   }
   await testInfo.attach('actual-webgl2-limits', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
@@ -366,7 +359,7 @@ test('shared API float32 fixture preserves row-major values, signed zero and non
   expect(result.pixels[1]).toEqual(Array(3).fill([178, 51, 140, 255]));
 });
 
-test('selection preserves linear luminance across the full anchored range including black and white', async ({ page }) => {
+test('green levels are ordered and guides remain salient at both endpoints without uploads', async ({ page }) => {
   const result = await page.evaluate(() => {
     const { create, pixels, metrics } = window.harness;
     const r = create([1, 101], { textureLimit: 16 });
@@ -374,24 +367,60 @@ test('selection preserves linear luminance across the full anchored range includ
     r.setTransfer({ anchors: [-1, 1] }); r.setView(101, 1);
     const neutral = pixels(r);
     const before = { allocations: metrics.allocations, uploads: metrics.uploads };
-    r.setSelection({ row: 0, column: 50 }, [1, 1]);
+    r.setSelection({ row: 0, column: 50 });
     const selected = pixels(r);
+    r.setSelection(null);
+    const cleared = pixels(r);
     const after = { allocations: metrics.allocations, uploads: metrics.uploads };
     r.dispose();
-    return { neutral, selected, before, after };
+    return { neutral, selected, cleared, before, after };
   });
   expect(result.after).toEqual(result.before);
-  expect(result.selected[0]![0]).toEqual([0, 0, 0, 255]);
-  expect(result.selected[0]![100]).toEqual([255, 255, 255, 255]);
-  const decode = (v: number) => v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4;
+  expect(result.cleared).toEqual(result.neutral);
+  let previous = -1;
   for (let i = 0; i <= 100; i++) {
-    const value = Math.fround(i / 50 - 1);
-    const endpoint = 1 / (1 + Math.exp(4));
-    const y = (1 / (1 + Math.exp(-4 * value)) - endpoint) / (1 - 2 * endpoint);
-    for (const image of [result.neutral, result.selected]) {
-      const rgb = image[0]![i]!;
-      const actualY = 0.2126 * decode(rgb[0]!) + 0.7152 * decode(rgb[1]!) + 0.0722 * decode(rgb[2]!);
-      expect(Math.abs(actualY - y)).toBeLessThanOrEqual(0.0045);
+    const t = intensity(Math.fround(i / 50 - 1));
+    const rgb = result.neutral[0]![i]!;
+    expect(rgb[1]).toBeGreaterThan(rgb[0]!);
+    expect(rgb[1]).toBeGreaterThan(rgb[2]!);
+    expect(luminance(rgb)).toBeGreaterThanOrEqual(previous); previous = luminance(rgb);
+    const overlay = result.selected[0]![i]!;
+    expect(overlay[0]! - overlay[1]!).toBeGreaterThan(30);
+    for (const [actual, expected] of [[rgb, color(t)], [overlay, color(t, i === 50 ? 0.9 : 0.65)]]) {
+      expected!.forEach((v, j) => expect(Math.abs(actual![j]! - v)).toBeLessThanOrEqual(1));
     }
   }
+});
+
+for (const scenario of ['tightly centered', 'outlier-heavy']) test(`robust contrast: ${scenario}`, async ({ page }, testInfo) => {
+  const values = Array.from({ length: 101 }, (_, i) => Math.fround(0.01 + (i - 50) * 0.00001));
+  if (scenario === 'outlier-heavy') { values[0] = -1e6; values[100] = 1e6; }
+  const result = await page.evaluate((values) => {
+    const { create, pixels, metrics } = window.harness;
+    const r = create([101]); r.setView(101, 1); r.upload(new Float32Array(values));
+    const before = { uploads: metrics.uploads, allocations: metrics.allocations };
+    const transfer = { statistics: { minimum: values[0]!, maximum: values[100]!,
+      percentiles: { p01: values[1]!, p99: values[99]! } } };
+    r.setTransfer(transfer);
+    const first = pixels(r);
+    r.setTransfer(transfer);
+    const second = pixels(r);
+    const exact = values.map((_, i) => r.readCell(0, i));
+    r.dispose();
+    return { first, second, exact, before, after: { uploads: metrics.uploads, allocations: metrics.allocations } };
+  }, values);
+  expect(result.first).toEqual(result.second);
+  expect(result.after).toEqual(result.before);
+  values.forEach((value, i) => expect(result.exact[i]).toMatchObject({ value }));
+  const tones = result.first[0]!;
+  // Independent old default: slope 8, neutral linear Y encoded for display.
+  const oldCode = (v: number) => Math.round(255 * (1.055 * intensity(v, values[1], values[99], 8) ** (1 / 2.4) - 0.055));
+  const oldSpread = oldCode(values[60]!) - oldCode(values[40]!);
+  const newSpread = tones[60]![1]! - tones[40]![1]!;
+  expect(newSpread).toBeGreaterThan(oldSpread * 1.2);
+  expect(luminance(tones[75]!) - luminance(tones[25]!)).toBeGreaterThan(0.5);
+  // The sigmoid intentionally compresses tails; every central-half level stays distinct.
+  expect(new Set(tones.slice(25, 76).map((p) => p.join(','))).size).toBe(51);
+  await testInfo.attach('contrast-comparison', { body: JSON.stringify({ scenario, oldSpread, newSpread,
+    p25Luminance: luminance(tones[25]!), p75Luminance: luminance(tones[75]!) }), contentType: 'application/json' });
 });

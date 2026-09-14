@@ -19,6 +19,15 @@ The detailed behavior and visual design of both explorers are intentionally dele
 
 The proof of concept must establish the architecture that later inference exploration will use. It must not be a disposable implementation that requires replacing the backend, API model, session model, streaming mechanism, artifact cache, or renderer boundary when inference is added.
 
+## Accepted post-PoC extension
+
+Tokenizer Explorer may visualize the model input embedding rows corresponding
+to its latest real token sequence. This is a narrow embedding-table lookup for
+already produced token IDs, using the existing session, progressive binary API,
+and matrix renderer boundaries. It does not introduce positional encoding,
+transformer forward execution, logits, or generation. API semantics belong in
+`api/contract.md`; presentation belongs in `ui/tokenizer-explorer.md`.
+
 ## Future direction
 
 A later phase will extend the same architecture to step-by-step inference: embeddings, transformer layers, attention, matrix/vector operations, activations, generation, KV cache, sampling, and other intermediate state. Execution remains driven by the UI: even a continuous Play mode is conceptually a sequence of steps requested by the UI rather than an autonomous backend process.

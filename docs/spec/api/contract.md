@@ -20,7 +20,8 @@ Long operations use ordinary HTTP streaming rather than WebSockets. The request 
 
 ## Endpoint set
 
-The proof-of-concept API consists of these operations:
+The current API includes the proof-of-concept operations and the accepted
+post-PoC input-embedding lookup:
 
 | Operation | Method and path | Response |
 | --- | --- | --- |
@@ -33,6 +34,7 @@ The proof-of-concept API consists of these operations:
 | Stream tensor statistics | `GET /sessions/{session_id}/tensors/{tensor_id}/statistics` | Binary stream |
 | Stream row/column distributions | `GET /sessions/{session_id}/tensors/{tensor_id}/distributions` | Binary stream |
 | Tokenize text | `POST /sessions/{session_id}/tokenize` | JSON |
+| Look up input embeddings | `POST /sessions/{session_id}/embeddings` | Binary stream |
 | Cancel long operation | `DELETE /operations/{operation_id}` | Empty |
 
 No generic operation endpoint is part of the proof of concept.
@@ -162,6 +164,56 @@ inserted special; it is an offset example, not a claimed model tokenization.
 
 The UI is responsible for preventing an older asynchronous result from replacing a newer editor state. Echoing the input text provides enough information to perform that check without introducing a separate request-sequence protocol.
 
+## Input embedding lookup
+
+`POST /sessions/{session_id}/embeddings` accepts `InputEmbeddingsRequest` with
+ordered `token_ids` from the existing tokenizer result for that session model,
+including special tokens. It starts a long operation with LMEX result kind
+`input_embeddings`. It performs only embedding-table row lookup: no positional
+encoding, forward execution, logits, or generation.
+
+For IDs `[t0, ..., tN-1]`, the complete logical result has shape
+`[N, hidden_size]`. Row `i` contains the model input embedding vector for `ti`,
+in canonical little-endian float32 C-order. Preserve exact row order and
+duplicates; equal IDs produce equal row bytes. Do not sort, deduplicate the
+output, normalize values, or substitute output/unembedding weights. Empty IDs
+are valid with a known positive hidden size and yield `[0, hidden_size]` with
+zero payload bytes. The response contains only requested rows, never the full
+vocabulary table as an implementation shortcut.
+
+The backend must resolve a trustworthy input-embedding source from supported
+model architecture/configuration and checkpoint metadata. A tensor-name guess
+alone is insufficient. If the source, vocabulary range, hidden size, or logical
+representation cannot be established reliably, use `unsupported_representation`
+(HTTP 422 before streaming, terminal `ERROR_JSON` afterward), including for
+empty input when the hidden size cannot be established. Resolution and lookup
+must preserve lazy local model access; this capability must not require eager
+loading/materialization of the full vocabulary table or model.
+
+Validate the entire request before emitting META or DATA: each ID must be a
+nonnegative safe integer below the model vocabulary size and address a row in
+the resolved input table. Reject invalid IDs with `validation_error`; strings,
+booleans, negative/fractional values, and out-of-range IDs are invalid. An added
+token with no corresponding model embedding row is invalid too. Never deliver
+a valid prefix of a request containing an invalid ID. Malformed JSON, unknown
+sessions/models, and pinned model-content changes use the existing errors.
+
+Metadata uses `InputEmbeddingsMetadata`, with the exact ordered `token_ids`
+echo and shape. It has no checkpoint `tensor_id` or `name`. Consumers associate
+the matrix with their originating request/session and verify the echoed IDs
+before displaying it; shape and length alone cannot detect a stale response.
+Token IDs are small control metadata, while embedding values remain binary.
+If the serialized META would exceed the existing 1 MiB control-frame limit,
+reject with `unsupported_size` before emitting META/DATA; never truncate the
+sequence. Safe shape/product/byte limits also apply before allocation.
+
+This endpoint reuses `BinaryStream`, including `X-Operation-Id`, CORS exposure,
+`Cache-Control: no-store`, progressive delivery, independent consumer
+cancellation, and terminal semantics. Equivalent work may be shared only for
+the same model content and ordered IDs; cancellation must preserve other
+consumers. No new public artifact, statistics, or distribution endpoint for
+this derived matrix is introduced here.
+
 ## Long operations, sharing, and cancellation
 
 Every request to a streaming endpoint creates a unique consumer-visible `operation_id`, returned in the `X-Operation-Id` response header.
@@ -219,6 +271,9 @@ A mathematically valid safe size can still fail a runtime allocation with
 - Tensor descriptors require `rank == len(shape)` and `numel == product(shape)`.
   The empty product for scalar shape `[]` is 1; any zero dimension gives 0.
   Tensor metadata requires `byte_length == 4 * product(shape)`.
+- Input embedding metadata requires exactly two dimensions, positive hidden
+  size, `shape[0] == len(token_ids)`, and `byte_length == 4 * product(shape)`.
+  The IDs must equal the originating request in order and multiplicity.
 - Statistics require `count == finite_count + non_finite_count`.
   With zero finite values all finite-derived fields, including every percentile,
   are null. Otherwise they are finite numbers, `minimum <= maximum`, stddev is

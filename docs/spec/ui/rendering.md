@@ -45,14 +45,14 @@ The tensor value remains authoritative. The renderer must not rewrite tensor val
 
 Store one authoritative scalar GPU representation using single-channel R32F
 textures with exact indexed sampling (`texelFetch`, nearest filtering, one mip
-level). Grayscale and later semantic-color/inspection drawing reuse that storage.
+level). Green scalar and semantic-color/inspection drawing reuse that storage.
 No RGB/YUV weight encoding, interpolation, downsampling or quantization is allowed.
 One optional CPU Float32Array may support exact readout and reconstruction. Do not
 retain accumulated chunk lists or values belonging to disposed tensors.
 
 Accept consecutive row-major float32 chunks and track their populated prefix.
 Not-yet-received cells and received nonfinite values are distinct unavailable
-states, visually separate from finite grayscale data; neither represents a zero
+states, visually separate from finite green data; neither represents a zero
 weight. Rendering may start before the complete prefix or statistics arrive.
 
 ## Luminosity
@@ -63,7 +63,7 @@ The renderer maps tensor values to a normalized `[0, 1]` visual intensity using 
 
 Tensor statistics are supplied independently by the backend and may arrive after tensor data has already started rendering. The renderer may use a provisional mapping and update the visual transfer function when the statistics become available without retransmitting or rewriting tensor values.
 
-The reproducible baseline uses `a=p01`, `b=p99`, `k=8`, and
+The reproducible baseline uses `a=p01`, `b=p99`, `k=12`, and
 `u=clamp((w-a)/(b-a), 0, 1)`. With `L(x)=1/(1+exp(-x))`, intensity is
 `(L(k*(u-0.5))-L(-k/2))/(L(k/2)-L(-k/2))`. Normalize without overflowing
 float32 subtraction, including opposite-sign finite extremes. If percentile
@@ -72,7 +72,9 @@ maps to 0.5. Before statistics arrive, use the provisional centered logistic
 `L(k*w)`, clamping its exponent input for numeric stability. Changing slope or
 anchors changes small draw uniforms, never scalar bytes. The renderer accepts
 slopes from 0.01 through 80 to keep endpoint normalization well-conditioned.
-Scalar intensity is the luminosity input that future semantic chroma must preserve.
+The steeper default expands tonal separation around the robust range center.
+The green display curve below keeps midrange data darker than an sRGB-encoded
+neutral 0.5, while retaining ordered luminance across the range.
 
 ## Resource lifetime
 
@@ -85,33 +87,42 @@ hover, scrolling and transfer changes do not take this reconstruction path.
 
 ## Color
 
-Color is reserved as an independent semantic channel. Future uses include selection, activation state, clusters, highlighting, and other overlays.
+The default scientific palette is monochromatic sequential green. Hue does not
+encode a second variable: scalar intensity controls monotonically increasing
+luminance from near-black green through green to pale green. Matrix values and
+distribution density use the same family. Warm amber/orange is reserved for
+interaction overlays; future semantic modes require their own accepted design.
 
-Applying or changing semantic color must not change the luminosity-derived underlying weight information and must not require modification of the stored tensor values.
+Display overlays must preserve the underlying scalar transfer and stored values.
+Thin inspection guides may change final composited luminance, as defined below.
 
 ## Interaction scope
 
 The proof of concept does not require zoom or pan. Detailed Tensor Explorer interaction behavior is owned by `tensor-explorer.md` and must not be inferred from this common rendering specification.
 
-### Concrete linear-sRGB selection transfer
+### Concrete linear-sRGB scalar and guide transfer
 
-Scalar transfer output is linear-sRGB luminance `Y`. Matrix and distribution
-shaders use the same coefficients `Y = 0.2126 R + 0.7152 G + 0.0722 B`.
-Starting at neutral `(Y,Y,Y)`, amber adds `t * d`, where
-`d = (1, (0.0722*0.6 - 0.2126)/0.7152, -0.6)` has zero luminance.
-The standard row/column strength is `t=0.08`; their intersection uses `0.3`.
-For each positive component `d_i`, bound `t <= (1-Y)/d_i`; for each negative
-component, bound `t <= -Y/d_i`. Use the minimum of all bounds and requested
-strength. This reduces chroma along one vector without clipping RGB components
-or changing Y. At black/white, `t=0` and data stays unchanged.
+For normalized scalar intensity `t`, the green linear-sRGB color is
+`G(t) = (0.001 + 0.819*t^3, 0.006 + 0.994*t^1.5, 0.002 + 0.858*t^3)`.
+All components and luminance increase monotonically, and green is the largest
+component throughout. Luminance uses `Y = 0.2126 R + 0.7152 G + 0.0722 B`.
+Distribution intensity uses its separately owned density normalization before
+this same display curve. Constant finite tensors use `t=0.5`; all-nonfinite and
+pending regions retain their explicit status colors instead of this curve.
+
+The active row and column each receive one device pixel of amber overlay,
+computed from exact integer logical coordinates, including texture-band origins.
+Blend in linear sRGB: `C = (1-alpha)*G(t) + alpha*(1, 0.32, 0.015)`.
+Default guide alpha is `0.65`; the intersection uses `0.9`. This makes guides
+visible even at both scalar endpoints and keeps underlying variation visible.
+The overlay changes final display luminance, never scalar intensity, authoritative
+values/counts, or their storage. Selection and opacity are small uniforms.
 
 Encode each resulting linear component once with the sRGB OETF:
 `12.92*c` for `c <= 0.0031308`, otherwise `1.055*c^(1/2.4)-0.055`.
 The canvas and inspection RGBA8 buffer store these display-encoded bytes; do not
 apply a second gamma conversion. Pending/nonfinite colors remain explicit status
-colors outside this scalar transfer. Relative to ideal display encoding, pixel
-validation permits at most one 8-bit code per channel (rounding plus shader
-precision); decoded luminance versus prequantized Y permits `0.0045` absolute
-error, bounded by the maximum sRGB inverse derivative times half an 8-bit code.
-CPU numeric validation before display quantization uses floating-point tolerance,
-not that display error allowance.
+colors outside this scalar transfer. Pixel validation permits at most one 8-bit
+code per channel relative to ideal display encoding; decoded luminance versus
+prequantized color permits `0.0045` absolute error. CPU numeric validation before
+display quantization uses floating-point tolerance, not that display allowance.

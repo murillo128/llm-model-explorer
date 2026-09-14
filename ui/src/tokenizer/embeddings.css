@@ -1,0 +1,8 @@
+/* The original prompt grid, margins, editor height and resize behavior are frozen. */
+.tokenizer-workspace { display: grid; gap: 18px; min-width: 0; }
+.input-embeddings { display: flex; flex-direction: column; gap: 8px; min-width: 0; height: 280px; }
+.input-embeddings header { flex-shrink: 0; }
+.input-embeddings h2 { font-size: 14px; font-weight: 600; }
+.input-embeddings p { font-size: 13px; color: var(--ui-text-muted); }
+[data-token-index][data-active-token] { background: var(--ui-accent-soft); outline: 1px solid var(--ui-accent); }
+.source-annotation[data-active-token] { text-decoration: underline; text-decoration-color: var(--ui-accent); text-underline-offset: 3px; }

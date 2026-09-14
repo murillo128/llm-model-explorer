@@ -24,10 +24,13 @@ export function product(shape: number[]): number {
 
 function crossFields(name: string, value: unknown): void {
   if (name === 'StreamMetadata') {
-    crossFields(({ tensor: 'TensorMetadata', tensor_statistics: 'TensorStatisticsMetadata', tensor_distributions: 'TensorDistributionsMetadata' })[(value as Metadata).kind], value);
-  } else if (name === 'TensorMetadata') {
-    const m = value as Schemas['TensorMetadata'];
+    crossFields(({ tensor: 'TensorMetadata', input_embeddings: 'InputEmbeddingsMetadata', tensor_statistics: 'TensorStatisticsMetadata', tensor_distributions: 'TensorDistributionsMetadata' })[(value as Metadata).kind], value);
+  } else if (name === 'TensorMetadata' || name === 'InputEmbeddingsMetadata') {
+    const m = value as Schemas['TensorMetadata'] | Schemas['InputEmbeddingsMetadata'];
     requireProtocol(m.byte_length === safeSize(product(m.shape) * 4), 'Tensor byte length differs from shape');
+    if (m.kind === 'input_embeddings') {
+      requireProtocol(m.shape[0] === m.token_ids.length, 'Embedding row count differs from token IDs');
+    }
   } else if (name === 'TensorDescriptor') {
     const m = value as Schemas['TensorDescriptor'];
     requireProtocol(m.rank === m.shape.length && m.numel === product(m.shape), 'Invalid tensor descriptor dimensions');

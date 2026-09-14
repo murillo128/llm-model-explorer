@@ -22,7 +22,7 @@ export interface TransferUniforms {
 }
 
 export function transferUniforms(parameters: TransferParameters = {}): TransferUniforms {
-  const slope = parameters.slope ?? 8;
+  const slope = parameters.slope ?? 12;
   // Keep the endpoint normalization well-conditioned even on float32 shaders.
   if (!Number.isFinite(slope) || slope < 0.01 || slope > 80) {
     throw new Error('Sigmoid slope must be between 0.01 and 80.');

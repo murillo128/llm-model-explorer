@@ -17,7 +17,8 @@ properties remain optional; generation does not alter endpoint semantics.
 
 ## Progressive consumption
 
-`streamTensor`, `streamTensorStatistics`, and `streamTensorDistributions` return
+`streamTensor`, `streamTensorStatistics`, `streamTensorDistributions`, and
+`streamInputEmbeddings` return
 a `StreamOperation` immediately. `onOperationId` fires when headers arrive,
 before any body bytes are required. `onMetadata` supplies validated dimensions
 and sizes; `onData(bytes, byteOffset)` delivers contiguous raw little-endian
@@ -73,3 +74,10 @@ fixtures cover safe allocation arithmetic and token code-point spans.
 The transport unit tests and `tests/api-transport.spec.ts` exercise the actual
 adapter; the latter uses browser fetch against a separately bound HTTP server
 with controlled headers/body timing, CORS and DELETE preflight handling.
+
+
+`streamInputEmbeddings(sessionId, { token_ids }, options)` uses the generated
+`InputEmbeddingsRequest` type/schema and POSTs through the same LMEX transport.
+It snapshots ordered IDs and rejects an incorrect echo before exposing META or
+DATA, including reordering, changed duplicates, and length mismatches. The
+component never fetches or parses an embedding response itself.

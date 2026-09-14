@@ -6,10 +6,11 @@ import { TensorViewport } from './tensor-viewport';
 import type { TensorDescriptor, ViewGeometry } from './geometry';
 
 export interface MatrixViewportOptions extends RendererOptions {
+  readonly distributions?: boolean;
   readonly onInspection?: (inspection: Inspection | null) => void;
 }
 
-/** Three exact scientific surfaces sharing the main surface's native scroll origin. */
+/** Three exact surfaces sharing native scroll state. Supply an empty host with a bounded content height. */
 export class MatrixViewport {
   readonly matrix: TensorViewport;
   readonly rows?: DistributionRenderer;
@@ -20,14 +21,15 @@ export class MatrixViewport {
   private readonly originalStyle: string | null;
   private disposed = false;
   private inspection?: MatrixInspection;
+  private readonly observer: ResizeObserver;
 
   constructor(readonly host: HTMLElement, descriptor: TensorDescriptor, options: MatrixViewportOptions = {}) {
     if (host.childNodes.length) throw new Error('MatrixViewport requires an empty host.');
     this.originalStyle = host.getAttribute('style');
     host.classList.add('matrix-surfaces');
-    Object.assign(host.style, { display: 'grid', gap: '10px', alignItems: 'start', minWidth: '0' });
+    Object.assign(host.style, { display: 'grid', gap: '10px', alignItems: 'start', alignContent: 'start', minWidth: '0' });
     this.main.className = 'matrix-scroll';
-    Object.assign(this.main.style, { gridColumn: '1', gridRow: '1', minWidth: '0', height: 'auto' });
+    Object.assign(this.main.style, { gridColumn: '1', gridRow: '1', minWidth: '0', minHeight: '0', height: 'auto', overflowY: 'scroll', overscrollBehavior: 'contain' });
     this.main.setAttribute('role', 'region');
     this.main.setAttribute('aria-label', 'Tensor matrix; scroll to inspect all values');
     this.main.tabIndex = 0;
@@ -39,9 +41,9 @@ export class MatrixViewport {
     // Auto height includes native horizontal scrollbar chrome in addition to the
     // intrinsic data extent. A fixed data-height border box can hide a short strip.
     const hostMaxHeight = getComputedStyle(this.main).maxHeight;
-    this.main.style.maxHeight = hostMaxHeight === 'none' ? '50vh' : `min(50vh, ${hostMaxHeight})`;
+    this.main.style.maxHeight = hostMaxHeight === 'none' ? 'var(--matrix-height)' : `min(var(--matrix-height), ${hostMaxHeight})`;
     try {
-      if (descriptor.rank === 2 && descriptor.numel > 0) {
+      if (descriptor.rank === 2 && descriptor.numel > 0 && options.distributions !== false) {
         for (const [panel, label] of [[this.rowHost, 'Row distributions'], [this.columnHost, 'Column distributions']] as const) {
           const canvas = document.createElement('canvas');
           canvas.setAttribute('aria-label', label);
@@ -55,7 +57,15 @@ export class MatrixViewport {
       }
       const layout = () => {
         const dpr = window.devicePixelRatio;
-        host.style.gridTemplateColumns = `minmax(0, ${descriptor.shape.at(-1)! / dpr}px)${this.rows ? ` ${100 / dpr}px` : ''}`;
+        // The host receives the pane's remaining content height. Reserve profile
+        // depth and gap here; TensorViewport still measures the actual client box.
+        const depth = this.rows ? 100 / dpr : 0;
+        const gap = this.rows ? parseFloat(getComputedStyle(host).rowGap) : 0;
+        host.style.setProperty('--matrix-height', `${Math.max(0, host.clientHeight - depth - gap)}px`);
+        // The vertical scrollbar reserves space even without overflow. Include it in
+        // the native-width track so a tall, otherwise fitting tensor stays fitting.
+        const gutter = this.main.offsetWidth - this.main.clientWidth;
+        host.style.gridTemplateColumns = `minmax(0, ${descriptor.shape.at(-1)! / dpr + gutter}px)${this.rows ? ` ${depth}px` : ''}`;
       };
       layout();
       this.matrix = new TensorViewport(this.main, descriptor, { ...options, onStateChange: (state) => {
@@ -67,6 +77,8 @@ export class MatrixViewport {
         this.inspection?.refresh();
       } });
       if (descriptor.rank === 2 && options.onInspection) this.inspection = new MatrixInspection(this, options.onInspection);
+      this.observer = new ResizeObserver(() => { layout(); this.matrix.refresh(); });
+      this.observer.observe(host);
     } catch (error) {
       this.rows?.dispose();
       this.columns?.dispose();
@@ -96,6 +108,7 @@ export class MatrixViewport {
   }
 
   refresh() { this.matrix.refresh(); }
+  setLinkedRow(row: number | null) { this.inspection?.setLinkedRow(row); }
 
   private restoreHost() {
     this.host.classList.remove('matrix-surfaces');
@@ -106,6 +119,7 @@ export class MatrixViewport {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this.observer.disconnect();
     this.inspection?.dispose();
     this.matrix.dispose();
     this.rows?.dispose();

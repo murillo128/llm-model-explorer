@@ -1,0 +1,1000 @@
+{
+  "source": {
+    "vocabulary_size": 4,
+    "hidden_size": 3,
+    "input_table": [
+      [
+        1.0,
+        -2.0,
+        3.5
+      ],
+      [
+        4.25,
+        0.0,
+        -6.0
+      ],
+      [
+        -7.5,
+        8.0,
+        9.25
+      ],
+      [
+        10.0,
+        -11.5,
+        12.0
+      ]
+    ]
+  },
+  "request_cases": [
+    {
+      "name": "embeddings-asymmetric",
+      "request": {
+        "token_ids": [
+          2,
+          0
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-duplicates",
+      "request": {
+        "token_ids": [
+          3,
+          1,
+          3
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-one-token",
+      "request": {
+        "token_ids": [
+          1
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-empty",
+      "request": {
+        "token_ids": []
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-negative-id",
+      "request": {
+        "token_ids": [
+          0,
+          -1
+        ]
+      },
+      "valid": false,
+      "expected_http_status": 422,
+      "error_code": "validation_error"
+    },
+    {
+      "name": "embeddings-fractional-id",
+      "request": {
+        "token_ids": [
+          1.5
+        ]
+      },
+      "valid": false,
+      "expected_http_status": 422,
+      "error_code": "validation_error"
+    },
+    {
+      "name": "embeddings-boolean-id",
+      "request": {
+        "token_ids": [
+          true
+        ]
+      },
+      "valid": false,
+      "expected_http_status": 422,
+      "error_code": "validation_error"
+    },
+    {
+      "name": "embeddings-string-id",
+      "request": {
+        "token_ids": [
+          "1"
+        ]
+      },
+      "valid": false,
+      "expected_http_status": 422,
+      "error_code": "validation_error"
+    },
+    {
+      "name": "embeddings-null-id",
+      "request": {
+        "token_ids": [
+          null
+        ]
+      },
+      "valid": false,
+      "expected_http_status": 422,
+      "error_code": "validation_error"
+    },
+    {
+      "name": "embeddings-unsafe-id",
+      "request": {
+        "token_ids": [
+          9007199254740992
+        ]
+      },
+      "valid": false,
+      "expected_http_status": 422,
+      "error_code": "validation_error"
+    },
+    {
+      "name": "embeddings-out-of-range-id",
+      "request": {
+        "token_ids": [
+          0,
+          4
+        ]
+      },
+      "valid": false,
+      "expected_http_status": 422,
+      "error_code": "validation_error"
+    },
+    {
+      "name": "embeddings-missing-ids",
+      "request": {},
+      "valid": false,
+      "expected_http_status": 422,
+      "error_code": "validation_error"
+    },
+    {
+      "name": "embeddings-null-ids",
+      "request": {
+        "token_ids": null
+      },
+      "valid": false,
+      "expected_http_status": 422,
+      "error_code": "validation_error"
+    },
+    {
+      "name": "embeddings-extra-field",
+      "request": {
+        "token_ids": [
+          0
+        ],
+        "tensor_id": "guess"
+      },
+      "valid": false,
+      "expected_http_status": 422,
+      "error_code": "validation_error"
+    }
+  ],
+  "schema_cases": [
+    {
+      "name": "embeddings-asymmetric",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          2,
+          3
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 24
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-duplicates",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          3,
+          1,
+          3
+        ],
+        "shape": [
+          3,
+          3
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 36
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-one-token",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          1
+        ],
+        "shape": [
+          1,
+          3
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 12
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-empty",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [],
+        "shape": [
+          0,
+          3
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 0
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-asymmetric-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": [
+          2,
+          0
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-duplicates-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": [
+          3,
+          1,
+          3
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-one-token-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": [
+          1
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-empty-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": []
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-negative-id-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": [
+          0,
+          -1
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-fractional-id-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": [
+          1.5
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-boolean-id-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": [
+          true
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-string-id-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": [
+          "1"
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-null-id-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": [
+          null
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-unsafe-id-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": [
+          9007199254740992
+        ]
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-out-of-range-id-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": [
+          0,
+          4
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "embeddings-missing-ids-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {},
+      "valid": false
+    },
+    {
+      "name": "embeddings-null-ids-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": null
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-extra-field-request",
+      "schema": "InputEmbeddingsRequest",
+      "value": {
+        "token_ids": [
+          0
+        ],
+        "tensor_id": "guess"
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-row-count",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          1,
+          3
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 12
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-rank-one",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          6
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 24
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-rank-three",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          2,
+          3,
+          1
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 24
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-hidden-size-zero",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          2,
+          0
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 0
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-length",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          2,
+          3
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 20
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-unsafe-product",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          2,
+          9007199254740991
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 24
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-unsafe-byte-product",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          0
+        ],
+        "shape": [
+          1,
+          2251799813685248
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 0
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-negative-id-meta",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          -1
+        ],
+        "shape": [
+          2,
+          3
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 24
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-checkpoint-identity",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          2,
+          3
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 24,
+        "tensor_id": "t",
+        "name": "input.weight"
+      },
+      "valid": false
+    },
+    {
+      "name": "embeddings-wrong-dtype",
+      "schema": "StreamMetadata",
+      "value": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          2,
+          3
+        ],
+        "dtype": "float16",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 24
+      },
+      "valid": false
+    }
+  ],
+  "wire_cases": [
+    {
+      "name": "embeddings-asymmetric",
+      "request": {
+        "token_ids": [
+          2,
+          0
+        ]
+      },
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d455802000000040000000000f0c04c4d4558030000002b0000007b22636f6d706c65746564223a312c22746f74616c223a362c22756e6974223a22656c656d656e7473227d4c4d4558020000001400000000000041000014410000803f000000c0000060404c4d45580400000000000000",
+      "expected": {
+        "outcome": "complete",
+        "metadata": {
+          "kind": "input_embeddings",
+          "token_ids": [
+            2,
+            0
+          ],
+          "shape": [
+            2,
+            3
+          ],
+          "dtype": "float32",
+          "byte_order": "little",
+          "layout": "c",
+          "byte_length": 24
+        },
+        "data_hex": "0000f0c000000041000014410000803f000000c000006040",
+        "decoded": [
+          [
+            -7.5,
+            8.0,
+            9.25
+          ],
+          [
+            1.0,
+            -2.0,
+            3.5
+          ]
+        ]
+      }
+    },
+    {
+      "name": "embeddings-duplicates",
+      "request": {
+        "token_ids": [
+          3,
+          1,
+          3
+        ]
+      },
+      "wire_hex": "4c4d455801000000830000007b22627974655f6c656e677468223a33362c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b332c335d2c22746f6b656e5f696473223a5b332c312c335d7d4c4d45580200000004000000000020414c4d4558030000002b0000007b22636f6d706c65746564223a312c22746f74616c223a392c22756e6974223a22656c656d656e7473227d4c4d45580200000020000000000038c10000404100008840000000000000c0c000002041000038c1000040414c4d45580400000000000000",
+      "expected": {
+        "outcome": "complete",
+        "metadata": {
+          "kind": "input_embeddings",
+          "token_ids": [
+            3,
+            1,
+            3
+          ],
+          "shape": [
+            3,
+            3
+          ],
+          "dtype": "float32",
+          "byte_order": "little",
+          "layout": "c",
+          "byte_length": 36
+        },
+        "data_hex": "00002041000038c10000404100008840000000000000c0c000002041000038c100004041",
+        "decoded": [
+          [
+            10.0,
+            -11.5,
+            12.0
+          ],
+          [
+            4.25,
+            0.0,
+            -6.0
+          ],
+          [
+            10.0,
+            -11.5,
+            12.0
+          ]
+        ]
+      }
+    },
+    {
+      "name": "embeddings-one-token",
+      "request": {
+        "token_ids": [
+          1
+        ]
+      },
+      "wire_hex": "4c4d4558010000007f0000007b22627974655f6c656e677468223a31322c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b312c335d2c22746f6b656e5f696473223a5b315d7d4c4d45580200000004000000000088404c4d4558030000002b0000007b22636f6d706c65746564223a312c22746f74616c223a332c22756e6974223a22656c656d656e7473227d4c4d45580200000008000000000000000000c0c04c4d45580400000000000000",
+      "expected": {
+        "outcome": "complete",
+        "metadata": {
+          "kind": "input_embeddings",
+          "token_ids": [
+            1
+          ],
+          "shape": [
+            1,
+            3
+          ],
+          "dtype": "float32",
+          "byte_order": "little",
+          "layout": "c",
+          "byte_length": 12
+        },
+        "data_hex": "00008840000000000000c0c0",
+        "decoded": [
+          [
+            4.25,
+            0.0,
+            -6.0
+          ]
+        ]
+      }
+    },
+    {
+      "name": "embeddings-empty",
+      "request": {
+        "token_ids": []
+      },
+      "wire_hex": "4c4d4558010000007d0000007b22627974655f6c656e677468223a302c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b302c335d2c22746f6b656e5f696473223a5b5d7d4c4d45580400000000000000",
+      "expected": {
+        "outcome": "complete",
+        "metadata": {
+          "kind": "input_embeddings",
+          "token_ids": [],
+          "shape": [
+            0,
+            3
+          ],
+          "dtype": "float32",
+          "byte_order": "little",
+          "layout": "c",
+          "byte_length": 0
+        },
+        "data_hex": "",
+        "decoded": []
+      }
+    },
+    {
+      "name": "embeddings-row-count",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a31322c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b312c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "invalid_metadata"
+      }
+    },
+    {
+      "name": "embeddings-rank-one",
+      "wire_hex": "4c4d4558010000007f0000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b365d2c22746f6b656e5f696473223a5b322c305d7d4c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "invalid_metadata"
+      }
+    },
+    {
+      "name": "embeddings-rank-three",
+      "wire_hex": "4c4d455801000000830000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c332c315d2c22746f6b656e5f696473223a5b322c305d7d4c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "invalid_metadata"
+      }
+    },
+    {
+      "name": "embeddings-hidden-size-zero",
+      "wire_hex": "4c4d455801000000800000007b22627974655f6c656e677468223a302c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c305d2c22746f6b656e5f696473223a5b322c305d7d4c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "invalid_metadata"
+      }
+    },
+    {
+      "name": "embeddings-length",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32302c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "invalid_metadata"
+      }
+    },
+    {
+      "name": "embeddings-unsafe-product",
+      "wire_hex": "4c4d455801000000900000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c393030373139393235343734303939315d2c22746f6b656e5f696473223a5b322c305d7d4c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "invalid_metadata"
+      }
+    },
+    {
+      "name": "embeddings-unsafe-byte-product",
+      "wire_hex": "4c4d4558010000008d0000007b22627974655f6c656e677468223a302c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b312c323235313739393831333638353234385d2c22746f6b656e5f696473223a5b305d7d4c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "invalid_metadata"
+      }
+    },
+    {
+      "name": "embeddings-negative-id-meta",
+      "wire_hex": "4c4d455801000000820000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c2d315d7d4c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "invalid_metadata"
+      }
+    },
+    {
+      "name": "embeddings-checkpoint-identity",
+      "wire_hex": "4c4d455801000000a70000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c226e616d65223a22696e7075742e776569676874222c227368617065223a5b322c335d2c2274656e736f725f6964223a2274222c22746f6b656e5f696473223a5b322c305d7d4c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "invalid_metadata"
+      }
+    },
+    {
+      "name": "embeddings-wrong-dtype",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743136222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "invalid_metadata"
+      }
+    },
+    {
+      "name": "embeddings-early-error",
+      "wire_hex": "4c4d455805000000540000007b22636f6465223a22756e737570706f727465645f726570726573656e746174696f6e222c226d657373616765223a22496e70757420656d62656464696e6720736f7572636520756e617661696c61626c65227d",
+      "expected": {
+        "outcome": "error",
+        "error": {
+          "code": "unsupported_representation",
+          "message": "Input embedding source unavailable"
+        }
+      }
+    },
+    {
+      "name": "embeddings-early-cancelled",
+      "wire_hex": "4c4d45580600000000000000",
+      "expected": {
+        "outcome": "cancelled"
+      }
+    },
+    {
+      "name": "embeddings-partial-error",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d455802000000040000000000f0c04c4d455805000000540000007b22636f6465223a22756e737570706f727465645f726570726573656e746174696f6e222c226d657373616765223a22496e70757420656d62656464696e6720736f7572636520756e617661696c61626c65227d",
+      "expected": {
+        "outcome": "error",
+        "incomplete_data_hex": "0000f0c0",
+        "error": {
+          "code": "unsupported_representation",
+          "message": "Input embedding source unavailable"
+        }
+      }
+    },
+    {
+      "name": "embeddings-partial-cancelled",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d455802000000040000000000f0c04c4d45580600000000000000",
+      "expected": {
+        "outcome": "cancelled",
+        "incomplete_data_hex": "0000f0c0"
+      }
+    },
+    {
+      "name": "embeddings-truncated-header",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d455802000000180000000000f0c000000041000014410000803f000000c0000060404c4d455804000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "truncated_header"
+      }
+    },
+    {
+      "name": "embeddings-truncated-data",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d455802000000180000000000f0c000000041000014410000803f000000c0000060",
+      "expected": {
+        "outcome": "reject",
+        "reason": "truncated_payload"
+      }
+    },
+    {
+      "name": "embeddings-short-result",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d455802000000040000000000f0c04c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "data_length_mismatch"
+      }
+    },
+    {
+      "name": "embeddings-overrun",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d4558020000001c0000000000f0c000000041000014410000803f000000c0000060400000f0c04c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "data_overrun"
+      }
+    },
+    {
+      "name": "embeddings-unaligned",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d455802000000030000006162634c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "unaligned_data"
+      }
+    },
+    {
+      "name": "embeddings-duplicate-meta",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d455802000000180000000000f0c000000041000014410000803f000000c0000060404c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject",
+        "reason": "duplicate_metadata"
+      }
+    },
+    {
+      "name": "embeddings-missing-terminal",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d455802000000180000000000f0c000000041000014410000803f000000c000006040",
+      "expected": {
+        "outcome": "reject",
+        "reason": "missing_terminal"
+      }
+    },
+    {
+      "name": "embeddings-trailing-byte",
+      "wire_hex": "4c4d455801000000810000007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c226b696e64223a22696e7075745f656d62656464696e6773222c226c61796f7574223a2263222c227368617065223a5b322c335d2c22746f6b656e5f696473223a5b322c305d7d4c4d455802000000180000000000f0c000000041000014410000803f000000c0000060404c4d4558040000000000000078",
+      "expected": {
+        "outcome": "reject",
+        "reason": "trailing_bytes"
+      }
+    }
+  ],
+  "association_cases": [
+    {
+      "name": "exact-order",
+      "request": {
+        "token_ids": [
+          2,
+          0
+        ]
+      },
+      "metadata": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          2,
+          3
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 24
+      },
+      "valid": true
+    },
+    {
+      "name": "reordered-ids",
+      "request": {
+        "token_ids": [
+          0,
+          2
+        ]
+      },
+      "metadata": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          2,
+          3
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 24
+      },
+      "valid": false
+    },
+    {
+      "name": "changed-duplicate",
+      "request": {
+        "token_ids": [
+          2,
+          2
+        ]
+      },
+      "metadata": {
+        "kind": "input_embeddings",
+        "token_ids": [
+          2,
+          0
+        ],
+        "shape": [
+          2,
+          3
+        ],
+        "dtype": "float32",
+        "byte_order": "little",
+        "layout": "c",
+        "byte_length": 24
+      },
+      "valid": false
+    }
+  ]
+}

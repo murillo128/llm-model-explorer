@@ -12,14 +12,14 @@ it('gates backend requests on validated configuration', async () => {
   expect(screen.getByRole('status')).toHaveTextContent('Loading application configuration');
   expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   respond(new Response('{"backend_base_url":"https://models.example/api/"}'));
-  expect(await screen.findByRole('heading', { level: 1, name: 'Tensor Explorer' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Tensor Explorer' })).toBeInTheDocument();
   expect(screen.getByTestId('backend-url')).toHaveTextContent('https://models.example/api');
   expect(screen.getByText('Loading models…')).toBeInTheDocument();
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   expect(fetchMock.mock.calls[1]?.[0]).toBe('https://models.example/api/models');
 
   await userEvent.click(screen.getByRole('button', { name: 'Tokenizer Explorer' }));
-  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tokenizer Explorer');
+  expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Tokenizer Explorer' })).toHaveAttribute('aria-current', 'page');
   expect(screen.getByText('Open a model session to use this explorer.')).toBeInTheDocument();
 });
@@ -34,7 +34,7 @@ it('offers a working retry after invalid configuration', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Set backend_base_url');
   expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Retry configuration' }));
-  await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tensor Explorer'));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Tensor Explorer' })).toHaveAttribute('aria-current', 'page'));
   expect(screen.getByTestId('backend-url')).toHaveTextContent('http://localhost:9000');
 });
 

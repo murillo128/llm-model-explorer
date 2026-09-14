@@ -1,0 +1,3001 @@
+{
+  "fixture_seed": 17,
+  "cuda": {
+    "available": false,
+    "runtime": null,
+    "device": null,
+    "capability": null
+  },
+  "reference": {
+    "supplied": true,
+    "device": "cpu"
+  },
+  "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+  "python": "3.12.14",
+  "node": "v24.14.0",
+  "packages": {
+    "torch": "2.14.0+cpu",
+    "fastapi": "0.141.1",
+    "starlette": "1.6.0",
+    "uvicorn": "0.52.4",
+    "transformers": "4.57.6",
+    "tokenizers": "0.22.2",
+    "pytest": "9.1.1"
+  },
+  "playwright": "1.63.0",
+  "backend": {
+    "tests": 556,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 16
+  },
+  "network": {
+    "tests": 17,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "ui_unit": {
+    "numTotalTests": 253,
+    "numPassedTests": 253,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  "component_browser": {
+    "stats": {
+      "startTime": "2026-09-14T02:29:24.153Z",
+      "duration": 163920.34100000001,
+      "expected": 172,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "measurements": [],
+    "skip_reasons": [],
+    "reference_webgl": []
+  },
+  "product_browser": {
+    "stats": {
+      "startTime": "2026-09-14T02:32:08.528Z",
+      "duration": 336668.7,
+      "expected": 22,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "measurements": [
+      {
+        "browser": "153.0.8010.12",
+        "viewport": {
+          "width": 1000,
+          "height": 500
+        },
+        "backendDevice": "cpu",
+        "limits": {
+          "dpr": 1,
+          "texture": 8192,
+          "renderbuffer": 8192,
+          "viewport": [
+            8192,
+            8192
+          ],
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        },
+        "firstUploadMs": 623.5,
+        "firstPopulatedRenderMs": 623.7000000029802,
+        "completionMs": 1490.2000000029802,
+        "producerHeldUntilMs": 701.5,
+        "resources": {
+          "readers": 0,
+          "peakReaders": 3,
+          "createdTextures": 3,
+          "peakTextures": 3,
+          "errors": [],
+          "contextLosses": 0,
+          "peakGpuBytes": 4383744,
+          "uploads": 168,
+          "firstUpload": 766.3999999985099,
+          "firstRender": 766.6000000014901,
+          "maxUploadBytes": 65536,
+          "textures": 3,
+          "gpuBytes": 4383744,
+          "arrays": [
+            230400,
+            614400,
+            3538944
+          ]
+        }
+      },
+      {
+        "scenario": "ordered embeddings",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "limits": {
+          "dpr": 1,
+          "texture": 8192,
+          "renderbuffer": 8192,
+          "viewport": [
+            8192,
+            8192
+          ],
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        },
+        "tokenIds": [
+          1,
+          35,
+          175,
+          256,
+          249,
+          225,
+          35
+        ],
+        "prefixElements": 576,
+        "totalElements": 4032,
+        "sourceReads": {
+          "row_elements": 4608,
+          "max_row_block": 576,
+          "full_tensors": []
+        },
+        "resources": {
+          "readers": 0,
+          "peakReaders": 1,
+          "createdTextures": 2,
+          "peakTextures": 1,
+          "errors": [],
+          "contextLosses": 0,
+          "peakGpuBytes": 16128,
+          "uploads": 8,
+          "firstUpload": 741.8999999985099,
+          "firstRender": 742.5999999940395,
+          "maxUploadBytes": 2304,
+          "textures": 1,
+          "gpuBytes": 16128,
+          "arrays": [
+            2304,
+            16128,
+            2304,
+            2304,
+            2304,
+            2304,
+            2304,
+            2304,
+            2304
+          ]
+        }
+      },
+      {
+        "browser": "153.0.8010.12",
+        "viewport": {
+          "width": 1000,
+          "height": 500
+        },
+        "backendDevice": "cpu",
+        "limits": {
+          "dpr": 2,
+          "texture": 8192,
+          "renderbuffer": 8192,
+          "viewport": [
+            8192,
+            8192
+          ],
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        },
+        "firstUploadMs": 579.8999999985099,
+        "firstPopulatedRenderMs": 580.1999999955297,
+        "completionMs": 2628,
+        "producerHeldUntilMs": 725.8999999985099,
+        "resources": {
+          "readers": 0,
+          "peakReaders": 3,
+          "createdTextures": 3,
+          "peakTextures": 3,
+          "errors": [],
+          "contextLosses": 0,
+          "peakGpuBytes": 4383744,
+          "uploads": 168,
+          "firstUpload": 722.5,
+          "firstRender": 722.7999999970198,
+          "maxUploadBytes": 65536,
+          "textures": 3,
+          "gpuBytes": 4383744,
+          "arrays": [
+            230400,
+            614400,
+            3538944
+          ]
+        }
+      },
+      {
+        "scenario": "ordered embeddings",
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "limits": {
+          "dpr": 2,
+          "texture": 8192,
+          "renderbuffer": 8192,
+          "viewport": [
+            8192,
+            8192
+          ],
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        },
+        "tokenIds": [
+          1,
+          35,
+          175,
+          256,
+          249,
+          225,
+          35
+        ],
+        "prefixElements": 576,
+        "totalElements": 4032,
+        "sourceReads": {
+          "row_elements": 4608,
+          "max_row_block": 576,
+          "full_tensors": []
+        },
+        "resources": {
+          "readers": 0,
+          "peakReaders": 1,
+          "createdTextures": 2,
+          "peakTextures": 1,
+          "errors": [],
+          "contextLosses": 0,
+          "peakGpuBytes": 16128,
+          "uploads": 8,
+          "firstUpload": 741,
+          "firstRender": 741.5,
+          "maxUploadBytes": 2304,
+          "textures": 1,
+          "gpuBytes": 16128,
+          "arrays": [
+            2304,
+            16128,
+            2304,
+            2304,
+            2304,
+            2304,
+            2304,
+            2304,
+            2304
+          ]
+        }
+      },
+      {
+        "scenario": "native geometry",
+        "viewport": {
+          "width": 1000,
+          "height": 700
+        },
+        "limits": {
+          "dpr": 1,
+          "texture": 8192,
+          "renderbuffer": 8192,
+          "viewport": [
+            8192,
+            8192
+          ],
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        },
+        "cases": [
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              32
+            ],
+            "client": [
+              32,
+              32
+            ],
+            "matrix": [
+              325,
+              113,
+              32,
+              32
+            ],
+            "row": [
+              382,
+              113,
+              100,
+              32
+            ],
+            "column": [
+              325,
+              155,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              32
+            ],
+            "client": [
+              32,
+              32
+            ],
+            "matrix": [
+              325,
+              113,
+              32,
+              32
+            ],
+            "row": [
+              382,
+              113,
+              100,
+              32
+            ],
+            "column": [
+              325,
+              155,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              32
+            ],
+            "client": [
+              32,
+              32
+            ],
+            "matrix": [
+              325,
+              113,
+              32,
+              32
+            ],
+            "row": [
+              382,
+              113,
+              100,
+              32
+            ],
+            "column": [
+              325,
+              155,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              32
+            ],
+            "client": [
+              32,
+              32
+            ],
+            "matrix": [
+              325,
+              113,
+              32,
+              32
+            ],
+            "row": [
+              382,
+              113,
+              100,
+              32
+            ],
+            "column": [
+              325,
+              155,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              1200
+            ],
+            "client": [
+              32,
+              424
+            ],
+            "matrix": [
+              325,
+              113,
+              32,
+              424
+            ],
+            "row": [
+              382,
+              113,
+              100,
+              424
+            ],
+            "column": [
+              325,
+              547,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              1200
+            ],
+            "client": [
+              32,
+              424
+            ],
+            "matrix": [
+              325,
+              113,
+              32,
+              424
+            ],
+            "row": [
+              382,
+              113,
+              100,
+              424
+            ],
+            "column": [
+              325,
+              547,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              776
+            ],
+            "extent": [
+              32,
+              1200
+            ],
+            "client": [
+              32,
+              424
+            ],
+            "matrix": [
+              325,
+              113,
+              32,
+              424
+            ],
+            "row": [
+              382,
+              113,
+              100,
+              424
+            ],
+            "column": [
+              325,
+              547,
+              32,
+              100
+            ],
+            "origins": [
+              "0,776",
+              "0,776",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              776
+            ],
+            "extent": [
+              32,
+              1200
+            ],
+            "client": [
+              32,
+              424
+            ],
+            "matrix": [
+              325,
+              113,
+              32,
+              424
+            ],
+            "row": [
+              382,
+              113,
+              100,
+              424
+            ],
+            "column": [
+              325,
+              547,
+              32,
+              100
+            ],
+            "origins": [
+              "0,776",
+              "0,776",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              1600,
+              32
+            ],
+            "client": [
+              521,
+              32
+            ],
+            "matrix": [
+              325,
+              113,
+              521,
+              32
+            ],
+            "row": [
+              871,
+              113,
+              100,
+              32
+            ],
+            "column": [
+              325,
+              170,
+              521,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              1079,
+              0
+            ],
+            "extent": [
+              1600,
+              32
+            ],
+            "client": [
+              521,
+              32
+            ],
+            "matrix": [
+              325,
+              113,
+              521,
+              32
+            ],
+            "row": [
+              871,
+              113,
+              100,
+              32
+            ],
+            "column": [
+              325,
+              170,
+              521,
+              100
+            ],
+            "origins": [
+              "1079,0",
+              "0,0",
+              "1079,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              1600,
+              32
+            ],
+            "client": [
+              521,
+              32
+            ],
+            "matrix": [
+              325,
+              113,
+              521,
+              32
+            ],
+            "row": [
+              871,
+              113,
+              100,
+              32
+            ],
+            "column": [
+              325,
+              170,
+              521,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              1079,
+              0
+            ],
+            "extent": [
+              1600,
+              32
+            ],
+            "client": [
+              521,
+              32
+            ],
+            "matrix": [
+              325,
+              113,
+              521,
+              32
+            ],
+            "row": [
+              871,
+              113,
+              100,
+              32
+            ],
+            "column": [
+              325,
+              170,
+              521,
+              100
+            ],
+            "origins": [
+              "1079,0",
+              "0,0",
+              "1079,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              1600,
+              1200
+            ],
+            "client": [
+              521,
+              409
+            ],
+            "matrix": [
+              325,
+              113,
+              521,
+              409
+            ],
+            "row": [
+              871,
+              113,
+              100,
+              409
+            ],
+            "column": [
+              325,
+              547,
+              521,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              1079,
+              0
+            ],
+            "extent": [
+              1600,
+              1200
+            ],
+            "client": [
+              521,
+              409
+            ],
+            "matrix": [
+              325,
+              113,
+              521,
+              409
+            ],
+            "row": [
+              871,
+              113,
+              100,
+              409
+            ],
+            "column": [
+              325,
+              547,
+              521,
+              100
+            ],
+            "origins": [
+              "1079,0",
+              "0,0",
+              "1079,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              791
+            ],
+            "extent": [
+              1600,
+              1200
+            ],
+            "client": [
+              521,
+              409
+            ],
+            "matrix": [
+              325,
+              113,
+              521,
+              409
+            ],
+            "row": [
+              871,
+              113,
+              100,
+              409
+            ],
+            "column": [
+              325,
+              547,
+              521,
+              100
+            ],
+            "origins": [
+              "0,791",
+              "0,791",
+              "0,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              1079,
+              791
+            ],
+            "extent": [
+              1600,
+              1200
+            ],
+            "client": [
+              521,
+              409
+            ],
+            "matrix": [
+              325,
+              113,
+              521,
+              409
+            ],
+            "row": [
+              871,
+              113,
+              100,
+              409
+            ],
+            "column": [
+              325,
+              547,
+              521,
+              100
+            ],
+            "origins": [
+              "1079,791",
+              "0,791",
+              "1079,0"
+            ]
+          }
+        ]
+      },
+      {
+        "scenario": "native geometry",
+        "viewport": {
+          "width": 390,
+          "height": 640
+        },
+        "limits": {
+          "dpr": 1,
+          "texture": 8192,
+          "renderbuffer": 8192,
+          "viewport": [
+            8192,
+            8192
+          ],
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        },
+        "cases": [
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              32
+            ],
+            "client": [
+              32,
+              32
+            ],
+            "matrix": [
+              17,
+              244,
+              32,
+              32
+            ],
+            "row": [
+              74,
+              244,
+              100,
+              32
+            ],
+            "column": [
+              17,
+              286,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              32
+            ],
+            "client": [
+              32,
+              32
+            ],
+            "matrix": [
+              17,
+              244,
+              32,
+              32
+            ],
+            "row": [
+              74,
+              244,
+              100,
+              32
+            ],
+            "column": [
+              17,
+              286,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              32
+            ],
+            "client": [
+              32,
+              32
+            ],
+            "matrix": [
+              17,
+              244,
+              32,
+              32
+            ],
+            "row": [
+              74,
+              244,
+              100,
+              32
+            ],
+            "column": [
+              17,
+              286,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              32
+            ],
+            "client": [
+              32,
+              32
+            ],
+            "matrix": [
+              17,
+              244,
+              32,
+              32
+            ],
+            "row": [
+              74,
+              244,
+              100,
+              32
+            ],
+            "column": [
+              17,
+              286,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              1200
+            ],
+            "client": [
+              32,
+              241
+            ],
+            "matrix": [
+              17,
+              244,
+              32,
+              241
+            ],
+            "row": [
+              74,
+              244,
+              100,
+              241
+            ],
+            "column": [
+              17,
+              495,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              32,
+              1200
+            ],
+            "client": [
+              32,
+              241
+            ],
+            "matrix": [
+              17,
+              244,
+              32,
+              241
+            ],
+            "row": [
+              74,
+              244,
+              100,
+              241
+            ],
+            "column": [
+              17,
+              495,
+              32,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              959
+            ],
+            "extent": [
+              32,
+              1200
+            ],
+            "client": [
+              32,
+              241
+            ],
+            "matrix": [
+              17,
+              244,
+              32,
+              241
+            ],
+            "row": [
+              74,
+              244,
+              100,
+              241
+            ],
+            "column": [
+              17,
+              495,
+              32,
+              100
+            ],
+            "origins": [
+              "0,959",
+              "0,959",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              959
+            ],
+            "extent": [
+              32,
+              1200
+            ],
+            "client": [
+              32,
+              241
+            ],
+            "matrix": [
+              17,
+              244,
+              32,
+              241
+            ],
+            "row": [
+              74,
+              244,
+              100,
+              241
+            ],
+            "column": [
+              17,
+              495,
+              32,
+              100
+            ],
+            "origins": [
+              "0,959",
+              "0,959",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              1600,
+              32
+            ],
+            "client": [
+              231,
+              32
+            ],
+            "matrix": [
+              17,
+              244,
+              231,
+              32
+            ],
+            "row": [
+              273,
+              244,
+              100,
+              32
+            ],
+            "column": [
+              17,
+              301,
+              231,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              1369,
+              0
+            ],
+            "extent": [
+              1600,
+              32
+            ],
+            "client": [
+              231,
+              32
+            ],
+            "matrix": [
+              17,
+              244,
+              231,
+              32
+            ],
+            "row": [
+              273,
+              244,
+              100,
+              32
+            ],
+            "column": [
+              17,
+              301,
+              231,
+              100
+            ],
+            "origins": [
+              "1369,0",
+              "0,0",
+              "1369,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              1600,
+              32
+            ],
+            "client": [
+              231,
+              32
+            ],
+            "matrix": [
+              17,
+              244,
+              231,
+              32
+            ],
+            "row": [
+              273,
+              244,
+              100,
+              32
+            ],
+            "column": [
+              17,
+              301,
+              231,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              1369,
+              0
+            ],
+            "extent": [
+              1600,
+              32
+            ],
+            "client": [
+              231,
+              32
+            ],
+            "matrix": [
+              17,
+              244,
+              231,
+              32
+            ],
+            "row": [
+              273,
+              244,
+              100,
+              32
+            ],
+            "column": [
+              17,
+              301,
+              231,
+              100
+            ],
+            "origins": [
+              "1369,0",
+              "0,0",
+              "1369,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              1600,
+              1200
+            ],
+            "client": [
+              231,
+              226
+            ],
+            "matrix": [
+              17,
+              244,
+              231,
+              226
+            ],
+            "row": [
+              273,
+              244,
+              100,
+              226
+            ],
+            "column": [
+              17,
+              495,
+              231,
+              100
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              1369,
+              0
+            ],
+            "extent": [
+              1600,
+              1200
+            ],
+            "client": [
+              231,
+              226
+            ],
+            "matrix": [
+              17,
+              244,
+              231,
+              226
+            ],
+            "row": [
+              273,
+              244,
+              100,
+              226
+            ],
+            "column": [
+              17,
+              495,
+              231,
+              100
+            ],
+            "origins": [
+              "1369,0",
+              "0,0",
+              "1369,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              974
+            ],
+            "extent": [
+              1600,
+              1200
+            ],
+            "client": [
+              231,
+              226
+            ],
+            "matrix": [
+              17,
+              244,
+              231,
+              226
+            ],
+            "row": [
+              273,
+              244,
+              100,
+              226
+            ],
+            "column": [
+              17,
+              495,
+              231,
+              100
+            ],
+            "origins": [
+              "0,974",
+              "0,974",
+              "0,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              1369,
+              974
+            ],
+            "extent": [
+              1600,
+              1200
+            ],
+            "client": [
+              231,
+              226
+            ],
+            "matrix": [
+              17,
+              244,
+              231,
+              226
+            ],
+            "row": [
+              273,
+              244,
+              100,
+              226
+            ],
+            "column": [
+              17,
+              495,
+              231,
+              100
+            ],
+            "origins": [
+              "1369,974",
+              "0,974",
+              "1369,0"
+            ]
+          }
+        ]
+      },
+      {
+        "scenario": "native geometry",
+        "viewport": {
+          "width": 1000,
+          "height": 700
+        },
+        "limits": {
+          "dpr": 2,
+          "texture": 8192,
+          "renderbuffer": 8192,
+          "viewport": [
+            8192,
+            8192
+          ],
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        },
+        "cases": [
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              16
+            ],
+            "client": [
+              16,
+              16
+            ],
+            "matrix": [
+              325,
+              113,
+              16,
+              16
+            ],
+            "row": [
+              366,
+              113,
+              50,
+              16
+            ],
+            "column": [
+              325,
+              139,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              16
+            ],
+            "client": [
+              16,
+              16
+            ],
+            "matrix": [
+              325,
+              113,
+              16,
+              16
+            ],
+            "row": [
+              366,
+              113,
+              50,
+              16
+            ],
+            "column": [
+              325,
+              139,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              16
+            ],
+            "client": [
+              16,
+              16
+            ],
+            "matrix": [
+              325,
+              113,
+              16,
+              16
+            ],
+            "row": [
+              366,
+              113,
+              50,
+              16
+            ],
+            "column": [
+              325,
+              139,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              16
+            ],
+            "client": [
+              16,
+              16
+            ],
+            "matrix": [
+              325,
+              113,
+              16,
+              16
+            ],
+            "row": [
+              366,
+              113,
+              50,
+              16
+            ],
+            "column": [
+              325,
+              139,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              600
+            ],
+            "client": [
+              16,
+              474
+            ],
+            "matrix": [
+              325,
+              113,
+              16,
+              474
+            ],
+            "row": [
+              366,
+              113,
+              50,
+              474
+            ],
+            "column": [
+              325,
+              597,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              600
+            ],
+            "client": [
+              16,
+              474
+            ],
+            "matrix": [
+              325,
+              113,
+              16,
+              474
+            ],
+            "row": [
+              366,
+              113,
+              50,
+              474
+            ],
+            "column": [
+              325,
+              597,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              126
+            ],
+            "extent": [
+              16,
+              600
+            ],
+            "client": [
+              16,
+              474
+            ],
+            "matrix": [
+              325,
+              113,
+              16,
+              474
+            ],
+            "row": [
+              366,
+              113,
+              50,
+              474
+            ],
+            "column": [
+              325,
+              597,
+              16,
+              50
+            ],
+            "origins": [
+              "0,252",
+              "0,252",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              126
+            ],
+            "extent": [
+              16,
+              600
+            ],
+            "client": [
+              16,
+              474
+            ],
+            "matrix": [
+              325,
+              113,
+              16,
+              474
+            ],
+            "row": [
+              366,
+              113,
+              50,
+              474
+            ],
+            "column": [
+              325,
+              597,
+              16,
+              50
+            ],
+            "origins": [
+              "0,252",
+              "0,252",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              800,
+              16
+            ],
+            "client": [
+              571,
+              16
+            ],
+            "matrix": [
+              325,
+              113,
+              571,
+              16
+            ],
+            "row": [
+              921,
+              113,
+              50,
+              16
+            ],
+            "column": [
+              325,
+              154,
+              571,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              229,
+              0
+            ],
+            "extent": [
+              800,
+              16
+            ],
+            "client": [
+              571,
+              16
+            ],
+            "matrix": [
+              325,
+              113,
+              571,
+              16
+            ],
+            "row": [
+              921,
+              113,
+              50,
+              16
+            ],
+            "column": [
+              325,
+              154,
+              571,
+              50
+            ],
+            "origins": [
+              "458,0",
+              "0,0",
+              "458,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              800,
+              16
+            ],
+            "client": [
+              571,
+              16
+            ],
+            "matrix": [
+              325,
+              113,
+              571,
+              16
+            ],
+            "row": [
+              921,
+              113,
+              50,
+              16
+            ],
+            "column": [
+              325,
+              154,
+              571,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              229,
+              0
+            ],
+            "extent": [
+              800,
+              16
+            ],
+            "client": [
+              571,
+              16
+            ],
+            "matrix": [
+              325,
+              113,
+              571,
+              16
+            ],
+            "row": [
+              921,
+              113,
+              50,
+              16
+            ],
+            "column": [
+              325,
+              154,
+              571,
+              50
+            ],
+            "origins": [
+              "458,0",
+              "0,0",
+              "458,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              800,
+              600
+            ],
+            "client": [
+              571,
+              459
+            ],
+            "matrix": [
+              325,
+              113,
+              571,
+              459
+            ],
+            "row": [
+              921,
+              113,
+              50,
+              459
+            ],
+            "column": [
+              325,
+              597,
+              571,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              229,
+              0
+            ],
+            "extent": [
+              800,
+              600
+            ],
+            "client": [
+              571,
+              459
+            ],
+            "matrix": [
+              325,
+              113,
+              571,
+              459
+            ],
+            "row": [
+              921,
+              113,
+              50,
+              459
+            ],
+            "column": [
+              325,
+              597,
+              571,
+              50
+            ],
+            "origins": [
+              "458,0",
+              "0,0",
+              "458,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              141
+            ],
+            "extent": [
+              800,
+              600
+            ],
+            "client": [
+              571,
+              459
+            ],
+            "matrix": [
+              325,
+              113,
+              571,
+              459
+            ],
+            "row": [
+              921,
+              113,
+              50,
+              459
+            ],
+            "column": [
+              325,
+              597,
+              571,
+              50
+            ],
+            "origins": [
+              "0,282",
+              "0,282",
+              "0,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              229,
+              141
+            ],
+            "extent": [
+              800,
+              600
+            ],
+            "client": [
+              571,
+              459
+            ],
+            "matrix": [
+              325,
+              113,
+              571,
+              459
+            ],
+            "row": [
+              921,
+              113,
+              50,
+              459
+            ],
+            "column": [
+              325,
+              597,
+              571,
+              50
+            ],
+            "origins": [
+              "458,282",
+              "0,282",
+              "458,0"
+            ]
+          }
+        ]
+      },
+      {
+        "scenario": "native geometry",
+        "viewport": {
+          "width": 390,
+          "height": 640
+        },
+        "limits": {
+          "dpr": 2,
+          "texture": 8192,
+          "renderbuffer": 8192,
+          "viewport": [
+            8192,
+            8192
+          ],
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        },
+        "cases": [
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              16
+            ],
+            "client": [
+              16,
+              16
+            ],
+            "matrix": [
+              17,
+              243.5,
+              16,
+              16
+            ],
+            "row": [
+              58,
+              243.5,
+              50,
+              16
+            ],
+            "column": [
+              17,
+              269.5,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              16
+            ],
+            "client": [
+              16,
+              16
+            ],
+            "matrix": [
+              17,
+              243.5,
+              16,
+              16
+            ],
+            "row": [
+              58,
+              243.5,
+              50,
+              16
+            ],
+            "column": [
+              17,
+              269.5,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              16
+            ],
+            "client": [
+              16,
+              16
+            ],
+            "matrix": [
+              17,
+              243.5,
+              16,
+              16
+            ],
+            "row": [
+              58,
+              243.5,
+              50,
+              16
+            ],
+            "column": [
+              17,
+              269.5,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "fits",
+            "horizontal": false,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              16
+            ],
+            "client": [
+              16,
+              16
+            ],
+            "matrix": [
+              17,
+              243.5,
+              16,
+              16
+            ],
+            "row": [
+              58,
+              243.5,
+              50,
+              16
+            ],
+            "column": [
+              17,
+              269.5,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              600
+            ],
+            "client": [
+              16,
+              291
+            ],
+            "matrix": [
+              17,
+              243.5,
+              16,
+              291
+            ],
+            "row": [
+              58,
+              243.5,
+              50,
+              291
+            ],
+            "column": [
+              17,
+              544.5,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              16,
+              600
+            ],
+            "client": [
+              16,
+              291
+            ],
+            "matrix": [
+              17,
+              243.5,
+              16,
+              291
+            ],
+            "row": [
+              58,
+              243.5,
+              50,
+              291
+            ],
+            "column": [
+              17,
+              544.5,
+              16,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              309
+            ],
+            "extent": [
+              16,
+              600
+            ],
+            "client": [
+              16,
+              291
+            ],
+            "matrix": [
+              17,
+              243.5,
+              16,
+              291
+            ],
+            "row": [
+              58,
+              243.5,
+              50,
+              291
+            ],
+            "column": [
+              17,
+              544.5,
+              16,
+              50
+            ],
+            "origins": [
+              "0,618",
+              "0,618",
+              "0,0"
+            ]
+          },
+          {
+            "name": "tall",
+            "horizontal": false,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              309
+            ],
+            "extent": [
+              16,
+              600
+            ],
+            "client": [
+              16,
+              291
+            ],
+            "matrix": [
+              17,
+              243.5,
+              16,
+              291
+            ],
+            "row": [
+              58,
+              243.5,
+              50,
+              291
+            ],
+            "column": [
+              17,
+              544.5,
+              16,
+              50
+            ],
+            "origins": [
+              "0,618",
+              "0,618",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              800,
+              16
+            ],
+            "client": [
+              281,
+              16
+            ],
+            "matrix": [
+              17,
+              243.5,
+              281,
+              16
+            ],
+            "row": [
+              323,
+              243.5,
+              50,
+              16
+            ],
+            "column": [
+              17,
+              284.5,
+              281,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              519,
+              0
+            ],
+            "extent": [
+              800,
+              16
+            ],
+            "client": [
+              281,
+              16
+            ],
+            "matrix": [
+              17,
+              243.5,
+              281,
+              16
+            ],
+            "row": [
+              323,
+              243.5,
+              50,
+              16
+            ],
+            "column": [
+              17,
+              284.5,
+              281,
+              50
+            ],
+            "origins": [
+              "1038,0",
+              "0,0",
+              "1038,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              800,
+              16
+            ],
+            "client": [
+              281,
+              16
+            ],
+            "matrix": [
+              17,
+              243.5,
+              281,
+              16
+            ],
+            "row": [
+              323,
+              243.5,
+              50,
+              16
+            ],
+            "column": [
+              17,
+              284.5,
+              281,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "wide",
+            "horizontal": true,
+            "vertical": false,
+            "gutter": 15,
+            "scroll": [
+              519,
+              0
+            ],
+            "extent": [
+              800,
+              16
+            ],
+            "client": [
+              281,
+              16
+            ],
+            "matrix": [
+              17,
+              243.5,
+              281,
+              16
+            ],
+            "row": [
+              323,
+              243.5,
+              50,
+              16
+            ],
+            "column": [
+              17,
+              284.5,
+              281,
+              50
+            ],
+            "origins": [
+              "1038,0",
+              "0,0",
+              "1038,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              0
+            ],
+            "extent": [
+              800,
+              600
+            ],
+            "client": [
+              281,
+              276
+            ],
+            "matrix": [
+              17,
+              243.5,
+              281,
+              276
+            ],
+            "row": [
+              323,
+              243.5,
+              50,
+              276
+            ],
+            "column": [
+              17,
+              544.5,
+              281,
+              50
+            ],
+            "origins": [
+              "0,0",
+              "0,0",
+              "0,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              519,
+              0
+            ],
+            "extent": [
+              800,
+              600
+            ],
+            "client": [
+              281,
+              276
+            ],
+            "matrix": [
+              17,
+              243.5,
+              281,
+              276
+            ],
+            "row": [
+              323,
+              243.5,
+              50,
+              276
+            ],
+            "column": [
+              17,
+              544.5,
+              281,
+              50
+            ],
+            "origins": [
+              "1038,0",
+              "0,0",
+              "1038,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              0,
+              324
+            ],
+            "extent": [
+              800,
+              600
+            ],
+            "client": [
+              281,
+              276
+            ],
+            "matrix": [
+              17,
+              243.5,
+              281,
+              276
+            ],
+            "row": [
+              323,
+              243.5,
+              50,
+              276
+            ],
+            "column": [
+              17,
+              544.5,
+              281,
+              50
+            ],
+            "origins": [
+              "0,648",
+              "0,648",
+              "0,0"
+            ]
+          },
+          {
+            "name": "both",
+            "horizontal": true,
+            "vertical": true,
+            "gutter": 15,
+            "scroll": [
+              519,
+              324
+            ],
+            "extent": [
+              800,
+              600
+            ],
+            "client": [
+              281,
+              276
+            ],
+            "matrix": [
+              17,
+              243.5,
+              281,
+              276
+            ],
+            "row": [
+              323,
+              243.5,
+              50,
+              276
+            ],
+            "column": [
+              17,
+              544.5,
+              281,
+              50
+            ],
+            "origins": [
+              "1038,648",
+              "0,648",
+              "1038,0"
+            ]
+          }
+        ]
+      }
+    ],
+    "skip_reasons": [],
+    "reference_webgl": [
+      {
+        "dpr": 1,
+        "texture": 8192,
+        "renderbuffer": 8192,
+        "viewport": [
+          8192,
+          8192
+        ],
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+      },
+      {
+        "dpr": 2,
+        "texture": 8192,
+        "renderbuffer": 8192,
+        "viewport": [
+          8192,
+          8192
+        ],
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+      }
+    ]
+  },
+  "network_measurements": {
+    "first_data_seconds": "0.006461371005570982",
+    "completion_seconds": "0.07117311600450194"
+  },
+  "network_skip_reasons": [
+    "CUDA unavailable in the installed PyTorch/runtime; CPU acceptance is mandatory"
+  ]
+}

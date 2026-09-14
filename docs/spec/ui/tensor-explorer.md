@@ -30,9 +30,13 @@ Rank-1 tensors remain in scope, but the dedicated design work so far has not fix
 
 ## Tensor navigation and header
 
-The inventory is presented hierarchically using the tensor's logical/model name structure. Selecting a tensor opens one complete Tensor Explorer view; filesystem paths never appear in the UI.
+The inventory follows the public descriptor's logical path segments, never filesystem structure. Branches alone use chevron disclosure controls. Each leaf is one compact row with a tensor icon, its relative final path segment, and inline shape/storage dtype when width permits. Selection highlights the row rather than opening a card. Use shallow, capped indentation, truncate long labels, and retain full public identity in accessible names/tooltips so duplicate leaf names remain distinguishable. Native disclosure and selection work with Enter/Space and Tab; arrow keys navigate visible rows, open/close branches, or return to a parent, with Home/End reaching the first/last visible row.
 
-The inspector header should make the current context unambiguous without consuming significant data-view area. It may show the model, logical layer/module path, tensor name, shape, and the fact that the data view uses exact pixel mapping. The UI should use the descriptors already supplied by the inventory/API instead of reconstructing model metadata from names.
+The selected tensor has one compact contextual header inside the workspace: its breadcrumb/path plus immediately useful shape and storage dtype. Do not repeat it in global chrome, a large tensor-name title, or a permanent logical-path field. Use descriptors supplied by the inventory/API rather than inferring model metadata from names.
+
+A focusable, clickable information control beside the identity exposes secondary metadata on demand: full logical path (including any truncated portion), rank, element count, storage dtype/format, and logical dtype. The labelled popover supports pointer and keyboard opening, moves focus inside, dismisses on Escape with focus restored to the trigger, and closes when focus or pointer interaction leaves it. Filesystem paths never appear. Put exact-pixel orientation and keyboard inspection help here rather than in permanent workspace copy.
+
+Pending/streaming operations show compact transient feedback with a small spinner and accessible text near the header, plus cancellation while work remains active. Successful results return to a quiet ready state, without permanent completion labels. Keep independent tensor, statistics, and distribution error/cancellation states visible; auxiliary failure must not disable a successful matrix. Rendering resource failures remain explicit and actionable.
 
 The primary screen should remain visually sparse. The current design has three primary data rectangles for a 2D tensor and does not add a fourth legend/control block in the lower-right corner merely to fill space.
 
@@ -98,7 +102,32 @@ The matrix must be usable before distribution/statistics results have completed.
 
 ## Scroll synchronization
 
-When the matrix exceeds the available UI area, the exact data surfaces remain aligned while normal page/panel scrolling is used:
+Tensor Explorer is a bounded workspace inside the fixed application shell. The
+inventory owns its vertical overflow independently from the selected tensor's
+scientific pane. Neither inventory navigation nor scientific scrolling moves the
+document, contextual header, or application bars. The default rank-2 view has one
+inventory scroller and one matrix scroller; the scientific pane and its wrappers
+do not add nested scroll surfaces. Transient notices and on-demand metadata may
+retain their own bounded overflow.
+
+At desktop widths the inventory uses 200–280 CSS pixels and the scientific pane
+has a 360 CSS-pixel minimum. Below 760 CSS pixels the panes stack: the inventory
+receives 24% of workspace height (at least 64 CSS pixels), and the scientific pane
+receives the remainder. This preserves usable scientific chrome instead of
+collapsing a side-by-side matrix pane. Native data geometry never shrinks to fit.
+
+The matrix viewport receives the scientific pane's remaining height after context,
+transient feedback, distribution depth, and gaps. Reserve its vertical scrollbar
+gutter deterministically, including that gutter in the native-width layout track.
+The baseline keeps the native vertical scrollbar track present even for short
+tensors, avoiding changes to content width when vertical overflow changes.
+Use the viewport's actual client dimensions, excluding scrollbars, for rendering.
+A tall tensor whose native width fits must not gain horizontal overflow merely
+because a vertical scrollbar appears. Genuine excess width retains horizontal
+scrolling. Short matrices and rank-1 strips retain their full data height in
+addition to any horizontal scrollbar chrome.
+
+When the matrix exceeds its viewport, native matrix scrolling preserves alignment:
 
 - vertical scrolling of the main matrix keeps the right-hand row-distribution panel on the same rows;
 - horizontal scrolling of the main matrix keeps the bottom column-distribution panel on the same columns;
@@ -142,47 +171,34 @@ The magnifier:
 
 The proof-of-concept product rule that there is no general zoom/pan remains unchanged. The magnifier does not change matrix scale, scroll position, or the one-weight-to-one-pixel main surface.
 
-## Selection encoding: luminosity is data, chroma is interaction
+## Selection encoding: green data and amber inspection guides
 
-The common renderer already defines weight/scalar value through luminosity and reserves color for semantic information. Tensor Explorer makes that separation concrete for hover/selection.
+Unselected matrix and distribution pixels use the common renderer's sequential
+green scalar family. The underlying scalar transfer remains independent of
+selection. Hover/focus on a populated cell links exactly one active coordinate:
 
-Conceptually, the shader treats the displayed color as a luminance/chrominance representation:
+- a thin high-contrast amber horizontal guide through the matrix row;
+- a thin amber vertical guide through the matrix column;
+- a stronger amber intersection at the exact active cell;
+- the same row guide across the right distribution scanline;
+- the same column guide across the lower distribution scanline.
 
-- `Y` is the scalar-data luminosity produced by the common renderer transfer function;
-- `U/V` (or an equivalent two-dimensional chroma representation) encode interaction state.
+Guides normally occupy one device pixel. They blend over the scientific display
+at draw time, retaining underlying variation; they are not opaque replacement
+lines. The common renderer owns concrete palette, opacity and display encoding.
+Pending/nonfinite pixels retain explicit status colors. Pending-cell inspection
+may expose unavailable text but does not activate linked guides until populated.
 
-`Y` must remain unchanged when a cell, row, or column is highlighted.
-
-The standard hover state uses a warm orange/amber chroma vector. `U` and `V` are used together to select the desired hue; the design must not assume that one chroma axis alone can express the required semantic color.
-
-The intended behavior is:
-
-- unselected pixels: neutral/default semantic chroma;
-- hovered row: subtle selection chroma, original `Y` unchanged;
-- hovered column: subtle selection chroma, original `Y` unchanged;
-- hovered cell at the row/column intersection: stronger selection chroma, original `Y` unchanged;
-- matching scanline in the row-distribution panel: the same selection semantics;
-- matching scanline in the column-distribution panel: the same selection semantics.
-
-The selection channel is full resolution per displayed tensor pixel — semantically equivalent to 4:4:4 chroma. Chroma subsampling such as 4:2:0 is not acceptable for cell selection because it would smear interaction state into neighboring weights.
-
-`Y/U/V` here describe shader semantics, not a requirement to store tensor data in a YUV video/image format. The authoritative GPU tensor representation remains the scalar tensor representation defined by the common renderer. Selection color is computed at draw time.
-
-If a chosen chroma would push the final RGB conversion outside the displayable gamut, reduce/clamp chroma before altering `Y`; preserving the scalar-derived luminosity takes priority over maximum saturation.
-
-### No guide lines over tensor data
-
-Row/column selection must not be implemented by painting opaque horizontal or vertical guide lines across the matrix or distribution data. Such lines overwrite exactly the information the explorer is intended to inspect.
-
-If an additional geometric guide is ever needed for accessibility/contrast, it may appear only as short ticks protruding just outside the corresponding matrix/distribution edges. It must not cross the data surface.
-
-The chroma highlight is the primary row/column linkage mechanism.
+The small amber cursor and magnifier center marker remain available. The magnifier
+uses the same green transfer and active accent as the matrix. Exact coordinates,
+value text and a visible keyboard focus outline communicate state without relying
+on color alone. Arrow-key focus uses the same coordinate propagation as hover.
 
 ## GPU interaction-state constraint
 
 Hover and selection must not require a recolored copy of the tensor or a second copy of the weights in GPU memory.
 
-For the standard single-cell hover state, the renderer should be able to express selection with small interaction state such as the active row index, active column index, hover flag, and semantic-color parameters. The shader derives row/column/intersection chroma from that state while reading the same immutable scalar tensor representation.
+For the standard single-cell hover state, the renderer should be able to express selection with small interaction state such as the active row index, active column index, hover flag, and semantic-color parameters. The shader derives row/column/intersection overlays from that state while reading the same immutable scalar tensor representation.
 
 A per-pixel selection texture/mask is unnecessary for the normal one-cell hover case and should not be introduced merely to recolor a row and column.
 
@@ -296,9 +312,9 @@ A conforming current Matrix Inspector for rank-2 tensors has all of these proper
 - hover readout for the exact cell value and coordinates;
 - small orange cross cursor;
 - rounded-square pixel-preserving neighborhood magnifier, currently `9 × 9`;
-- row/column/intersection selection through full-resolution chroma while preserving luminosity;
+- green scalar transfer with thin amber row/column guides and a stronger intersection;
 - linked selection state in both distribution panels;
-- no guide line painted over tensor or histogram pixels;
+- guides blend over data without changing scalar transfer or stored values;
 - no recolored duplicate of the tensor in GPU memory;
 - light, minimal, editor-like UI shell;
 - no general zoom or pan in the proof of concept.
@@ -356,7 +372,6 @@ with the owning renderer, including context loss/reconstruction.
 
 The card/readout chooses among four pointer-relative placements and clamps within
 the viewport while excluding the inspected neighborhood where viewport dimensions
-permit a 170×212 CSS-pixel inspection surface. The thin center marker exists only
-on the magnified display; no guide lines cross the scientific data rectangles.
-Concrete luminance coefficients, gamut handling and display encoding are owned by
-[`rendering.md`](rendering.md#concrete-linear-srgb-selection-transfer).
+permit a 170×212 CSS-pixel inspection surface. The magnified display retains its thin center marker in addition to linked
+guides. Concrete palette, compositing and display encoding are owned by
+[`rendering.md`](rendering.md#concrete-linear-srgb-scalar-and-guide-transfer).

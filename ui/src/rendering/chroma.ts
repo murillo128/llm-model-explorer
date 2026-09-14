@@ -1,15 +1,16 @@
-/** Linear-sRGB luminance basis; the amber displacement is orthogonal to it. */
+/** Linear-sRGB luminance basis and display-only interaction color. */
 export const luminance = [0.2126, 0.7152, 0.0722] as const;
-export const amber = [1, (0.0722 * 0.6 - 0.2126) / 0.7152, -0.6] as const;
+export const amber = [1, 0.32, 0.015] as const;
 export interface Selection { readonly row: number; readonly column: number }
 
-export function chromaRGB(y: number, strength: number): number[] {
-  let t = strength;
-  for (const component of amber) {
-    if (component > 0) t = Math.min(t, (1 - y) / component);
-    if (component < 0) t = Math.min(t, -y / component);
-  }
-  return amber.map((component) => y + t * component);
+/** Monotonic near-black green → green → pale green, in linear sRGB. */
+export function scalarGreen(intensity: number): number[] {
+  const t = Math.max(0, Math.min(1, intensity));
+  return [0.001 + 0.819 * t ** 3, 0.006 + 0.994 * t ** 1.5, 0.002 + 0.858 * t ** 3];
+}
+
+export function chromaRGB(intensity: number, opacity: number): number[] {
+  return scalarGreen(intensity).map((component, i) => component * (1 - opacity) + amber[i]! * opacity);
 }
 
 export function encodeSRGB(linear: number) {

@@ -40,9 +40,10 @@ test('browser tabs create, recover, expire and close independent sessions', asyn
   expect(backend.gets).toContain(first);
   const tab = await context.newPage();
   await tab.goto('/');
-  await expect(tab.getByText('No model selected')).toBeVisible();
+  await expect(tab.getByRole('combobox', { name: 'Model' })).toHaveValue('');
   await choose(tab, models[1]!.id);
   const second = [...backend.sessions.keys()][1]!;
+  await page.getByRole('button', { name: 'Session options', exact: true }).click();
   await page.getByRole('button', { name: 'Close session' }).click();
   await expect(page.getByText('Session closed.')).toBeVisible();
   expect(backend.deletes).toEqual([first]); expect(backend.sessions.has(second)).toBe(true);
@@ -65,17 +66,17 @@ test('keyboard operates logical disclosures, duplicate leaves, unsupported ranks
   await page.keyboard.press('Enter'); await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: /left.weight/ })).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'left.weight' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'left › weight' })).toBeVisible();
   const right = page.getByRole('button', { name: /right.weight/ });
   await right.focus(); await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'right.weight' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'right › weight' })).toBeVisible();
   await page.getByRole('button', { name: /cube/ }).focus(); await page.keyboard.press('Enter');
   await expect(page.getByText(/This rank-3 tensor/)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('session-navigation.png'), fullPage: true });
   await testInfo.attach('session navigation', { path: testInfo.outputPath('session-navigation.png'), contentType: 'image/png' });
   await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).focus(); await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tokenizer Explorer');
+  await expect(page.getByRole('button', { name: 'Tokenizer Explorer', exact: true })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByText('Session active.')).toBeVisible();
 });
 
@@ -90,7 +91,7 @@ test('backend URL changes on refresh never recover the previous backend session'
   await page.reload();
   await expect(page.getByText('No models available on this backend.')).toBeVisible();
   expect(requests).toEqual(['https://second.example/models']);
-  await expect(page.getByText('No model selected')).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Model' })).toHaveValue('');
 });
 
 test('invalid and unreachable backend responses expose no private error details', async ({ page, context }) => {

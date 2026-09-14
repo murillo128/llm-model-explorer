@@ -2,18 +2,9 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type {} from './tensor-explorer-harness';
 
-const decode = (byte: number) => byte / 255 <= 0.04045 ? byte / 255 / 12.92 : ((byte / 255 + 0.055) / 1.055) ** 2.4;
-const luminance = (rgb: number[]) => rgb.slice(0, 3).reduce((sum, v, i) => sum + decode(v) * [0.2126, 0.7152, 0.0722][i]!, 0);
-// Independent display oracle, with exact float32 input and double-precision transfer.
+import { color } from './scalar-oracle';
 function expected(value: number, row: boolean, column: boolean) {
-  const y = 1 / (1 + Math.exp(-8 * value));
-  const direction = [1, (0.0722 * 0.6 - 0.2126) / 0.7152, -0.6];
-  let t = row && column ? 0.3 : row || column ? 0.08 : 0;
-  direction.forEach((c) => { t = Math.min(t, c > 0 ? (1 - y) / c : -y / c); });
-  return direction.map((c) => {
-    const v = y + c * t;
-    return Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055));
-  });
+  return color(1 / (1 + Math.exp(-12 * value)), row && column ? 0.9 : row || column ? 0.65 : 0);
 }
 async function open(page: Page, prefix = 323) {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);
@@ -36,8 +27,9 @@ async function open(page: Page, prefix = 323) {
     }
     f.data(2, counts); f.end(2);
   }, prefix);
-  await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', prefix === 323 ? 'complete' : 'streaming');
-  await expect(page.locator('[data-result="distributions"]')).toHaveAttribute('data-state', 'complete');
+  if (prefix === 323) await expect(page.locator('[data-result="tensor"]')).toHaveCount(0);
+  else await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', 'streaming');
+  await expect(page.locator('[data-result="distributions"]')).toHaveCount(0);
   await page.locator('.matrix-scroll').scrollIntoViewIfNeeded();
 }
 async function hover(page: Page, row: number, column: number) {
@@ -77,25 +69,24 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
       });
       const value = row! === 0 && column! === 0 ? '-0' : String(Math.fround(((row! * 19 + column!) % 17 - 8) / 32));
       expect(actual.value).toBe(value);
-      let maxColorError = 0, maxLuminanceError = 0, wrongScanlines = 0;
+      let maxColorError = 0, wrongScanlines = 0;
       // Check every matrix pixel: exactly one row and column, intersection stronger.
       for (let y = 0; y < 17; y++) for (let x = 0; x < 19; x++) {
         const value = y === 0 && x === 0 ? -0 : Math.fround(((y * 19 + x) % 17 - 8) / 32);
         const rgb = actual.matrix[y]![x]!;
         expected(value, y === row, x === column).forEach((v, i) => { maxColorError = Math.max(maxColorError, Math.abs(rgb[i]! - v)); });
-        maxLuminanceError = Math.max(maxLuminanceError, Math.abs(luminance(rgb) - 1 / (1 + Math.exp(-8 * value))));
       }
       for (const [pixels, axis] of [[actual.rows, 'row'], [actual.columns, 'column']] as const) {
         for (let y = 0; y < pixels.length; y++) for (let x = 0; x < pixels[y]!.length; x++) {
           const rgb = pixels[y]![x]!;
           const count = actual.counts[axis === 'row' ? 0 : 1]![y]![x]!;
-          const selected = (axis === 'row' ? y === row : x === column) && count > 0;
-          if ((rgb[0] !== rgb[1]) !== selected) wrongScanlines++;
-          maxLuminanceError = Math.max(maxLuminanceError, Math.abs(luminance(rgb) - Math.log1p(count) / Math.log1p(axis === 'row' ? 19 : 17)));
+          const selected = axis === 'row' ? y === row : x === column;
+          if ((rgb[0]! > rgb[1]!) !== selected) wrongScanlines++;
+          color(Math.log1p(count) / Math.log1p(axis === 'row' ? 19 : 17), selected ? 0.65 : 0)
+            .forEach((v, i) => { maxColorError = Math.max(maxColorError, Math.abs(rgb[i]! - v)); });
         }
       }
       expect(maxColorError).toBeLessThanOrEqual(1);
-      expect(maxLuminanceError).toBeLessThanOrEqual(0.0045);
       expect(wrongScanlines).toBe(0);
       for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) {
         const sourceY = row! + y - 4, sourceX = column! + x - 4;
@@ -130,13 +121,16 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
     expect(await resources(page)).toEqual(before);
     await page.mouse.move(0, 0);
     await expect(page.locator('.matrix-inspection')).toHaveCount(0);
-    expect(await page.evaluate(() => window.explorerFixture.pixels(window.explorerFixture.renderers[0]!).every((row) => row.every((p) => p[0] === p[1] && p[1] === p[2])))).toBe(true);
+    expect(await page.evaluate(() => window.explorerFixture.pixels(window.explorerFixture.renderers[0]!).every((row) => row.every((p) => p[1]! > p[0]! && p[1]! > p[2]!)))).toBe(true);
     await page.evaluate(() => window.explorerFixture.unmount());
     expect(await page.evaluate(() => [window.explorerFixture.metrics.live.size, window.explorerFixture.metrics.liveDisplays.size])).toEqual([0, 0]);
   });
 
   test('card flips within all viewport corners without covering the inspected neighborhood', async ({ page }) => {
     await open(page);
+    // This isolated magnifier test deliberately moves data outside the workspace.
+    // Hide the fixed application bars so they do not intercept those corner probes.
+    await page.addStyleTag({ content: '.app-bar, .app-status-bar { visibility: hidden; }' });
     for (const [right, bottom] of [[false, false], [true, false], [false, true], [true, true]]) {
       await page.locator('.matrix-surfaces').evaluate((host: HTMLElement, [right, bottom]) => {
         Object.assign(host.style, { position: 'fixed', width: `${119 / devicePixelRatio + 10}px`, zIndex: '10', left: `${right ? innerWidth - 19 / devicePixelRatio - 2 : 2}px`,
@@ -168,11 +162,35 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
       })).toBe(true);
       const origin = await page.evaluate(() => window.explorerFixture.renderers[0]!.view!);
       await hover(page, origin.y, origin.x);
+      const before = await resources(page);
+      const surfaces = await page.evaluate(() => {
+        const f = window.explorerFixture;
+        return f.renderers.map((r) => ({ view: r.view!, pixels: f.pixels(r) }));
+      });
+      for (const [index, surface] of surfaces.entries()) {
+        for (let y = 0; y < surface.pixels.length; y++) for (let x = 0; x < surface.pixels[y]!.length; x++) {
+          const active = (index !== 2 && y + surface.view.y === origin.y) ||
+            (index !== 1 && x + surface.view.x === origin.x);
+          const rgb = surface.pixels[y]![x]!;
+          expect(rgb[0]! > rgb[1]!).toBe(active);
+        }
+      }
+      expect(await resources(page)).toEqual(before);
     }
     await hover(page, 16, 18);
     await page.locator('.matrix-scroll').focus();
     await page.keyboard.press('ArrowLeft');
     await expect(page.locator('.inspection-readout')).toContainText('row 9 · column 10');
+    expect(await page.evaluate(() => {
+      const f = window.explorerFixture;
+      return f.renderers.map((r, index) => {
+        const view = r.view!;
+        return f.pixels(r).every((scanline, y) => scanline.every((rgb, x) => {
+          const active = (index !== 2 && y + view.y === 9) || (index !== 1 && x + view.x === 10);
+          return (rgb[0]! > rgb[1]!) === active;
+        }));
+      });
+    })).toEqual([true, true, true]);
     await page.keyboard.press('Escape');
     await expect(page.locator('.matrix-inspection')).toHaveCount(0);
     await page.getByRole('button', { name: /^B \[/ }).click();
@@ -185,6 +203,10 @@ test('missing/nonfinite values, stream arrival and late transfer update the acti
   await open(page, 10);
   await hover(page, 0, 10);
   await expect(page.locator('.inspection-readout')).toContainText('Unavailable — not received');
+  expect(await page.evaluate(() => {
+    const f = window.explorerFixture;
+    return f.renderers.every((r) => f.pixels(r).every((row) => row.every((rgb) => rgb[0]! < rgb[1]!)));
+  })).toBe(true);
   expect(await page.locator('.magnifier-card canvas').evaluate((canvas: HTMLCanvasElement) => Array.from(canvas.getContext('2d')!.getImageData(4, 4, 1, 1).data))).toEqual([46, 61, 76, 255]);
   await page.evaluate(() => { const f = window.explorerFixture; f.data(0, [Infinity, -Infinity, NaN, 1.0000001192092896]); });
   for (const [column, value] of [[10, 'Infinity'], [11, '-Infinity'], [12, 'NaN'], [13, '1.0000001192092896']] as const) {
@@ -210,4 +232,15 @@ test('matrix context loss clears active text and inspection resources', async ({
   await expect(page.locator('.matrix-inspection')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.explorerFixture.metrics.liveDisplays.size)).toBe(0);
   await expect(page.getByRole('alert')).toContainText('Exact rendering is unavailable');
+});
+
+
+test('shell typography preserves hit-testing at the final tensor pixel across font stacks', async ({ page }) => {
+  await open(page);
+  for (const font of ['Arial, sans-serif', 'DejaVu Sans, sans-serif', 'monospace']) {
+    await page.locator('.app-shell').evaluate((shell: HTMLElement, font) => { shell.style.fontFamily = font; }, font);
+    await page.locator('.matrix-scroll').scrollIntoViewIfNeeded();
+    await hover(page, 16, 18);
+    expect(await page.evaluate(() => document.documentElement.scrollHeight === innerHeight)).toBe(true);
+  }
 });

@@ -101,7 +101,13 @@ export class ApiClient {
   streamTensorDistributions(session: string, tensor: string, options: StreamOptions = {}): StreamOperation {
     return this.stream(`${this.tensorPath(session, tensor)}/distributions`, tensor, 'tensor_distributions', options);
   }
-  private stream(path: string, tensor: string, kind: Metadata['kind'], options: StreamOptions): StreamOperation {
+  streamInputEmbeddings(session: string, body: Schemas['InputEmbeddingsRequest'], options: StreamOptions = {}): StreamOperation {
+    validateSchema('InputEmbeddingsRequest', body);
+    // Snapshot the ordered identity: caller mutation must not alter echo validation.
+    const token_ids = [...body.token_ids];
+    return this.stream(`${this.sessionPath(session)}/embeddings`, token_ids, 'input_embeddings', options, { token_ids });
+  }
+  private stream(path: string, identity: string | readonly number[], kind: Metadata['kind'], options: StreamOptions, body?: Schemas['InputEmbeddingsRequest']): StreamOperation {
     const controller = new AbortController();
     let operationId: string | undefined;
     let settled = false;
@@ -113,7 +119,10 @@ export class ApiClient {
       let response: Response | undefined;
       let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
       try {
-        response = await this.fetcher(this.base + path, { signal: controller.signal, cache: 'no-store', headers: { Accept: streamMediaType } });
+        response = await this.fetcher(this.base + path, { signal: controller.signal, cache: 'no-store',
+          headers: { Accept: streamMediaType, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+          ...(body ? { method: 'POST', body: JSON.stringify(body) } : {}),
+        });
         await checkStatus(response, 200);
         const id = response.headers.get('X-Operation-Id');
         requireProtocol(id && uuidPattern.test(id), 'Missing or invalid X-Operation-Id (check CORS exposure)');
@@ -122,7 +131,10 @@ export class ApiClient {
         requireProtocol(mediaType(response) === streamMediaType, 'Invalid stream media type');
         requireProtocol(response.body, 'Missing stream body');
         const decoder = new LmexDecoder({ ...options, onMetadata: (metadata) => {
-          requireProtocol(metadata.kind === kind && metadata.tensor_id === tensor, 'Unexpected stream result identity');
+          requireProtocol(metadata.kind === kind, 'Unexpected stream result kind');
+          requireProtocol(metadata.kind === 'input_embeddings'
+            ? Array.isArray(identity) && metadata.token_ids.length === identity.length && metadata.token_ids.every((id, i) => id === identity[i])
+            : metadata.tensor_id === identity, 'Unexpected stream result identity');
           options.onMetadata?.(metadata);
         } });
         reader = response.body.getReader();

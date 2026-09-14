@@ -131,7 +131,32 @@ class TensorDistributionsMetadata(Control):
         return self
 
 
-Metadata = TensorMetadata | TensorStatisticsMetadata | TensorDistributionsMetadata
+class InputEmbeddingsMetadata(Control):
+    kind: Literal["input_embeddings"]
+    token_ids: list[Size]
+    shape: Annotated[list[Size], Field(min_length=2, max_length=2)]
+    dtype: Literal["float32"]
+    byte_order: Literal["little"]
+    layout: Literal["c"]
+    byte_length: Size
+
+    @model_validator(mode="after")
+    def geometry(self) -> Self:
+        if (
+            self.shape[0] != len(self.token_ids)
+            or self.shape[1] == 0
+            or self.byte_length != 4 * _product(self.shape)
+        ):
+            raise ValueError("input embedding geometry")
+        return self
+
+
+Metadata = (
+    TensorMetadata
+    | InputEmbeddingsMetadata
+    | TensorStatisticsMetadata
+    | TensorDistributionsMetadata
+)
 METADATA: TypeAdapter[Metadata] = TypeAdapter(Annotated[Metadata, Field(discriminator="kind")])
 
 

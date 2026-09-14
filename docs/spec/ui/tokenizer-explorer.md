@@ -20,7 +20,7 @@ The current wireframe is the `Inference Explorer` frame in the Miro dashboard:
 
 https://miro.com/app/board/uXjVHnoDEYY=/?moveToWidget=3458764683523016635
 
-The Miro board is a visual reference for the combined prompt/tokenization area. This document is normative if the board and specification diverge. Downstream content visible in that wider inference wireframe, such as an embedding matrix, is outside the Tokenizer Explorer's ownership and is not specified here.
+The Miro board is a visual reference for the combined prompt/tokenization area. This document is normative if the board and specification diverge. Only the narrow input-embedding lookup described below is an accepted downstream extension; other inference content in the wider wireframe remains future scope.
 
 ## Live editing and tokenization
 
@@ -68,8 +68,65 @@ The Tokenizer Explorer intentionally uses a minimal monochrome distinction:
 
 Token identity is not encoded by assigning a different color to every token. The important visual relationship is the exact segmentation of the editable text and its associated metadata.
 
+## Accepted input-embedding extension
+
+The post-PoC Tokenizer Explorer may consume the input-embedding lookup defined
+in `../api/contract.md` for the latest successful tokenizer result. Submit its
+real token IDs in sequence order, including special tokens and duplicates,
+under the same session. Associate each matrix row with that sequence position
+using the echoed IDs; never infer IDs from displayed text or download the full
+vocabulary embedding table to gather rows in the browser.
+
+The matrix must correspond to the current editor result and session. An older
+lookup must not replace a newer one; while tokenization/lookup is pending or
+fails, an older matrix must not be presented as current. Empty input and
+unsupported lookup are explicit states. Consume the float32 matrix progressively
+using the common rules in `rendering.md`, preserving one weight per rendered
+pixel.
+
+The existing prompt/tokenization region is frozen: retain its editor, helper
+copy, token annotations, empty state, geometry, resize behavior, and native
+selection/caret/history/IME behavior. Invisible interaction/accessibility wiring
+may connect its existing annotations to the downstream matrix. Do not compact,
+reorder, replace, or repeat the prompt or add a second token strip.
+
+Place the shared Matrix Explorer directly below the prompt in the same bounded
+Tokenizer workspace. The workspace owns internal overflow when the prompt and
+matrix exceed available height; the document remains fixed. Preserve the prompt's
+accepted size and the matrix's native `[token count, hidden width]` orientation.
+The matrix is matrix-only unless authoritative distribution artifacts exist;
+do not fabricate statistics or distributions. Use the common green scalar
+palette, provisional scalar transfer, and amber inspection semantics.
+
+Existing annotation IDs are individually focusable by sequence position,
+including IDs sharing an overlapping source span. Hover/focus/activation of ID
+`i` highlights matrix row `i`; a source span shared by several tokens links its
+first sequence position, while each existing ID independently addresses its own
+row. Hover/focus of a matrix cell highlights the associated existing annotation
+without changing editor text or selection. Duplicate IDs at different positions
+remain distinct links. Exact cell inspection retains row, hidden-dimension
+column, and float32 value. The latest token or matrix interaction takes precedence, including token hover
+or activation while the matrix retains keyboard focus. A token interaction
+clears the previous cell readout without moving focus or editor selection; a
+subsequent matrix interaction resumes exact cell inspection. Linked row state
+changes display uniforms only.
+
+Fence each lookup with the tokenizer editor generation and session/options
+identity, not text equality alone, including A→B→A changes. Invalidate the old
+matrix as soon as that tokenization stops being current, abort superseded
+transport, and cancel known operation handles. Delayed metadata, DATA, errors,
+and completion cannot populate a later generation. Pending/streaming feedback
+is compact and confined to the new embedding region; the prompt stays editable.
+Unsupported lookup leaves tokenization usable with a bounded explanation.
+An empty token sequence shows an explicit empty embedding state without a
+lookup or invented values. Failed/cancelled embedding results invalidate any
+partial matrix. No positional encoding or later inference stage is included.
+
 ## Reuse in later inference views
 
 Later inference exploration may place the tokenizer component directly above embeddings or other model stages. That composition must reuse this same live prompt/tokenization component rather than introducing a parallel tokenizer UI with different interaction or visual semantics.
 
-This document does not define those downstream stages. Tensor rendering rules remain in `rendering.md`, and inference/embedding behavior belongs to the future specification that owns those computations and views.
+Beyond the accepted input-embedding row lookup above, this document does not
+define downstream computation stages. Tensor rendering rules remain in
+`rendering.md`; positional encoding, transformer execution, logits, and
+generation require future design.
