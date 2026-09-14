@@ -96,7 +96,7 @@ test.afterEach(async ({ page }, info) => {
 
 for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3', 'qwen35', 'vjepa2']) {
   test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and native modal`, async ({ page }, info) => {
-    test.setTimeout(reference ? 420_000 : 90_000);
+    test.setTimeout(reference ? 600_000 : 90_000);
     const graph = await selectGraph(page);
     expect(graph.coverage).toBe('complete');
     const canvas = page.getByLabel('Architecture graph', { exact: true });
@@ -168,7 +168,11 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
         ['-m', 'acceptance.architecture_reference', family, '--tensor', matrix.name, '--row', String(row), '--column', String(selectedColumn)],
         { cwd: repo, encoding: 'utf8' })).samples[0].value : ((row * columns + selectedColumn) % 29 - 14) / 8;
       await expect(coordinate).toHaveText(`row ${row} · column ${selectedColumn}`);
-      await expect.poll(async () => Number(await scalar.textContent())).toBe(expectedValue);
+      // Software WebGL can delay a browser read beyond the fixture deadline
+      // while a complete reference embedding table is uploading and drawing.
+      await expect.poll(async () => Number(await scalar.textContent()), {
+        timeout: reference ? 90_000 : 15_000,
+      }).toBe(expectedValue);
     }
     await page.keyboard.press('Escape'); await released(page);
     const unavailable = graph.parameters.find((p) => p.inspection.status === 'unavailable');
