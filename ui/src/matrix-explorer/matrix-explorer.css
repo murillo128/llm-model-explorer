@@ -2,7 +2,7 @@
 .matrix-explorer > :not(.matrix-surfaces) { flex-shrink: 0; }
 .matrix-explorer > .matrix-surfaces { flex: 1; min-height: 0; }
 .matrix-explorer-header { font-size: 13px; line-height: 20px; }
-.distribution-range { display: flex; flex-wrap: wrap; gap: 0 12px; color: #575953; font: 10px/16px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.distribution-range { display: flex; flex-wrap: wrap; align-content: start; height: 32px; min-height: 32px; max-height: 32px; overflow: auto; scrollbar-width: thin; gap: 0 12px; color: #575953; font: 10px/16px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .matrix-scroll { background: var(--ui-surface-soft, #fbfaf7); }
 
 .matrix-inspectable {

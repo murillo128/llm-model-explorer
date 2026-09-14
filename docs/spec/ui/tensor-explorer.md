@@ -133,6 +133,10 @@ invent a zero location. All-nonfinite data reports no finite domain/extrema and
 has no numeric ticks. Before distribution metadata arrives, the domain is
 unavailable; valid metadata can label a progressive prefix without claiming that
 the operation is complete. Statistics arrival/failure does not change this scale.
+Reserve a fixed two-line (32 CSS pixel) region for this secondary metadata from
+initial loading onward, so constant-domain or all-nonfinite descriptions never
+shift the matrix origin. Retain wrapped text and keyboard/touch-accessible bounded
+overflow when the pane is too narrow for the complete description.
 
 Hover, native scrolling, and any separately accepted camera navigation change
 only inspected/visible matrix coordinates; they must not rescale value bins or

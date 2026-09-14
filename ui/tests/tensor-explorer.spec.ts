@@ -74,8 +74,8 @@ for (const dpr of [1, 2]) test(`asymmetric progressive surfaces, independent res
   await expect(page.getByText('Complete', { exact: true })).toHaveCount(0);
   await expect(page.getByText(/One value per device pixel|Focus the matrix/)).toHaveCount(0);
   const overhead = await page.evaluate(() => document.querySelector('.matrix-surfaces')!.getBoundingClientRect().top - document.querySelector('.working-surface')!.getBoundingClientRect().top);
-  // Fixed 40px header, range metadata, panel padding, and composition gaps.
-  expect(overhead).toBeLessThanOrEqual(86);
+  // Fixed 40px header, two-line range metadata, panel padding, and composition gaps.
+  expect(overhead).toBeLessThanOrEqual(102);
   const path = testInfo.outputPath(`asymmetric-dpr-${dpr}.png`);
   await page.screenshot({ path, fullPage: true });
   await testInfo.attach('asymmetric scientific layout', { path, contentType: 'image/png' });

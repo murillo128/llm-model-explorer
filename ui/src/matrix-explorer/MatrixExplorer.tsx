@@ -98,7 +98,7 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
   return <div className="matrix-explorer">
     {header && <div className="matrix-explorer-header">{header}</div>}
     {failed && <p role="alert">Exact rendering is unavailable. WebGL2 resources could not be allocated or were lost. Reopen this view to retry.</p>}
-    {source.distributions && <div className="distribution-range" aria-label="Distribution range">
+    {source.distributions && <div className="distribution-range" role="region" aria-label="Distribution range" tabIndex={0}>
       {!domain ? 'Bin domain unavailable' : domain.minimum === null || domain.maximum === null
         ? 'No finite values · bin domain and true min/max unavailable'
         : <><span>Full-range bins</span><span title={`True finite minimum: ${domain.minimum}`}>min {compactValue(domain.minimum)}</span>
