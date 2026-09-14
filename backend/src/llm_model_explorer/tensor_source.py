@@ -17,6 +17,21 @@ from .model_files import MAX_METADATA_BYTES, FileSnapshot, ModelError, changed, 
 MAX_SAFE_INTEGER = 2**53 - 1
 DEFAULT_CHUNK_ELEMENTS = 256 * 1024
 DTYPES = {"F32": (torch.float32, 4), "F16": (torch.float16, 2), "BF16": (torch.bfloat16, 2)}
+# Storage widths are independent of the supported mathematical conversion paths.
+STORAGE_WIDTHS = {"F32": 4, "F16": 2, "BF16": 2, "I32": 4, "U8": 1, "F8_E4M3": 1}
+
+
+@dataclass(frozen=True)
+class PhysicalTensor:
+    """Backend-only storage geometry; deliberately has no actionable tensor ID."""
+
+    name: str
+    dtype: str
+    shape: tuple[int, ...]
+    numel: int
+    byte_length: int
+    file: str
+    offset: int
 
 
 class TensorDescriptor(BaseModel):
@@ -40,13 +55,32 @@ class TensorLocation:
     offset: int
 
 
+def native_location(storage: PhysicalTensor) -> TensorLocation:
+    if storage.dtype not in DTYPES:
+        raise ModelError("unsupported_representation", "Unsupported native tensor encoding.")
+    safe_integer(storage.numel * 4)
+    return TensorLocation(
+        TensorDescriptor(
+            id=hashlib.sha256(storage.name.encode("utf-8")).hexdigest(),
+            name=storage.name,
+            path=tuple(storage.name.split(".")),
+            shape=storage.shape,
+            rank=len(storage.shape),
+            numel=storage.numel,
+            storage_dtype=storage.dtype,
+        ),
+        storage.file,
+        storage.offset,
+    )
+
+
 def safe_integer(value: object) -> int:
     if type(value) is not int or not 0 <= value <= MAX_SAFE_INTEGER:
         raise ModelError("unsupported_size", "Tensor dimensions or offsets exceed safe limits.")
     return value
 
 
-def parse_header(snapshot: FileSnapshot, name: str) -> tuple[TensorLocation, ...]:
+def parse_header(snapshot: FileSnapshot, name: str) -> tuple[PhysicalTensor, ...]:
     with snapshot.open(name) as stream:
         prefix = stream.read(8)
         if len(prefix) != 8:
@@ -64,13 +98,13 @@ def parse_header(snapshot: FileSnapshot, name: str) -> tuple[TensorLocation, ...
     metadata = header.pop("__metadata__", {})
     if not isinstance(metadata, dict) or any(not isinstance(v, str) for v in metadata.values()):
         raise invalid("Invalid safetensors metadata.")
-    locations: list[TensorLocation] = []
+    locations: list[PhysicalTensor] = []
     ranges: list[tuple[int, int]] = []
     for tensor_name, info in header.items():
         if not tensor_name or not isinstance(info, dict):
             raise invalid("Invalid tensor descriptor.")
         dtype = info.get("dtype")
-        if not isinstance(dtype, str) or dtype not in DTYPES:
+        if not isinstance(dtype, str) or dtype not in STORAGE_WIDTHS:
             raise ModelError("unsupported_representation", "Unsupported tensor storage encoding.")
         shape = info.get("shape")
         offsets = info.get("data_offsets")
@@ -78,21 +112,22 @@ def parse_header(snapshot: FileSnapshot, name: str) -> tuple[TensorLocation, ...
             raise invalid("Invalid tensor shape or offsets.")
         dimensions = tuple(safe_integer(d) for d in shape)
         numel = safe_integer(math.prod(dimensions))
-        safe_integer(numel * 4)
+        byte_length = safe_integer(numel * STORAGE_WIDTHS[dtype])
         start, end = (safe_integer(v) for v in offsets)
-        if end < start or end - start != numel * DTYPES[dtype][1] or end > size - 8 - length:
+        if end < start or end - start != byte_length or end > size - 8 - length:
             raise invalid("Invalid tensor data offsets.")
         ranges.append((start, end))
-        descriptor = TensorDescriptor(
-            id=hashlib.sha256(tensor_name.encode("utf-8")).hexdigest(),
-            name=tensor_name,
-            path=tuple(tensor_name.split(".")),
-            shape=dimensions,
-            rank=len(dimensions),
-            numel=numel,
-            storage_dtype=dtype,
+        locations.append(
+            PhysicalTensor(
+                tensor_name,
+                dtype,
+                dimensions,
+                numel,
+                byte_length,
+                name,
+                safe_integer(8 + length + start),
+            )
         )
-        locations.append(TensorLocation(descriptor, name, 8 + length + start))
     position = 0
     for start, end in sorted(ranges):
         if start != position:
@@ -111,6 +146,29 @@ class ModelSource:
     fingerprint: str
     _snapshot: FileSnapshot
     _locations: tuple[TensorLocation, ...]
+    _physical: tuple[PhysicalTensor, ...]
+
+    def physical_tensors(self) -> tuple[PhysicalTensor, ...]:
+        """Complete guarded storage inventory for structural analysis, never HTTP."""
+        self.check_unchanged()
+        return self._physical
+
+    def inventory(self) -> dict[str, object]:
+        tensors = self.tensors()
+        partial = len(self._physical) > len(tensors)
+        return {
+            "tensors": [tensor.model_dump(mode="json") for tensor in tensors],
+            "coverage": "partial" if partial else "complete",
+            "diagnostics": [
+                {
+                    "code": "unsupported_representation",
+                    "message": "Packed, auxiliary, or unresolved storage is excluded from "
+                    "numeric inspection; only verified complete native tensors are listed.",
+                }
+            ]
+            if partial
+            else [],
+        }
 
     def check_unchanged(self, *, rehash: bool = False) -> None:
         self._snapshot.check()

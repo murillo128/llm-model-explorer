@@ -1,0 +1,96 @@
+{
+  "JunHowie": {
+    "repo": "JunHowie/Qwen3-0.6B-GPTQ-Int4",
+    "revision": "b9d87006067b0c0c2dea836370d6288e14f112ab",
+    "config": {
+      "model_type": "qwen3",
+      "architectures": [
+        "Qwen3ForCausalLM"
+      ],
+      "quantization_config": {
+        "bits": 4,
+        "checkpoint_format": "gptq",
+        "desc_act": false,
+        "group_size": 128,
+        "hyb_act": false,
+        "lm_head": false,
+        "meta": {
+          "damp_auto_increment": 0.01,
+          "damp_percent": 0.05,
+          "mse": 0.0,
+          "quantizer": [
+            "gptqmodel:4.0.0"
+          ],
+          "static_groups": false,
+          "true_sequential": true,
+          "uri": "https://github.com/modelcloud/gptqmodel",
+          "v2": false,
+          "v2_alpha": 0.25
+        },
+        "pack_dtype": "int32",
+        "quant_method": "gptq",
+        "sym": true
+      }
+    }
+  },
+  "AxionML": {
+    "repo": "AxionML/Qwen3.5-0.8B-NVFP4",
+    "revision": "2ac1e750cda67cc8538d731f6216f77b9c3a6f72",
+    "config": {
+      "model_type": "qwen3_5",
+      "architectures": [
+        "Qwen3_5ForConditionalGeneration"
+      ],
+      "quantization_config": {
+        "config_groups": {
+          "group_0": {
+            "input_activations": {
+              "dynamic": false,
+              "num_bits": 4,
+              "type": "float",
+              "group_size": 16
+            },
+            "weights": {
+              "dynamic": false,
+              "num_bits": 4,
+              "type": "float",
+              "group_size": 16
+            },
+            "targets": [
+              "Linear"
+            ]
+          }
+        },
+        "ignore": [
+          "lm_head",
+          "model.language_model.layers.0.linear_attn.conv1d",
+          "model.language_model.layers.1.linear_attn.conv1d",
+          "model.language_model.layers.10.linear_attn.conv1d",
+          "model.language_model.layers.12.linear_attn.conv1d",
+          "model.language_model.layers.13.linear_attn.conv1d",
+          "model.language_model.layers.14.linear_attn.conv1d",
+          "model.language_model.layers.16.linear_attn.conv1d",
+          "model.language_model.layers.17.linear_attn.conv1d",
+          "model.language_model.layers.18.linear_attn.conv1d",
+          "model.language_model.layers.2.linear_attn.conv1d",
+          "model.language_model.layers.20.linear_attn.conv1d",
+          "model.language_model.layers.21.linear_attn.conv1d",
+          "model.language_model.layers.22.linear_attn.conv1d",
+          "model.language_model.layers.4.linear_attn.conv1d",
+          "model.language_model.layers.5.linear_attn.conv1d",
+          "model.language_model.layers.6.linear_attn.conv1d",
+          "model.language_model.layers.8.linear_attn.conv1d",
+          "model.language_model.layers.9.linear_attn.conv1d",
+          "model.visual*",
+          "mtp.layers.0*"
+        ],
+        "quant_algo": "NVFP4",
+        "producer": {
+          "name": "modelopt",
+          "version": "0.0.1.dev1+g82f1d216d"
+        },
+        "quant_method": "modelopt"
+      }
+    }
+  }
+}

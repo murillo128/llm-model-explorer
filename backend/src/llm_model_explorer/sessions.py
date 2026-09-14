@@ -60,6 +60,12 @@ class SessionRegistry:
         self.require(session_id)
         return tensors
 
+    async def inventory(self, session_id: UUID) -> dict[str, object]:
+        session = self.require(session_id)
+        inventory = await self.work.run(session.source.inventory)
+        self.require(session_id)
+        return inventory
+
     async def tensor(self, session_id: UUID, tensor_id: str) -> TensorDescriptor:
         for tensor in await self.tensors(session_id):
             if tensor.id == tensor_id:
