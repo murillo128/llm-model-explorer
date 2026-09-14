@@ -58,6 +58,7 @@ export class TensorExplorerController {
             requireProtocol(metadata.kind === 'tensor_distributions', 'Unexpected tensor explorer result');
             requireProtocol(metadata.rows === tensor.shape[0] && metadata.columns === tensor.shape[1], 'Distribution descriptor/shape mismatch');
             distributions = metadata;
+            this.updates.distributionDomain({ minimum: metadata.domain_minimum, maximum: metadata.domain_maximum });
           }
         },
         onData: (bytes, offset) => {

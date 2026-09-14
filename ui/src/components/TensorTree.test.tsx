@@ -28,7 +28,9 @@ it('navigates deep branches and visible rows with arrows, Home/End, Enter and Sp
   const onSelect = vi.fn();
   const { container } = render(<TensorTree tensors={[deep, tensors[3]!]} selectedId={undefined} onSelect={onSelect} />);
   const summaries = container.querySelectorAll('summary');
-  const leaf = screen.getByRole('button', { name: /model.layers/ });
+  const leaf = container.querySelector<HTMLButtonElement>('.tensor-choice')!;
+  expect(summaries[0]!.parentElement).toHaveAttribute('open');
+  for (const summary of [...summaries].slice(1)) expect(summary.parentElement).not.toHaveAttribute('open');
   summaries[0]!.focus();
   await userEvent.keyboard('{ArrowLeft}');
   expect(summaries[0]!.parentElement).not.toHaveAttribute('open');
@@ -36,12 +38,14 @@ it('navigates deep branches and visible rows with arrows, Home/End, Enter and Sp
   expect(screen.getByRole('button', { name: /scalar/ })).toHaveFocus();
   await userEvent.keyboard('{Home}{ArrowRight}{ArrowRight}');
   expect(summaries[1]).toHaveFocus();
+  await userEvent.keyboard('{ArrowRight}');
   await userEvent.keyboard('{ArrowLeft}');
   expect(summaries[1]!.parentElement).not.toHaveAttribute('open');
   await userEvent.keyboard('{ArrowLeft}');
   expect(summaries[0]).toHaveFocus();
   await userEvent.keyboard('{ArrowRight}{ArrowRight}{ArrowRight}');
   expect(summaries[2]).toHaveFocus();
+  for (let index = 2; index < summaries.length; index++) await userEvent.keyboard('{ArrowRight}{ArrowRight}');
   await userEvent.keyboard('{End}{ArrowUp}{Enter}');
   expect(leaf).toHaveFocus();
   expect(onSelect).toHaveBeenLastCalledWith(deep);

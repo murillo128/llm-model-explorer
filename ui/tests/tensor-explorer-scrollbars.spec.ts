@@ -1,3 +1,4 @@
+import { nativeCamera } from './native-camera';
 import { green } from './scalar-oracle';
 import { expect, test } from '@playwright/test';
 
@@ -11,6 +12,7 @@ for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () =>
       await expect(page.getByRole('combobox')).toBeEnabled();
       await page.getByRole('combobox').selectOption('lab/alpha');
       await page.getByRole('button', { name: new RegExp(`^${name} \\[` ) }).click();
+      await nativeCamera(page);
       await page.evaluate((rows) => {
         const f = window.explorerFixture;
         f.emit(0, 1, f.metadata(0));
@@ -103,7 +105,7 @@ for (const dpr of [1, 2]) test.describe(`workspace panes at DPR ${dpr}`, () => {
         const mr = m!.canvas.getBoundingClientRect(), rr = r!.canvas.getBoundingClientRect(), cr = c!.canvas.getBoundingClientRect();
         return { document: [document.documentElement.scrollWidth, document.documentElement.scrollHeight],
           body: [document.body.scrollWidth, document.body.scrollHeight], windowScroll: [scrollX, scrollY],
-          top: rect('.app-bar'), bottom: rect('.app-status-bar'), header: rect('.tensor-header'), pane: rect('.working-surface'),
+          top: rect('.app-bar'), bottom: rect('.app-status-bar'), header: rect('.matrix-panel-header'), pane: rect('.working-surface'),
           inventory: rect('.tensor-layout > aside'), inventoryScroll: document.querySelector('.tensor-layout > aside')!.scrollTop,
           outerOverflow: ['.working-surface', '.surface-content', '.tensor-explorer', '.matrix-surfaces'].map((s) => {
             const e = document.querySelector(s)!;
@@ -124,6 +126,7 @@ for (const dpr of [1, 2]) test.describe(`workspace panes at DPR ${dpr}`, () => {
       const evidence = [];
       for (const [name, horizontal, vertical] of [['fits', false, false], ['tall', false, true], ['wide', true, false], ['both', true, true]] as const) {
         await page.getByRole('button', { name: new RegExp(`^${name} \\[` ) }).click();
+      await nativeCamera(page);
         await expect(matrix).toBeVisible();
         await expect.poll(async () => { const g = await geometry(); return [g.horizontal, g.vertical]; }).toEqual([horizontal, vertical]);
         const initial = await geometry();

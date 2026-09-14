@@ -39,6 +39,7 @@ export class MatrixInspection {
     const { canvas, host } = viewport.matrix;
     canvas.classList.add('matrix-inspectable');
     canvas.addEventListener('pointermove', this.move);
+    canvas.addEventListener('click', this.click);
     canvas.addEventListener('pointerleave', this.leave);
     host.addEventListener('focus', this.focus);
     host.addEventListener('blur', this.leave);
@@ -46,6 +47,7 @@ export class MatrixInspection {
     window.addEventListener('scroll', this.windowScroll, true);
   }
 
+  private click = (event: MouseEvent) => { this.pointer = { x: event.clientX, y: event.clientY }; this.refresh(); };
   private move = (event: PointerEvent) => {
     this.pointer = { x: event.clientX, y: event.clientY };
     this.refresh();
@@ -57,7 +59,7 @@ export class MatrixInspection {
   private focus = () => {
     this.pointer = null;
     const view = this.viewport.matrix.renderer.view;
-    if (view) { this.cell = { row: view.y, column: view.x }; this.refresh(); }
+    if (view) { this.cell = { row: Math.floor(view.y), column: Math.floor(view.x) }; this.refresh(); }
   };
   private key = (event: KeyboardEvent) => {
     if (event.key === 'Escape') { this.leave(); return; }
@@ -68,13 +70,13 @@ export class MatrixInspection {
     const view = renderer.view;
     if (!view) return;
     this.pointer = null;
-    const cell = this.cell ?? { row: view.y, column: view.x };
+    const cell = this.cell ?? { row: Math.floor(view.y), column: Math.floor(view.x) };
     this.cell = { row: Math.max(0, Math.min(renderer.geometry.rows - 1, cell.row + step[0]!)),
       column: Math.max(0, Math.min(renderer.geometry.columns - 1, cell.column + step[1]!)) };
-    if (this.cell.column < view.x) host.scrollLeft = this.cell.column / view.dpr;
-    if (this.cell.column >= view.x + view.width) host.scrollLeft = (this.cell.column - view.width + 1) / view.dpr;
-    if (this.cell.row < view.y) host.scrollTop = this.cell.row / view.dpr;
-    if (this.cell.row >= view.y + view.height) host.scrollTop = (this.cell.row - view.height + 1) / view.dpr;
+    if (this.cell.column < view.x) host.scrollLeft = this.cell.column * view.scaleX / view.dpr;
+    if (this.cell.column >= view.x + view.width / view.scaleX) host.scrollLeft = ((this.cell.column + 1) * view.scaleX - view.width) / view.dpr;
+    if (this.cell.row < view.y) host.scrollTop = this.cell.row * view.scaleY / view.dpr;
+    if (this.cell.row >= view.y + view.height / view.scaleY) host.scrollTop = ((this.cell.row + 1) * view.scaleY - view.height) / view.dpr;
     this.viewport.refresh();
   };
 
@@ -111,8 +113,8 @@ export class MatrixInspection {
     if (!value) { this.leave(); return; }
     this.select(value.state === 'pending' ? null : this.cell);
     const view = renderer.view!;
-    const x = this.pointer?.x ?? rect.left + (column - view.x + 0.5) / view.dpr;
-    const y = this.pointer?.y ?? rect.top + (row - view.y + 0.5) / view.dpr;
+    const x = this.pointer?.x ?? rect.left + (column - view.x + 0.5) * view.scaleX / view.dpr;
+    const y = this.pointer?.y ?? rect.top + (row - view.y + 0.5) * view.scaleY / view.dpr;
     this.changed({ row, column, value: 'value' in value ? formatFloat32(value.value) : 'Unavailable — not received',
       ...inspectionPosition(x, y, window.innerWidth, window.innerHeight, view.dpr),
       draw: (target) => {
@@ -140,6 +142,7 @@ export class MatrixInspection {
     const { canvas, host } = this.viewport.matrix;
     canvas.classList.remove('matrix-inspectable');
     canvas.removeEventListener('pointermove', this.move);
+    canvas.removeEventListener('click', this.click);
     canvas.removeEventListener('pointerleave', this.leave);
     host.removeEventListener('focus', this.focus);
     host.removeEventListener('blur', this.leave);

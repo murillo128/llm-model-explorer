@@ -9,7 +9,7 @@ import { models, sessionA } from '../src/test/shell-fixtures';
 import '../src/app/styles.css';
 
 const tensors: TensorDescriptor[] = [
-  ['inspection', [17, 19]], ['A', [2, 3]], ['B', [3, 2]], ['reference', [576, 1536]], ['vector', [5]], ['wide-vector', [1536]], ['short-matrix', [2, 1536]], ['empty', [0, 3]], ['unsupported', [2, 2, 2]],
+  ['distribution-outliers', [2, 100]], ['inspection', [17, 19]], ['A', [2, 3]], ['B', [3, 2]], ['reference', [576, 1536]], ['vector', [5]], ['wide-vector', [1536]], ['short-matrix', [2, 1536]], ['empty', [0, 3]], ['unsupported', [2, 2, 2]],
 ].map(([name, dimensions]) => {
   const shape = dimensions as number[];
   return { id: name as string, name: name as string, path: [name as string], shape, rank: shape.length, numel: shape.reduce((a, b) => a * b, 1), storage_dtype: 'float32', logical_dtype: 'float32' };

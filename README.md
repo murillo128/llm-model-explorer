@@ -31,7 +31,7 @@ Large numeric payloads are binary and progressive. The UI must be able to consum
 
 The backend owns physical model-format knowledge. The main visualization path exposes logical tensor values in canonical `float32`, so the UI does not need to implement NF4, INT8, or other quantization decoders. Model values remain authoritative and visualization must not mutate them.
 
-The proof-of-concept tensor renderer follows an exact spatial rule: **one weight equals one rendered pixel**. Matrices are not fit to the viewport, resampled, or aggregated; oversized content uses normal scrolling. Weight value is encoded through luminosity using a configurable nonlinear sigmoid-like transfer based on robust tensor statistics. Scientific surfaces use sequential green brightness. Amber inspection guides are composited over that display without changing the scalar transfer or stored values.
+The tensor renderer preserves **one authoritative scalar per square matrix cell**. Matrix Explorer defaults to fit width, supports focal-point wheel/pinch zoom with a native 1:1 minimum, and uses scrollbars for navigation. Exact indexed sampling never interpolates or aggregates weights. Weight value is encoded through luminosity using a configurable nonlinear sigmoid-like transfer based on robust tensor statistics. Scientific surfaces use sequential green brightness. Amber inspection guides are composited over that display without changing the scalar transfer or stored values.
 
 ## Sessions and artifact cache
 
