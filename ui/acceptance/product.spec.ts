@@ -10,7 +10,19 @@ import { fileURLToPath } from 'node:url';
 import { installProbe } from './probe';
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
-const backend = 'http://127.0.0.1:8765';
+const componentPort = Number(process.env.UI_TEST_PORT ?? 4173);
+const isolatedPorts = Boolean(process.env.UI_TEST_PORT);
+function acceptancePorts(project: string) {
+  if (project === 'dpr2') return {
+    ui: isolatedPorts ? componentPort + 4 : 4177,
+    backend: isolatedPorts ? componentPort + 5 : 8767,
+  };
+  return {
+    ui: isolatedPorts ? componentPort + 2 : 4175,
+    backend: isolatedPorts ? componentPort + 3 : 8765,
+  };
+}
+let backend = 'http://127.0.0.1:8765';
 const matrix = 'model.layers.0.mlp.down_proj.weight';
 const value = (index: number) => ((index * 17) % 257 - 128) / 128;
 let service: ReturnType<typeof spawn>;
@@ -50,17 +62,20 @@ function luminance(rgb: number[]) {
 
 test.beforeEach(async ({ page }, testInfo) => {
   log = '';
+  const ports = acceptancePorts(testInfo.project.name);
+  backend = `http://127.0.0.1:${ports.backend}`;
+  const uiOrigin = `http://127.0.0.1:${ports.ui}`;
   const isReference = testInfo.title.startsWith('local reference');
   test.skip(isReference && !process.env.LMEX_REFERENCE_MODEL_DIR,
     'LMEX_REFERENCE_MODEL_DIR not supplied; local SmolLM2-135M Base UI not tested');
-  let command = ['-m', 'acceptance.server'];
+  let command = ['-m', 'acceptance.server', '--port', String(ports.backend), '--origin', uiOrigin];
   if (isReference) {
     const directory = process.env.LMEX_REFERENCE_MODEL_DIR!;
     referenceSamples = JSON.parse(execFileSync(`${repo}backend/.venv/bin/python`,
       ['-m', 'acceptance.reference', directory], { cwd: repo, encoding: 'utf8' }));
     referenceRoot = mkdtempSync(join(tmpdir(), 'lmex-reference-'));
     command = ['-m', 'llm_model_explorer', '--model-root', dirname(directory),
-      '--cache-dir', referenceRoot, '--port', '8765', '--cors-origin', 'http://127.0.0.1:4175',
+      '--cache-dir', referenceRoot, '--port', String(ports.backend), '--cors-origin', uiOrigin,
       '--device', process.env.LMEX_REFERENCE_DEVICE ?? 'cpu'];
   }
   service = spawn(`${repo}backend/.venv/bin/python`, command, {
