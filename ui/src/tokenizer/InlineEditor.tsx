@@ -84,12 +84,13 @@ interface Props {
   result: Tokenization | undefined;
   activeRow?: number | null | undefined;
   onRowSelect?: ((row: number | null) => void) | undefined;
+  onRowActivate?: ((row: number) => void) | undefined;
   onEdit: (text: string, composing: boolean, promptly?: boolean) => void;
 }
 
 /** CodeMirror's immutable document/history remain separate from decoration-only
  * transactions. Widgets and brackets never enter source, selections or copy. */
-export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect }: Props) {
+export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect, onRowActivate }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const edit = useRef(onEdit);
@@ -133,18 +134,26 @@ export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect
         event.preventDefault(); enter(event);
       }
     };
+    const activate = (event: Event) => {
+      if (!(event.target instanceof Element) || !event.target.closest('[data-token-index]')) return;
+      event.preventDefault();
+      const row = rowFor(event.target);
+      if (row !== null) onRowActivate?.(row);
+    };
     const key = (event: KeyboardEvent) => {
-      if (event.key === 'Enter' || event.key === ' ') press(event);
+      if (event.key === 'Enter' || event.key === ' ') { press(event); activate(event); }
     };
     root.addEventListener('pointerover', enter); root.addEventListener('pointerout', leave);
     root.addEventListener('focusin', enter); root.addEventListener('focusout', leave);
+    root.addEventListener('click', activate);
     root.addEventListener('mousedown', press); root.addEventListener('keydown', key);
     return () => {
       root.removeEventListener('pointerover', enter); root.removeEventListener('pointerout', leave);
       root.removeEventListener('focusin', enter); root.removeEventListener('focusout', leave);
+      root.removeEventListener('click', activate);
       root.removeEventListener('mousedown', press); root.removeEventListener('keydown', key);
     };
-  }, [onRowSelect]);
+  }, [onRowSelect, onRowActivate]);
   useLayoutEffect(() => {
     for (const node of host.current!.querySelectorAll<HTMLElement>('[data-token-index], [data-token-indices]')) {
       const indices = node.dataset.tokenIndex ?? node.dataset.tokenIndices ?? '';

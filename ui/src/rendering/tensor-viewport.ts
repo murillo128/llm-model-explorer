@@ -114,6 +114,20 @@ export class TensorViewport {
     this.refresh();
   }
 
+  /** Reveal a linked logical row using only this host's vertical scroll. */
+  revealRow(row: number) {
+    if (this.disposed || !Number.isInteger(row) || row < 0 || row >= this.renderer.geometry.rows) return;
+    this.refresh();
+    const view = this.renderer.view;
+    if (!view) return;
+    const top = row * view.scaleY / view.dpr;
+    const bottom = (row + 1) * view.scaleY / view.dpr;
+    const height = view.height / view.dpr;
+    if (top < this.host.scrollTop || bottom - top > height) this.host.scrollTop = top;
+    else if (bottom > this.host.scrollTop + height) this.host.scrollTop = bottom - height;
+    this.refresh();
+  }
+
   zoomAt(scale: number, cssX: number, cssY: number) {
     if (!this.options.zoom || this.disposed || !Number.isFinite(scale)) return;
     this.refresh(); // Reconcile any native scrolling before resolving the focal point.

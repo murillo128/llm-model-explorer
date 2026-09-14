@@ -29,14 +29,14 @@ test('production shell model A→B→A never revives another model embedding res
   await expect.poll(() => pending.length).toBe(2);
   expect(pending[1]!.request().postDataJSON()).toEqual({ token_ids: [1] });
   await complete(1, [1], 9);
-  await expect(page.getByText('1 token rows · 9 hidden dimensions')).toBeVisible();
+  await expect(page.getByText('[1 × 9] · float32')).toBeVisible();
   await complete(0, [2], 3);
-  await expect(page.getByText('1 token rows · 9 hidden dimensions')).toBeVisible();
+  await expect(page.getByText('[1 × 9] · float32')).toBeVisible();
   await expect(page.locator('[data-token-index="0"]')).toHaveText('1');
   await page.getByRole('combobox').selectOption(models[0]!.id);
   await expect.poll(() => pending.length).toBe(3);
   await expect(page.locator('.matrix-scroll')).toHaveCount(0);
   await complete(2, [2], 3);
-  await expect(page.getByText('1 token rows · 3 hidden dimensions')).toBeVisible();
+  await expect(page.getByText('[1 × 3] · float32')).toBeVisible();
   await expect(page.locator('[data-token-index="0"]')).toHaveText('2');
 });

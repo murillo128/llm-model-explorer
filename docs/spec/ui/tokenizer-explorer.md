@@ -72,6 +72,23 @@ The Tokenizer Explorer intentionally uses a minimal monochrome distinction:
 
 Token identity is not encoded by assigning a different color to every token. The important visual relationship is the exact segmentation of the editable text and its associated metadata.
 
+## Panel composition
+
+Tokenizer Explorer composes two vertically stacked, visually distinct panels:
+**Prompt / Tokens** wraps the existing editable annotation surface, and
+**Input Embeddings** uses the same reusable `MatrixExplorer` as Tensor Explorer.
+Both use compact structural inspector headers. Wrapping the prompt must preserve
+its inline text/bracket/ID layout, native editor behavior and resize affordance;
+it must not introduce another token strip or prompt camera.
+
+The Input Embeddings header uses the shared Matrix Explorer header composition
+for matrix identity, available shape and logical dtype, operation status, and
+viewport controls. Do not repeat row/hidden-dimension counts as a separate block
+between panels. The matrix inherits the shared square-cell camera, fit-width,
+direct inspection, adaptive magnifier, and aligned distributions when its source
+provides them. Do not compute missing distributions or fork matrix functionality
+inside the tokenizer component.
+
 ## Accepted input-embedding extension
 
 After the latest successful tokenization, Tokenizer Explorer may inspect the session model's input embedding matrix for that exact token sequence. For `N` tokens, the matrix has shape `[N, hidden_size]`; row `i` corresponds to token sequence position `i`, including inserted special tokens and repeated token IDs.
@@ -79,6 +96,18 @@ After the latest successful tokenization, Tokenizer Explorer may inspect the ses
 The prompt/tokenization surface and the input-embedding matrix are independent inspection surfaces. Matrix zoom, scrolling, fit, region selection, or other matrix navigation affects only the embeddings view and must not zoom, reflow, recenter, or otherwise change the prompt editor viewport.
 
 The embeddings view exposes the same matrix-inspection and navigation behavior defined for the reusable Matrix Explorer, including exact row/column/value inspection and the accepted zoom/navigation behavior. Token inspection and embedding-matrix inspection are linked by sequence position: identifying token position `i` identifies embedding row `i`, and identifying an embedding row identifies the corresponding token position. This linkage must not change the editable prompt content or the tokenizer result.
+
+Hover or focus on an existing token annotation transiently highlights its row;
+matrix hover, focus or cell selection identifies the corresponding annotation.
+Transient state clears on leave/blur and remains distinct from any pinned/current
+selection provided by a consumer. Link by sequence position, including repeated
+IDs, overlapping source spans and inserted specials. Explicit token activation
+may minimally scroll an offscreen embedding row into view, preserving matrix
+scale and horizontal origin. Hover alone does not reveal rows. Matrix row
+interaction must never automatically scroll, zoom, or focus the Prompt panel.
+Use controlled row context, semantic selection callbacks and a narrow reveal
+intent through Matrix Explorer, without exposing renderer internals. Clear or
+fence linkage on source, generation, session replacement and remount.
 
 While a replacement tokenization or embedding result is pending, the last successful embedding matrix may remain visible as clearly stale/updating context rather than disappearing. Only an embedding result matching the current tokenization generation, session, model, options, and ordered token IDs may become authoritative. Older results must never replace newer state.
 

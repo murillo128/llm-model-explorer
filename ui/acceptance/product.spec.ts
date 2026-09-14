@@ -228,7 +228,7 @@ test('production UI renders before producer completes; native geometry, inspecti
     }
     await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
     // The real empty prompt includes BOS, so the embedding view owns one row.
-    await expect(page.getByText('1 token rows · 576 hidden dimensions')).toBeVisible();
+    await expect(page.getByText('[1 × 576] · float32')).toBeVisible();
     await expect.poll(async () => (await metrics(page)).textures).toBe(1);
     await expect.poll(async () => (await metrics(page)).readers).toBe(0);
     const cdp = await context.newCDPSession(page);
@@ -364,7 +364,7 @@ test('local reference Base opens normalization, both MLP orientations and embedd
 async function tokenizer(page: Page) {
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/fixture');
   await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
-  await expect(page.getByText('1 token rows · 576 hidden dimensions')).toBeVisible();
+  await expect(page.getByText('[1 × 576] · float32')).toBeVisible();
   return page.getByRole('textbox', { name: 'Prompt', exact: true });
 }
 async function closeSession(page: Page) {
@@ -375,7 +375,8 @@ async function closeSession(page: Page) {
   await expect.poll(async () => (await metrics(page)).readers).toBe(0);
 }
 async function embeddingDone(page: Page, rows: number) {
-  await expect(page.getByText(`${rows} token rows · 576 hidden dimensions`)).toBeVisible();
+  await expect(page.getByText(`[${rows} × 576] · float32`)).toBeVisible();
+  await expect(page.locator('.input-embeddings .matrix-panel-status')).toBeEmpty();
 }
 async function documentFits(page: Page) {
   expect(await page.evaluate(() => ({
@@ -474,7 +475,7 @@ test('real A→B→A response reordering and model/session changes show only the
   await idle();
   await control('release', {});
   await page.getByRole('combobox').selectOption('acceptance/fixture');
-  await expect(page.locator('.input-embeddings > header [role=status]')).toContainText('hidden dimensions');
+  await expect(page.locator('.input-embeddings .embedding-shape')).toContainText('× 576] · float32');
   await closeSession(page);
 });
 

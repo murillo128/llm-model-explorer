@@ -7,7 +7,7 @@ import type { MatrixSource, MatrixUpdates } from './types';
 
 const fake = vi.hoisted(() => ({ fail: false, transferFails: false, views: [] as {
   options: MatrixViewportOptions; upload: ReturnType<typeof vi.fn>; transfer: ReturnType<typeof vi.fn>;
-  fitWidth: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn>;
+  fitWidth: ReturnType<typeof vi.fn>; revealRow: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn>;
 }[] }));
 vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
   matrix;
@@ -19,9 +19,10 @@ vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
     const transfer = vi.fn(() => { if (fake.transferFails) throw new Error('Invalid transfer'); });
     this.matrix = { renderer: { upload, setTransfer: transfer } };
     this.dispose = vi.fn(() => { options.onInspection?.(null); host.replaceChildren(); });
-    fake.views.push({ options, upload, transfer, fitWidth: this.fitWidth, dispose: this.dispose });
+    fake.views.push({ options, upload, transfer, fitWidth: this.fitWidth, revealRow: this.revealRow, dispose: this.dispose });
   }
   fitWidth = vi.fn();
+  revealRow = vi.fn();
   refresh = vi.fn();
   setLinkedRow = vi.fn();
   setDistributionDomain = vi.fn();
@@ -127,4 +128,19 @@ it('composes Fit width into the header action slot without resubscribing or uplo
   expect(fake.views[0]!.fitWidth).toHaveBeenCalledOnce();
   expect(fake.views[0]!.upload).not.toHaveBeenCalled();
   expect(data.updates).toHaveLength(1);
+});
+
+it('reveals only on a new semantic intent without restarting delivery or resetting the camera', () => {
+  const data = source();
+  const intent = { row: 1 };
+  const view = render(<MatrixExplorer source={data} revealRow={intent} />);
+  view.rerender(<MatrixExplorer source={data} revealRow={intent} highlightedRow={0} />);
+  expect(fake.views[0]!.revealRow).toHaveBeenCalledExactlyOnceWith(1);
+  view.rerender(<MatrixExplorer source={data} revealRow={{ row: 1 }} />);
+  expect(fake.views[0]!.revealRow).toHaveBeenCalledTimes(2);
+  expect(fake.views[0]!.fitWidth).not.toHaveBeenCalled();
+  expect(data.updates).toHaveLength(1);
+  expect(fake.views[0]!.upload).not.toHaveBeenCalled();
+  view.rerender(<MatrixExplorer source={source()} />);
+  expect(fake.views[1]!.revealRow).not.toHaveBeenCalled();
 });
