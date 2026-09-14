@@ -2,19 +2,34 @@
 
 ## Pixel mapping
 
-The fundamental rendering rule is exact logical mapping: every displayed matrix cell refers to exactly one tensor value, with native row/column identity and ordering preserved.
+The durable spatial invariant is **one authoritative logical scalar per matrix cell**.
+A rank-2 `[rows, columns]` matrix uses columns on X and rows on Y, with row zero
+at the top. Its camera applies one uniform scale `s >= 1` device pixels per cell
+to both axes, so cells remain square. Enlarged cells use exact indexed/nearest
+sampling; interpolation, aggregation and subpixel minification are forbidden.
+Zoom never changes ordering, scalar storage or the logical identity of a complete
+matrix. Rank-1 retains the horizontal `N × 1` device-pixel strip. Empty tensors
+show an explicit empty state and allocate no scalar textures.
 
-For a 2D tensor of width `W` and height `H`, native data geometry is `W × H` logical cells. Rank-2 `[rows, columns]` uses columns on X and rows on Y, with row zero at the top. Matrix cells remain square under every view scale. Zoom is a view transformation only: it may enlarge a logical cell uniformly in X and Y, but it must not interpolate, average, merge, reorder, or rewrite tensor values.
+At devicePixelRatio `d`, the complete matrix extent is `W*s/d × H*s/d` CSS pixels.
+Visible framebuffer dimensions and screen scroll offsets are device-pixel integers.
+The logical camera origin is `round(nativeCSSScroll*d)/s`, which may be fractional.
+Hit testing resolves the logical cell containing the device pixel on each axis
+and excludes coordinates outside the visible surface. CPU hit testing and GPU
+sampling use the same float32 rasterized cell edges (`ceil(cellOffset*s -
+fractionalOriginPixels)`), with an integer logical origin kept separately.
+This avoids division rounding choosing a neighboring cell at exact edges or
+texture-band seams, including at large scroll origins. Native browsers may round requested CSS scroll offsets; focal
+preservation is subject to that rounding and matrix bounds.
 
-The native scale is one logical cell per framebuffer/device pixel. The Matrix Explorer may enlarge an underfilled matrix so its width uses the available viewport; it does not minify below native scale. A matrix wider than the viewport therefore remains at native scale until the user zooms in further and uses horizontal navigation rather than aggregating logical cells. At devicePixelRatio `d` and uniform device-pixel scale `s >= 1`, the complete rank-2 data extent is `W*s/d × H*s/d` CSS pixels. The rank-1 baseline remains a horizontal `N × 1` logical-cell strip. Empty tensors show an explicit empty state and allocate no scalar textures.
+Snap the canvas screen position to device pixels. Integer canvas dimensions with
+a DPR-only presentation transform and a constrained layout box avoid browser
+compositing interpolation. Zoom is a shader camera transform, never CSS scaling
+of a previously rasterized tensor. DPR changes recompute framebuffer/CSS extents
+while preserving logical camera origins as far as native scroll bounds permit.
 
-Visible framebuffer dimensions and data scroll origins remain aligned to exact logical cell coordinates. Hit testing at any zoom level must resolve the exact logical row and column beneath the pointer; zoom must not introduce nearest-cell ambiguity or averaged hit regions. Native browsers may round requested scroll offsets, and the displayed camera must remain consistent with the coordinates used for sampling and inspection.
-
-A DPR change recomputes display geometry while preserving the same logical camera position and square-cell scale semantics. A separate inspection magnifier does not change the main matrix camera.
-
-If the scaled matrix extent exceeds the available viewport, the containing UI uses horizontal and/or vertical navigation while preserving exact logical coordinates.
-
-If a tensor dimension exceeds a WebGL2 texture or render-target limit, the renderer may partition the representation internally into multiple textures/bands. This is an implementation detail and must preserve exact logical cell identity, ordering, sampling, and the identity of one complete matrix.
+Oversized content uses normal scrollbars. Internal texture/band partitioning may
+accommodate WebGL2 limits but must preserve exact scalar identity and sampling.
 
 Query actual texture, renderbuffer and viewport limits. Use a bounded visible
 framebuffer over the complete data extent rather than requiring a giant
@@ -86,7 +101,7 @@ Thin inspection guides may change final composited luminance, as defined below.
 
 ## Interaction scope
 
-Matrix views support a local uniform camera for zoom and navigation while preserving square logical cells and exact row/column identity. The accepted user interactions and synchronization with row/column distributions are defined by `tensor-explorer.md`. Camera changes affect only the Matrix Explorer instance in which they occur and never mutate tensor values.
+Matrix Explorer fit-width defaults, focal-point wheel/pinch zoom and scroll navigation are owned by `tensor-explorer.md`. Each instance owns its camera; these transforms never affect other explorers.
 
 ### Concrete linear-sRGB scalar and guide transfer
 
@@ -95,11 +110,14 @@ For normalized scalar intensity `t`, the green linear-sRGB color is
 All components and luminance increase monotonically, and green is the largest
 component throughout. Luminance uses `Y = 0.2126 R + 0.7152 G + 0.0722 B`.
 Distribution intensity uses its separately owned density normalization before
-this same display curve. Constant finite tensors use `t=0.5`; all-nonfinite and
+this same display curve. It changes density brightness only, never value-bin
+coordinates. Distribution numeric rulers and neutral zero references are
+display-only chrome owned by `tensor-explorer.md`; they do not update scalar or
+count storage. Constant finite tensors use `t=0.5`; all-nonfinite and
 pending regions retain their explicit status colors instead of this curve.
 
 The active row and column each receive one device pixel of amber overlay,
-computed from exact integer logical coordinates, including texture-band origins.
+centered on the active logical row/column at the current camera scale, including texture-band origins. The guide thickness stays one device pixel when cells enlarge.
 Blend in linear sRGB: `C = (1-alpha)*G(t) + alpha*(1, 0.32, 0.015)`.
 Default guide alpha is `0.65`; the intersection uses `0.9`. This makes guides
 visible even at both scalar endpoints and keeps underlying variation visible.
@@ -114,3 +132,15 @@ colors outside this scalar transfer. Pixel validation permits at most one 8-bit
 code per channel relative to ideal display encoding; decoded luminance versus
 prequantized color permits `0.0045` absolute error. CPU numeric validation before
 display quantization uses floating-point tolerance, not that display allowance.
+
+### Magnifier display overlays
+
+The 9×9 inspection buffer uses the same scalar bands and green transfer with
+selection overlays disabled; enlarging it with nearest sampling must not enlarge
+the main-view guides into cell-wide bands. The composition adds a 1 CSS-pixel
+warm-orange border around the center cell, plus one horizontal and one vertical
+1 CSS-pixel guide through its center across the magnifier. The guides use lower
+opacity (0.4) than the border and blend over the display without filling or
+replacing neighboring cells. These overlays require no duplicate scalar texture.
+Magnifier visibility and collision placement are owned by
+[tensor-explorer.md](tensor-explorer.md#magnifier).

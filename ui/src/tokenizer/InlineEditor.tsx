@@ -7,14 +7,22 @@ import { annotate } from './annotations';
 import type { Tokenization } from './annotations';
 
 const annotationsChanged = StateEffect.define<DecorationSet>();
-const annotationField = StateField.define<DecorationSet>({
-  create: () => Decoration.none,
+const annotationsStale = StateEffect.define<boolean>();
+const annotationField = StateField.define<{ decorations: DecorationSet; stale: boolean }>({
+  create: () => ({ decorations: Decoration.none, stale: true }),
   update(value, transaction) {
-    if (transaction.docChanged) return Decoration.none;
-    for (const effect of transaction.effects) if (effect.is(annotationsChanged)) return effect.value;
-    return value;
+    let next = transaction.docChanged
+      ? { decorations: value.decorations.map(transaction.changes), stale: true } : value;
+    for (const effect of transaction.effects) {
+      if (effect.is(annotationsChanged)) next = { decorations: effect.value, stale: false };
+      if (effect.is(annotationsStale)) next = { ...next, stale: effect.value };
+    }
+    return next;
   },
-  provide: (field) => EditorView.decorations.from(field),
+  provide: (field) => [
+    EditorView.decorations.from(field, value => value.decorations),
+    EditorView.editorAttributes.from(field, value => ({ 'data-annotations': value.stale ? 'stale' : 'current' })),
+  ],
 });
 
 class AnnotationWidget extends WidgetType {
@@ -84,12 +92,13 @@ interface Props {
   result: Tokenization | undefined;
   activeRow?: number | null | undefined;
   onRowSelect?: ((row: number | null) => void) | undefined;
+  onRowActivate?: ((row: number) => void) | undefined;
   onEdit: (text: string, composing: boolean, promptly?: boolean) => void;
 }
 
 /** CodeMirror's immutable document/history remain separate from decoration-only
  * transactions. Widgets and brackets never enter source, selections or copy. */
-export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect }: Props) {
+export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect, onRowActivate }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const edit = useRef(onEdit);
@@ -117,7 +126,8 @@ export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect
   useLayoutEffect(() => {
     const instance = view.current;
     if (!instance) return;
-    instance.dispatch({ effects: annotationsChanged.of(result && result.text === instance.state.doc.toString() ? decorations(result) : Decoration.none) });
+    instance.dispatch({ effects: result && result.text === instance.state.doc.toString()
+      ? annotationsChanged.of(decorations(result)) : annotationsStale.of(true) });
   }, [result]);
   useLayoutEffect(() => {
     const root = host.current!;
@@ -133,18 +143,26 @@ export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect
         event.preventDefault(); enter(event);
       }
     };
+    const activate = (event: Event) => {
+      if (!(event.target instanceof Element) || !event.target.closest('[data-token-index]')) return;
+      event.preventDefault();
+      const row = rowFor(event.target);
+      if (row !== null) onRowActivate?.(row);
+    };
     const key = (event: KeyboardEvent) => {
-      if (event.key === 'Enter' || event.key === ' ') press(event);
+      if (event.key === 'Enter' || event.key === ' ') { press(event); activate(event); }
     };
     root.addEventListener('pointerover', enter); root.addEventListener('pointerout', leave);
     root.addEventListener('focusin', enter); root.addEventListener('focusout', leave);
+    root.addEventListener('click', activate);
     root.addEventListener('mousedown', press); root.addEventListener('keydown', key);
     return () => {
       root.removeEventListener('pointerover', enter); root.removeEventListener('pointerout', leave);
       root.removeEventListener('focusin', enter); root.removeEventListener('focusout', leave);
+      root.removeEventListener('click', activate);
       root.removeEventListener('mousedown', press); root.removeEventListener('keydown', key);
     };
-  }, [onRowSelect]);
+  }, [onRowSelect, onRowActivate]);
   useLayoutEffect(() => {
     for (const node of host.current!.querySelectorAll<HTMLElement>('[data-token-index], [data-token-indices]')) {
       const indices = node.dataset.tokenIndex ?? node.dataset.tokenIndices ?? '';

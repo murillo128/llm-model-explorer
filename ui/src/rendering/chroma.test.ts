@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chromaRGB, scalarGreen, encodeSRGB, luminance } from './chroma';
-import { formatFloat32, inspectionPosition } from './matrix-inspection';
+import { formatFloat32 } from './matrix-inspection';
 
 describe('green scalar and amber overlay', () => {
   it('orders luminance throughout the green scale and keeps compositing in gamut', () => {
@@ -26,17 +26,4 @@ it('readout round-trips exact float32s including signed zero and nonfinite value
   const words = new Uint32Array([0, 0x80000000, 1, 0x7f7fffff, 0xff7fffff, 0x3f800001, 0x7f800000, 0xff800000, 0x7fc00000]);
   for (const value of new Float32Array(words.buffer)) expect(Object.is(Math.fround(Number(formatFloat32(value))), value)).toBe(true);
   expect(formatFloat32(-0)).toBe('-0');
-});
-
-it('places all viewport-edge cards outside the inspected neighborhood at DPR 1/2', () => {
-  for (const dpr of [1, 2]) for (const [width, height] of [[390, 844], [1440, 900]]) {
-    for (const x of [1, width! / 2, width! - 1]) for (const y of [1, height! / 2, height! - 1]) {
-      const p = inspectionPosition(x, y, width!, height!, dpr);
-      expect(p.left).toBeGreaterThanOrEqual(0);
-      expect(p.top).toBeGreaterThanOrEqual(0);
-      expect(p.left + 170).toBeLessThanOrEqual(width!);
-      expect(p.top + 212).toBeLessThanOrEqual(height!);
-      expect(p.left > x + 5 / dpr || p.left + 170 < x - 5 / dpr || p.top > y + 5 / dpr || p.top + 212 < y - 5 / dpr).toBe(true);
-    }
-  }
 });

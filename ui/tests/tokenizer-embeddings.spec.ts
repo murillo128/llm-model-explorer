@@ -1,3 +1,4 @@
+import { nativeCamera } from './native-camera';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Tokenization } from '../src/tokenizer/annotations';
@@ -54,7 +55,7 @@ for (const dpr of [1, 2]) test(`exact progressive rows, linked annotations and f
   await expect(page.locator('.inspection-readout')).toContainText('0.4375');
   await expect(page.getByText('Streaming input embeddings…')).toBeVisible();
   await send(page, 0, [...payload.slice(16), ...frame(4)], true);
-  await expect(page.getByText('3 token rows · 7 hidden dimensions')).toBeVisible();
+  await expect(page.getByText('[3 × 7] · float32')).toBeVisible();
   const expected = values([2, 0, 2]);
   for (let row = 0; row < 3; row++) {
     if (row) { for (let i = 0; i < 6; i++) await matrix.press('ArrowLeft'); await matrix.press('ArrowDown'); }
@@ -65,6 +66,7 @@ for (const dpr of [1, 2]) test(`exact progressive rows, linked annotations and f
       await expect(page.locator(`[data-token-index="${row}"]`)).toHaveAttribute('data-active-token', '');
     }
   }
+  await nativeCamera(page);
   const canvas = matrix.locator('canvas');
   const box = (await canvas.boundingBox())!;
   expect(box.width * dpr).toBeCloseTo(7, 5); expect(box.height * dpr).toBeCloseTo(3, 5);
@@ -115,20 +117,22 @@ test('A→B→A, late headers/data, options and session changes cancel supersede
   await tokenize(page, 2, tokens('B', [0])); await embeddingCount(page, 2);
   await editor.fill('A'); await count(page, 4); await tokenize(page, 3, tokens('A', [2])); await embeddingCount(page, 3);
   await stream(page, 2, [2]);
-  await expect(page.getByText('1 token rows · 7 hidden dimensions')).toBeVisible();
+  await expect(page.getByText('[1 × 7] · float32')).toBeVisible();
   await stream(page, 1, [0]); await send(page, 0, frame(4), true);
   expect(await page.evaluate(() => window.embeddingHarness.requests.slice(0, 2).map(r => r.aborted))).toEqual([true, true]);
   expect(await page.evaluate(() => window.embeddingHarness.cancelled)).toContain('/operations/00000000-0000-4000-8000-000000000000');
   await page.getByRole('checkbox', { name: 'Add special tokens' }).uncheck(); await count(page, 5);
   await page.getByRole('checkbox', { name: 'Add special tokens' }).check(); await count(page, 6);
-  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  await expect(page.locator('.matrix-scroll')).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
   await tokenize(page, 4, tokens('A', [0], false)); await embeddingCount(page, 3);
   await tokenize(page, 5, tokens('A', [2])); await embeddingCount(page, 4);
   await page.getByRole('button', { name: 'Change session' }).click(); await count(page, 7);
-  await stream(page, 3, [2]); await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  await stream(page, 3, [2]); await expect(page.locator('.matrix-scroll')).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
   await tokenize(page, 6, tokens('A', [0])); await embeddingCount(page, 5); await stream(page, 4, [0]);
   expect(await page.evaluate(() => window.embeddingHarness.requests[4]!.session)).toMatch(/^bbbb/);
-  await expect(page.getByText('1 token rows · 7 hidden dimensions')).toBeVisible();
+  await expect(page.getByText('[1 × 7] · float32')).toBeVisible();
 });
 
 test('unsupported capability, cancellation, invalid echo and empty input stay bounded below the editable prompt', async ({ page }) => {
@@ -156,7 +160,7 @@ test('overlapping Unicode IDs and inserted specials link individual sequence row
     { index: 2, id: 3, token: 'byte-b', decoded: '�', special: false, start: 0, end: 1 },
   ] });
   await embeddingCount(page, 1); await stream(page, 0, [1, 2, 3]);
-  await expect(page.getByText('3 token rows · 7 hidden dimensions')).toBeVisible();
+  await expect(page.getByText('[3 × 7] · float32')).toBeVisible();
   await expect(page.locator('.source-annotation')).toHaveCount(1);
   await expect(page.locator('.token-opening .token-ids')).toHaveText('2, 3');
   for (const row of [0, 1, 2]) {
@@ -194,10 +198,11 @@ test('token hover and activation take over keyboard matrix inspection without mo
   const editor = await start(page);
   await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
   await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2]);
-  await expect(page.getByText('3 token rows · 7 hidden dimensions')).toBeVisible();
+  await expect(page.getByText('[3 × 7] · float32')).toBeVisible();
   await editor.press('Home'); await editor.press('ArrowRight');
   const selection = await page.evaluate(() => window.tokenizerHarness.selection());
   await page.mouse.move(0, 0);
+  await nativeCamera(page);
   const matrix = page.locator('.matrix-scroll');
   await matrix.focus();
   await expect(page.locator('.inspection-readout')).toContainText('row 0 · column 0');
@@ -222,6 +227,7 @@ test('token hover and activation take over keyboard matrix inspection without mo
   await expect(token).toHaveAttribute('data-active-token', '');
   await expect(page.locator('.inspection-readout')).toHaveCount(0);
   await expect(matrix).toBeFocused();
+  await nativeCamera(page);
   const pixels = await page.evaluate(() => {
     const r = window.embeddingHarness.renderers.at(-1)!; r.draw();
     const gl = r.canvas.getContext('webgl2')!;
@@ -241,4 +247,247 @@ test('token hover and activation take over keyboard matrix inspection without mo
     const r = window.embeddingHarness.renderers.at(-1)!;
     return { uploads: r.diagnostics.scalarUploadCalls, cpu: r.diagnostics.cpuBytes, requests: window.embeddingHarness.requests.length };
   })).toEqual(before);
+});
+
+for (const dpr of [1, 2]) test(`panel cameras and offscreen token reveal stay independent at DPR ${dpr}`, async ({ page }) => {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: page.viewportSize()!.width, height: page.viewportSize()!.height, deviceScaleFactor: dpr, mobile: false });
+  const editor = await start(page);
+  const text = 'A'.repeat(400);
+  const ids = Array.from({ length: 400 }, (_, i) => i % 4);
+  await editor.fill(text); await count(page, 2); await tokenize(page, 1, tokens(text, ids));
+  await embeddingCount(page, 1); await stream(page, 0, ids, 64);
+  const prompt = page.getByRole('region', { name: 'Prompt / Tokens', exact: true });
+  const embeddings = page.getByRole('region', { name: 'Input embeddings', exact: true });
+  await expect(prompt.locator('.matrix-panel-header')).toHaveCount(1);
+  await expect(embeddings.locator('.matrix-panel-header')).toHaveCount(1);
+  await expect(embeddings.locator('.matrix-explorer')).toHaveCount(1);
+  await expect(embeddings.getByText('[400 × 64] · float32')).toBeVisible();
+  await expect(embeddings.getByText(/token rows/)).toHaveCount(0);
+  await expect(embeddings.getByRole('button', { name: 'Fit width' })).toBeVisible();
+
+  const matrix = embeddings.locator('.matrix-scroll');
+  await matrix.scrollIntoViewIfNeeded();
+  // Set the caret without asking the browser to reveal the editor's ancestors.
+  await editor.evaluate(node => (node as HTMLElement).focus({ preventScroll: true }));
+  await editor.press('Home'); await editor.press('ArrowRight');
+  await matrix.scrollIntoViewIfNeeded();
+  const promptState = () => page.evaluate(() => {
+    const editor = document.querySelector<HTMLElement>('.tokenizer-editor')!;
+    const prompt = document.querySelector<HTMLElement>('.prompt-panel')!;
+    return { editor: editor.getBoundingClientRect().toJSON(), prompt: prompt.getBoundingClientRect().toJSON(),
+      scroll: [editor.scrollLeft, editor.scrollTop], caret: window.tokenizerHarness.selection(),
+      source: window.tokenizerHarness.source(), document: [scrollX, scrollY] };
+  });
+  await nativeCamera(page);
+  const before = await promptState();
+  const camera = () => page.evaluate(() => {
+    const view = window.embeddingHarness.renderers.at(-1)!.view!;
+    return { x: view.x, y: view.y, scale: view.scaleX, height: view.height / view.scaleY };
+  });
+  const canvas = matrix.locator('canvas');
+  const box = (await canvas.boundingBox())!;
+  const initial = await camera();
+  await page.mouse.move(box.x + 20, box.y + 25); await page.mouse.wheel(0, -400);
+  await expect.poll(async () => (await camera()).scale).toBeGreaterThan(initial.scale);
+  expect(await promptState()).toEqual(before);
+  await matrix.evaluate(node => { node.scrollTop += 120; node.scrollLeft += 20; });
+  await expect.poll(async () => (await camera()).y).toBeGreaterThan(initial.y);
+  expect(await promptState()).toEqual(before);
+  const zoomed = await camera();
+  await page.mouse.move(box.x + 12, box.y + 12); await page.mouse.down();
+  await page.mouse.move(box.x + 65, box.y + 65, { steps: 5 });
+  await expect(page.locator('.matrix-zoom-preview')).toBeVisible();
+  await page.mouse.up();
+  await expect(page.locator('.matrix-zoom-preview')).toHaveCount(0);
+  await expect.poll(async () => (await camera()).scale).toBeGreaterThan(zoomed.scale);
+  expect(await promptState()).toEqual(before);
+  await embeddings.getByRole('button', { name: 'Fit width' }).click();
+  await expect.poll(async () => (await camera()).y).toBe(0);
+  expect(await promptState()).toEqual(before);
+
+  // Synthetic events avoid Playwright's own automatic ancestor scrolling and
+  // exercise the same annotation handlers for a horizontally offscreen token.
+  const token = page.locator('[data-token-index="399"]');
+  const fitted = await camera();
+  await token.dispatchEvent('pointerover');
+  expect(await camera()).toEqual(fitted); // hover is transient, never reveal
+  await token.dispatchEvent('click');
+  await expect.poll(async () => (await camera()).y).toBeGreaterThan(0);
+  let revealed = await camera();
+  expect(revealed.scale).toBe(fitted.scale); expect(revealed.x).toBe(fitted.x);
+  expect(revealed.y).toBeLessThanOrEqual(399); expect(revealed.y + revealed.height).toBeGreaterThanOrEqual(399.99);
+  expect(await promptState()).toEqual(before);
+  await token.dispatchEvent('pointerout');
+  await expect(page.locator('[data-token-index][data-active-token]')).toHaveCount(0);
+  // A fresh activation of the same row is a new reveal intent.
+  await matrix.evaluate(node => { node.scrollTop = 0; });
+  await expect.poll(async () => (await camera()).y).toBe(0);
+  await token.dispatchEvent('keydown', { key: 'Enter' });
+  await expect.poll(async () => (await camera()).y).toBeGreaterThan(0);
+  revealed = await camera(); expect(revealed.scale).toBe(fitted.scale);
+  expect(await promptState()).toEqual(before);
+});
+
+test('session/source replacement clears old linkage before and after the new matrix mounts', async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2]);
+  await page.locator('[data-token-index="2"]').dispatchEvent('click');
+  await expect(page.locator('[data-token-index="2"]')).toHaveAttribute('data-active-token', '');
+  await page.getByRole('button', { name: 'Change session' }).click(); await count(page, 3);
+  await tokenize(page, 2, tokens('ABC'));
+  await expect(page.locator('[data-token-index][data-active-token]')).toHaveCount(0);
+  await embeddingCount(page, 2); await stream(page, 1, [2, 0, 2]);
+  await expect(page.locator('.matrix-scroll')).toBeVisible();
+  await expect(page.locator('[data-token-index][data-active-token]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.embeddingHarness.renderers[0]!.state)).toBe('disposed');
+  await page.locator('.matrix-scroll').focus();
+  await expect(page.locator('[data-token-index="0"]')).toHaveAttribute('data-active-token', '');
+  await editor.fill('DEF'); await count(page, 4); await tokenize(page, 3, tokens('DEF'));
+  await embeddingCount(page, 3); await stream(page, 2, [2, 0, 2]);
+  await expect(page.locator('[data-token-index][data-active-token]')).toHaveCount(0);
+});
+
+test('completed matrices stay mounted through staged replacements, failures and generation mismatches', async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2]);
+  const visibleMatrix = page.locator('.embedding-layer:not([data-staging]) .matrix-scroll');
+  await expect(visibleMatrix).toBeVisible();
+  await visibleMatrix.evaluate(node => { node.setAttribute('data-original-matrix', ''); });
+  const originalRenderer = await page.evaluate(() => window.embeddingHarness.renderers.findIndex(r => r.state !== 'disposed'));
+  await page.evaluate(() => {
+    const frames: number[] = [];
+    Object.assign(window, { matrixFrames: frames, matrixSampling: true });
+    const sample = () => {
+      frames.push(document.querySelectorAll('.embedding-layer:not([data-staging]) .matrix-scroll').length);
+      if (Reflect.get(window, 'matrixSampling')) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  const geometry = () => page.locator('.input-embeddings').evaluate(node => ({
+    height: node.getBoundingClientRect().height,
+    header: node.querySelector('.matrix-panel-header')!.getBoundingClientRect().height,
+    matrix: node.querySelector('.matrix-scroll')!.getBoundingClientRect().height,
+  }));
+  const before = await geometry();
+  await editor.press('End'); await editor.pressSequentially('D'); await count(page, 3);
+  await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'stale');
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  await page.locator('[data-token-index="2"]').dispatchEvent('click');
+  await expect(page.locator('[data-active-token]')).toHaveCount(0);
+  await tokenize(page, 2, tokens('ABCD', [3, 1, 0, 2])); await embeddingCount(page, 2);
+  await page.locator('[data-token-index="3"]').dispatchEvent('click');
+  await expect(page.locator('[data-active-token]')).toHaveCount(0);
+  await visibleMatrix.focus(); await visibleMatrix.press('ArrowDown');
+  await expect(page.locator('[data-active-token]')).toHaveCount(0);
+  await page.evaluate(() => window.embeddingHarness.headers(1));
+  await send(page, 1, [...meta([3, 1, 0, 2]), ...data([3, 1, 0, 2])]);
+  await expect(page.locator('[data-staging] .matrix-scroll')).toHaveCount(1);
+  await expect(page.locator('[data-staging]')).toHaveAttribute('inert', '');
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  expect(await geometry()).toEqual(before);
+  expect(await page.evaluate(index => window.embeddingHarness.renderers[index]!.state, originalRenderer)).not.toBe('disposed');
+
+  // Supersede a fully populated but incomplete replacement; late COMPLETE and
+  // a late tokenization response cannot promote it or restore its row linkage.
+  await editor.press('End'); await editor.pressSequentially('E'); await count(page, 4);
+  await expect(page.locator('[data-staging]')).toHaveCount(0);
+  await editor.pressSequentially('F'); await count(page, 5);
+  await tokenize(page, 4, tokens('ABCDEF', [1])); await embeddingCount(page, 3);
+  await tokenize(page, 3, tokens('ABCDE', [9]));
+  await send(page, 1, frame(4), true);
+  await page.evaluate(() => window.embeddingHarness.headers(2, 422));
+  await expect(page.getByText(/Input embeddings are unavailable/)).toBeVisible();
+  await expect(page.locator('.token-ids')).toHaveText('1');
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  expect(await geometry()).toEqual(before);
+
+  // Tokenizer failure retains both contexts and its error without shifting the panel.
+  await editor.pressSequentially('G'); await count(page, 6);
+  await page.evaluate(() => window.tokenizerHarness.fail(5));
+  await expect(page.getByRole('alert')).toContainText('Previous annotations are stale');
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  expect(await geometry()).toEqual(before);
+  await page.getByRole('button', { name: 'Retry tokenization' }).click(); await count(page, 7);
+  await tokenize(page, 6, tokens('ABCDEFG', [3, 2])); await embeddingCount(page, 4);
+  await page.evaluate(() => window.embeddingHarness.headers(3));
+  await send(page, 3, [...meta([3, 2]), ...data([3, 2])]);
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  await send(page, 3, frame(5, new TextEncoder().encode(JSON.stringify({ code: 'internal_error', message: 'Fixture failure' }))), true);
+  await expect(page.getByText(/Could not load input embeddings/)).toBeVisible();
+  await expect(page.locator('[data-staging]')).toHaveCount(0);
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'current');
+
+  // A successful replacement swaps the already populated renderer atomically.
+  await editor.press('End'); await editor.pressSequentially('H'); await count(page, 8);
+  await tokenize(page, 7, tokens('ABCDEFGH', [0, 1])); await embeddingCount(page, 5);
+  await page.evaluate(() => window.embeddingHarness.headers(4));
+  await send(page, 4, [...meta([0, 1]), ...data([0, 1])]);
+  await expect(page.locator('[data-staging] .matrix-scroll')).toHaveCount(1);
+  await send(page, 4, frame(4), true);
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+  await expect(page.locator('[data-original-matrix]')).toHaveCount(0);
+  await expect(visibleMatrix).toBeVisible();
+  await page.locator('[data-token-index="1"]').dispatchEvent('click');
+  await expect(page.locator('[data-token-index="1"]')).toHaveAttribute('data-active-token', '');
+  const allocated = await page.evaluate(() => window.embeddingHarness.renderers.map(r => ({ state: r.state, bytes: r.diagnostics.cpuBytes })));
+  expect(allocated.filter(r => r.state !== 'disposed')).toHaveLength(1);
+  expect(allocated.filter(r => r.state === 'disposed').every(r => r.bytes === 0)).toBe(true);
+  expect(allocated[originalRenderer]!.state).toBe('disposed');
+  const frames = await page.evaluate(() => {
+    Reflect.set(window, 'matrixSampling', false);
+    return Reflect.get(window, 'matrixFrames') as number[];
+  });
+  expect(frames.length).toBeGreaterThan(5);
+  expect(frames.every(count => count === 1)).toBe(true);
+  // Empty input remains explicit, with only the previous matrix as stale context.
+  await editor.fill(''); await count(page, 9); await tokenize(page, 8, tokens(''));
+  await expect(page.getByText(/No tokens to embed/)).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  await expect(visibleMatrix).toBeVisible();
+});
+
+
+test('disposing a workspace releases both completed and staged matrix resources', async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2]);
+  await expect(page.locator('.matrix-scroll')).toBeVisible();
+  await editor.press('End'); await editor.pressSequentially('D'); await count(page, 3);
+  await tokenize(page, 2, tokens('ABCD', [2, 0])); await embeddingCount(page, 2);
+  await page.evaluate(() => window.embeddingHarness.headers(1));
+  await send(page, 1, [...meta([2, 0]), ...data([2, 0])]);
+  await expect(page.locator('.matrix-scroll')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Close workspace' }).click();
+  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  expect(await page.evaluate(() => window.embeddingHarness.renderers.every(r => r.state === 'disposed' && r.diagnostics.cpuBytes === 0))).toBe(true);
+  await send(page, 1, frame(4), true);
+  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+});
+
+test('a lost staging WebGL context cannot replace the previous completed matrix', async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2]);
+  await expect(page.locator('.matrix-scroll')).toBeVisible();
+  await page.locator('.matrix-scroll').evaluate(node => node.setAttribute('data-original-matrix', ''));
+  await editor.press('End'); await editor.pressSequentially('D'); await count(page, 3);
+  await tokenize(page, 2, tokens('ABCD', [2, 0])); await embeddingCount(page, 2);
+  await page.evaluate(() => window.embeddingHarness.headers(1));
+  await send(page, 1, [...meta([2, 0]), ...data([2, 0])]);
+  await expect(page.locator('[data-staging] .matrix-scroll')).toHaveCount(1);
+  await page.locator('[data-staging] .matrix-scroll canvas').evaluate(canvas => {
+    const gl = (canvas as HTMLCanvasElement).getContext('webgl2')!;
+    gl.getExtension('WEBGL_lose_context')!.loseContext();
+  });
+  await expect(page.getByText(/Could not load input embeddings/)).toBeVisible();
+  await expect(page.locator('[data-staging]')).toHaveCount(0);
+  await send(page, 1, frame(4), true);
+  await expect(page.locator('[data-original-matrix]')).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'current');
 });

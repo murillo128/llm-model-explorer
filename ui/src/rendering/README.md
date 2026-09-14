@@ -24,7 +24,7 @@ viewport.refresh();
 
 For custom composition, construct `TensorRenderer(canvas, descriptor, options)`.
 The renderer owns that canvas's exclusive WebGL2 context. `setView(cssWidth,
-cssHeight, scrollLeft, scrollTop, dpr)` returns integer data origins, framebuffer
+cssHeight, scrollLeft, scrollTop, dpr, scaleX = 1, scaleY = scaleX)` returns logical camera origins, framebuffer
 size, CSS size and the full logical scroll extent. The canvas uses integer CSS
 dimensions plus a DPR-only transform, avoiding Chromium's fractional canvas-size
 rounding. Custom hosts must constrain/clip its untransformed layout box to the
@@ -81,9 +81,29 @@ from received zeros. No client-side histogram computation is performed.
 `setSelection({ row, column })` sets small guide-coordinate/opacity uniforms; `null` clears selection.
 A negative coordinate disables that axis, allowing linked row/column profiles.
 `MatrixViewport` accepts `onInspection` to enable its rank-2 interaction controller.
-The callback supplies exact coordinates, round-trip value text, viewport placement,
+The callback supplies exact coordinates, round-trip value text, pane placement, magnifier visibility,
 and a guarded `draw(canvas)` function for an application-owned 9×9 2D canvas.
 React owns the floating card/readout; the renderer owns the shared-texture display
-pass and its small framebuffer. `drawNeighborhood()` never changes the main view,
+pass and its small framebuffer. `drawNeighborhood()` omits selection tint so the composition can draw thin guides after enlargement. It never changes the main view,
 allocates scalar storage, or uploads weights. See the owning specifications for
 linear-sRGB green/amber compositing, display encoding, missing-data and keyboard semantics.
+
+MatrixViewport enables the uniform square-cell camera for rank-2 tensors. Its
+TensorViewport uses fit-width initially, `fitWidth()` to reset, and
+`zoomAt(scale, focalCSSX, focalCSSY)` for focal navigation. Scale is device pixels
+per logical cell, bounded below by 1. `ViewGeometry.width/height` are framebuffer
+pixels; `x/y` are logical origins and may be fractional. Only distribution renderers
+use unequal axis scales, keeping their 100-bin thickness unchanged. Wheel and
+ctrl-wheel trackpad pinch are local nonpassive listeners; two-touch pinch retains
+the gesture's logical focal point. Disposal removes every listener. Camera changes
+never allocate scalar storage or upload values. Native TensorViewport callers
+remain at 1:1 unless explicitly enabling `zoom`.
+
+`MatrixZoomSelection` adds primary-drag navigation to nonempty rank-2 matrix and
+profile canvases. It snaps to the renderer's rasterized logical boundaries, uses
+a transient amber DOM overlay, and calls `TensorViewport.zoomToBounds()` with
+half-open row/column bounds. Omit an axis to preserve its current logical center.
+Five CSS pixels distinguish selection from inspection; Escape/cancel and a second
+touch discard the preview. Data canvases reserve one-finger drag for selection;
+native scrollbars and the existing two-touch pinch continue to navigate. Camera,
+source, context and disposal changes cancel previews without scalar/count uploads.

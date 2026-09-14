@@ -6,7 +6,7 @@ This document owns Tensor Explorer-specific behavior, layout, interaction, and s
 
 In particular:
 
-- exact logical-cell rendering, scalar-value luminosity, semantic color, and Matrix Explorer viewport behavior are defined by [`rendering.md`](rendering.md);
+- exact scalar-cell rendering, scalar-value luminosity, semantic color, and viewport overflow behavior are defined by [`rendering.md`](rendering.md);
 - browser/runtime and WebGL2 boundaries are defined by [`architecture.md`](architecture.md);
 - tensor inventory, logical tensor materialization, and model-format handling are defined by [`../backend/models.md`](../backend/models.md);
 - statistics and tensor transfer are API/backend concerns defined by [`../api/contract.md`](../api/contract.md) and [`../api/binary-streaming.md`](../api/binary-streaming.md).
@@ -32,13 +32,25 @@ Rank-1 tensors remain in scope, but the dedicated design work so far has not fix
 
 The inventory follows the public descriptor's logical path segments, never filesystem structure. Branches alone use chevron disclosure controls. Each leaf is one compact row with a tensor icon, its relative final path segment, and inline shape/storage dtype when width permits. Selection highlights the row rather than opening a card. Use shallow, capped indentation, truncate long labels, and retain full public identity in accessible names/tooltips so duplicate leaf names remain distinguishable. Native disclosure and selection work with Enter/Space and Tab; arrow keys navigate visible rows, open/close branches, or return to a parent, with Home/End reaching the first/last visible row.
 
-The inventory is secondary navigation and may be hidden to reclaim its workspace width, restored explicitly, and resized while visible. Its initial state is progressively collapsed rather than recursively opening deep layer internals. User choices for inventory visibility, width, and branch expansion should survive revisiting the explorer in the same browser. These navigation preferences do not change tensor identity or model state.
+The inventory is secondary navigation. Its visible Hide inventory control removes
+the entire pane and divider track; a visible, keyboard-accessible Show inventory
+control in the scientific workspace restores it. Focus moves to the corresponding
+control after hiding/restoring. Neither action changes the selected tensor or
+restarts scientific operations. There is no automatic hiding on selection.
 
-The selected tensor has one compact contextual header inside the workspace: its breadcrumb/path plus immediately useful shape and storage dtype. Do not repeat it in global chrome, a large tensor-name title, or a permanent logical-path field. Use descriptors supplied by the inventory/API rather than inferring model metadata from names.
+On a fresh browser preference state, open only first-level branches. Deeper
+branches, including layer lists and their internals, start collapsed. Remember
+explicit branch expansion/collapse choices by the array of public logical path
+segments (shared across models with matching paths); never use filesystem identity.
+Visibility, preferred desktop width, and branch choices persist in local browser
+storage across explorer visits and reloads. If storage is unavailable or malformed,
+use safe defaults and retain working interactions in memory.
 
-An information control beside the tensor identity exposes secondary metadata on demand: full logical path (including any truncated portion), rank, element count, storage dtype/format, and logical dtype. Hover or keyboard focus may expose this information ephemerally. Explicit activation by click, tap, or keyboard pins it for continued reading; a pinned state can be closed explicitly, by Escape, or by interaction outside it. Filesystem paths never appear. General matrix-orientation or keyboard instructions are not tensor metadata and do not belong in this information view.
+The selected tensor has one persistent scientific-panel header, composed through the reusable Matrix Explorer header. Use a single compact row, approximately 36–44 CSS pixels high, with a subtle separator. Keep it stationary while the scientific content scrolls. Show its logical breadcrumb/path, an accessible standard information icon, and secondary shape/storage dtype together. Do not repeat them in global chrome, a large title, a permanent logical-path field, or a second metadata block. Use public descriptors supplied by the inventory/API, never inferred names or filesystem paths.
 
-Pending/streaming operation state is presented within the stable tensor/matrix header so the matrix does not move when loading starts or finishes. Cancellation remains available while work is active. Successful results return to a quiet ready state without permanent completion labels. Keep independent tensor, statistics, and distribution error/cancellation states visible; auxiliary failure must not disable a successful matrix. Rendering resource failures remain explicit and actionable.
+The information control opens a lightweight labelled popover directly below the icon, clamped within the scientific pane when necessary. Pointer hover and keyboard focus show an ephemeral preview without moving focus or showing a close control. Click, tap, Enter, or Space pins the popover and moves focus to its small accessible × close control. Pinned metadata survives pointer departure and focus navigation; the close control, outside pointer interaction, or Escape dismisses it. Close and Escape restore trigger focus without immediately reopening the preview. Touch activation requires no hover. The popover contains only full logical path, rank, element count, storage dtype, storage format when supplied, and logical dtype; general pixel-orientation and keyboard help do not belong here. It floats over the content without reserving scientific width.
+
+Pending/streaming feedback and cancellation occupy reserved space inside the header, with accessible compact text and a spinner. The header height and matrix origin remain fixed across loading, streaming, ready, cancelled, and successful completion. At constrained widths, the status slot may scroll horizontally while cancellation remains reachable. Ordinary success clears status without leaving Complete/Ready labels. Preserve independent tensor, statistics, and distribution errors/cancellation; auxiliary failures must not disable a usable matrix. Rendering resource failures remain explicit and actionable. Use the composable right-side action slot for the compact `Fit width` camera reset alongside operation actions.
 
 The primary screen should remain visually sparse. The current design has three primary data rectangles for a 2D tensor and does not add a fourth legend/control block in the lower-right corner merely to fill space.
 
@@ -52,12 +64,12 @@ For a logical rank-2 tensor with shape `[rows, columns]`:
 
 The default view does not transpose a matrix for aesthetic reasons. If a future explicit transpose operation is added, it must be visible as a view transformation and must not be confused with native tensor order.
 
-Examples for SmolLM2-style MLP matrices make the convention concrete:
+At native scale (`s=1`), examples for SmolLM2-style MLP matrices make the convention concrete:
 
 - a tensor shaped `[576, 1536]` has native geometry `1536 × 576` cells;
 - a tensor shaped `[1536, 576]` has native geometry `576 × 1536` cells.
 
-Matrix cells remain square at every zoom level. The default view enlarges an underfilled matrix to use the available width, but does not shrink below the native one-device-pixel-per-cell scale. Wider matrices therefore retain native scale and horizontal navigation rather than aggregating values. Exact logical mapping and the common camera rules are inherited from [`rendering.md`](rendering.md).
+Exact mapping and overflow/scroll behavior are inherited from [`rendering.md`](rendering.md). Matrix Explorer applies its shared square-cell camera to the matrix and aligned profile axes.
 
 ## Matrix Inspector layout
 
@@ -69,24 +81,46 @@ A rank-2 Tensor Explorer uses three aligned surfaces:
 
 The current design uses a small gap between the main matrix and each distribution panel so the surfaces remain visually distinct while preserving obvious alignment.
 
-For the current reference layout, the distribution depth is `100 px`:
-
-- for a `rows × columns` tensor, the row-distribution panel has 100 value bins across its horizontal depth;
-- the column-distribution panel has 100 value bins across its vertical depth.
-
-This means a `[576, 1536]` tensor has 576 row profiles and 1536 column profiles, each using the same 100-bin value domain. The `100 px` dimension corresponds to the current 100-bin visual design. It is a Tensor Explorer visualization parameter, not a tensor dimension.
+Distribution thickness is fixed at 100 device pixels (100 bins), independent of
+matrix zoom. CSS chrome/gaps remain fixed. The right panel is anchored to the
+right viewport edge and the bottom panel below the matrix viewport, even when
+the matrix data is short or narrow. Their visible data-axis extents match the
+matrix canvas, excluding native scrollbars.
 
 ### Row distributions
 
-Each tensor row owns exactly one logical row profile in the right-hand panel. Along that profile, the panel represents the distribution of values in that tensor row across the shared histogram bins.
-
-The profile's on-screen thickness along Y follows the same matrix camera scale as the corresponding logical row, so zooming the matrix preserves row alignment. The histogram-bin depth itself remains fixed and does not grow with matrix zoom.
+Each logical row owns one horizontal profile in the right panel. Its vertical
+extent scales with that matrix row and shares the exact matrix Y camera origin.
+The horizontal bin axis retains its fixed thickness; this is a density image,
+not a separate bar chart for each row.
 
 ### Column distributions
 
-Each tensor column owns exactly one logical column profile in the bottom panel. Along that profile, the panel represents the distribution of values in that tensor column across the shared histogram bins.
+Each logical column owns one vertical profile in the bottom panel. Its horizontal
+extent scales with that matrix column and shares the exact matrix X camera origin.
+The vertical bin axis retains its fixed thickness.
 
-The profile's on-screen thickness along X follows the same matrix camera scale as the corresponding logical column, while the histogram-bin depth remains fixed.
+### Matrix camera
+
+Each Matrix Explorer instance defaults to **fit width without minification**:
+`s = max(1, floor(availableCSSWidth * DPR) / columns)`. Underfilled matrices expand
+uniformly; wider matrices remain at native scale and use horizontal scrolling.
+The `Fit width` header action restores this scale and resets scroll origins.
+While fit mode remains active, resizing refits the width. Manual zoom retains its
+scale across layout changes. A new source starts a fresh local camera.
+
+Wheel and trackpad/touch pinch zoom around their pointer/gesture focal point,
+retaining its logical coordinate as far as native scroll rounding and bounds
+permit. Zoom-out stops at native 1:1. Zoom-in supports substantial enlargement
+(the implementation ceiling accommodates both 64 times fit width and a single
+logical cell filling either viewport dimension). Scrollbars remain the panning
+mechanism; primary pointer drag selects a region for direct zoom. No minimap is
+present. Camera changes never move the document,
+inventory, another Matrix Explorer or Tokenizer prompt/editor.
+
+The transform applies equally to X and Y, preserving square cells. Hover, click
+and keyboard inspection resolve exact logical indices, including pending cells.
+DPR changes preserve logical camera origins as far as scroll bounds permit.
 
 ### Histogram consistency and numeric scale
 
@@ -96,15 +130,74 @@ The distribution surfaces expose enough numeric scale information to interpret t
 
 The density/intensity normalization may be chosen to keep profiles readable, but it must be stable for the open tensor and must not silently change on hover, scroll, or zoom. Camera navigation changes which rows/columns are visible, not the value-bin domain.
 
+Both orientations expose a compact numeric ruler for the actual shared bin
+domain: low to high runs left to right for rows and top to bottom for columns.
+Use the distribution metadata's endpoints, never the matrix's robust luminosity
+anchors. The current API uses the full finite range; label it as full-range bins
+and show the authoritative true finite `min` and `max` in compact secondary
+metadata. Rounded display values retain exact endpoints in accessible ruler
+names and endpoint tooltips. A narrow profile with extreme outliers can correctly
+reflect concentration near zero; do not stretch its numeric coordinates to fill
+the panel. If a later accepted bin domain is clipped, describe its endpoints as
+bin/clipped bounds and keep true extrema separate.
+
+For a distinct domain containing zero, place a quiet neutral zero reference at
+`(0 - low) / (high - low)` of its bin depth, including at either boundary.
+Graphite rulers/text and a subtle neutral guide remain materially quieter than
+amber inspection guides. Keep rulers outside the data rectangles and retain the
+100-device-pixel profile depth. Constant finite data reports both equal endpoints
+and explicitly states that samples occupy bin 50 with no numeric span; do not
+invent a zero location. All-nonfinite data reports no finite domain/extrema and
+has no numeric ticks. Before distribution metadata arrives, the domain is
+unavailable; valid metadata can label a progressive prefix without claiming that
+the operation is complete. Statistics arrival/failure does not change this scale.
+Reserve a fixed two-line (32 CSS pixel) region for this secondary metadata from
+initial loading onward, so constant-domain or all-nonfinite descriptions never
+shift the matrix origin. Retain wrapped text and keyboard/touch-accessible bounded
+overflow when the pane is too narrow for the complete description.
+
+Hover, native scrolling, and any separately accepted camera navigation change
+only inspected/visible matrix coordinates; they must not rescale value bins or
+their labels. Auxiliary operation status remains independent from these labels.
+
 The matrix must be usable before distribution/statistics results have completed. Distribution panels may progressively become available after the tensor itself; they must not block first render. The production and transport of these statistics remain owned by the backend/API specifications.
 
 ## Matrix viewport navigation
 
 The Matrix Explorer owns one local camera with a uniform scale for both axes. Wheel and pinch gestures zoom around the pointer or gesture focal point so the logical cell under that point remains stable as far as matrix bounds permit. A fit-width reset returns the matrix to its default view. Camera changes are local to the current Matrix Explorer and never alter another matrix view or the Tensor inventory.
 
-The user may also navigate directly to a region. Dragging a nontrivial rectangle over the matrix selects exact logical row/column bounds and previews that pending zoom region with the interaction accent. Releasing the selection zooms to the largest uniform square-cell scale that fits the selected rectangle in the matrix viewport. Cancelling the gesture leaves the camera unchanged.
+Primary pointer dragging directly navigates to a region, without a mode toggle or
+confirmation. A matrix drag of at least 5 CSS pixels previews an arbitrary rectangle
+with a thin warm amber border and an 8%-opacity amber fill. Snap both endpoints to
+the nearest exact logical cell boundary, using the same raster edges as hit testing;
+normalize forward and reverse drags into half-open integer row/column bounds. Clip
+the preview to the data surface and clamp captured pointers outside it to its edge.
+The preview is small transient DOM state, independent of scalar/count storage and
+transfer settings; underlying variation remains readable.
 
-The aligned distribution panels provide one-axis equivalents. Selecting a start/end range in the bottom column-distribution panel zooms to that column range; selecting a range in the right row-distribution panel zooms to that row range. The same square-cell camera is used, and the orthogonal view position is preserved as far as bounds allow. These selections are navigation gestures only; they do not select, transform, or export tensor data.
+On release, fit the entire rectangle with the largest uniform square-cell scale
+allowed by the available matrix viewport dimensions, retaining the native 1:1
+minimum. Center the selected region in any spare dimension and clamp origins to
+matrix bounds. Use the full available viewport even when current data underfills
+it; account for native scrollbar geometry. Zero-width/height selections are no-ops.
+A movement below the threshold remains ordinary exact cell click/tap inspection.
+During an active drag, suspend hover inspection and suppress the release click so
+navigation does not become data selection. Resume normal inspection afterward.
+
+The aligned distribution panels provide one-axis equivalents. Dragging at least
+5 CSS pixels along the bottom panel selects a column boundary range; dragging
+along the right panel selects a row boundary range. Use the same amber preview
+across the fixed bin depth without changing counts. On release, fill the aligned
+matrix viewport dimension with that range using the same uniform camera; retain
+the previous logical center on the orthogonal axis as far as bounds allow.
+
+Escape, pointer cancellation/capture loss, window blur, camera/viewport changes,
+source replacement and context loss remove a pending preview without applying it.
+Wheel zoom cancels a pending selection before using the existing focal zoom.
+One-finger dragging on a data surface selects a region/range; a second touch
+cancels selection and allows the existing two-finger matrix pinch. Native
+scrollbars continue to own panning. These gestures remain local to their Matrix
+Explorer and never transform, export, or select tensor data or zoom prompt views.
 
 ## Scroll synchronization
 
@@ -116,22 +209,29 @@ inventory scroller and one matrix scroller; the scientific pane and its wrappers
 do not add nested scroll surfaces. Transient notices and on-demand metadata may
 retain their own bounded overflow.
 
-At desktop widths the inventory uses 200–280 CSS pixels and the scientific pane
-has a 360 CSS-pixel minimum. Below 760 CSS pixels the panes stack: the inventory
-receives 24% of workspace height (at least 64 CSS pixels), and the scientific pane
-receives the remainder. This preserves usable scientific chrome instead of
-collapsing a side-by-side matrix pane. Native data geometry never shrinks to fit.
+Above 760 CSS pixels, the visible inventory defaults to 280 CSS pixels. A
+focusable vertical divider supports pointer dragging, Left/Right arrows in 16 px
+steps, and Home/End to reach width bounds. Clamp inventory width to 200–480 CSS
+pixels and to the available workspace width minus the 16 px divider and the
+scientific pane's 360 CSS-pixel minimum. A temporarily constrained viewport must
+not overwrite the user's preferred width.
+
+At or below 760 CSS pixels the visible panes stack: the inventory receives 24%
+of workspace height (at least 64 CSS pixels), and the scientific pane receives
+the remainder with an 8 px gap. The desktop width divider is unavailable in this
+layout; the saved desktop width is retained. Hiding the inventory removes its
+entire row and gap as well. The inventory's compact controls remain reachable
+while its tree scrolls. Native data geometry never shrinks to fit.
 
 The matrix viewport receives the scientific pane's remaining height after context,
-distribution depth, and gaps. Reserve its vertical scrollbar
-gutter deterministically, including that gutter in the native-width layout track.
+transient feedback, distribution depth, and gaps. Reserve its vertical scrollbar
+gutter deterministically, excluding that gutter from the available fit width.
 The baseline keeps the native vertical scrollbar track present even for short
 tensors, avoiding changes to content width when vertical overflow changes.
 Use the viewport's actual client dimensions, excluding scrollbars, for rendering.
 A tall tensor whose native width fits must not gain horizontal overflow merely
 because a vertical scrollbar appears. Genuine excess width retains horizontal
-scrolling. Short matrices and rank-1 strips retain their full data height in
-addition to any horizontal scrollbar chrome.
+scrolling. Short matrices retain their zoomed data height within the bounded viewport; rank-1 strips retain their full native data height plus horizontal scrollbar chrome.
 
 Scrolling and zoom preserve distribution alignment:
 
@@ -152,7 +252,7 @@ When the pointer is over a populated matrix cell, Tensor Explorer resolves the e
 
 The current visual treatment uses a compact monospace readout adjacent to the magnifier rather than permanently printing coordinates over the matrix.
 
-Hover must resolve the exact logical cell at every zoom level. Zooming must not average neighboring values or change which tensor value is reported for a logical coordinate.
+Hover must resolve the exact cell at every camera scale, including native one-pixel resolution. Never average cells or report a neighbor’s value.
 
 If a progressively streamed region has not arrived yet, the UI must not invent a value for that cell.
 
@@ -174,7 +274,19 @@ The magnifier:
 - repositions around the active cell when necessary to stay inside the usable scientific pane, avoid the right/bottom distribution panels, and avoid covering the inspected neighborhood when another valid position exists;
 - is an inspection aid, not the Matrix Explorer camera itself.
 
-When the main matrix is zoomed far enough that the local cell neighborhood is directly legible, the magnifier is suppressed automatically. The row/column/value readout and the active logical cell remain available. Zooming back out restores the magnifier without changing logical selection, and the transition should avoid flicker near the visibility threshold.
+The magnifier does not change matrix scale or scroll position. It is suppressed
+when the effective on-screen logical cell size reaches 10 CSS pixels per side
+(`camera scale / devicePixelRatio`). Once hidden, it returns only below 8 CSS
+pixels per side. These per-instance hysteresis thresholds are named UI tokens in
+`inspection-layout.ts`. Hiding or restoring it preserves the active logical cell,
+linked inspection state, and compact row/column/value readout. When shown, it
+continues to inspect the same 9×9 logical neighborhood.
+
+Placement evaluates nearby and boundary candidates inside the visible scientific
+pane, rejects intersections with either distribution surface, and prefers avoiding
+the inspected neighborhood and matrix when space permits. Near the right/bottom
+edges it can move left/above. If the pane cannot accommodate the full card without
+covering distributions, retain the compact readout instead.
 
 ## Selection encoding: green data and amber inspection guides
 
@@ -323,7 +435,8 @@ A conforming current Matrix Inspector for rank-2 tensors has all of these proper
 - linked selection state in both distribution panels;
 - guides blend over data without changing scalar transfer or stored values;
 - no recolored duplicate of the tensor in GPU memory;
-- light, minimal, editor-like UI shell.
+- light, minimal, editor-like UI shell;
+- local square-cell camera with fit-width reset, focal-point wheel/pinch zoom and native scroll navigation; no minimap or primary-drag pan.
 
 ## Progressive composition and density baseline
 
@@ -356,4 +469,29 @@ with statistics and no distributions.
 
 ### Inspection implementation and resource ownership
 
-The matrix viewport and current logical camera resolve pointer coordinates to exact row/column identity; texture-band origins affect sampling, not logical selection identity. Readout uses the retained float32 scalar value's shortest JavaScript round-trip decimal, with explicit `-0`, `NaN`, and signed infinities. Pending cells report unavailable and no numeric value. Stream and transfer updates refresh an active inspection; leaving, disposing, or losing the matrix context clears it. Focus exposes the first visible coordinate, arrow keys inspect adjacent cells with navigation as needed, and Escape/blur clear inspection. The focus outline and coordinate/value text remain independent of hue.
+The renderer's snapped canvas rectangle, current logical camera origin and uniform
+cell scale resolve pointer coordinates through DPR; texture-band origins affect sampling,
+not logical selection identity. Readout uses the retained float32 scalar value's
+shortest JavaScript round-trip decimal, with explicit `-0`, `NaN`, and signed
+infinities. Pending cells report unavailable and no numeric value. Stream and
+transfer updates refresh an active inspection; leaving, disposing, or losing the
+matrix context clears it. Focus exposes the first visible coordinate, arrow keys
+inspect adjacent cells with native scrolling at the current scale as needed, and Escape/blur clear
+inspection. The focus outline and coordinate/value text remain independent of hue.
+
+The 170px magnifier card presents a 9×9 display canvas at 162×162 CSS pixels with
+nearest-neighbor enlargement. It reuses the matrix shader and existing scalar
+bands through one renderer-owned 9×9 RGBA8 renderbuffer/framebuffer. A 324-byte
+readback transfers only the small rendered display image to the card's 2D canvas;
+it is not scalar storage, a selection mask, or a weight upload. There is no new
+WebGL context, weight texture, tensor array, or per-hover request. The offscreen
+pass does not resize the main canvas or change its view/scroll/scale. Clear the
+inspection framebuffer to unavailable before drawing intersecting source bands,
+so out-of-bounds cells never repeat edge weights. Dispose the display resources
+with the owning renderer, including context loss/reconstruction.
+
+The card/readout chooses among four pointer-relative placements and clamps within
+the viewport while excluding the inspected neighborhood where viewport dimensions
+permit a 170×212 CSS-pixel inspection surface. The magnified display retains its thin center marker in addition to linked
+guides. Concrete palette, compositing and display encoding are owned by
+[`rendering.md`](rendering.md#concrete-linear-srgb-scalar-and-guide-transfer).

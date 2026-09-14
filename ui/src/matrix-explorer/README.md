@@ -35,6 +35,11 @@ set `distributions: true` and deliver `updates.distribution('rows', counts, offs
 for `[rows, 100]` counts and `'columns'` for `[100, columns]`. Profiles use the
 existing shared-domain, 100-bin uint32 count contract; the parent validates and
 splits transport metadata/sections. Missing counts stay visibly unavailable.
+Deliver `updates.distributionDomain({ minimum, maximum })` from the authoritative
+distribution metadata to label both rulers and true finite extrema. The current
+contract bins the complete finite range. Null endpoints mean no finite values;
+omitting domain delivery leaves the scale explicitly unavailable. Domain labels
+are independent from `updates.transfer(...)` and are fenced with their source.
 Do not compute substitute statistics or distributions in the browser.
 
 An optional initial `source.transfer` and subsequent `updates.transfer(...)`
@@ -66,3 +71,21 @@ and clears its cell readout. A subsequent local pointer/focus/key interaction
 can inspect a cell again; linked consumers clear their external row when that
 local selection is reported. Clearing the external row does not clear a newer
 local cell.
+
+`PanelHeader` composes identity, information, summary, status, and right-side actions in a fixed 40px scientific toolbar. Pass it through `MatrixExplorer.header`; status changes do not restart the source. `InfoPopover` supplies hover/focus previews and click/tap/keyboard pinning, with pinned-only close, outside/Escape dismissal, and focus restoration. Neither primitive depends on tensor transport or tokenizer state.
+
+Every rank-2 instance owns a fit-width camera with wheel/pinch zoom and native
+scroll navigation. `Fit width` resets its scale/origins; replacing `source` starts
+a fresh camera. A plain `header` is placed in PanelHeader beside this action.
+For an existing contextual header, pass `header={(cameraControls) => ...}` and
+compose `cameraControls` into its action slot. Header changes do not resubscribe.
+Distribution thickness and value-bin rulers remain independent of camera scale;
+their data axes share the matrix transform exactly. Rank-1 remains a native strip.
+
+`revealRow={{ row }}` is a narrow viewport intent for linked consumers. A new
+object identity requests minimal vertical scroll to expose that logical row,
+without changing scale, horizontal origin or browser focus. Keep the object
+stable between activations, and clear it on source/generation replacement.
+Invalid indices are ignored. If one cell is taller than the viewport, reveal its
+top edge. Row highlighting and reveal are separate: hover should normally set
+only `highlightedRow`, while explicit activation may issue `revealRow`.

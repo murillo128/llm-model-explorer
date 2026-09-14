@@ -2,9 +2,10 @@ import { defineConfig, devices } from '@playwright/test';
 
 const port = Number(process.env.UI_TEST_PORT ?? 4173);
 const baseURL = `http://127.0.0.1:${port}`;
+// Both CI workflows share one physical host; bound concurrent SwiftShader work.
 const workers = process.env.PLAYWRIGHT_WORKERS
   ? Number(process.env.PLAYWRIGHT_WORKERS)
-  : process.env.CI ? 4 : 1;
+  : process.env.CI ? 2 : 1;
 
 export default defineConfig({
   testDir: './tests',

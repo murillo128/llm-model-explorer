@@ -12,11 +12,14 @@ interface Props {
   addSpecialTokens?: boolean;
   tokenizerAvailable?: boolean;
   signal?: AbortSignal;
-  activeRow?: number | null;
-  onRowSelect?: (row: number | null) => void;
+  header?: ReactNode;
+  activeRow?: { signal: AbortSignal; row: number | null } | undefined;
+  onRowSelect?: (row: number | null, current: CurrentTokenization | undefined) => void;
+  onRowActivate?: (row: number, current: CurrentTokenization | undefined) => void;
   downstream?: (result: CurrentTokenization | undefined) => ReactNode;
 }
 interface Editor { text: string; generation: number; composing: boolean; promptly: boolean }
+/** Each request owns a unique signal: also the opaque token/embedding generation identity. */
 export interface CurrentTokenization { data: Tokenization; signal: AbortSignal }
 interface Result {
   editor: Editor; context: object;
@@ -25,10 +28,11 @@ interface Result {
 
 /** The editor document owns source and history. Responses change decorations
  * only; every request/result is fenced by editor and context generations. */
-export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, tokenizerAvailable = true, signal, activeRow, onRowSelect, downstream }: Props) {
+export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, tokenizerAvailable = true, signal, header, activeRow, onRowSelect, onRowActivate, downstream }: Props) {
   const id = useId();
   const [editor, setEditor] = useState<Editor>({ text: '', generation: 0, composing: false, promptly: false });
   const [result, setResult] = useState<Result>();
+  const [hasPrevious, setHasPrevious] = useState(false);
   const generation = useRef(0);
   const requestGeneration = useRef(0);
   const pending = useRef<AbortController | null>(null);
@@ -39,7 +43,7 @@ export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, to
 
   function edit(text: string, isComposing: boolean, promptly = false) {
     pending.current?.abort();
-    onRowSelect?.(null);
+    onRowSelect?.(null, undefined);
     setEditor({ text, generation: ++generation.current, composing: isComposing, promptly });
   }
 
@@ -58,7 +62,10 @@ export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, to
         if (!isCurrent()) return;
         if (data.text !== editor.text || data.add_special_tokens !== addSpecialTokens) {
           setResult({ ...stamp, error: 'The tokenizer returned a result for different input. Edit the prompt or retry.' });
-        } else setResult({ ...stamp, data, signal: controller.signal });
+        } else {
+          setHasPrevious(true);
+          setResult({ ...stamp, data, signal: controller.signal });
+        }
       }, (error: unknown) => {
         if (!isCurrent()) return;
         const message = error instanceof ApiFailure && error.detail?.code === 'unsupported_representation'
@@ -74,12 +81,23 @@ export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, to
   const message = !tokenizerAvailable ? 'Tokenizer unavailable for this model. You can still edit the prompt.'
     : signal?.aborted ? 'Session view closed.'
     : editor.composing ? 'Composing text… Tokenization will resume when composition finishes.'
-    : current?.error ?? (current?.data ? `${current.data.tokens.length} tokens · current prompt` : 'Tokenizing… Previous boundaries are hidden.');
-  return <><section className="prompt-tokenizer" aria-label="Live prompt tokenization">
+    : current?.error ?? (current?.data ? `${current.data.tokens.length} tokens · current prompt` : 'Tokenizing…');
+  const tokenization = current?.data && current.signal ? { data: current.data, signal: current.signal } : undefined;
+  const prompt = <section className="prompt-tokenizer" aria-label="Live prompt tokenization">
     <label className="section-label" htmlFor={id}>Prompt</label>
     <p id={`${id}-help`} className="tokenizer-help">Edit the prompt directly. Gray brackets and IDs annotate source spans. Gray token text is an annotation without a source span.</p>
-    <InlineEditor id={id} result={current?.data} onEdit={edit} activeRow={activeRow} onRowSelect={onRowSelect} />
-    <p id={`${id}-status`} role={current?.error ? 'alert' : 'status'} className="tokenizer-status">{message}</p>
-    {current?.error && <button type="button" className="button" onClick={() => edit(editor.text, false, true)}>Retry tokenization</button>}
-  </section>{downstream?.(current?.data && current.signal ? { data: current.data, signal: current.signal } : undefined)}</>;
+    <InlineEditor id={id} result={current?.data} onEdit={edit}
+      activeRow={activeRow?.signal === current?.signal ? activeRow?.row : null}
+      onRowSelect={row => onRowSelect?.(row, tokenization)}
+      onRowActivate={row => onRowActivate?.(row, tokenization)} />
+    <div className="tokenizer-status-row">
+      <p id={`${id}-status`} role={current?.error ? 'alert' : 'status'} className="tokenizer-status">
+        {message}{!current?.data && hasPrevious ? ' Previous annotations are stale.' : ''}
+      </p>
+      <button type="button" className="button tokenizer-retry" hidden={!current?.error}
+        onClick={() => edit(editor.text, false, true)}>Retry tokenization</button>
+    </div>
+  </section>;
+  return <>{header ? <section className="prompt-panel" aria-label="Prompt / Tokens">{header}{prompt}</section> : prompt}
+    {downstream?.(tokenization)}</>;
 }

@@ -8,6 +8,9 @@ import { dirname, join } from 'node:path';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { installProbe } from './probe';
+import { camera, zoom, drag, panelGeometry, promptViewport } from './usability';
+import { nativeCamera } from '../tests/native-camera';
+import { revealTensor } from '../tests/tensor-tree-helpers';
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
 const componentPort = Number(process.env.UI_TEST_PORT ?? 4173);
@@ -46,7 +49,7 @@ async function idle() {
 }
 async function open(page: Page, name = matrix) {
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/fixture');
-  await page.getByRole('button', { name: new RegExp(name.replaceAll('.', '\\.')) }).click();
+  await (await revealTensor(page.getByRole('button', { includeHidden: true, name: new RegExp(name.replaceAll('.', '\\.')) }))).click();
 }
 async function complete(page: Page) {
   await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
@@ -146,6 +149,9 @@ test('production UI renders before producer completes; native geometry, inspecti
   // Main extent must preserve 1536 columns and 576 rows regardless of viewport/DPR.
   expect(parseFloat(geometry.extentWidth) * limits.dpr).toBe(1536);
   expect(parseFloat(geometry.extentHeight) * limits.dpr).toBe(576);
+  // Reserve room for the full card at DPR 1. At DPR 2 the original pane
+  // already fits it and retains the vertical overflow asserted below.
+  if (limits.dpr === 1) await page.setViewportSize({ width: 1000, height: 700 });
   await canvas.scrollIntoViewIfNeeded();
   await page.locator('.matrix-scroll').evaluate((node) => { node.scrollLeft = 53; node.scrollTop = 27; });
   await expect.poll(async () => canvas.getAttribute('data-origin')).not.toBe('0,0');
@@ -155,6 +161,8 @@ test('production UI renders before producer completes; native geometry, inspecti
   expect(origin[0]).toBeGreaterThan(0);
   expect(origin[1]).toBeGreaterThan(0);
   const neutral = await pixel(page, 8, 8);
+  const neutralNeighborhood = await page.evaluate(() => Array.from({ length: 81 }, (_, i) =>
+    (window as any).__acceptance.pixel('.matrix-scroll canvas', i % 9 + 4, Math.floor(i / 9) + 4)));
   const profileBefore = await page.evaluate(() => ['.row-distributions canvas', '.column-distributions canvas']
     .map(selector => (window as any).__acceptance.pixel(selector, 8, 8)));
   for (const rgb of profileBefore) {
@@ -188,18 +196,18 @@ test('production UI renders before producer completes; native geometry, inspecti
   const neighborhood = page.getByLabel('9 by 9 matrix neighborhood');
   expect(await neighborhood.evaluate((c) => [(c as HTMLCanvasElement).width, (c as HTMLCanvasElement).height])).toEqual([9, 9]);
   const center = await neighborhood.evaluate((c) => [...(c as HTMLCanvasElement).getContext('2d')!.getImageData(4, 4, 1, 1).data]);
-  center.forEach((v, i) => expect(Math.abs(v - selected[i])).toBeLessThanOrEqual(1));
-  const comparison = await page.evaluate(() => {
+  center.forEach((v, i) => expect(Math.abs(v - neutral[i])).toBeLessThanOrEqual(1));
+  const comparison = await page.evaluate((neutralNeighborhood) => {
     const c = document.querySelector<HTMLCanvasElement>('[aria-label="9 by 9 matrix neighborhood"]')!;
     const bytes = c.getContext('2d')!.getImageData(0, 0, 9, 9).data;
     let maximumDifference = 0;
     for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) {
-      const expected = (window as any).__acceptance.pixel('.matrix-scroll canvas', x + 4, y + 4);
+      const expected = neutralNeighborhood[y * 9 + x];
       for (let channel = 0; channel < 4; channel++) maximumDifference = Math.max(maximumDifference,
         Math.abs(bytes[(y * 9 + x) * 4 + channel]! - expected[channel]));
     }
     return maximumDifference;
-  });
+  }, neutralNeighborhood);
   expect(comparison).toBeLessThanOrEqual(1);
   await page.screenshot({ path: testInfo.outputPath('matrix-inspection.png') });
   await testInfo.attach('measurements', { body: JSON.stringify({ browser: context.browser()!.version(), viewport: page.viewportSize(), backendDevice: 'cpu', limits, firstUploadMs: first.firstUpload - started,
@@ -207,8 +215,9 @@ test('production UI renders before producer completes; native geometry, inspecti
     producerHeldUntilMs: beforeRelease - started, resources: await metrics(page) }, null, 2), contentType: 'application/json' });
   // Repeated real navigation must release GL allocations, readers and CPU owners.
   for (const name of ['model.norm.weight', 'model.layers.0.mlp.up_proj.weight', 'model.embed_tokens.weight']) {
-    await page.getByRole('button', { name: new RegExp(name.replaceAll('.', '\\.')) }).click();
+    await (await revealTensor(page.getByRole('button', { includeHidden: true, name: new RegExp(name.replaceAll('.', '\\.')) }))).click();
     await complete(page);
+    await nativeCamera(page);
     const dimensions = name === 'model.norm.weight' ? [576, 1] : name.includes('up_proj') ? [576, 1536] : [576, 1025];
     expect(await canvas.evaluate((c) => {
       const extent = c.closest('.matrix-scroll')!.firstElementChild as HTMLElement;
@@ -220,7 +229,7 @@ test('production UI renders before producer completes; native geometry, inspecti
     }
     await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
     // The real empty prompt includes BOS, so the embedding view owns one row.
-    await expect(page.getByText('1 token rows · 576 hidden dimensions')).toBeVisible();
+    await expect(page.getByText('[1 × 576] · float32')).toBeVisible();
     await expect.poll(async () => (await metrics(page)).textures).toBe(1);
     await expect.poll(async () => (await metrics(page)).readers).toBe(0);
     const cdp = await context.newCDPSession(page);
@@ -288,7 +297,7 @@ test('cancel and network disconnect preserve incomplete status and return resour
   for (const [name, disconnect] of [[matrix, false], ['model.layers.0.mlp.up_proj.weight', true]] as const) {
     await control('arm', { kind: 'logical_tensor' });
     if (name === matrix) await open(page, name);
-    else await page.getByRole('button', { name: new RegExp(name.replaceAll('.', '\\.')) }).click();
+    else await (await revealTensor(page.getByRole('button', { includeHidden: true, name: new RegExp(name.replaceAll('.', '\\.')) }))).click();
     await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
     if (disconnect) {
       await page.context().setOffline(true);
@@ -315,7 +324,7 @@ test('real producer errors are distinct from cancellation in both primary and au
   await idle();
   const before = Object.keys((await control()).artifacts);
   await control('arm', { kind: 'logical_tensor', mode: 'midstream-error' });
-  await page.getByRole('button', { name: /model\.layers\.0\.mlp\.up_proj\.weight/ }).click();
+  await (await revealTensor(page.getByRole('button', { includeHidden: true, name: /model\.layers\.0\.mlp\.up_proj\.weight/ }))).click();
   await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
   await control('release', {});
   await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'failed');
@@ -330,8 +339,9 @@ test('local reference Base opens normalization, both MLP orientations and embedd
   expect(model).toBeTruthy();
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(model.id);
   for (const tensor of referenceSamples.selected) {
-    await page.getByRole('button', { name: new RegExp(tensor.name.replaceAll('.', '\\.')) }).click();
+    await (await revealTensor(page.getByRole('button', { includeHidden: true, name: new RegExp(tensor.name.replaceAll('.', '\\.')) }))).click();
     await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
+    await nativeCamera(page);
     await expect(page.locator('[data-result=tensor]')).toHaveCount(0, { timeout: 180_000 });
     if (tensor.shape.length === 2) {
       const canvas = page.locator('.matrix-scroll canvas');
@@ -353,10 +363,10 @@ test('local reference Base opens normalization, both MLP orientations and embedd
 
 // All routes below still reach the production service. Barriers delay actual
 // responses; no numeric/tokenizer response is synthesized in this suite.
-async function tokenizer(page: Page) {
+async function tokenizer(page: Page, waitForInitial = true) {
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/fixture');
   await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
-  await expect(page.getByText('1 token rows · 576 hidden dimensions')).toBeVisible();
+  if (waitForInitial) await embeddingDone(page, 1);
   return page.getByRole('textbox', { name: 'Prompt', exact: true });
 }
 async function closeSession(page: Page) {
@@ -367,7 +377,9 @@ async function closeSession(page: Page) {
   await expect.poll(async () => (await metrics(page)).readers).toBe(0);
 }
 async function embeddingDone(page: Page, rows: number) {
-  await expect(page.getByText(`${rows} token rows · 576 hidden dimensions`)).toBeVisible();
+  await expect(page.getByText(`[${rows} × 576] · float32`).filter({ visible: true })).toBeVisible();
+  await expect(page.locator('.input-embeddings [data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+  await expect(page.locator('.input-embeddings .embedding-layer:not([data-staging]) .matrix-panel-status')).toBeEmpty();
 }
 async function documentFits(page: Page) {
   expect(await page.evaluate(() => ({
@@ -378,7 +390,16 @@ async function documentFits(page: Page) {
 }
 
 test('real ordered embeddings render progressively with exact duplicate rows and linked annotations', async ({ page, context }, testInfo) => {
-  const input = await tokenizer(page);
+  // First delivery must be usable progressively, before any completed matrix exists.
+  await control('arm', { kind: 'input_embeddings' });
+  const input = await tokenizer(page, false);
+  await expect(page.getByRole('status').filter({ hasText: 'Streaming input embeddings…' })).toBeVisible();
+  await expect.poll(async () => (await control()).control.entered).toBe(true);
+  await page.locator('.matrix-scroll').focus();
+  const firstId = Number(await page.locator('[data-token-index="0"]').textContent());
+  await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 0${value(firstId * 576)}`);
+  expect((await control()).control.released).toBe(false);
+  await control('release', {}); await embeddingDone(page, 1);
   const readsBefore = (await control()).source_reads.row_elements;
   await page.evaluate(() => { (window as any).__acceptance.captureScalars = true; });
   await control('arm', { kind: 'input_embeddings' });
@@ -390,16 +411,20 @@ test('real ordered embeddings render progressively with exact duplicate rows and
   const ids: number[] = result.tokens.map((t: any) => t.id);
   expect((await requested).postDataJSON()).toEqual({ token_ids: ids });
   expect(ids[1]).toBe(ids.at(-1));
-  await expect(page.getByText('Streaming input embeddings…')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Streaming input embeddings…' })).toBeVisible();
   await expect.poll(async () => (await control()).control.entered).toBe(true);
   const prefix = await page.evaluate(() => [...(window as any).__acceptance.scalarValues]);
   expect(prefix.length).toBeGreaterThan(0); expect(prefix.length).toBeLessThan(ids.length * 576);
-  const scroller = page.locator('.matrix-scroll');
+  const scroller = page.locator('.matrix-scroll:visible');
   await scroller.focus();
   await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 0${value(ids[0]! * 576)}`);
   expect((await control()).control.released).toBe(false);
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  await expect(page.locator('[data-token-index][data-active-token]')).toHaveCount(0);
+  await expect(page.locator('[data-staging] .matrix-scroll')).toHaveCount(1);
   await control('release', {});
   await embeddingDone(page, ids.length);
+  await scroller.focus();
   const uploaded = await page.evaluate(() => [...(window as any).__acceptance.scalarValues]);
   expect(uploaded).toEqual(ids.flatMap(id => Array.from({ length: 576 }, (_, col) => value(id * 576 + col))));
   const reads = (await control()).source_reads;
@@ -443,7 +468,8 @@ test('real A→B→A response reordering and model/session changes show only the
   });
   await input.fill('A'); await expect.poll(() => entered).toBe(1);
   await input.fill('B'); await expect.poll(() => entered).toBe(2);
-  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  await expect(page.locator('.matrix-scroll:visible')).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
   await input.fill('A'); await expect.poll(() => entered).toBe(3);
   await embeddingDone(page, 2);
   const canvas = page.locator('.matrix-scroll'); await canvas.focus(); await canvas.press('ArrowDown');
@@ -456,7 +482,7 @@ test('real A→B→A response reordering and model/session changes show only the
   // Keep a real stream open, then replace its owning model/session twice.
   await control('arm', { kind: 'input_embeddings' });
   await input.fill('switch😀');
-  await expect(page.getByText('Streaming input embeddings…')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Streaming input embeddings…' })).toBeVisible();
   await page.getByRole('combobox').selectOption('acceptance/unsupported');
   await expect(page.getByText(/Input embeddings are unavailable/)).toBeVisible();
   await expect(page.locator('.matrix-scroll')).toHaveCount(0);
@@ -466,7 +492,7 @@ test('real A→B→A response reordering and model/session changes show only the
   await idle();
   await control('release', {});
   await page.getByRole('combobox').selectOption('acceptance/fixture');
-  await expect(page.locator('.input-embeddings > header [role=status]')).toContainText('hidden dimensions');
+  await expect(page.locator('.input-embeddings .embedding-shape')).toContainText('× 576] · float32');
   await closeSession(page);
 });
 
@@ -475,10 +501,12 @@ test('repeated prompt edits and explorer unmounts cancel real embedding readers 
     const input = await tokenizer(page);
     await control('arm', { kind: 'input_embeddings' });
     await input.fill(`cancel-${cycle}😀`);
-    await expect(page.getByText('Streaming input embeddings…')).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Streaming input embeddings…' })).toBeVisible();
     await expect.poll(async () => (await control()).control.entered).toBe(true);
     await input.fill(`replacement-${cycle}`);
-    await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+    await expect(page.locator('[data-staging]')).toHaveCount(0);
+    await expect(page.locator('.matrix-scroll:visible')).toBeVisible();
+    await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
     await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
     await idle();
     await expect.poll(async () => (await metrics(page)).textures).toBe(0);
@@ -503,18 +531,19 @@ test.describe('production native pane geometry', () => {
       await page.getByRole('button', { name: 'Refresh models', exact: true }).click(); await refreshed;
       await expect(page.locator('.tensor-identity')).toHaveCount(1);
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(0);
-      await expect(page.locator('.tensor-leaf-name')).toHaveText(Array(90).fill('weight'));
+      await expect(page.locator('.tensor-leaf-name')).toHaveText(Array(94).fill('weight'));
       await expect(page.locator('.tensor-choice summary, .tensor-choice details')).toHaveCount(0);
-      const info = page.getByRole('button', { name: 'Tensor information and help' });
+      const info = page.getByRole('button', { name: 'Tensor information' });
       await info.focus(); await info.press('Enter');
-      await expect(page.getByRole('dialog', { name: 'Tensor information and help' })).toContainText('Logical dtype');
+      await expect(page.getByRole('dialog', { name: 'Tensor information' })).toContainText('Logical dtype');
       await page.keyboard.press('Escape'); await expect(info).toBeFocused();
       await expect(page.getByText(/One value per device pixel/)).toHaveCount(0);
       const evidence = [];
       for (const [name, horizontal, vertical] of [['fits', false, false], ['tall', false, true], ['wide', true, false], ['both', true, true]] as const) {
-        const leaf = page.getByRole('button', { name: new RegExp(`^layout\\.${name}\\.weight`) });
-        await leaf.focus(); await leaf.press('Enter'); await expect(leaf).toHaveAttribute('aria-pressed', 'true');
+        const leaf = page.getByRole('button', { includeHidden: true, name: new RegExp(`^layout\\.${name}\\.weight`) });
+        await revealTensor(leaf); await leaf.focus(); await leaf.press('Enter'); await expect(leaf).toHaveAttribute('aria-pressed', 'true');
         await complete(page); await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+        await nativeCamera(page);
         const geometry = () => page.evaluate(() => {
           const m = document.querySelector<HTMLElement>('.matrix-scroll')!;
           const rect = (s: string) => { const r = document.querySelector(s)!.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; };
@@ -546,7 +575,7 @@ test.describe('production native pane geometry', () => {
           await documentFits(page); evidence.push({ name, ...g });
         }
       }
-      await expect(page.locator('.tensor-header')).not.toContainText('complete');
+      await expect(page.locator('.matrix-panel-header')).not.toContainText('complete');
       await page.screenshot({ path: testInfo.outputPath('compact-tensor.png') });
       await testInfo.attach('measurements', { body: JSON.stringify({ scenario: 'native geometry', viewport,
         limits: await page.evaluate(() => (window as any).__acceptance.limits()), cases: evidence }), contentType: 'application/json' });
@@ -559,7 +588,7 @@ test('production prompt pixels, selection, history and composition survive embed
   const editor = await tokenizer(page);
   await control('arm', { kind: 'input_embeddings' });
   await editor.fill('hello world');
-  await expect(page.getByText('Streaming input embeddings…')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Streaming input embeddings…' })).toBeVisible();
   const prompt = page.getByRole('region', { name: 'Live prompt tokenization' });
   const nav = page.getByRole('button', { name: 'Tokenizer Explorer', exact: true });
   await nav.focus(); await page.mouse.move(0, 0);
@@ -596,12 +625,284 @@ test('production prompt pixels, selection, history and composition survive embed
   page.on('request', r => { if (r.url().endsWith('/tokenize')) duringComposition.push(r.postDataJSON().text); });
   await editor.dispatchEvent('compositionstart'); await editor.fill('に');
   await expect(page.locator('.tokenizer-status')).toContainText('Composing');
-  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  await expect(page.locator('.matrix-scroll:visible')).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
   // Deliberately exceed the production debounce while the IME owns the source.
   await page.waitForTimeout(250); expect(duringComposition).toEqual([]);
   await editor.fill('日本'); await editor.dispatchEvent('compositionend', { data: '日本' });
   await expect(page.locator('.tokenizer-status')).toContainText('current prompt');
   await embeddingDone(page, 7);
   expect(duringComposition).toEqual(['日本']);
+  await closeSession(page);
+});
+
+test('integrated inventory preferences and metadata preserve streaming panel geometry', async ({ page }, testInfo) => {
+  const name = 'layout.fits.weight';
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/fixture');
+  await expect(page.locator('.tensor-tree').first()).toBeVisible();
+  expect(await page.locator('.tensor-tree details').evaluateAll(nodes => nodes.every(node =>
+    node.hasAttribute('open') === !node.parentElement!.closest('details')))).toBe(true);
+  await control('arm', { kind: 'logical_tensor' });
+  await open(page, name);
+  await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
+  const initial = await panelGeometry(page);
+  expect(initial['.matrix-panel-header']![3]).toBe(40);
+  const info = page.getByRole('button', { name: 'Tensor information', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Tensor information' });
+  const close = page.getByRole('button', { name: 'Close tensor information' });
+  await info.hover(); await expect(dialog).toBeVisible(); await expect(close).toHaveCount(0);
+  const icon = (await info.boundingBox())!;
+  expect((await dialog.boundingBox())!.y).toBe(icon.y + icon.height);
+  await info.click(); await expect(close).toBeFocused();
+  await page.mouse.move(0, 0); await expect(dialog).toBeVisible();
+  await expect(dialog.locator('dt')).toHaveText(['Logical path', 'Rank', 'Elements', 'Storage dtype', 'Storage format', 'Logical dtype']);
+  expect(await panelGeometry(page)).toEqual(initial);
+  await page.keyboard.press('Escape'); await expect(info).toBeFocused();
+  await control('release', {}); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  expect(await panelGeometry(page)).toEqual(initial);
+  const canvas = await page.locator('.matrix-scroll canvas').elementHandle();
+  const resources = await metrics(page);
+  const pane = page.getByRole('region', { name: 'Tensor Explorer workspace', exact: true });
+  const inventory = page.getByRole('complementary', { name: 'Tensor inventory' });
+  const before = (await pane.boundingBox())!, width = (await inventory.boundingBox())!.width;
+  await page.getByRole('button', { name: 'Hide inventory' }).click();
+  await expect(page.getByRole('button', { name: 'Show inventory' })).toBeFocused();
+  expect((await pane.boundingBox())!.width - before.width).toBe(width + 16);
+  expect(await pane.boundingBox()).toEqual(await page.locator('#workspace').boundingBox());
+  await page.getByRole('button', { name: 'Show inventory' }).click();
+  const divider = page.getByRole('separator', { name: 'Resize tensor inventory' });
+  await divider.focus(); await divider.press('End');
+  await expect(divider).toHaveAttribute('aria-valuenow', '480');
+  expect(await canvas!.evaluate(node => node === document.querySelector('.matrix-scroll canvas'))).toBe(true);
+  expect(await metrics(page)).toMatchObject({ uploads: resources.uploads, createdTextures: resources.createdTextures });
+  await page.getByRole('button', { name: 'Hide inventory' }).click();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Show inventory' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show inventory' }).click();
+  await expect(divider).toHaveAttribute('aria-valuenow', '480');
+  await expect(page.getByRole('button', { name: new RegExp(`^${name}`) })).toBeVisible();
+  await documentFits(page);
+  await testInfo.attach('measurements', { body: JSON.stringify({ initial, reclaimedWidth: width + 16, restoredWidth: 480 }), contentType: 'application/json' });
+  await closeSession(page);
+});
+
+test('integrated camera gestures, exact selection, aligned scales and adaptive inspection retain scalar storage', async ({ page }, testInfo) => {
+  await open(page, 'layout.fits.weight'); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  let c = await camera(page, 32, 32);
+  expect(c.scaleX).toBeCloseTo(Math.max(1, Math.floor(c.width * c.dpr) / 32));
+  expect(c.scaleY).toBeCloseTo(c.scaleX);
+  await open(page); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await nativeCamera(page);
+  expect((await camera(page, 576, 1536)).scaleX).toBe(1);
+  const resource = await metrics(page);
+  const rulers = await page.locator('.distribution-scale').evaluateAll(nodes => nodes.map(n => n.getAttribute('aria-label')));
+  const canvas = await page.locator('.matrix-scroll canvas').elementHandle();
+  await zoom(page, 576, 1536, 3);
+  c = await camera(page, 576, 1536);
+  const focal = { x: c.rect.left + 91, y: c.rect.top + 71 };
+  await page.mouse.move(focal.x, focal.y); await page.mouse.wheel(0, -180);
+  await expect.poll(async () => (await camera(page, 576, 1536)).scaleX).toBeGreaterThan(c.scaleX);
+  const after = await camera(page, 576, 1536);
+  expect(Math.abs(c.x + 91 * c.dpr / c.scaleX - after.x - 91 * c.dpr / after.scaleX)).toBeLessThanOrEqual(2 * c.dpr / after.scaleX);
+  expect(Math.abs(c.y + 71 * c.dpr / c.scaleY - after.y - 71 * c.dpr / after.scaleY)).toBeLessThanOrEqual(2 * c.dpr / after.scaleY);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: focal.x - 20, y: focal.y }, { x: focal.x + 20, y: focal.y }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: focal.x - 40, y: focal.y }, { x: focal.x + 40, y: focal.y }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect.poll(async () => (await camera(page, 576, 1536)).scaleX).toBeGreaterThan(after.scaleX);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false }); await cdp.detach();
+  for (const axis of ['matrix', 'rows', 'columns'] as const) {
+    await page.getByRole('button', { name: 'Fit width', exact: true }).click();
+    await zoom(page, 576, 1536, 6);
+    c = await camera(page, 576, 1536);
+    const selector = axis === 'matrix' ? '.matrix-scroll canvas' : axis === 'rows' ? '.row-distributions canvas' : '.column-distributions canvas';
+    const box = (await page.locator(selector).boundingBox())!;
+    await drag(page, { x: box.x + 12, y: box.y + 12 },
+      { x: box.x + (axis === 'rows' ? 12 : 72), y: box.y + (axis === 'columns' ? 12 : 42) });
+    const bounds = axis === 'matrix' ? { columns: [2, 12], rows: [2, 7] } : { [axis]: [2, axis === 'rows' ? 7 : 12] };
+    await expect(page.locator('.matrix-zoom-preview')).toHaveAttribute('data-bounds', JSON.stringify(bounds));
+    expect(await page.locator('.matrix-zoom-preview').evaluate(n => getComputedStyle(n).borderTopColor)).toBe('rgb(245, 154, 56)');
+    expect((await camera(page, 576, 1536)).scaleX).toBeCloseTo(c.scaleX);
+    await page.mouse.up(); await expect(page.locator('.matrix-zoom-preview')).toHaveCount(0);
+    const selected = await camera(page, 576, 1536);
+    const expected = axis === 'matrix' ? Math.min(selected.width * c.dpr / 10, selected.height * c.dpr / 5)
+      : axis === 'rows' ? selected.height * c.dpr / 5 : selected.width * c.dpr / 10;
+    expect(selected.scaleX).toBeCloseTo(expected); expect(selected.scaleY).toBeCloseTo(expected);
+    if (axis !== 'matrix') {
+      const horizontal = axis === 'columns';
+      const oldCenter = horizontal ? c.y + c.height * c.dpr / c.scaleY / 2 : c.x + c.width * c.dpr / c.scaleX / 2;
+      const span = (horizontal ? selected.height : selected.width) * c.dpr / expected;
+      const wanted = Math.max(0, Math.min((horizontal ? 576 : 1536) - span, oldCenter - span / 2));
+      expect(Math.abs((horizontal ? selected.y : selected.x) - wanted)).toBeLessThanOrEqual(2 * c.dpr / expected);
+    }
+    await expect(page.locator('.row-distributions canvas')).toHaveAttribute('data-origin', `0,${selected.y}`);
+    await expect(page.locator('.column-distributions canvas')).toHaveAttribute('data-origin', `${selected.x},0`);
+    const row = (await page.locator('.row-distributions canvas').boundingBox())!;
+    const column = (await page.locator('.column-distributions canvas').boundingBox())!;
+    expect(row.width * c.dpr).toBe(100); expect(column.height * c.dpr).toBe(100);
+    expect(row.y).toBe(selected.rect.top); expect(column.x).toBe(selected.rect.left);
+    expect(row.height).toBe(selected.rect.height); expect(column.width).toBe(selected.rect.width);
+  }
+  await page.getByRole('button', { name: 'Fit width', exact: true }).click();
+  for (const [size, visible] of [[7, true], [9, true], [10.1, false], [9, false], [7, true]] as const) {
+    await zoom(page, 576, 1536, size);
+    c = await camera(page, 576, 1536);
+    await page.mouse.click(c.rect.left + 3.5 * size, c.rect.top + 3.5 * size);
+    await expect(page.locator('.inspection-readout')).toHaveText(`row 3 · column 3${value(3 * 1536 + 3)}`);
+    await expect(page.locator('.magnifier-card')).toHaveCount(visible ? 1 : 0);
+    if (visible) {
+      const card = (await page.locator('.matrix-inspection').boundingBox())!;
+      const pane = (await page.locator('.matrix-surfaces').boundingBox())!;
+      expect(card.x).toBeGreaterThanOrEqual(pane.x); expect(card.y).toBeGreaterThanOrEqual(pane.y);
+      expect(card.x + card.width).toBeLessThanOrEqual(pane.x + pane.width);
+      expect(card.y + card.height).toBeLessThanOrEqual(pane.y + pane.height);
+      for (const panel of await page.locator('.row-distributions, .column-distributions').all()) {
+        const p = (await panel.boundingBox())!;
+        expect(card.x + card.width <= p.x || card.x >= p.x + p.width || card.y + card.height <= p.y || card.y >= p.y + p.height).toBe(true);
+      }
+      expect(await page.locator('.magnifier-guide-horizontal').evaluate(n => n.getBoundingClientRect().height)).toBe(1);
+      expect(await page.locator('.magnifier-guide-vertical').evaluate(n => n.getBoundingClientRect().width)).toBe(1);
+    }
+  }
+  expect(await page.locator('.distribution-scale').evaluateAll(nodes => nodes.map(n => n.getAttribute('aria-label')))).toEqual(rulers);
+  expect(await metrics(page)).toMatchObject({ uploads: resource.uploads, createdTextures: resource.createdTextures, gpuBytes: resource.gpuBytes, errors: [] });
+  expect(await canvas!.evaluate(node => node === document.querySelector('.matrix-scroll canvas'))).toBe(true);
+  await documentFits(page);
+  await testInfo.attach('measurements', { body: JSON.stringify({ fit: c, focalBefore: after, resources: await metrics(page), rulers }), contentType: 'application/json' });
+  await closeSession(page);
+});
+
+for (const [name, low, high] of [
+  ['science', -2, 6], ['scale.concentrated', Math.fround(-.0001), Math.fround(.0002)],
+  ['scale.outliers', -1000, 3000], ['scale.constant', 2, 2], ['scale.nonfinite', null, null],
+] as const) test(`production distribution scale is truthful for ${name}`, async ({ page }) => {
+  await open(page, `${name}.weight`); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  for (const ruler of await page.locator('.distribution-scale').all()) {
+    if (low === null) {
+      await expect(ruler).toHaveAttribute('aria-label', /no finite values/);
+      await expect(ruler.locator('.distribution-endpoint')).toHaveCount(0);
+    } else {
+      await expect(ruler).toHaveAttribute('data-minimum', String(low));
+      await expect(ruler).toHaveAttribute('data-maximum', String(high));
+      if (low === high) await expect(ruler).toHaveAttribute('aria-label', /constant, samples in bin 50/);
+      else expect(await ruler.evaluate(n => parseFloat((n as HTMLElement).style.getPropertyValue('--distribution-zero'))))
+        .toBeCloseTo(-low / (high! - low) * 100);
+    }
+  }
+  const range = page.getByRole('region', { name: 'Distribution range' });
+  if (low === null) await expect(range).toContainText('No finite');
+  else {
+    await expect(range).toContainText('min'); await expect(range).toContainText('max');
+    await expect(range.locator('[title]').first()).toHaveAttribute('title', `True finite minimum: ${low}`);
+    await expect(range.locator('[title]').last()).toHaveAttribute('title', `True finite maximum: ${high}`);
+  }
+  const stable = await range.textContent();
+  await page.locator('.matrix-scroll').dispatchEvent('wheel', { deltaY: -100, ctrlKey: true });
+  expect(await range.textContent()).toBe(stable);
+  await closeSession(page);
+});
+
+test('production stale results remain visible and generation-fenced while embedding camera leaves prompt intact', async ({ page }, testInfo) => {
+  const editor = await tokenizer(page);
+  await editor.fill('AAA'); await embeddingDone(page, 4);
+  await editor.press('End');
+  const prompt = await promptViewport(page);
+  const canvas = await page.locator('.matrix-scroll canvas').elementHandle();
+  const resource = await metrics(page);
+  await zoom(page, 4, 576, 6);
+  let c = await camera(page, 4, 576);
+  await drag(page, { x: c.rect.left + 12, y: c.rect.top + 6 }, { x: c.rect.left + 72, y: c.rect.top + 18 });
+  await expect(page.locator('.matrix-zoom-preview')).toHaveAttribute('data-bounds', JSON.stringify({ columns: [2, 12], rows: [1, 3] }));
+  await page.mouse.up();
+  await page.locator('.matrix-scroll').evaluate(n => { n.scrollLeft = 100; });
+  expect(await promptViewport(page)).toEqual(prompt);
+  await page.getByRole('button', { name: 'Fit width', exact: true }).click();
+  expect(await promptViewport(page)).toEqual(prompt);
+  expect(await metrics(page)).toMatchObject({ uploads: resource.uploads, createdTextures: resource.createdTextures });
+  const oldIds = await page.locator('.token-ids').allTextContents();
+  await page.evaluate(() => {
+    const frames = { count: 0, missing: 0, running: true };
+    (window as any).__continuity = frames;
+    const sample = () => {
+      if (!frames.running) return;
+      frames.count++;
+      if (!document.querySelector('.token-opening') || !document.querySelector('.token-ids')
+        || !document.querySelector('.embedding-layer:not([data-staging]) canvas')) frames.missing++;
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  let release!: () => void, entered = false;
+  const barrier = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/tokenize', async route => {
+    const response = await route.fetch();
+    if (route.request().postDataJSON().text === 'AAAB') { entered = true; await barrier; }
+    await route.fulfill({ response });
+  });
+  await editor.focus(); await editor.press('End'); await editor.press('B');
+  await expect.poll(() => entered).toBe(true);
+  await expect(page.locator('.cm-editor')).toHaveAttribute('data-annotations', 'stale');
+  await expect(page.locator('.token-ids')).toHaveText(oldIds);
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  expect(await canvas!.evaluate(n => n === document.querySelector('.matrix-scroll canvas'))).toBe(true);
+  await page.locator('[data-token-index="1"]').hover();
+  await expect(page.locator('[data-token-index][data-active-token]')).toHaveCount(0);
+  await control('arm', { kind: 'input_embeddings' });
+  await editor.focus(); await editor.press('End'); await editor.press('C');
+  await expect.poll(async () => (await control()).control.entered).toBe(true);
+  await expect(page.locator('.cm-editor')).toHaveAttribute('data-annotations', 'current');
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  expect(await canvas!.evaluate(n => n === document.querySelector('.embedding-layer:not([data-staging]) .matrix-scroll canvas'))).toBe(true);
+  await page.locator('.matrix-scroll:visible').focus();
+  await expect(page.locator('[data-token-index][data-active-token]')).toHaveCount(0);
+  const newIds = await page.locator('.token-ids').allTextContents();
+  release(); await page.unrouteAll({ behavior: 'wait' });
+  await expect(page.locator('.token-ids')).toHaveText(newIds);
+  await control('release', {}); await embeddingDone(page, 6);
+  expect(await canvas!.evaluate(n => n.isConnected)).toBe(false);
+  await page.locator('.matrix-scroll').focus();
+  await expect(page.locator('[data-token-index="0"]')).toHaveAttribute('data-active-token', '');
+  c = await camera(page, 6, 576);
+  const frames = await page.evaluate(() => { const frames = (window as any).__continuity; frames.running = false; return frames; });
+  expect(frames.count).toBeGreaterThan(2); expect(frames.missing).toBe(0);
+  await documentFits(page);
+  await testInfo.attach('measurements', { body: JSON.stringify({ prompt, camera: c, frames, resources: await metrics(page) }), contentType: 'application/json' });
+  await closeSession(page);
+});
+
+test('production inspection tolerates DPR change before viewport resize notification', async ({ page }) => {
+  await open(page); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await page.locator('.matrix-scroll').focus();
+  await expect(page.locator('.inspection-readout')).toContainText('row 0 · column 0');
+  const before = await metrics(page);
+  // A monitor/browser DPR change can precede resize/media-query notification.
+  // Force that event order, rather than relying on a timing-sensitive real move.
+  const errors = await page.evaluate(() => {
+    const messages: string[] = [];
+    const record = (event: ErrorEvent) => { messages.push(event.message); };
+    window.addEventListener('error', record);
+    const original = devicePixelRatio;
+    try {
+      Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: original === 1 ? 2 : 1 });
+      document.querySelector('.matrix-scroll canvas')!.dispatchEvent(new PointerEvent('pointerleave'));
+      window.dispatchEvent(new Event('resize'));
+    } finally {
+      Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: original });
+      window.dispatchEvent(new Event('resize'));
+      window.removeEventListener('error', record);
+    }
+    return messages;
+  });
+  expect(errors).toEqual([]);
+  await expect(page.locator('.inspection-readout')).toHaveCount(0);
+  await page.locator('.matrix-scroll').press('ArrowRight');
+  await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 1${value(1)}`);
+  expect(await metrics(page)).toMatchObject({ uploads: before.uploads, createdTextures: before.createdTextures });
   await closeSession(page);
 });

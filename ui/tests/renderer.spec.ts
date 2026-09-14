@@ -424,3 +424,88 @@ for (const scenario of ['tightly centered', 'outlier-heavy']) test(`robust contr
   await testInfo.attach('contrast-comparison', { body: JSON.stringify({ scenario, oldSpread, newSpread,
     p25Luminance: luminance(tones[25]!), p75Luminance: luminance(tones[75]!) }), contentType: 'application/json' });
 });
+
+test('fractional zoom samples exact scalar cells across texture bands and preserves the magnifier', async ({ page }, testInfo) => {
+  const results = await page.evaluate(() => {
+    const { create, pixels } = window.harness;
+    const r = create([17, 19], { textureLimit: 8 });
+    r.setTransfer({ anchors: [-1, 1] });
+    r.upload(Float32Array.from({ length: 17 * 19 - 5 }, (_, i) => i % 2 ? 1 : -1));
+    const initial = r.diagnostics;
+    const output = [];
+    for (const scale of [1, 2, 3.25, 4.9, 23.7]) {
+      const view = r.setView(120, 100, 11, 13, devicePixelRatio, scale);
+      const frame = pixels(r);
+      const cells = frame.map((row, y) => row.map((_, x) => r.cellAt((x + .25) / devicePixelRatio, (y + .25) / devicePixelRatio)));
+      const card = document.createElement('canvas'); card.width = card.height = 9;
+      r.drawNeighborhood(8, 8, card.getContext('2d')!);
+      output.push({ view, frame, cells, neighborhood: Array.from(card.getContext('2d')!.getImageData(0, 0, 9, 9).data) });
+    }
+    const final = r.diagnostics;
+    r.dispose();
+    return { output, initial, final };
+  });
+  for (const { frame, cells, view, neighborhood } of results.output) {
+    for (let y = 0; y < frame.length; y++) for (let x = 0; x < frame[y]!.length; x++) {
+      const cell = cells[y]![x]!;
+      const index = cell.row * 19 + cell.column;
+      const expected = index >= 17 * 19 - 5 ? [46, 61, 76, 255] : green(index % 2 ? 1 : -1);
+      expect(frame[y]![x], `scale ${view.scaleX}, device pixel ${x}:${y}, cell ${cell.row}:${cell.column}`).toEqual(expected);
+    }
+    expect(neighborhood).toEqual(results.output[0]!.neighborhood);
+  }
+  expect(results.final.scalarUploadCalls).toBe(results.initial.scalarUploadCalls);
+  expect(results.final.scalarBytes).toBe(results.initial.scalarBytes);
+  await testInfo.attach('zoom-geometry', { body: JSON.stringify(results.output.map(({ view }) => view)), contentType: 'application/json' });
+});
+
+
+test('fractional selection guides stay inside the exact cell with one-pixel thickness', async ({ page }) => {
+  const results = await page.evaluate(() => {
+    const { create, pixels } = window.harness;
+    const r = create([32, 32], { textureLimit: 8 });
+    r.upload(new Float32Array(32 * 32));
+    const initial = r.diagnostics;
+    const output = [];
+    const dpr = devicePixelRatio;
+    for (const scale of [1, 1.01, 1.25, 1.5, 1.99, 3.25, 4.9]) {
+      for (const scroll of [0, 1, 7]) {
+        const view = r.setView(12, 12, scroll, scroll, dpr, scale);
+        const selected = { row: Math.floor(view.y) + 1, column: Math.floor(view.x) + 1 };
+        r.setSelection(selected);
+        const frame = pixels(r);
+        const cells = frame.map((row, y) => row.map((_, x) => r.cellAt((x + .25) / dpr, (y + .25) / dpr)));
+        output.push({ view, selected, frame, cells });
+      }
+    }
+    const final = r.diagnostics;
+    r.dispose();
+    return { output, initial, final };
+  });
+  for (const { frame, cells, selected, view } of results.output) {
+    const rowPixels = new Set<number>(), columnPixels = new Set<number>();
+    let intersections = 0;
+    for (let y = 0; y < frame.length; y++) for (let x = 0; x < frame[y]!.length; x++) {
+      const pixel = frame[y]![x]!, cell = cells[y]![x]!;
+      if (pixel[0]! <= pixel[1]!) continue;
+      const row = cell.row === selected.row, column = cell.column === selected.column;
+      expect(row || column, `scale ${view.scaleX}, origin ${view.x}, pixel ${x}:${y}`).toBe(true);
+      if (row && !column) rowPixels.add(y);
+      if (column && !row) columnPixels.add(x);
+      if (pixel.every((v, i) => Math.abs(v - [...color(.5, .9), 255][i]!) <= 1)) {
+        expect(row && column).toBe(true);
+        intersections++;
+      }
+    }
+    expect(rowPixels.size).toBe(1);
+    expect(columnPixels.size).toBe(1);
+    expect(intersections).toBe(1);
+    const guideY = [...rowPixels][0]!, guideX = [...columnPixels][0]!;
+    for (let y = 0; y < frame.length; y++) for (let x = 0; x < frame[y]!.length; x++) {
+      const expected = [...color(.5, y === guideY && x === guideX ? .9 : y === guideY || x === guideX ? .65 : 0), 255];
+      frame[y]![x]!.forEach((v, i) => expect(Math.abs(v - expected[i]!)).toBeLessThanOrEqual(1));
+    }
+  }
+  expect(results.final.scalarUploadCalls).toBe(results.initial.scalarUploadCalls);
+  expect(results.final.scalarBytes).toBe(results.initial.scalarBytes);
+});

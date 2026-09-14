@@ -113,9 +113,13 @@ Filesystem paths must never be shown. Model identity and tensor/module context
 come from public descriptors defined by the application contracts.
 
 Selected-item identity belongs to the owning workspace, with compact technical
-shape/type metadata beside it. Secondary descriptors and instructions use
-keyboard-accessible information popovers rather than permanent rows. The Tensor
+shape/type metadata beside it. Secondary descriptors use keyboard-accessible information popovers rather than permanent rows. The Tensor
 Explorer's exact hierarchy and feedback behavior are owned by
+[`tensor-explorer.md`](tensor-explorer.md#tensor-navigation-and-header).
+Secondary navigation panes may expose compact, labelled hide/restore controls and
+a subtle keyboard-focusable resize divider. Hidden panes reclaim their layout
+track and gap, with restoration available without hover discovery. Tensor
+inventory geometry, responsive behavior, and browser preferences are owned by
 [`tensor-explorer.md`](tensor-explorer.md#tensor-navigation-and-header).
 Navigation leaves use compact highlighted rows; reserve disclosure chevrons for
 branches and avoid nested selection cards.
@@ -132,6 +136,8 @@ When a compact inference layout needs less vertical space, compress this same co
 
 The reusable Matrix Explorer is the central scientific surface for rank-2 data and inherits its behavioral contract from `tensor-explorer.md` and `rendering.md`.
 
+Scientific context uses a reusable compact panel header with identity, information, secondary metadata, reserved operation status, and a composable right-side action slot. Its single row is approximately 36–44 CSS pixels high with a subtle separator and remains stationary above scrolling data. Transient status must not insert content between the header and matrix or change their geometry. Information floats below its trigger; it does not reserve a permanent metadata column. Tensor-specific fields and preview/pinned dismissal behavior belong to `tensor-explorer.md`.
+
 For a rank-2 tensor, the visual composition is:
 
 - the exact matrix surface;
@@ -141,7 +147,7 @@ For a rank-2 tensor, the visual composition is:
 
 The lower-right corner is not a fourth dashboard panel. It may remain empty; if a tiny bin-count note is genuinely useful, render it as quiet microcopy rather than a boxed control.
 
-The matrix itself is not styled using ordinary CSS palette tokens. Each value maps to exactly one rendered pixel and scalar value controls luminosity. The page, borders, labels, and histogram chrome use the neutral UI system around that surface.
+The matrix itself is not styled using ordinary CSS palette tokens. Each value maps to one exact logical square cell under the common renderer camera and scalar value controls luminosity. The page, borders, labels, and histogram chrome use the neutral UI system around that surface.
 
 ## Hover, selection, and magnification
 
@@ -181,10 +187,10 @@ Avoid dense overlays on the matrix. Inspection UI should move or flip sides when
 
 ## Do not
 
-Do not use a dark terminal-style application shell around the scientific view. Do not add saturated card backgrounds, gradient chrome, large decorative icons, or heavy shadows. Do not assign arbitrary colors to tokens. Do not rescale matrices to fit cards. Do not use general zoom/pan as a substitute for scrolling. Do not draw opaque row/column guide lines across tensor data. Do not modify tensor values to implement visual state. Do not maintain a second recolored tensor merely for hover/selection.
+Do not use a dark terminal-style application shell around the scientific view. Do not add saturated card backgrounds, gradient chrome, large decorative icons, or heavy shadows. Do not assign arbitrary colors to tokens. Use the Matrix Explorer camera defined in `tensor-explorer.md`; do not introduce independent CSS matrix scaling or replace native scroll navigation. Do not draw opaque row/column guide lines across tensor data. Do not modify tensor values to implement visual state. Do not maintain a second recolored tensor merely for hover/selection.
 
 ## Implementation boundary
 
 React owns composition, semantic HTML, controls, text, and panel layout. The reusable WebGL2 renderer owns exact tensor pixels and shader-based visual transformations. The visual tokens in this document style the application shell; they must not leak into authoritative tensor mathematics.
 
-Semantic interaction colors should reach the renderer as small state/uniform parameters. The renderer derives the final chroma at draw time while continuing to read the same immutable scalar tensor representation. This keeps the visual system consistent with the project's memory and one-value-to-one-pixel invariants.
+Semantic interaction colors should reach the renderer as small state/uniform parameters. The renderer derives the final chroma at draw time while continuing to read the same immutable scalar tensor representation. This keeps the visual system consistent with the project's memory and exact scalar-cell invariants.

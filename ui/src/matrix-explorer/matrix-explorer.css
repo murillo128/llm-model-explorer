@@ -2,17 +2,36 @@
 .matrix-explorer > :not(.matrix-surfaces) { flex-shrink: 0; }
 .matrix-explorer > .matrix-surfaces { flex: 1; min-height: 0; }
 .matrix-explorer-header { font-size: 13px; line-height: 20px; }
+.distribution-range { display: flex; flex-wrap: wrap; align-content: start; height: 32px; min-height: 32px; max-height: 32px; overflow: auto; scrollbar-width: thin; gap: 0 12px; color: #575953; font: 10px/16px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .matrix-scroll { background: var(--ui-surface-soft, #fbfaf7); }
 
 .matrix-inspectable {
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' viewBox='0 0 17 17'%3E%3Cpath d='M8.5 1v5M8.5 11v5M1 8.5h5M11 8.5h5' stroke='%23c47a22' stroke-width='1'/%3E%3C/svg%3E") 8 8, crosshair;
 }
 .matrix-scroll:focus-visible { outline: 2px solid #74552f; outline-offset: 3px; }
-.matrix-inspection { position: fixed; z-index: 20; width: 170px; height: 212px; pointer-events: none; }
+.matrix-inspection { position: fixed; z-index: 20; width: 170px; pointer-events: none; }
 .magnifier-card { position: relative; width: 170px; height: 170px; padding: 4px; background: #fff; border-radius: 9px; box-shadow: 0 4px 18px #24272b26; }
 .magnifier-card canvas { display: block; width: 162px; height: 162px; image-rendering: pixelated; }
+.magnifier-guide { position: absolute; background: #c47a22; opacity: 0.4; }
+.magnifier-guide-horizontal { left: 4px; top: 84.5px; width: 162px; height: 1px; }
+.magnifier-guide-vertical { left: 84.5px; top: 4px; width: 1px; height: 162px; }
 .magnifier-center { position: absolute; left: 76px; top: 76px; width: 18px; height: 18px; border: 1px solid #c47a22; }
 .inspection-readout { display: block; margin-top: 4px; padding: 2px 4px; border-radius: 4px; background: #fff; color: #24272b; font: 10px/15px ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
 .inspection-readout span { display: block; }
 
 .matrix-inspection, .matrix-inspection * { box-sizing: border-box; }
+
+.matrix-panel-header { position: sticky; top: 0; z-index: 21; display: flex; align-items: center; gap: 8px; height: 40px; min-height: 40px; max-height: 40px; min-width: 0; border-bottom: 1px solid var(--ui-border, #d7d3ca); background: var(--ui-surface, #fff); font-size: 13px; line-height: 20px; }
+.matrix-panel-context { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
+.matrix-panel-status { flex: 0 1 auto; max-width: 40%; min-width: 0; overflow: auto; scrollbar-width: thin; }
+.matrix-panel-status:empty, .matrix-panel-actions:empty { display: none; }
+.matrix-panel-actions { display: flex; align-items: center; flex-shrink: 0; }
+.matrix-info { flex-shrink: 0; }
+.matrix-info-trigger, .matrix-info-close, .matrix-header-cancel { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--ui-text, #20201d); cursor: pointer; font-size: 20px; }
+.matrix-info-trigger:hover, .matrix-info-close:hover, .matrix-header-cancel:hover { background: var(--ui-accent-soft, #f3e1c9); }
+.matrix-info-trigger svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.matrix-info-popover { position: fixed; z-index: 22; overflow: auto; padding: 12px; border: 1px solid var(--ui-border, #d7d3ca); border-radius: 6px; background: var(--ui-surface, #fff); box-shadow: var(--ui-shadow-float, 0 10px 25px #2b271f24); }
+.matrix-info-close { margin: -6px -6px 2px auto; }
+.matrix-panel-header :focus-visible { outline: 2px solid var(--ui-text, #20201d); outline-offset: -2px; }
+
+.matrix-fit-width { flex-shrink: 0; padding: 3px 7px; border: 1px solid var(--ui-border, #d7d3ca); border-radius: 4px; background: var(--ui-surface, #fff); color: inherit; font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; }

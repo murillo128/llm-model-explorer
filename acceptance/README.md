@@ -26,6 +26,12 @@ is not a hardware claim. This tests browser GL behavior, not physical GPU
 performance. The backend computes fixture results on CPU. Dependency installation
 may use the network; the acceptance application runs with `HF_HUB_OFFLINE=1`.
 
+The headed product suite uses one worker in both local runs and CI to isolate
+native window/pointer interactions. Parallel runs on the shared X display showed
+intermittent loss of transient inspection/drag state, while the same scenarios
+passed serially. Separate ports do not isolate native input. Component browser
+parallelism is unchanged.
+
 The runner writes JUnit, JSON counts, measurements and version information to a
 new `/tmp/lmex-evidence-*` directory. Set `LMEX_EVIDENCE_DIR` for a stable output
 location. Browser screenshots and failure-only traces go to ignored
@@ -56,7 +62,9 @@ FP16 and float32. The fixture has `[576,1536]` and `[1536,576]` MLP orientations
 a `[1025,576]` embedding, a supported Llama embedding configuration, a 576-value
 vector, an empty tensor, and a small F32 scientific tensor with NaN/infinity/signed
 zero. The browser additionally generates four overflow matrices (`[32,32]`,
-`[1200,32]`, `[32,1600]`, `[1200,1600]`), 80 small inventory leaves, and an
+`[1200,32]`, `[32,1600]`, `[1200,1600]`), 80 small inventory leaves, four 20×20
+distribution-scale edge cases (near-zero concentration, outliers, constant, and
+all-nonfinite), and an
 unsupported-embedding model with the same usable tokenizer. The byte BPE uses an
 explicitly ordered alphabet with no stochastic training.
 
@@ -150,5 +158,6 @@ hf download HuggingFaceTB/SmolLM2-135M \
   --local-dir /absolute/path/to/models/SmolLM2-135M
 ```
 
-Current compact explorer and embedding evidence is in [improvements.md](improvements.md).
+Navigable matrix and stale-tokenizer coverage is documented in [usability.md](usability.md).
+The earlier compact explorer and embedding evidence is in [improvements.md](improvements.md).
 The earlier [evidence.md](evidence.md) remains the historical PoC report.

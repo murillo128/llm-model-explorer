@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type {} from './tensor-explorer-harness';
 
+import { nativeCamera } from './native-camera';
 import { color } from './scalar-oracle';
 function expected(value: number, row: boolean, column: boolean) {
   return color(1 / (1 + Math.exp(-12 * value)), row && column ? 0.9 : row || column ? 0.65 : 0);
@@ -31,6 +32,7 @@ async function open(page: Page, prefix = 323) {
   else await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', 'streaming');
   await expect(page.locator('[data-result="distributions"]')).toHaveCount(0);
   await page.locator('.matrix-scroll').scrollIntoViewIfNeeded();
+  await nativeCamera(page);
 }
 async function hover(page: Page, row: number, column: number) {
   const point = await page.evaluate(({ row, column }) => {
@@ -91,7 +93,7 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
       for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) {
         const sourceY = row! + y - 4, sourceX = column! + x - 4;
         const pixel = actual.neighborhood.slice((y * 9 + x) * 4, (y * 9 + x + 1) * 4);
-        expect(pixel).toEqual(sourceY < 0 || sourceY >= 17 || sourceX < 0 || sourceX >= 19 ? [46, 61, 76, 255] : actual.matrix[sourceY]![sourceX]);
+        expect(pixel).toEqual(sourceY < 0 || sourceY >= 17 || sourceX < 0 || sourceX >= 19 ? [46, 61, 76, 255] : [...expected(sourceY === 0 && sourceX === 0 ? -0 : Math.fround(((sourceY * 19 + sourceX) % 17 - 8) / 32), false, false), 255]);
       }
       // Inspect actual composited enlargement, not just its 9×9 source buffer.
       const screenshot = await page.locator('.magnifier-card canvas').screenshot();
@@ -101,12 +103,12 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
         const context = canvas.getContext('2d')!; context.drawImage(img, 0, 0);
         const samples = [];
         for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) {
-          for (const offset of [3, 9, 15]) samples.push(Array.from(context.getImageData(
+          for (const offset of [3, 15]) samples.push(Array.from(context.getImageData(
             Math.floor((x * 18 + offset) * img.width / 162), Math.floor((y * 18 + offset) * img.height / 162), 1, 1).data));
         }
         return samples;
       }, screenshot.toString('base64'));
-      enlarged.forEach((pixel, index) => expect(pixel).toEqual(actual.neighborhood.slice(Math.floor(index / 3) * 4, (Math.floor(index / 3) + 1) * 4)));
+      enlarged.forEach((pixel, index) => expect(pixel).toEqual(actual.neighborhood.slice(Math.floor(index / 2) * 4, (Math.floor(index / 2) + 1) * 4)));
       expect(actual.card.x).toBeGreaterThanOrEqual(0); expect(actual.card.y).toBeGreaterThanOrEqual(0);
       expect(actual.card.right).toBeLessThanOrEqual(actual.viewport[0]!);
       expect(actual.card.bottom).toBeLessThanOrEqual(actual.viewport[1]!);
@@ -126,27 +128,42 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
     expect(await page.evaluate(() => [window.explorerFixture.metrics.live.size, window.explorerFixture.metrics.liveDisplays.size])).toEqual([0, 0]);
   });
 
-  test('card flips within all viewport corners without covering the inspected neighborhood', async ({ page }) => {
+  test('card stays inside the scientific pane and clear of distribution panels', async ({ page }) => {
     await open(page);
-    // This isolated magnifier test deliberately moves data outside the workspace.
-    // Hide the fixed application bars so they do not intercept those corner probes.
-    await page.addStyleTag({ content: '.app-bar, .app-status-bar { visibility: hidden; }' });
-    for (const [right, bottom] of [[false, false], [true, false], [false, true], [true, true]]) {
-      await page.locator('.matrix-surfaces').evaluate((host: HTMLElement, [right, bottom]) => {
-        Object.assign(host.style, { position: 'fixed', width: `${119 / devicePixelRatio + 10}px`, zIndex: '10', left: `${right ? innerWidth - 19 / devicePixelRatio - 2 : 2}px`,
-          top: `${bottom ? innerHeight - 17 / devicePixelRatio - 2 : 2}px` });
-      }, [right!, bottom!]);
-      await hover(page, 8, 8);
-      const geometry = await page.evaluate(() => {
-        const card = document.querySelector('.matrix-inspection')!.getBoundingClientRect();
-        const main = window.explorerFixture.renderers[0]!.canvas.getBoundingClientRect();
-        return { card: card.toJSON(), x: main.x + 8.5 / devicePixelRatio, y: main.y + 8.5 / devicePixelRatio, width: innerWidth, height: innerHeight };
-      });
-      const { card, x, y, width, height } = geometry;
-      expect(card.left).toBeGreaterThanOrEqual(0); expect(card.top).toBeGreaterThanOrEqual(0);
-      expect(card.right).toBeLessThanOrEqual(width); expect(card.bottom).toBeLessThanOrEqual(height);
-      expect(card.left > x + 5 / dpr || card.right < x - 5 / dpr || card.top > y + 5 / dpr || card.bottom < y - 5 / dpr).toBe(true);
+    for (const [row, column] of [[0, 0], [0, 18], [16, 0], [16, 18]]) {
+      await hover(page, row!, column!);
+      const { card, pane, panels } = await page.evaluate(() => ({
+        card: document.querySelector('.matrix-inspection')!.getBoundingClientRect().toJSON(),
+        pane: document.querySelector('.matrix-surfaces')!.getBoundingClientRect().toJSON(),
+        panels: ['.row-distributions', '.column-distributions'].map((selector) => document.querySelector(selector)!.getBoundingClientRect().toJSON()),
+      }));
+      expect(card.left).toBeGreaterThanOrEqual(pane.left);
+      expect(card.top).toBeGreaterThanOrEqual(pane.top);
+      expect(card.right).toBeLessThanOrEqual(pane.right);
+      expect(card.bottom).toBeLessThanOrEqual(pane.bottom);
+      for (const panel of panels) expect(card.right <= panel.left || card.left >= panel.right || card.bottom <= panel.top || card.top >= panel.bottom).toBe(true);
     }
+  });
+
+  test('center border and centered guides have thin independent display geometry', async ({ page }) => {
+    await open(page);
+    await hover(page, 8, 8);
+    const styles = await page.evaluate(() => {
+      const read = (selector: string) => {
+        const element = document.querySelector(selector)!;
+        const style = getComputedStyle(element), rect = element.getBoundingClientRect();
+        return { width: rect.width, height: rect.height, x: rect.x + rect.width / 2, y: rect.y + rect.height / 2,
+          opacity: Number(style.opacity), border: style.borderTopWidth };
+      };
+      return { center: read('.magnifier-center'), h: read('.magnifier-guide-horizontal'), v: read('.magnifier-guide-vertical') };
+    });
+    expect(styles.center.border).toBe('1px');
+    expect(styles.h.height).toBe(1); expect(styles.v.width).toBe(1);
+    expect(styles.h.width).toBe(162); expect(styles.v.height).toBe(162);
+    expect(styles.h.x).toBe(styles.center.x); expect(styles.h.y).toBe(styles.center.y);
+    expect(styles.v.x).toBe(styles.center.x); expect(styles.v.y).toBe(styles.center.y);
+    expect(styles.h.opacity).toBeLessThan(styles.center.opacity);
+    expect(styles.v.opacity).toBeLessThan(styles.center.opacity);
   });
 
   test('native scrolling resolves stationary pointer across bands and keyboard focus has exact text', async ({ page }) => {
@@ -240,6 +257,7 @@ test('shell typography preserves hit-testing at the final tensor pixel across fo
   for (const font of ['Arial, sans-serif', 'DejaVu Sans, sans-serif', 'monospace']) {
     await page.locator('.app-shell').evaluate((shell: HTMLElement, font) => { shell.style.fontFamily = font; }, font);
     await page.locator('.matrix-scroll').scrollIntoViewIfNeeded();
+  await nativeCamera(page);
     await hover(page, 16, 18);
     expect(await page.evaluate(() => document.documentElement.scrollHeight === innerHeight)).toBe(true);
   }

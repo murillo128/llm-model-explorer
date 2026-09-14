@@ -32,7 +32,8 @@ Architecture is already prepared at startup and retrieved as bounded structured 
 
 ## Matrix Explorer composition
 
-`ui/src/matrix-explorer/` owns the reusable React scientific composition above `MatrixViewport`: viewport lifetime, local camera/scrolling, optional aligned profiles, compact header, and inspection/readout. It accepts logical float32 descriptors and progressive subscriptions without model, navigation, or HTTP dependencies. The consuming explorer owns protocol validation, operations, cancellation, and result status.
+`ui/src/matrix-explorer/` owns the reusable React scientific composition above `MatrixViewport`: viewport lifetime, per-instance square-cell camera and local scrolling, optional aligned profiles, compact contextual header slot, and hover/focus magnifier/readout. It accepts logical float32 descriptors and progressive subscriptions without model, navigation, or HTTP dependencies. The consuming explorer owns protocol validation, operations, cancellation, and result status.
+
 
 A source object identifies one immutable descriptor and delivery generation. Replacing it detaches subscriptions and releases its viewport; old callbacks cannot affect a later allocation, including a return to the same source. Subscriptions restart at offset zero on remount. Scalar chunks are consumed synchronously without a second scalar array or accumulated chunk list. Transfer/statistics updates change draw state without scalar reuploads.
 

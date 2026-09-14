@@ -83,6 +83,13 @@ export class EmbeddingController {
     } catch (error) { if (current()) this.fail(error); }
   };
 
+  /** A hidden replacement that cannot render must never displace a valid matrix. */
+  renderingFailed = () => {
+    if (this.disposed) return;
+    this.dispose();
+    this.changed({ status: 'failed' });
+  };
+
   private fail(error: unknown) {
     this.changed({ status: error instanceof ApiFailure && error.detail?.code === 'unsupported_representation' ? 'unsupported' : 'failed' });
   }
