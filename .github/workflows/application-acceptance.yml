@@ -79,9 +79,9 @@ jobs:
         shell: bash
         run: |
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-            acceptance/check.sh
+            bash acceptance/check.sh
           else
-            acceptance/check-integration.sh
+            bash acceptance/check-integration.sh
           fi
       - uses: actions/upload-artifact@v4
         if: always()
