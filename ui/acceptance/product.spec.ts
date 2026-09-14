@@ -361,10 +361,10 @@ test('local reference Base opens normalization, both MLP orientations and embedd
 
 // All routes below still reach the production service. Barriers delay actual
 // responses; no numeric/tokenizer response is synthesized in this suite.
-async function tokenizer(page: Page) {
+async function tokenizer(page: Page, waitForInitial = true) {
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/fixture');
   await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
-  await expect(page.getByText('[1 × 576] · float32')).toBeVisible();
+  if (waitForInitial) await embeddingDone(page, 1);
   return page.getByRole('textbox', { name: 'Prompt', exact: true });
 }
 async function closeSession(page: Page) {
@@ -375,8 +375,9 @@ async function closeSession(page: Page) {
   await expect.poll(async () => (await metrics(page)).readers).toBe(0);
 }
 async function embeddingDone(page: Page, rows: number) {
-  await expect(page.getByText(`[${rows} × 576] · float32`)).toBeVisible();
-  await expect(page.locator('.input-embeddings .matrix-panel-status')).toBeEmpty();
+  await expect(page.getByText(`[${rows} × 576] · float32`).filter({ visible: true })).toBeVisible();
+  await expect(page.locator('.input-embeddings [data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+  await expect(page.locator('.input-embeddings .embedding-layer:not([data-staging]) .matrix-panel-status')).toBeEmpty();
 }
 async function documentFits(page: Page) {
   expect(await page.evaluate(() => ({
@@ -387,7 +388,16 @@ async function documentFits(page: Page) {
 }
 
 test('real ordered embeddings render progressively with exact duplicate rows and linked annotations', async ({ page, context }, testInfo) => {
-  const input = await tokenizer(page);
+  // First delivery must be usable progressively, before any completed matrix exists.
+  await control('arm', { kind: 'input_embeddings' });
+  const input = await tokenizer(page, false);
+  await expect(page.getByRole('status').filter({ hasText: 'Streaming input embeddings…' })).toBeVisible();
+  await expect.poll(async () => (await control()).control.entered).toBe(true);
+  await page.locator('.matrix-scroll').focus();
+  const firstId = Number(await page.locator('[data-token-index="0"]').textContent());
+  await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 0${value(firstId * 576)}`);
+  expect((await control()).control.released).toBe(false);
+  await control('release', {}); await embeddingDone(page, 1);
   const readsBefore = (await control()).source_reads.row_elements;
   await page.evaluate(() => { (window as any).__acceptance.captureScalars = true; });
   await control('arm', { kind: 'input_embeddings' });
@@ -399,16 +409,20 @@ test('real ordered embeddings render progressively with exact duplicate rows and
   const ids: number[] = result.tokens.map((t: any) => t.id);
   expect((await requested).postDataJSON()).toEqual({ token_ids: ids });
   expect(ids[1]).toBe(ids.at(-1));
-  await expect(page.getByText('Streaming input embeddings…')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Streaming input embeddings…' })).toBeVisible();
   await expect.poll(async () => (await control()).control.entered).toBe(true);
   const prefix = await page.evaluate(() => [...(window as any).__acceptance.scalarValues]);
   expect(prefix.length).toBeGreaterThan(0); expect(prefix.length).toBeLessThan(ids.length * 576);
-  const scroller = page.locator('.matrix-scroll');
+  const scroller = page.locator('.matrix-scroll:visible');
   await scroller.focus();
   await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 0${value(ids[0]! * 576)}`);
   expect((await control()).control.released).toBe(false);
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  await expect(page.locator('[data-token-index][data-active-token]')).toHaveCount(0);
+  await expect(page.locator('[data-staging] .matrix-scroll')).toHaveCount(1);
   await control('release', {});
   await embeddingDone(page, ids.length);
+  await scroller.focus();
   const uploaded = await page.evaluate(() => [...(window as any).__acceptance.scalarValues]);
   expect(uploaded).toEqual(ids.flatMap(id => Array.from({ length: 576 }, (_, col) => value(id * 576 + col))));
   const reads = (await control()).source_reads;
@@ -452,7 +466,8 @@ test('real A→B→A response reordering and model/session changes show only the
   });
   await input.fill('A'); await expect.poll(() => entered).toBe(1);
   await input.fill('B'); await expect.poll(() => entered).toBe(2);
-  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  await expect(page.locator('.matrix-scroll:visible')).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
   await input.fill('A'); await expect.poll(() => entered).toBe(3);
   await embeddingDone(page, 2);
   const canvas = page.locator('.matrix-scroll'); await canvas.focus(); await canvas.press('ArrowDown');
@@ -465,7 +480,7 @@ test('real A→B→A response reordering and model/session changes show only the
   // Keep a real stream open, then replace its owning model/session twice.
   await control('arm', { kind: 'input_embeddings' });
   await input.fill('switch😀');
-  await expect(page.getByText('Streaming input embeddings…')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Streaming input embeddings…' })).toBeVisible();
   await page.getByRole('combobox').selectOption('acceptance/unsupported');
   await expect(page.getByText(/Input embeddings are unavailable/)).toBeVisible();
   await expect(page.locator('.matrix-scroll')).toHaveCount(0);
@@ -484,10 +499,12 @@ test('repeated prompt edits and explorer unmounts cancel real embedding readers 
     const input = await tokenizer(page);
     await control('arm', { kind: 'input_embeddings' });
     await input.fill(`cancel-${cycle}😀`);
-    await expect(page.getByText('Streaming input embeddings…')).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Streaming input embeddings…' })).toBeVisible();
     await expect.poll(async () => (await control()).control.entered).toBe(true);
     await input.fill(`replacement-${cycle}`);
-    await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+    await expect(page.locator('[data-staging]')).toHaveCount(0);
+    await expect(page.locator('.matrix-scroll:visible')).toBeVisible();
+    await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
     await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
     await idle();
     await expect.poll(async () => (await metrics(page)).textures).toBe(0);
@@ -569,7 +586,7 @@ test('production prompt pixels, selection, history and composition survive embed
   const editor = await tokenizer(page);
   await control('arm', { kind: 'input_embeddings' });
   await editor.fill('hello world');
-  await expect(page.getByText('Streaming input embeddings…')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Streaming input embeddings…' })).toBeVisible();
   const prompt = page.getByRole('region', { name: 'Live prompt tokenization' });
   const nav = page.getByRole('button', { name: 'Tokenizer Explorer', exact: true });
   await nav.focus(); await page.mouse.move(0, 0);
@@ -606,7 +623,8 @@ test('production prompt pixels, selection, history and composition survive embed
   page.on('request', r => { if (r.url().endsWith('/tokenize')) duringComposition.push(r.postDataJSON().text); });
   await editor.dispatchEvent('compositionstart'); await editor.fill('に');
   await expect(page.locator('.tokenizer-status')).toContainText('Composing');
-  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  await expect(page.locator('.matrix-scroll:visible')).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
   // Deliberately exceed the production debounce while the IME owns the source.
   await page.waitForTimeout(250); expect(duringComposition).toEqual([]);
   await editor.fill('日本'); await editor.dispatchEvent('compositionend', { data: '日本' });

@@ -7,14 +7,22 @@ import { annotate } from './annotations';
 import type { Tokenization } from './annotations';
 
 const annotationsChanged = StateEffect.define<DecorationSet>();
-const annotationField = StateField.define<DecorationSet>({
-  create: () => Decoration.none,
+const annotationsStale = StateEffect.define<boolean>();
+const annotationField = StateField.define<{ decorations: DecorationSet; stale: boolean }>({
+  create: () => ({ decorations: Decoration.none, stale: true }),
   update(value, transaction) {
-    if (transaction.docChanged) return Decoration.none;
-    for (const effect of transaction.effects) if (effect.is(annotationsChanged)) return effect.value;
-    return value;
+    let next = transaction.docChanged
+      ? { decorations: value.decorations.map(transaction.changes), stale: true } : value;
+    for (const effect of transaction.effects) {
+      if (effect.is(annotationsChanged)) next = { decorations: effect.value, stale: false };
+      if (effect.is(annotationsStale)) next = { ...next, stale: effect.value };
+    }
+    return next;
   },
-  provide: (field) => EditorView.decorations.from(field),
+  provide: (field) => [
+    EditorView.decorations.from(field, value => value.decorations),
+    EditorView.editorAttributes.from(field, value => ({ 'data-annotations': value.stale ? 'stale' : 'current' })),
+  ],
 });
 
 class AnnotationWidget extends WidgetType {
@@ -118,7 +126,8 @@ export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect
   useLayoutEffect(() => {
     const instance = view.current;
     if (!instance) return;
-    instance.dispatch({ effects: annotationsChanged.of(result && result.text === instance.state.doc.toString() ? decorations(result) : Decoration.none) });
+    instance.dispatch({ effects: result && result.text === instance.state.doc.toString()
+      ? annotationsChanged.of(decorations(result)) : annotationsStale.of(true) });
   }, [result]);
   useLayoutEffect(() => {
     const root = host.current!;

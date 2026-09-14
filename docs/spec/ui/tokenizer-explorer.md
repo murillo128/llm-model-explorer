@@ -32,6 +32,8 @@ Each edit retokenizes the current text. Token boundaries are allowed to change a
 
 While a replacement tokenization is pending, the last successful tokenization remains visible as clearly stale/updating context instead of disappearing. The editable text is always the current user text, and stale annotations must not be presented as authoritative for that new text. When the matching current tokenization arrives, it replaces the stale presentation atomically, without an intermediate undecorated state.
 
+Retain and move prior decorations through the editor transaction’s normal change mapping; do not clear them merely because the document changed. Stale state uses reduced annotation emphasis and an accessible status without changing source text or panel geometry. A failed recomputation keeps mapped previous annotations explicitly stale alongside the error; a later matching success replaces them atomically.
+
 A result for an older input must never replace the presentation for a newer input if responses complete out of order. Only a result matching the current text, tokenizer options, session, and model may become authoritative.
 
 ## Inline token presentation
@@ -109,7 +111,7 @@ Use controlled row context, semantic selection callbacks and a narrow reveal
 intent through Matrix Explorer, without exposing renderer internals. Clear or
 fence linkage on source, generation, session replacement and remount.
 
-While a replacement tokenization or embedding result is pending, the last successful embedding matrix may remain visible as clearly stale/updating context rather than disappearing. Only an embedding result matching the current tokenization generation, session, model, options, and ordered token IDs may become authoritative. Older results must never replace newer state.
+While a replacement tokenization or embedding result is pending, the last successful embedding matrix remains mounted and visible as clearly stale/updating context rather than disappearing. Only an embedding result matching the current tokenization generation, session, model, options, and ordered token IDs may become authoritative. Older results must never replace newer state. A replacement is promoted atomically after successful complete delivery; initial embedding delivery remains progressive. Failure, cancellation, empty sequences, or unavailability retain the previous matrix only as explicitly stale context alongside the current status. Pending and failed replacement allocations are disposed, and successful replacement or workspace disposal releases superseded Matrix Explorer resources. Updating/error status stays in the existing header slot.
 
 Token-to-row linkage is active only when the visible tokenization and visible embedding matrix belong to the same authoritative generation. If a newer tokenization is already current while an older embedding matrix remains visible as stale context, they must not be linked as if their row identities still matched.
 

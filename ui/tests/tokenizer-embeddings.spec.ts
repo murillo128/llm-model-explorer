@@ -123,11 +123,13 @@ test('A→B→A, late headers/data, options and session changes cancel supersede
   expect(await page.evaluate(() => window.embeddingHarness.cancelled)).toContain('/operations/00000000-0000-4000-8000-000000000000');
   await page.getByRole('checkbox', { name: 'Add special tokens' }).uncheck(); await count(page, 5);
   await page.getByRole('checkbox', { name: 'Add special tokens' }).check(); await count(page, 6);
-  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  await expect(page.locator('.matrix-scroll')).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
   await tokenize(page, 4, tokens('A', [0], false)); await embeddingCount(page, 3);
   await tokenize(page, 5, tokens('A', [2])); await embeddingCount(page, 4);
   await page.getByRole('button', { name: 'Change session' }).click(); await count(page, 7);
-  await stream(page, 3, [2]); await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  await stream(page, 3, [2]); await expect(page.locator('.matrix-scroll')).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
   await tokenize(page, 6, tokens('A', [0])); await embeddingCount(page, 5); await stream(page, 4, [0]);
   expect(await page.evaluate(() => window.embeddingHarness.requests[4]!.session)).toMatch(/^bbbb/);
   await expect(page.getByText('[1 × 7] · float32')).toBeVisible();
@@ -345,4 +347,147 @@ test('session/source replacement clears old linkage before and after the new mat
   await editor.fill('DEF'); await count(page, 4); await tokenize(page, 3, tokens('DEF'));
   await embeddingCount(page, 3); await stream(page, 2, [2, 0, 2]);
   await expect(page.locator('[data-token-index][data-active-token]')).toHaveCount(0);
+});
+
+test('completed matrices stay mounted through staged replacements, failures and generation mismatches', async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2]);
+  const visibleMatrix = page.locator('.embedding-layer:not([data-staging]) .matrix-scroll');
+  await expect(visibleMatrix).toBeVisible();
+  await visibleMatrix.evaluate(node => { node.setAttribute('data-original-matrix', ''); });
+  const originalRenderer = await page.evaluate(() => window.embeddingHarness.renderers.findIndex(r => r.state !== 'disposed'));
+  await page.evaluate(() => {
+    const frames: number[] = [];
+    Object.assign(window, { matrixFrames: frames, matrixSampling: true });
+    const sample = () => {
+      frames.push(document.querySelectorAll('.embedding-layer:not([data-staging]) .matrix-scroll').length);
+      if (Reflect.get(window, 'matrixSampling')) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  const geometry = () => page.locator('.input-embeddings').evaluate(node => ({
+    height: node.getBoundingClientRect().height,
+    header: node.querySelector('.matrix-panel-header')!.getBoundingClientRect().height,
+    matrix: node.querySelector('.matrix-scroll')!.getBoundingClientRect().height,
+  }));
+  const before = await geometry();
+  await editor.press('End'); await editor.pressSequentially('D'); await count(page, 3);
+  await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'stale');
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  await page.locator('[data-token-index="2"]').dispatchEvent('click');
+  await expect(page.locator('[data-active-token]')).toHaveCount(0);
+  await tokenize(page, 2, tokens('ABCD', [3, 1, 0, 2])); await embeddingCount(page, 2);
+  await page.locator('[data-token-index="3"]').dispatchEvent('click');
+  await expect(page.locator('[data-active-token]')).toHaveCount(0);
+  await visibleMatrix.focus(); await visibleMatrix.press('ArrowDown');
+  await expect(page.locator('[data-active-token]')).toHaveCount(0);
+  await page.evaluate(() => window.embeddingHarness.headers(1));
+  await send(page, 1, [...meta([3, 1, 0, 2]), ...data([3, 1, 0, 2])]);
+  await expect(page.locator('[data-staging] .matrix-scroll')).toHaveCount(1);
+  await expect(page.locator('[data-staging]')).toHaveAttribute('inert', '');
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  expect(await geometry()).toEqual(before);
+  expect(await page.evaluate(index => window.embeddingHarness.renderers[index]!.state, originalRenderer)).not.toBe('disposed');
+
+  // Supersede a fully populated but incomplete replacement; late COMPLETE and
+  // a late tokenization response cannot promote it or restore its row linkage.
+  await editor.press('End'); await editor.pressSequentially('E'); await count(page, 4);
+  await expect(page.locator('[data-staging]')).toHaveCount(0);
+  await editor.pressSequentially('F'); await count(page, 5);
+  await tokenize(page, 4, tokens('ABCDEF', [1])); await embeddingCount(page, 3);
+  await tokenize(page, 3, tokens('ABCDE', [9]));
+  await send(page, 1, frame(4), true);
+  await page.evaluate(() => window.embeddingHarness.headers(2, 422));
+  await expect(page.getByText(/Input embeddings are unavailable/)).toBeVisible();
+  await expect(page.locator('.token-ids')).toHaveText('1');
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  expect(await geometry()).toEqual(before);
+
+  // Tokenizer failure retains both contexts and its error without shifting the panel.
+  await editor.pressSequentially('G'); await count(page, 6);
+  await page.evaluate(() => window.tokenizerHarness.fail(5));
+  await expect(page.getByRole('alert')).toContainText('Previous annotations are stale');
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  expect(await geometry()).toEqual(before);
+  await page.getByRole('button', { name: 'Retry tokenization' }).click(); await count(page, 7);
+  await tokenize(page, 6, tokens('ABCDEFG', [3, 2])); await embeddingCount(page, 4);
+  await page.evaluate(() => window.embeddingHarness.headers(3));
+  await send(page, 3, [...meta([3, 2]), ...data([3, 2])]);
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  await send(page, 3, frame(5, new TextEncoder().encode(JSON.stringify({ code: 'internal_error', message: 'Fixture failure' }))), true);
+  await expect(page.getByText(/Could not load input embeddings/)).toBeVisible();
+  await expect(page.locator('[data-staging]')).toHaveCount(0);
+  await expect(visibleMatrix).toHaveAttribute('data-original-matrix', '');
+  await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'current');
+
+  // A successful replacement swaps the already populated renderer atomically.
+  await editor.press('End'); await editor.pressSequentially('H'); await count(page, 8);
+  await tokenize(page, 7, tokens('ABCDEFGH', [0, 1])); await embeddingCount(page, 5);
+  await page.evaluate(() => window.embeddingHarness.headers(4));
+  await send(page, 4, [...meta([0, 1]), ...data([0, 1])]);
+  await expect(page.locator('[data-staging] .matrix-scroll')).toHaveCount(1);
+  await send(page, 4, frame(4), true);
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+  await expect(page.locator('[data-original-matrix]')).toHaveCount(0);
+  await expect(visibleMatrix).toBeVisible();
+  await page.locator('[data-token-index="1"]').dispatchEvent('click');
+  await expect(page.locator('[data-token-index="1"]')).toHaveAttribute('data-active-token', '');
+  const allocated = await page.evaluate(() => window.embeddingHarness.renderers.map(r => ({ state: r.state, bytes: r.diagnostics.cpuBytes })));
+  expect(allocated.filter(r => r.state !== 'disposed')).toHaveLength(1);
+  expect(allocated.filter(r => r.state === 'disposed').every(r => r.bytes === 0)).toBe(true);
+  expect(allocated[originalRenderer]!.state).toBe('disposed');
+  const frames = await page.evaluate(() => {
+    Reflect.set(window, 'matrixSampling', false);
+    return Reflect.get(window, 'matrixFrames') as number[];
+  });
+  expect(frames.length).toBeGreaterThan(5);
+  expect(frames.every(count => count === 1)).toBe(true);
+  // Empty input remains explicit, with only the previous matrix as stale context.
+  await editor.fill(''); await count(page, 9); await tokenize(page, 8, tokens(''));
+  await expect(page.getByText(/No tokens to embed/)).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  await expect(visibleMatrix).toBeVisible();
+});
+
+
+test('disposing a workspace releases both completed and staged matrix resources', async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2]);
+  await expect(page.locator('.matrix-scroll')).toBeVisible();
+  await editor.press('End'); await editor.pressSequentially('D'); await count(page, 3);
+  await tokenize(page, 2, tokens('ABCD', [2, 0])); await embeddingCount(page, 2);
+  await page.evaluate(() => window.embeddingHarness.headers(1));
+  await send(page, 1, [...meta([2, 0]), ...data([2, 0])]);
+  await expect(page.locator('.matrix-scroll')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Close workspace' }).click();
+  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  expect(await page.evaluate(() => window.embeddingHarness.renderers.every(r => r.state === 'disposed' && r.diagnostics.cpuBytes === 0))).toBe(true);
+  await send(page, 1, frame(4), true);
+  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+});
+
+test('a lost staging WebGL context cannot replace the previous completed matrix', async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2]);
+  await expect(page.locator('.matrix-scroll')).toBeVisible();
+  await page.locator('.matrix-scroll').evaluate(node => node.setAttribute('data-original-matrix', ''));
+  await editor.press('End'); await editor.pressSequentially('D'); await count(page, 3);
+  await tokenize(page, 2, tokens('ABCD', [2, 0])); await embeddingCount(page, 2);
+  await page.evaluate(() => window.embeddingHarness.headers(1));
+  await send(page, 1, [...meta([2, 0]), ...data([2, 0])]);
+  await expect(page.locator('[data-staging] .matrix-scroll')).toHaveCount(1);
+  await page.locator('[data-staging] .matrix-scroll canvas').evaluate(canvas => {
+    const gl = (canvas as HTMLCanvasElement).getContext('webgl2')!;
+    gl.getExtension('WEBGL_lose_context')!.loseContext();
+  });
+  await expect(page.getByText(/Could not load input embeddings/)).toBeVisible();
+  await expect(page.locator('[data-staging]')).toHaveCount(0);
+  await send(page, 1, frame(4), true);
+  await expect(page.locator('[data-original-matrix]')).toBeVisible();
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'current');
 });

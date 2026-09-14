@@ -81,15 +81,17 @@ test('session/options changes and late errors cannot contaminate the current edi
   await page.evaluate(() => window.tokenizerHarness.fail(1));
   await expect(page.locator('.token-opening .token-ids')).toHaveText('333'); await expect(page.getByRole('alert')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.tokenizerHarness.source())).toBe('keep me');
-  await editor.fill('error'); await count(page, 5); await page.evaluate(() => window.tokenizerHarness.fail(4));
+  await editor.press('End'); await editor.pressSequentially(' error'); await count(page, 5); await page.evaluate(() => window.tokenizerHarness.fail(4));
   await expect(page.getByRole('alert')).toContainText('Could not tokenize');
-  await expect(page.locator('.token-opening .token-ids')).toHaveCount(0);
+  await expect(page.locator('.token-opening .token-ids')).toHaveText('333');
+  await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'stale');
   await page.getByRole('button', { name: 'Retry tokenization' }).click(); await count(page, 6);
-  await complete(page, 5, response('error', 555, false));
+  await complete(page, 5, response('keep me error', 555, false));
   await expect(page.locator('.token-opening .token-ids')).toHaveText('555');
   await page.getByRole('checkbox', { name: 'Tokenizer available' }).uncheck();
   await expect(page.getByRole('status')).toContainText('Tokenizer unavailable');
-  await expect(editor).toHaveAttribute('contenteditable', 'true'); await expect(page.locator('.token-opening .token-ids')).toHaveCount(0);
+  await expect(editor).toHaveAttribute('contenteditable', 'true'); await expect(page.locator('.token-opening .token-ids')).toHaveText('555');
+  await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'stale');
 });
 
 test('exact whitespace, Unicode, overlapping and typed versus inserted specials share one source surface', async ({ page, context }, testInfo) => {
@@ -123,9 +125,10 @@ test('configuration A→B→A does not revive an earlier settled annotation whil
   await expect(page.locator('.token-opening .token-ids')).toHaveText('111');
   await page.getByRole('checkbox', { name: 'Add special tokens' }).uncheck(); await count(page, 3);
   await page.getByRole('checkbox', { name: 'Add special tokens' }).check(); await count(page, 4);
-  await expect(page.locator('.token-opening .token-ids')).toHaveCount(0);
+  await expect(page.locator('.token-opening .token-ids')).toHaveText('111');
+  await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'stale');
   await complete(page, 2, response('A', 222, false));
-  await expect(page.locator('.token-opening .token-ids')).toHaveCount(0);
+  await expect(page.locator('.token-opening .token-ids')).toHaveText('111');
   await complete(page, 3, response('A', 333));
   await expect(page.locator('.token-opening .token-ids')).toHaveText('333');
 });
@@ -213,4 +216,49 @@ test('standalone shell calls the typed endpoint and reports tokenizer unavailabi
   await expect(page.getByRole('textbox', { name: 'Prompt' })).toBeVisible();
   await expect(page.getByRole('alert')).toContainText('Tokenizer unavailable');
   expect(requests).toEqual([{ text: '', add_special_tokens: true }]);
+});
+
+
+test('mapped stale brackets and IDs survive every animation frame, composition, undo and atomic replacement', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const editor = await start(page);
+  await editor.fill('hello'); await count(page, 2); await complete(page, 1, response('hello', 111));
+  await expect(page.locator('.token-opening .token-ids')).toHaveText('111');
+  await page.evaluate(() => {
+    const frames: { ids: string; stale: boolean }[] = [];
+    Object.assign(window, { continuityFrames: frames, continuityRunning: true });
+    const sample = () => {
+      frames.push({ ids: document.querySelector('.token-ids')?.textContent ?? '',
+        stale: document.querySelector('[data-annotations]')?.getAttribute('data-annotations') === 'stale' });
+      if (Reflect.get(window, 'continuityRunning')) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  await editor.press('Home'); await editor.press('ArrowRight'); await editor.pressSequentially('X'); await count(page, 3);
+  await expect(page.locator('.source-annotation')).toHaveText('hXello');
+  await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'stale');
+  expect(await page.locator('.token-opening').evaluate(node => getComputedStyle(node).opacity)).toBe('0.55');
+  await editor.dispatchEvent('compositionstart');
+  await expect(page.getByRole('status')).toContainText('Previous annotations are stale');
+  await complete(page, 2, response('hXello', 222)); // pre-composition result is obsolete
+  await expect(page.locator('.token-ids')).toHaveText('111');
+  await editor.dispatchEvent('compositionend'); await count(page, 4);
+  await editor.press('Control+z'); await count(page, 5);
+  expect(await page.evaluate(() => window.tokenizerHarness.source())).toBe('hello');
+  await editor.press('Control+Shift+Z'); await count(page, 6);
+  expect(await page.evaluate(() => window.tokenizerHarness.source())).toBe('hXello');
+  await editor.press('Control+a'); await editor.press('Control+c');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('hXello');
+  await complete(page, 5, response('hXello', 666));
+  await expect(page.locator('.token-ids')).toHaveText('666');
+  await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'current');
+  await complete(page, 3, response('hXello', 444)); await complete(page, 4, response('hello', 555));
+  await expect(page.locator('.token-ids')).toHaveText('666');
+  const frames = await page.evaluate(() => {
+    Reflect.set(window, 'continuityRunning', false);
+    return Reflect.get(window, 'continuityFrames') as { ids: string; stale: boolean }[];
+  });
+  expect(frames.length).toBeGreaterThan(5);
+  expect(frames.every(frame => frame.ids === '111' || frame.ids === '666')).toBe(true);
+  expect(frames.some(frame => frame.stale)).toBe(true);
 });
