@@ -117,6 +117,11 @@ shape/type metadata beside it. Secondary descriptors and instructions use
 keyboard-accessible information popovers rather than permanent rows. The Tensor
 Explorer's exact hierarchy and feedback behavior are owned by
 [`tensor-explorer.md`](tensor-explorer.md#tensor-navigation-and-header).
+Secondary navigation panes may expose compact, labelled hide/restore controls and
+a subtle keyboard-focusable resize divider. Hidden panes reclaim their layout
+track and gap, with restoration available without hover discovery. Tensor
+inventory geometry, responsive behavior, and browser preferences are owned by
+[`tensor-explorer.md`](tensor-explorer.md#tensor-navigation-and-header).
 Navigation leaves use compact highlighted rows; reserve disclosure chevrons for
 branches and avoid nested selection cards.
 

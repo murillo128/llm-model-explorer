@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { models, sessionA, tensors } from '../src/test/shell-fixtures';
+import { revealTensor } from './tensor-tree-helpers';
 
 const path = ['model', 'layers', '12', 'attention', 'projection', 'nested', 'deep', 'long_module_name_for_truncation'.repeat(5), 'weight'];
 
@@ -17,9 +18,9 @@ test('compact deep navigator and contextual metadata remain accessible in narrow
   await page.goto('/');
   await page.getByRole('combobox').selectOption(models[0]!.id);
   const tree = page.getByRole('complementary', { name: 'Tensor inventory' });
-  const leaf = tree.getByRole('button', { name: /model.layers/ });
+  const leaf = tree.getByRole('button', { includeHidden: true, name: /model.layers/ });
   const other = tree.getByRole('button', { name: /other.weight/ });
-  await leaf.click();
+  await (await revealTensor(leaf)).click();
   await expect(leaf).toHaveAttribute('aria-pressed', 'true');
   await expect(leaf).toHaveText('weight[1 × 2 × 3] · int8');
   expect(await leaf.evaluate((node) => node.getBoundingClientRect().height)).toBe(28);

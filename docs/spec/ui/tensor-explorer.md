@@ -32,6 +32,20 @@ Rank-1 tensors remain in scope, but the dedicated design work so far has not fix
 
 The inventory follows the public descriptor's logical path segments, never filesystem structure. Branches alone use chevron disclosure controls. Each leaf is one compact row with a tensor icon, its relative final path segment, and inline shape/storage dtype when width permits. Selection highlights the row rather than opening a card. Use shallow, capped indentation, truncate long labels, and retain full public identity in accessible names/tooltips so duplicate leaf names remain distinguishable. Native disclosure and selection work with Enter/Space and Tab; arrow keys navigate visible rows, open/close branches, or return to a parent, with Home/End reaching the first/last visible row.
 
+The inventory is secondary navigation. Its visible Hide inventory control removes
+the entire pane and divider track; a visible, keyboard-accessible Show inventory
+control in the scientific workspace restores it. Focus moves to the corresponding
+control after hiding/restoring. Neither action changes the selected tensor or
+restarts scientific operations. There is no automatic hiding on selection.
+
+On a fresh browser preference state, open only first-level branches. Deeper
+branches, including layer lists and their internals, start collapsed. Remember
+explicit branch expansion/collapse choices by the array of public logical path
+segments (shared across models with matching paths); never use filesystem identity.
+Visibility, preferred desktop width, and branch choices persist in local browser
+storage across explorer visits and reloads. If storage is unavailable or malformed,
+use safe defaults and retain working interactions in memory.
+
 The selected tensor has one compact contextual header inside the workspace: its breadcrumb/path plus immediately useful shape and storage dtype. Do not repeat it in global chrome, a large tensor-name title, or a permanent logical-path field. Use descriptors supplied by the inventory/API rather than inferring model metadata from names.
 
 A focusable, clickable information control beside the identity exposes secondary metadata on demand: full logical path (including any truncated portion), rank, element count, storage dtype/format, and logical dtype. The labelled popover supports pointer and keyboard opening, moves focus inside, dismisses on Escape with focus restored to the trigger, and closes when focus or pointer interaction leaves it. Filesystem paths never appear. Put exact-pixel orientation and keyboard inspection help here rather than in permanent workspace copy.
@@ -110,11 +124,19 @@ inventory scroller and one matrix scroller; the scientific pane and its wrappers
 do not add nested scroll surfaces. Transient notices and on-demand metadata may
 retain their own bounded overflow.
 
-At desktop widths the inventory uses 200–280 CSS pixels and the scientific pane
-has a 360 CSS-pixel minimum. Below 760 CSS pixels the panes stack: the inventory
-receives 24% of workspace height (at least 64 CSS pixels), and the scientific pane
-receives the remainder. This preserves usable scientific chrome instead of
-collapsing a side-by-side matrix pane. Native data geometry never shrinks to fit.
+Above 760 CSS pixels, the visible inventory defaults to 280 CSS pixels. A
+focusable vertical divider supports pointer dragging, Left/Right arrows in 16 px
+steps, and Home/End to reach width bounds. Clamp inventory width to 200–480 CSS
+pixels and to the available workspace width minus the 16 px divider and the
+scientific pane's 360 CSS-pixel minimum. A temporarily constrained viewport must
+not overwrite the user's preferred width.
+
+At or below 760 CSS pixels the visible panes stack: the inventory receives 24%
+of workspace height (at least 64 CSS pixels), and the scientific pane receives
+the remainder with an 8 px gap. The desktop width divider is unavailable in this
+layout; the saved desktop width is retained. Hiding the inventory removes its
+entire row and gap as well. The inventory's compact controls remain reachable
+while its tree scrolls. Native data geometry never shrinks to fit.
 
 The matrix viewport receives the scientific pane's remaining height after context,
 transient feedback, distribution depth, and gaps. Reserve its vertical scrollbar

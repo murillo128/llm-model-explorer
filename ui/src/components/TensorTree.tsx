@@ -1,6 +1,14 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { TensorDescriptor } from '../app/session-controller';
+import { readInventoryPreference, writeInventoryPreference } from './inventory-preferences';
+
+const expansionKey = 'lmex.tensor-inventory.branches';
+function initialExpansion(): Record<string, boolean> {
+  const saved = readInventoryPreference(expansionKey);
+  return saved && typeof saved === 'object' && !Array.isArray(saved)
+    ? Object.fromEntries(Object.entries(saved).filter(([, value]) => typeof value === 'boolean')) : {};
+}
 
 interface Branch { children: Map<string, Branch>; tensors: TensorDescriptor[] }
 function buildTree(tensors: TensorDescriptor[]) {
@@ -22,6 +30,13 @@ export function TensorTree({ tensors, selectedId, onSelect }: {
   tensors: TensorDescriptor[]; selectedId: string | undefined; onSelect: (tensor: TensorDescriptor) => void;
 }) {
   const tree = useMemo(() => buildTree(tensors), [tensors]);
+  const [expanded, setExpanded] = useState(initialExpansion);
+  useEffect(() => writeInventoryPreference(expansionKey, expanded), [expanded]);
+  function toggle(details: HTMLDetailsElement) {
+    const key = details.dataset.branchKey!;
+    const open = !details.open;
+    setExpanded((old) => ({ ...old, [key]: open }));
+  }
   function navigate(event: KeyboardEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement;
     if (!target.matches('summary, button')) return;
@@ -42,26 +57,38 @@ export function TensorTree({ tensors, selectedId, onSelect }: {
       case 'Home': next = rows[0]; break;
       case 'End': next = rows.at(-1); break;
       case 'ArrowRight':
-        if (details && !details.open) details.open = true;
+        if (details && !details.open) toggle(details);
         else if (details) next = rows[index + 1];
         break;
       case 'ArrowLeft':
-        if (details?.open) details.open = false;
+        if (details?.open) toggle(details);
         else next = (details?.parentElement ?? target.parentElement)?.closest('details')?.querySelector('summary') ?? undefined;
+        break;
+      case 'Enter':
+      case ' ':
+        if (!details) return;
+        toggle(details);
         break;
       default: return;
     }
     event.preventDefault();
     next?.focus();
   }
-  function renderBranch(branch: Branch, depth = 0) {
+  function renderBranch(branch: Branch, path: string[] = []) {
+    const depth = path.length;
     const paddingInlineStart = 4 + Math.min(depth, 7) * 8;
     return <ul className="tensor-tree">
-      {[...branch.children].map(([segment, child]) => <li key={`branch:${segment}`}>
-        <details open><summary style={{ paddingInlineStart }} title={segment}>
-          <span>{segment || '(unnamed segment)'}</span>
-        </summary>{renderBranch(child, depth + 1)}</details>
-      </li>)}
+      {[...branch.children].map(([segment, child]) => {
+        const childPath = [...path, segment];
+        const key = JSON.stringify(childPath);
+        const open = expanded[key] ?? depth === 0;
+        return <li key={`branch:${segment}`}>
+          <details open={open} data-branch-key={key}><summary style={{ paddingInlineStart }} title={childPath.join(' › ')}
+            onClick={(event) => { event.preventDefault(); toggle(event.currentTarget.parentElement as HTMLDetailsElement); }}>
+            <span>{segment || '(unnamed segment)'}</span>
+          </summary>{renderBranch(child, childPath)}</details>
+        </li>;
+      })}
       {branch.tensors.map((tensor) => <li key={`tensor:${tensor.id}`}>
         <button className="tensor-choice" type="button" aria-pressed={selectedId === tensor.id}
           style={{ paddingInlineStart }} title={tensor.path.join(' › ') || tensor.name}
