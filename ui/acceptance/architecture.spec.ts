@@ -52,6 +52,9 @@ async function recordGraph(page: Page, info: TestInfo, label: string, graph: Gra
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
   await info.attach(label, { body: JSON.stringify({ sourceNodes: graph.nodes.length, sourceEdges: graph.edges.length,
     viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), ...await graphObservation(page) }), contentType: 'application/json' });
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  const path = info.outputPath(`${label}.png`);
+  await page.screenshot({ path }); await info.attach(`${label}-capture`, { path, contentType: 'image/png' });
 }
 async function control(path: string, body?: object) {
   const response = await fetch(`${backend}/__test/${path}`, body ? {
