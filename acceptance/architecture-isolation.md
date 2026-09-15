@@ -42,3 +42,14 @@ npm exec vitest run src/architecture-explorer/scope.test.ts \
 This is structural fixture evidence, not reference-checkpoint or browser
 acceptance. Navigation is deliberately deferred until the issue-declared
 independent semantic checkpoint is satisfied.
+
+The first independent checkpoint found that external context aliases bypassed
+`showContext: false`. The correction classifies those aliases using the original
+source node kind while keeping exact endpoint identity. A new API-validated
+context fixture proves identical reversible filtering globally and in isolation.
+The external re-entry fixture now also passes normal API validation and retains
+both external computation segments as excluded records. The revised focused
+suite passed **79 tests**, plus TypeScript and targeted lint. A separate exact
+comparison of 24 global graph/view combinations against the activation source
+produced identical projection records, ELK boxes/ports/routes and bounds (excluding
+elapsed layout time). No global expectations were changed.

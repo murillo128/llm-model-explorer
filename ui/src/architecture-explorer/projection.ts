@@ -244,7 +244,8 @@ export function projectGraph(graph: Graph, options: ProjectionOptions): Projecti
   }
   let shownNodes = nodes, shownEdges = edges;
   if (!exhaustive && options.showContext === false) {
-    const context = new Set(nodes.filter((n) => n.kind === 'context').map((n) => n.id));
+    const context = new Set(nodes.filter((n) => n.kind === 'context' ||
+      n.presentation === 'external' && n.sourceIds.some((id) => records.get(id)!.kind === 'context')).map((n) => n.id));
     shownNodes = shownNodes.filter((n) => !context.has(n.id));
     shownEdges = shownEdges.filter((e) => {
       if (!context.has(e.source.node_id) && !context.has(e.target.node_id)) return true;
