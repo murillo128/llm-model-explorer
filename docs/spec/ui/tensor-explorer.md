@@ -88,10 +88,15 @@ A rank-2 Tensor Explorer uses three aligned surfaces:
 The current design uses a small gap between the main matrix and each distribution panel so the surfaces remain visually distinct while preserving obvious alignment.
 
 Distribution thickness is fixed at 100 device pixels (100 bins), independent of
-matrix zoom. CSS chrome/gaps remain fixed. The right panel is anchored to the
-right viewport edge and the bottom panel below the matrix viewport, even when
-the matrix data is short or narrow. Their visible data-axis extents match the
-matrix canvas, excluding native scrollbars.
+matrix zoom. CSS chrome/gaps remain fixed. Treat the matrix and its right/bottom
+profiles as one aligned scientific object: center independently on each axis
+where the data underfills the available matrix viewport at the current scale.
+Attach each profile to the corresponding visible matrix bound, including when
+the data is short or narrow; do not leave a gap to a viewport edge. Overflowing
+axes retain normal native scrolling and scrollbar clearance. Their visible
+data-axis extents match the matrix canvas, excluding native scrollbars.
+Centering changes only device-snapped presentation offsets, never camera scale,
+logical origins, square cells, sampling, or scalar/count storage.
 
 ### Row distributions
 
@@ -111,7 +116,7 @@ The vertical bin axis retains its fixed thickness.
 Each Matrix Explorer instance defaults to **fit width without minification**:
 `s = max(1, floor(availableCSSWidth * DPR) / columns)`. Underfilled matrices expand
 uniformly; wider matrices remain at native scale and use horizontal scrolling.
-The `Fit width` header action restores this scale and resets scroll origins.
+The `Fit width` header action restores this scale, resets scroll origins and clears zoom-back history.
 While fit mode remains active, resizing refits the width. Manual zoom retains its
 scale across layout changes. A new source starts a fresh local camera.
 
@@ -185,6 +190,12 @@ the preview to the data surface and clamp captured pointers outside it to its ed
 The preview is small transient DOM state, independent of scalar/count storage and
 transfer settings; underlying variation remains readable.
 
+During the preview, project the same exact snapped row range into the right
+profile and column range into the bottom profile. All three surfaces update
+synchronously for forward/reverse drags; one-cell ranges use thin exact
+row/column indicators. Clearing or consuming the preview clears all projected
+ranges; no persistent tensor-region selection is created.
+
 On release, fit the entire rectangle with the largest uniform square-cell scale
 allowed by the available matrix viewport dimensions, retaining the native 1:1
 minimum. Center the selected region in any spare dimension and clamp origins to
@@ -200,6 +211,8 @@ along the right panel selects a row boundary range. Use the same amber preview
 across the fixed bin depth without changing counts. On release, fill the aligned
 matrix viewport dimension with that range using the same uniform camera; retain
 the previous logical center on the orthogonal axis as far as bounds allow.
+Its preview projects the selected axis back across the matrix extent with the
+same exact bounds; it does not invent a range on the unselected axis.
 
 Escape, pointer cancellation/capture loss, window blur, camera/viewport changes,
 source replacement and context loss remove a pending preview without applying it.
@@ -208,6 +221,23 @@ One-finger dragging on a data surface selects a region/range; a second touch
 cancels selection and allows the existing two-finger matrix pinch. Native
 scrollbars continue to own panning. These gestures remain local to their Matrix
 Explorer and never transform, export, or select tensor data or zoom prompt views.
+
+### Zoom-back history and dismissal priority
+
+Each Matrix Explorer source owns a bounded history of 32 committed logical
+scale/origin states. A region/range zoom adds one prior state; wheel/trackpad
+events within 180 ms of the previous event form one gesture, and a two-finger
+pinch forms one gesture until its touches end. No-op zooms add no history.
+`Fit width` and source replacement clear history. Resize/DPR changes retain
+history; restoring it uses current viewport/native scroll bounds.
+
+Escape first cancels an active drag/preview. Focused modal/info-popover dismissal
+retains its local priority. Otherwise Escape restores the previous camera when
+the scientific surfaces own keyboard focus, or are hovered with neutral document
+focus. A hover-only magnifier never consumes Escape just to hide itself. Right
+click on a matrix or distribution data surface restores the same previous camera
+and suppresses that surface's browser context menu. Other surfaces and global
+browser shortcuts remain unchanged. With no prior state, camera back is a no-op.
 
 ## Scroll synchronization
 
@@ -293,11 +323,14 @@ pixels per side. These per-instance hysteresis thresholds are named UI tokens in
 linked inspection state, and compact row/column/value readout. When shown, it
 continues to inspect the same 9×9 logical neighborhood.
 
-Placement evaluates nearby and boundary candidates inside the visible scientific
-pane, rejects intersections with either distribution surface, and prefers avoiding
-the inspected neighborhood and matrix when space permits. Near the right/bottom
-edges it can move left/above. If the pane cannot accommodate the full card without
-covering distributions, retain the compact readout instead.
+Placement follows the current pointer/focused cell with a small offset inside
+the visible scientific pane, rejects intersections with either distribution data
+surface, and avoids the inspected neighborhood when a legal position permits.
+Try pointer-relative placements first, flipping left/above near boundaries;
+clamp only as a final fallback. Recompute on pointer movement, scroll, zoom,
+resize, DPR changes, source replacement and layout shifts affecting usable bounds.
+If the pane cannot accommodate the complete card/readout surface, retain the
+compact readout instead.
 
 ## Selection encoding: green data and amber inspection guides
 
@@ -487,8 +520,9 @@ shortest JavaScript round-trip decimal, with explicit `-0`, `NaN`, and signed
 infinities. Pending cells report unavailable and no numeric value. Stream and
 transfer updates refresh an active inspection; leaving, disposing, or losing the
 matrix context clears it. Focus exposes the first visible coordinate, arrow keys
-inspect adjacent cells with native scrolling at the current scale as needed, and Escape/blur clear
-inspection. The focus outline and coordinate/value text remain independent of hue.
+inspect adjacent cells with native scrolling at the current scale as needed, and
+blur clears inspection. Escape follows the dismissal/zoom-back priority above.
+The focus outline and coordinate/value text remain independent of hue.
 
 The 170px magnifier card presents a 9×9 display canvas at 162×162 CSS pixels with
 nearest-neighbor enlargement. It reuses the matrix shader and existing scalar

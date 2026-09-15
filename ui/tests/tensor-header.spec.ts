@@ -132,6 +132,34 @@ test('metadata previews, pins, anchors below the icon, and leaves scientific wid
   await expect(dialog).toHaveCount(0);
 });
 
+test('Escape dismisses pinned tensor information before restoring matrix zoom history', async ({ page }) => {
+  await open(page, 'reference');
+  const camera = () => page.evaluate(() => {
+    const view = window.explorerFixture.renderers[0]!.view!;
+    const host = document.querySelector('.matrix-scroll')!;
+    const extent = host.firstElementChild as HTMLElement;
+    return { x: view.x, y: view.y, scale: view.scaleX,
+      width: extent.style.width, height: extent.style.height };
+  });
+  const initial = await camera();
+  const canvas = (await page.locator('.matrix-scroll canvas').boundingBox())!;
+  await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
+  await page.mouse.wheel(0, -180);
+  await expect.poll(async () => (await camera()).scale).toBeGreaterThan(initial.scale);
+  const zoomed = await camera();
+  const info = page.getByRole('button', { name: 'Tensor information', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Tensor information' });
+  await info.click();
+  await expect(page.getByRole('button', { name: 'Close tensor information' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(info).toBeFocused();
+  expect(await camera()).toEqual(zoomed);
+  await page.locator('.matrix-scroll').focus();
+  await page.keyboard.press('Escape');
+  await expect.poll(camera).toEqual(initial);
+});
+
 test('touch pins metadata and supports close and outside tap without hover', async ({ browser }, testInfo) => {
   const context = await browser.newContext({ hasTouch: true, viewport: testInfo.project.use.viewport ?? { width: 390, height: 844 } });
   const page = await context.newPage();

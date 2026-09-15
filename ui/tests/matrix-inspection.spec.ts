@@ -209,7 +209,7 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
       });
     })).toEqual([true, true, true]);
     await page.keyboard.press('Escape');
-    await expect(page.locator('.matrix-inspection')).toHaveCount(0);
+    await expect(page.locator('.inspection-readout')).toContainText('row 9 · column 10');
     await page.getByRole('button', { name: /^B \[/ }).click();
     await expect(page.locator('.matrix-inspection')).toHaveCount(0);
     expect(await page.evaluate(() => window.explorerFixture.metrics.liveDisplays.size)).toBe(0);
