@@ -157,6 +157,14 @@ The primary pointer marker over a matrix is a small amber cross with a center ga
 
 Pinned selection reuses the same amber semantics and adds persistence through a visible state/readout, not through a new unrelated color system. Keyboard focus must remain visible independently of chroma alone.
 
+## Architecture graph surface
+
+Architecture Explorer uses the same neutral working-surface language rather than introducing a separate graph theme. Nodes and groups use white or soft-neutral surfaces, graphite text, readable muted metadata, hairline borders, restrained shadows, and the existing typography hierarchy. Repetition, operation type, state, and contextual roles are communicated primarily through labels, grouping, ports, geometry, line style, and direction rather than a rainbow or per-layer categorical palette.
+
+Graph-specific controls, focus navigation, repetition selectors, legends, connection inspection, and floating graph affordances stay inside the bounded Architecture workspace. They do not move or restyle the application bar, model selector, explorer navigation, page background, status bar, other explorers, or the shared Matrix Explorer.
+
+Warm amber remains the interaction accent for graph hover, keyboard focus, and pinned selection. A highlighted connection may strengthen its stroke, endpoint markers, and destination arrow while nonparticipating connections are subdued without disappearing. Direction and selection must remain understandable through geometry, arrowheads, markers, focus treatment, and readable text rather than color alone. Port and edge hover must not require a new general-purpose hue.
+
 ## Reusable operation composition
 
 Computational screens should compose the same primitives instead of inventing bespoke panels for every operation.
@@ -187,7 +195,7 @@ Avoid dense overlays on the matrix. Inspection UI should move or flip sides when
 
 ## Do not
 
-Do not use a dark terminal-style application shell around the scientific view. Do not add saturated card backgrounds, gradient chrome, large decorative icons, or heavy shadows. Do not assign arbitrary colors to tokens. Use the Matrix Explorer camera defined in `tensor-explorer.md`; do not introduce independent CSS matrix scaling or replace native scroll navigation. Do not draw opaque row/column guide lines across tensor data. Do not modify tensor values to implement visual state. Do not maintain a second recolored tensor merely for hover/selection.
+Do not use a dark terminal-style application shell around the scientific view. Do not add saturated card backgrounds, gradient chrome, large decorative icons, or heavy shadows. Do not assign arbitrary colors to tokens or graph layers. Use the Matrix Explorer camera defined in `tensor-explorer.md`; do not introduce independent CSS matrix scaling or replace native scroll navigation. Do not draw opaque row/column guide lines across tensor data. Do not modify tensor values to implement visual state. Do not maintain a second recolored tensor merely for hover/selection.
 
 ## Implementation boundary
 
