@@ -85,6 +85,10 @@ async function inspectComponents(page: Page, graph: Graph, info: TestInfo, famil
   };
   const nodeBox = (id: string) => page.locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`);
   const horizontal = async (before: string, after: string) => {
+    // Expanded source groups can be wider than the viewport. Fit the current
+    // focus before comparing both ends; React Flow culls offscreen node DOM.
+    await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     await expect(nodeBox(before)).toBeAttached(); await expect(nodeBox(after)).toBeAttached();
     const a = await nodeBox(before).boundingBox(), b = await nodeBox(after).boundingBox();
     expect(a).toBeTruthy(); expect(b).toBeTruthy();
