@@ -81,7 +81,7 @@ export class MatrixViewport {
         // the native-width track so a tall, otherwise fitting tensor stays fitting.
         const gutter = this.main.offsetWidth - this.main.clientWidth;
         host.style.gridTemplateColumns = `${descriptor.rank === 2 ? 'minmax(0, 1fr)' : `minmax(0, ${descriptor.shape.at(-1)! / dpr + gutter}px)`}${this.rows ? ` ${depth}px` : ''}`;
-        host.style.gridTemplateRows = this.rows ? `36px var(--matrix-height) ${depth}px` : 'var(--matrix-height)';
+        host.style.gridTemplateRows = this.rows ? `${this.rowScale!.ruler.offsetHeight}px var(--matrix-height) ${depth}px` : 'var(--matrix-height)';
       };
       layout();
       this.matrix = new TensorViewport(this.main, descriptor, { ...options, zoom: descriptor.rank === 2, onStateChange: (state) => {
@@ -120,6 +120,8 @@ export class MatrixViewport {
       const rect = host.getBoundingClientRect();
       renderer.canvas.style.left = `${Math.round(rect.left * view.dpr) / view.dpr - rect.left}px`;
       renderer.canvas.style.top = `${Math.round(rect.top * view.dpr) / view.dpr - rect.top}px`;
+      if (renderer === this.rows) this.rowScale?.alignBinAxis(renderer.canvas.style.left);
+      else this.columnScale?.alignBinAxis(renderer.canvas.style.top);
       const panelView = renderer.setView(width, height, x, y, view.dpr, scaleX, scaleY);
       renderer.canvas.dataset.origin = `${panelView.x},${panelView.y}`;
       renderer.draw();

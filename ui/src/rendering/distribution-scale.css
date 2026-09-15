@@ -4,13 +4,13 @@
   font: 10px/12px ui-monospace, SFMono-Regular, Menlo, monospace;
   min-width: 0;
 }
-.distribution-scale-rows { grid-column: 2; grid-row: 1; height: 36px; border-bottom: 1px solid #a1a39b; }
-.distribution-scale-columns { grid-column: 2; grid-row: 3; height: var(--distribution-depth); border-left: 1px solid #a1a39b; }
+.distribution-scale-rows { grid-column: 2; grid-row: 1; height: 24px; left: var(--distribution-offset, 0px); border-bottom: 1px solid #a1a39b; }
+.distribution-scale-columns { grid-column: 2; grid-row: 3; height: var(--distribution-depth); top: var(--distribution-offset, 0px); border-left: 1px solid #a1a39b; }
 .distribution-scale:not([data-minimum]), .distribution-scale-constant { border-color: transparent; }
 .distribution-endpoint, .distribution-zero-tick { position: absolute; white-space: nowrap; }
 .distribution-scale-rows .distribution-low { left: 0; top: 0; }
-.distribution-scale-rows .distribution-high { right: 0; top: 12px; }
-.distribution-scale-rows .distribution-zero-tick { left: clamp(3px, var(--distribution-zero), calc(100% - 3px)); bottom: 0; transform: translateX(-50%); }
+.distribution-scale-rows .distribution-high { right: 0; top: 0; }
+.distribution-scale-rows .distribution-zero-tick { left: var(--distribution-zero); bottom: 0; transform: translateX(-50%); }
 .distribution-scale-columns .distribution-low { left: 4px; top: 0; }
 .distribution-scale-columns .distribution-high { left: 4px; bottom: 0; }
 .distribution-scale-columns .distribution-zero-tick { left: -8px; top: clamp(6px, var(--distribution-zero), calc(100% - 6px)); transform: translateY(-50%); }
@@ -23,5 +23,5 @@
 .distribution-scale-columns::before { top: 0; }
 .distribution-scale-columns::after { bottom: 0; }
 .distribution-zero { position: absolute; pointer-events: none; background: rgb(170 175 169 / 35%); }
-.distribution-zero-rows { top: 0; bottom: 0; width: var(--distribution-pixel); left: clamp(0px, var(--distribution-zero), calc(100% - var(--distribution-pixel))); }
-.distribution-zero-columns { left: 0; right: 0; height: var(--distribution-pixel); top: clamp(0px, var(--distribution-zero), calc(100% - var(--distribution-pixel))); }
+.distribution-zero-rows { top: 0; bottom: 0; width: var(--distribution-pixel); left: clamp(0px, var(--distribution-zero), calc(100% - var(--distribution-pixel))); transform: translateX(var(--distribution-offset, 0px)); }
+.distribution-zero-columns { left: 0; right: 0; height: var(--distribution-pixel); top: clamp(0px, var(--distribution-zero), calc(100% - var(--distribution-pixel))); transform: translateY(var(--distribution-offset, 0px)); }

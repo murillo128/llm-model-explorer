@@ -46,11 +46,11 @@ Visibility, preferred desktop width, and branch choices persist in local browser
 storage across explorer visits and reloads. If storage is unavailable or malformed,
 use safe defaults and retain working interactions in memory.
 
-The selected tensor has one persistent scientific-panel header, composed through the reusable Matrix Explorer header. Use a single compact row, approximately 36–44 CSS pixels high, with a subtle separator. Keep it stationary while the scientific content scrolls. Show its logical breadcrumb/path, an accessible standard information icon, and secondary shape/storage dtype together. Do not repeat them in global chrome, a large title, a permanent logical-path field, or a second metadata block. Use public descriptors supplied by the inventory/API, never inferred names or filesystem paths.
+The selected tensor has one persistent scientific-panel header, composed through the reusable Matrix Explorer header. Use a single compact row, approximately 36–44 CSS pixels high, with its own subtle panel background and separator. Keep it stationary while the scientific content scrolls. Emphasize its logical breadcrumb/path with the existing scientific green accent, keeping shape/storage dtype visually secondary on the same row and the accessible standard information icon adjacent to this identity metadata. The scientific surfaces begin immediately below the header without a reserved secondary metadata row. Do not repeat identity in global chrome, a large title, a permanent logical-path field, or a second metadata block. Use public descriptors supplied by the inventory/API, never inferred names or filesystem paths.
 
-The information control opens a lightweight labelled popover directly below the icon, clamped within the scientific pane when necessary. Pointer hover and keyboard focus show an ephemeral preview without moving focus or showing a close control. Click, tap, Enter, or Space pins the popover and moves focus to its small accessible × close control. Pinned metadata survives pointer departure and focus navigation; the close control, outside pointer interaction, or Escape dismisses it. Close and Escape restore trigger focus without immediately reopening the preview. Touch activation requires no hover. The popover contains only full logical path, rank, element count, storage dtype, storage format when supplied, and logical dtype; general pixel-orientation and keyboard help do not belong here. It floats over the content without reserving scientific width.
+The information control opens a lightweight labelled popover directly below the icon, clamped within the scientific pane when necessary. Pointer hover and keyboard focus show an ephemeral preview without moving focus or showing a close control. Click, tap, Enter, or Space pins the popover and moves focus to its small accessible × close control. Pinned metadata survives pointer departure and focus navigation; the close control, outside pointer interaction, or Escape dismisses it. Close and Escape restore trigger focus without immediately reopening the preview. Touch activation requires no hover. The popover contains full logical path, rank, element count, storage dtype, storage format when supplied, and logical dtype. For rank-2 tensors it also contains the distribution-domain description and authoritative true finite minimum/maximum, reporting pending or unavailable metadata honestly. General pixel-orientation and keyboard help do not belong here. It floats over the content without reserving scientific width.
 
-Pending/streaming feedback and cancellation occupy reserved space inside the header, with accessible compact text and a spinner. The header height and matrix origin remain fixed across loading, streaming, ready, cancelled, and successful completion. At constrained widths, the status slot may scroll horizontally while cancellation remains reachable. Ordinary success clears status without leaving Complete/Ready labels. Preserve independent tensor, statistics, and distribution errors/cancellation; auxiliary failures must not disable a usable matrix. Rendering resource failures remain explicit and actionable. Use the composable right-side action slot for the compact `Fit width` camera reset alongside operation actions.
+Pending/streaming feedback and cancellation occupy reserved space inside the header, with accessible compact text and a spinner. The header height and matrix origin remain fixed across loading, streaming, ready, cancelled, and successful completion. At constrained widths, the status slot may scroll horizontally while cancellation, information, and `Fit width` remain reachable. Ordinary success clears status without leaving Complete/Ready labels. Preserve independent tensor, statistics, and distribution errors/cancellation; auxiliary failures must not disable a usable matrix. Rendering resource failures remain explicit and actionable. Use the composable right-side action slot for operation actions followed by the compact `Fit width` camera reset at the far right.
 
 The primary screen should remain visually sparse. The current design has three primary data rectangles for a 2D tensor and does not add a fourth legend/control block in the lower-right corner merely to fill space.
 
@@ -126,16 +126,20 @@ DPR changes preserve logical camera origins as far as scroll bounds permit.
 
 All row profiles in one tensor use the same bin boundaries, and all column profiles in that tensor use the same bin boundaries, so navigation does not change the histogram coordinate system underneath the user.
 
-The distribution surfaces expose enough numeric scale information to interpret the value axis: the lower and upper endpoints of the active bin domain, the mathematically correct location of zero when zero lies inside that domain, and the tensor's true finite minimum and maximum. If a future robust/clipped domain differs from the true extrema, its endpoints must not be mislabeled as `min`/`max`; the true extrema remain distinguishable from the displayed domain.
+The distribution surfaces continuously expose enough numeric scale information to interpret the value axis: the lower and upper endpoints of the active bin domain and the mathematically correct location of zero when zero lies inside that domain. The tensor's true finite minimum and maximum remain available in the information popover. If a future robust/clipped domain differs from the true extrema, its endpoints must not be mislabeled as `min`/`max`; the true extrema remain distinguishable from the displayed domain.
 
 The density/intensity normalization may be chosen to keep profiles readable, but it must be stable for the open tensor and must not silently change on hover, scroll, or zoom. Camera navigation changes which rows/columns are visible, not the value-bin domain.
 
 Both orientations expose a compact numeric ruler for the actual shared bin
 domain: low to high runs left to right for rows and top to bottom for columns.
+The right-hand row-profile ruler runs horizontally above the histogram width,
+with low at its left edge, high at its right edge, and zero at its actual numeric
+position when present. Align its ticks and labels to the histogram data rectangle,
+including any device-pixel alignment offset; they must not drift from its edges.
 Use the distribution metadata's endpoints, never the matrix's robust luminosity
 anchors. The current API uses the full finite range; label it as full-range bins
-and show the authoritative true finite `min` and `max` in compact secondary
-metadata. Rounded display values retain exact endpoints in accessible ruler
+and show the authoritative true finite `min` and `max` in the tensor information
+popover alongside that domain description. Rounded display values retain exact endpoints in accessible ruler
 names and endpoint tooltips. A narrow profile with extreme outliers can correctly
 reflect concentration near zero; do not stretch its numeric coordinates to fill
 the panel. If a later accepted bin domain is clipped, describe its endpoints as
@@ -151,10 +155,10 @@ invent a zero location. All-nonfinite data reports no finite domain/extrema and
 has no numeric ticks. Before distribution metadata arrives, the domain is
 unavailable; valid metadata can label a progressive prefix without claiming that
 the operation is complete. Statistics arrival/failure does not change this scale.
-Reserve a fixed two-line (32 CSS pixel) region for this secondary metadata from
-initial loading onward, so constant-domain or all-nonfinite descriptions never
-shift the matrix origin. Retain wrapped text and keyboard/touch-accessible bounded
-overflow when the pane is too narrow for the complete description.
+Keep these descriptive states in the information popover, with wrapped text and
+keyboard/touch-accessible bounded overflow at constrained widths. Do not reserve
+a permanent secondary metadata line; metadata arrival or failure never shifts
+the matrix origin. The numeric rulers remain visible independently of the popover.
 
 Hover, native scrolling, and any separately accepted camera navigation change
 only inspected/visible matrix coordinates; they must not rescale value bins or

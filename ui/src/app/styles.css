@@ -101,15 +101,14 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .tensor-layout > .working-surface { display: flex; overflow: hidden; }
 .tensor-layout .surface-content { --tensor-pane-padding: 12px; position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: var(--tensor-pane-padding); gap: 8px; }
 .tensor-layout .surface-content > :not(.tensor-explorer) { flex-shrink: 0; }
-.tensor-identity { min-width: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 13px/20px ui-monospace, SFMono-Regular, Menlo, monospace; }
-.tensor-summary { flex-shrink: 0; font-size: 12px; white-space: nowrap; }
+.tensor-identity { min-width: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #285b38; font: 600 13px/20px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.tensor-summary { min-width: 0; flex-shrink: 1; max-width: 45%; overflow: hidden; text-overflow: ellipsis; font-size: 12px; white-space: nowrap; }
 .matrix-info-popover .tensor-metadata { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 4px 8px; font-size: 12px; }
 .working-surface { min-width: 0; }
 @media (max-width: 760px) {
   .tensor-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(64px, 24%) minmax(0, 1fr); gap: 8px; }
   .inventory-resizer { display: none; }
   .tensor-layout .surface-content { --tensor-pane-padding: 8px; }
-  .tensor-summary { max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
 }
 
 .app-bar { display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--ui-border); background: var(--ui-surface-soft); min-width: 0; z-index: 30; }
