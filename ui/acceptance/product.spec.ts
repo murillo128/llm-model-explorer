@@ -11,6 +11,7 @@ import { installProbe } from './probe';
 import { camera, zoom, drag, panelGeometry, promptViewport, tokenizerGeometry, settledPrompt } from './usability';
 import { nativeCamera } from '../tests/native-camera';
 import { revealTensor } from '../tests/tensor-tree-helpers';
+import { findComponent } from '../tests/architecture-controls';
 import { makeProjectionFixture } from '../tests/architecture-projection-fixture';
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
@@ -1059,7 +1060,7 @@ async function polishCapture(page: Page, info: TestInfo, name: string) {
   await info.attach(name, { path, contentType: 'image/png' });
 }
 
-for (const width of [1178, 1440]) test(`architecture safety baseline preserves shell and other explorers at ${width}px`, async ({ page }, info) => {
+for (const width of [390, 1178, 1440]) test(`architecture safety baseline preserves shell and other explorers at ${width}px`, async ({ page }, info) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width, height: 900 });
   // Only structural architecture is authored. Tensor values, distributions,
@@ -1083,7 +1084,12 @@ for (const width of [1178, 1440]) test(`architecture safety baseline preserves s
     // The existing active-tab font weight changes the nav's content width.
     // Record each active view; compare its exact geometry on return below.
     for (const [selector, value] of Object.entries(baseline)) {
-      if (selector !== '.app-bar nav') expect(current[selector]).toEqual(value);
+      if (selector === '.app-bar select' && width === 390) {
+        // At narrow widths the selector flexes with the existing active-tab font
+        // width. Its styling/height stays fixed; exact same-view geometry is
+        // checked during every Architecture action and on Tensor return below.
+        expect(current[selector]).toMatchObject({ y: value.y, height: value.height, font: value.font, color: value.color, background: value.background });
+      } else if (selector !== '.app-bar nav') expect(current[selector]).toEqual(value);
     }
   };
   await documentFits(page);
@@ -1111,10 +1117,34 @@ for (const width of [1178, 1440]) test(`architecture safety baseline preserves s
   await polishCapture(page, info, `safety-architecture-${width}`);
   // Measurements are evidence, not a golden toolbar placement requirement.
   observations.architecture = await page.evaluate(() => Object.fromEntries(
-    ['.architecture-toolbar', '.architecture-repetitions', '.architecture-focus-controls', '.architecture-flow'].map((selector) => {
+    ['.architecture-toolbar', '.architecture-context-row', '.architecture-flow'].map((selector) => {
       const { x, y, width, height } = document.querySelector(selector)!.getBoundingClientRect();
       return [selector, { x, y, width, height }];
     })));
+  const readyGraph = async () => {
+    await expect(canvas).toHaveAttribute('aria-busy', 'false');
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  };
+  const boundedControls = async () => {
+    await readyGraph(); await documentFits(page); await fixedShell();
+    expect(await shell()).toEqual(observations.architectureShell);
+    // Native horizontal scrollbars add their own height at constrained widths.
+    // Bound each content row independently of that platform chrome.
+    expect(await page.locator('.architecture-toolbar').evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(50);
+    expect(await page.locator('.architecture-context-row').evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(45);
+    await expect(page.getByRole('button', { name: 'Show all operations', exact: true })).toHaveCount(0);
+  };
+  await expect(page.getByRole('combobox', { name: /Expand instance of/ })).toHaveCount(0);
+  await boundedControls();
+  await page.getByRole('button', { name: 'Explore stack Decoder layers', exact: true }).click();
+  await boundedControls(); await polishCapture(page, info, `controls-stack-${width}`);
+  await findComponent(page, 'layer-3.attention.Q');
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  await boundedControls(); await polishCapture(page, info, `controls-node-${width}`);
+  await page.locator('.architecture-connection[data-source-node="layer-3.attention.Q"][data-target-node="layer-3.attention.rope-Q"]').focus(); await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Close connection inspection' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await boundedControls(); await polishCapture(page, info, `controls-edge-${width}`);
   await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
   await complete(page); await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
   await documentFits(page); expect(await shell()).toEqual(baseline);
