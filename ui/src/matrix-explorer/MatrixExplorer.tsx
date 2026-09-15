@@ -4,6 +4,7 @@ import type { Inspection } from '../rendering/matrix-inspection';
 import type { RendererState } from '../rendering/tensor-renderer';
 import type { DistributionDomain } from '../rendering/distribution-scale';
 import { PanelHeader } from './PanelHeader';
+import { ViewerPanel } from './ViewerPanel';
 import { InspectionCard } from './InspectionCard';
 import type { MatrixExplorerProps, MatrixUpdates } from './types';
 import './matrix-explorer.css';
@@ -52,40 +53,63 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
       rendering('failed');
       return;
     }
+    let frame: number | undefined;
+    let firstValues = true;
+    const cancelRefresh = () => {
+      if (frame !== undefined) cancelAnimationFrame(frame);
+      frame = undefined;
+    };
+    const refresh = () => { cancelRefresh(); if (active) viewport.refresh(); };
+    const scheduleRefresh = () => {
+      if (frame !== undefined) return;
+      const scheduled = requestAnimationFrame(() => {
+        if (frame !== scheduled) return;
+        frame = undefined;
+        if (active) viewport.refresh();
+      });
+      frame = scheduled;
+    };
+    // Uploads remain immediate and exact. Present the first values progressively;
+    // later rows share one frame instead of redrawing three surfaces per row.
     // Every callback closes over this allocation, never a mutable current-view ref.
     const updates: MatrixUpdates = {
       values(values, offset) {
         if (!active) return;
         viewport.matrix.renderer.upload(values, offset);
-        viewport.refresh();
+        if (firstValues) { firstValues = false; refresh(); }
+        else scheduleRefresh();
       },
       transfer(parameters) {
         if (!active) return;
         viewport.matrix.renderer.setTransfer(parameters);
-        viewport.refresh();
+        refresh();
       },
       distribution(axis, counts, offset) {
         if (!active) return;
         const target = axis === 'rows' ? viewport.rows : viewport.columns;
         if (!target) throw new Error('This source has no distribution surfaces.');
         target.upload(counts, offset);
-        viewport.refresh();
+        if (offset === 0) refresh();
+        else scheduleRefresh();
       },
       distributionDomain(domain) {
         if (!active) return;
         viewport.setDistributionDomain(domain);
         setDomainState({ source, domain });
       },
+      flush() { if (active && frame !== undefined) refresh(); },
     };
     let detach: () => void;
     try { detach = source.subscribe(updates); }
     catch (error) {
       active = false;
+      cancelRefresh();
       viewport.dispose();
       throw error; // Domain/subscription failures belong to the parent.
     }
     return () => {
       active = false;
+      cancelRefresh();
       currentViewport.current = null;
       try { detach(); } finally { viewport.dispose(); }
     };
@@ -104,10 +128,9 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
       onClick={() => currentViewport.current?.fitWidth()}>Fit width</button> : null;
   const toolbar = typeof header === 'function' ? header(controls, domain)
     : controls ? <PanelHeader identity={header} actions={controls} /> : header;
-  return <div className="matrix-explorer">
-    {toolbar && <div className="matrix-explorer-header">{toolbar}</div>}
+  return <ViewerPanel className="matrix-explorer" header={toolbar}>
     {failed && <p role="alert">Exact rendering is unavailable. WebGL2 resources could not be allocated or were lost. Reopen this view to retry.</p>}
     <div ref={host} />
     {inspection && <InspectionCard inspection={inspection} host={host} />}
-  </div>;
+  </ViewerPanel>;
 }

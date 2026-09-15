@@ -228,6 +228,7 @@ class Consumer:
         self._parent = parent
         self._reader: ArtifactReader | None = None
         self._source_factory: Callable[[], SourceReader] | None = None
+        self._source_prepare: Callable[[Cancellation], Awaitable[SourceReader]] | None = None
         self._source_reader: SourceReader | None = None
         self.read_guard: Callable[[], None] | None = None
         self._read_lock = asyncio.Lock()
@@ -271,9 +272,16 @@ class Consumer:
                     if self.read_guard is not None:
                         await self.runtime.work.run(self.read_guard)
                         self.cancellation.check()
-                    if self._source_factory is not None:
+                    if self._source_factory is not None or self._source_prepare is not None:
                         if self._source_reader is None:
-                            self._source_reader = await self.runtime.work.run(self._source_factory)
+                            if self._source_prepare is not None:
+                                self._source_reader = await self._source_prepare(self.cancellation)
+                            else:
+                                assert self._source_factory is not None
+                                self._source_reader = await self.runtime.work.run(
+                                    self._source_factory
+                                )
+                            self.cancellation.check()
                         data = await self.runtime.work.run(
                             self._source_reader.read_available, max_bytes
                         )
@@ -374,8 +382,9 @@ class OperationRuntime:
     def subscribe_source(
         self,
         spec: ArtifactSpec,
-        factory: Callable[[], SourceReader],
+        factory: Callable[[], SourceReader] | None = None,
         *,
+        prepare: Callable[[Cancellation], Awaitable[SourceReader]] | None = None,
         session_id: UUID | None = None,
         parent: Cancellation | None = None,
     ) -> Consumer:
@@ -383,11 +392,15 @@ class OperationRuntime:
 
         Each interest owns its file cursor. Cancellation, session teardown and
         internal parent ownership use the same consumer lifecycle as artifacts.
+        Optional async preparation runs inside the shielded read lifetime, so
+        cancellation settles owned computation before its reader is disposed.
         """
         if self._closed:
             raise RuntimeError("operation runtime is closed")
         if parent is not None:
             parent.check()
+        if (factory is None) == (prepare is None):
+            raise ValueError("provide exactly one direct source factory or preparer")
 
         async def unused(context: ProducerContext) -> None:
             raise AssertionError("direct sources have no producer")
@@ -396,6 +409,7 @@ class OperationRuntime:
         flight.finished.set()
         consumer = Consumer(self, flight, session_id, parent)
         consumer._source_factory = factory
+        consumer._source_prepare = prepare
         flight.interests.add(consumer)
         self._consumers.add(consumer)
         if consumer.operation_id is not None:

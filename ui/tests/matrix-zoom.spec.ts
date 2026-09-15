@@ -5,7 +5,7 @@ import type {} from './matrix-explorer-harness';
 const url = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`;
 async function open(page: Page, name: 'short' | 'tall' | 'large' | 'square') {
   await page.goto(url);
-  await page.addStyleTag({ content: '#workspace { height: min(600px, 70vh); }' });
+  await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: min(600px, 70vh); }' });
   await expect(page.locator('.matrix-scroll')).toBeVisible();
   await page.evaluate((name) => window.matrixFixture.render(name), name);
   await expect.poll(() => page.evaluate(() => window.matrixFixture.subscriptions.length)).toBe(2);
@@ -52,8 +52,8 @@ for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
       expect(c.rows.scaleY).toBe(c.view.scaleY); expect(c.columns.scaleX).toBe(c.view.scaleX);
       expect(c.rows.width).toBe(100); expect(c.columns.height).toBe(100);
       expect(c.rowRect!.top).toBeCloseTo(c.rect.top, 3); expect(c.columnRect!.left).toBeCloseTo(c.rect.left, 3);
-      expect(c.rowRect!.left - c.rect.right).toBeCloseTo(10, 0);
-      expect(c.columnRect!.top - c.rect.bottom).toBeCloseTo(10, 0);
+      expect(c.rowRect!.left - c.host.left - c.width).toBeCloseTo(10, 0);
+      expect(c.columnRect!.top - c.host.top - c.height).toBeCloseTo(10, 0);
     }
     await page.evaluate(() => {
       const v = window.matrixFixture.viewports.at(-1)!;
@@ -178,7 +178,7 @@ test('touch pinch and two simultaneous cameras remain local', async ({ page }) =
   await expect(page.locator('.matrix-scroll')).toBeVisible();
   await page.evaluate(() => window.matrixFixture.renderPair());
   await expect(page.locator('.matrix-scroll')).toHaveCount(2);
-  await page.addStyleTag({ content: '#workspace { height: 380px; }' });
+  await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: 380px; }' });
   const other = await camera(page);
   const first = page.locator('.matrix-scroll').first();
   const rect = (await first.boundingBox())!;

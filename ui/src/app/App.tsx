@@ -6,6 +6,7 @@ import type { RuntimeConfig } from '../api/runtime-config';
 import { Button } from '../components/Button';
 import { AppBar, AppStatusBar } from './AppChrome';
 import { TensorHeader } from '../components/TensorHeader';
+import { ViewerPanel } from '../matrix-explorer';
 import { TensorTree } from '../components/TensorTree';
 import { TensorWorkspace } from '../components/TensorWorkspace';
 import { WorkingSurface } from '../components/WorkingSurface';
@@ -65,8 +66,11 @@ function BackendApp({ config, slots }: Required<AppProps>) {
           </>}>
           <WorkingSurface title={`${state.explorer} workspace`} showTitle={false}>
             {state.explorer === 'Tensor Explorer' && tensor && <>
-              {(!supported || slots.tensor) && <TensorHeader key={tensor.id} tensor={tensor} />}
-              {!supported && <p>Direct viewing supports complete rank-1 and rank-2 tensors. This rank-{tensor.rank} tensor is available for metadata inspection only.</p>}
+              {!supported ? <section className="tensor-explorer" aria-label="Tensor metadata view">
+                <ViewerPanel header={<TensorHeader key={tensor.id} tensor={tensor} />}>
+                  <p>Direct viewing supports complete rank-1 and rank-2 tensors. This rank-{tensor.rank} tensor is available for metadata inspection only.</p>
+                </ViewerPanel>
+              </section> : slots.tensor && <TensorHeader key={tensor.id} tensor={tensor} />}
             </>}
             {context ? <ExplorerContext.Provider key={state.viewRevision} value={context}>
               {Slot ? <Slot {...context} /> : state.explorer === 'Tokenizer Explorer' ?

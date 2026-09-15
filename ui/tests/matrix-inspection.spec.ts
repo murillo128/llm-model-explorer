@@ -128,14 +128,14 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
     expect(await page.evaluate(() => [window.explorerFixture.metrics.live.size, window.explorerFixture.metrics.liveDisplays.size])).toEqual([0, 0]);
   });
 
-  test('card stays inside the scientific pane and clear of distribution panels', async ({ page }) => {
+  test('card stays inside the scientific pane and clear of distribution data', async ({ page }) => {
     await open(page);
     for (const [row, column] of [[0, 0], [0, 18], [16, 0], [16, 18]]) {
       await hover(page, row!, column!);
       const { card, pane, panels } = await page.evaluate(() => ({
         card: document.querySelector('.matrix-inspection')!.getBoundingClientRect().toJSON(),
         pane: document.querySelector('.matrix-surfaces')!.getBoundingClientRect().toJSON(),
-        panels: ['.row-distributions', '.column-distributions'].map((selector) => document.querySelector(selector)!.getBoundingClientRect().toJSON()),
+        panels: ['.row-distributions canvas', '.column-distributions canvas'].map((selector) => document.querySelector(selector)!.getBoundingClientRect().toJSON()),
       }));
       expect(card.left).toBeGreaterThanOrEqual(pane.left);
       expect(card.top).toBeGreaterThanOrEqual(pane.top);

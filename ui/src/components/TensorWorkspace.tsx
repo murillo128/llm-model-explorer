@@ -50,7 +50,7 @@ export function TensorWorkspace({ enabled, inventory, children }: {
   const hidden = !preference.visible;
   return <main id="workspace" tabIndex={-1} ref={main}
     className={enabled ? `tensor-layout${hidden ? ' inventory-hidden' : ''}` : undefined}
-    style={{ '--inventory-width': `${width}px` } as CSSProperties}>
+    style={{ '--inventory-width': `${width}px`, '--inventory-tooltip-width': `${Math.max(0, available - 40)}px` } as CSSProperties}>
     {enabled && <>
       <aside id="tensor-inventory" aria-label="Tensor inventory" hidden={hidden}>
         <div className="inventory-header">

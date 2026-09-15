@@ -18,7 +18,8 @@ properties remain optional; generation does not alter endpoint semantics.
 ## Progressive consumption
 
 `streamTensor`, `streamTensorStatistics`, `streamTensorDistributions`, and
-`streamInputEmbeddings` return
+`streamInputEmbeddings`, `streamInputEmbeddingsStatistics`, and
+`streamInputEmbeddingsDistributions` return
 a `StreamOperation` immediately. `onOperationId` fires when headers arrive,
 before any body bytes are required. `onMetadata` supplies validated dimensions
 and sizes; `onData(bytes, byteOffset)` delivers contiguous raw little-endian
@@ -81,3 +82,10 @@ with controlled headers/body timing, CORS and DELETE preflight handling.
 It snapshots ordered IDs and rejects an incorrect echo before exposing META or
 DATA, including reordering, changed duplicates, and length mismatches. The
 component never fetches or parses an embedding response itself.
+
+The two embedding analysis methods accept the same ordered request and independently
+return statistics or binary row/column counts. Each validates its distinct result
+kind and exact ordered echo. Statistics include the requested matrix shape and
+count; distributions include its row/column geometry. Keep the three operation
+handles separate so auxiliary loading/failure does not gate valid matrix bytes.
+Application-level Tokenizer composition is a separate integration step.

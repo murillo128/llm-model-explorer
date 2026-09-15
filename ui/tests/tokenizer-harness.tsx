@@ -13,7 +13,11 @@ declare global {
   interface Window {
     embeddingHarness: {
       renderers: GridRenderer[];
+      countRenderers: GridRenderer[];
       requests: { session: string; token_ids: number[]; aborted: boolean }[];
+      auxiliary: { kind: 'statistics' | 'distributions'; session: string; token_ids: number[]; aborted: boolean }[];
+      auxiliaryHeaders: (index: number, status?: number) => void;
+      auxiliarySend: (index: number, bytes: number[], close?: boolean) => void;
       cancelled: string[];
       headers: (index: number, status?: number) => void;
       send: (index: number, bytes: number[], close?: boolean) => void;
@@ -38,15 +42,27 @@ window.tokenizerHarness = {
 };
 const embeddingResolvers: ((response: Response) => void)[] = [];
 const streams: ReadableStreamDefaultController<Uint8Array>[] = [];
+const auxiliaryResolvers: ((response: Response) => void)[] = [];
+const auxiliaryStreams: ReadableStreamDefaultController<Uint8Array>[] = [];
 const renderers: GridRenderer[] = [];
+const countRenderers: GridRenderer[] = [];
 const setView = GridRenderer.prototype.setView;
 GridRenderer.prototype.setView = function (...args) {
-  if (!renderers.includes(this)) renderers.push(this);
+  const collection = this.canvas.closest('.matrix-scroll') ? renderers : countRenderers;
+  if (!collection.includes(this)) collection.push(this);
   return setView.apply(this, args);
 };
 window.embeddingHarness = {
-  renderers,
-  requests: [], cancelled: [],
+  renderers, countRenderers,
+  requests: [], cancelled: [], auxiliary: [],
+  auxiliaryHeaders(index, status = 200) {
+    auxiliaryResolvers[index]!(status === 200 ? new Response(new ReadableStream({ start(controller) { auxiliaryStreams[index] = controller; } }), {
+      headers: { 'Content-Type': 'application/vnd.llm-model-explorer.stream', 'X-Operation-Id': `11111111-0000-4000-8000-${String(index).padStart(12, '0')}` },
+    }) : new Response(JSON.stringify({ code: 'internal_error', message: 'Analysis fixture failure' }), { status, headers: { 'Content-Type': 'application/json' } }));
+  },
+  auxiliarySend(index, bytes, close = false) {
+    try { auxiliaryStreams[index]!.enqueue(new Uint8Array(bytes)); if (close) auxiliaryStreams[index]!.close(); } catch { /* Deliberate late callbacks after cancellation. */ }
+  },
   headers(index, status = 200) {
     embeddingResolvers[index]!(status === 200 ? new Response(new ReadableStream({ start(controller) { streams[index] = controller; } }), {
       headers: { 'Content-Type': 'application/vnd.llm-model-explorer.stream', 'X-Operation-Id': `00000000-0000-4000-8000-${String(index).padStart(12, '0')}` },
@@ -61,6 +77,13 @@ window.embeddingHarness = {
 const client = new ApiClient({ backendBaseUrl: 'https://fixture.example' }, async (input, init) => {
   const path = new URL(String(input)).pathname;
   if (init?.method === 'DELETE') { window.embeddingHarness.cancelled.push(path); return new Response(null, { status: 204 }); }
+  if (/\/embeddings\/(statistics|distributions)$/.test(path)) {
+    const request = { kind: path.endsWith('/statistics') ? 'statistics' as const : 'distributions' as const,
+      session: path.split('/')[2]!, ...JSON.parse(init!.body as string) as { token_ids: number[] }, aborted: false };
+    window.embeddingHarness.auxiliary.push(request);
+    init?.signal?.addEventListener('abort', () => { request.aborted = true; });
+    return new Promise<Response>(resolve => auxiliaryResolvers.push(resolve));
+  }
   if (path.endsWith('/embeddings')) {
     const request = { session: path.split('/')[2]!, ...JSON.parse(init!.body as string) as { token_ids: number[] }, aborted: false };
     window.embeddingHarness.requests.push(request);

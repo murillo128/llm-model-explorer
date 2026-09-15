@@ -1,0 +1,318 @@
+{
+  "browser": "153.0.8010.12",
+  "phase": "before",
+  "measurements": [
+    {
+      "suffix": "1178",
+      "view": {
+        "dpr": 1,
+        "scaleX": 1,
+        "scaleY": 1,
+        "x": 0,
+        "y": 0,
+        "width": 1021,
+        "height": 601,
+        "cssWidth": 1021,
+        "cssHeight": 601,
+        "scrollWidth": 1024,
+        "scrollHeight": 6144
+      },
+      "client": [
+        1021,
+        601
+      ],
+      "gutter": [
+        15,
+        15
+      ],
+      "viewport": {
+        "x": 16,
+        "y": 90,
+        "width": 1036,
+        "height": 616,
+        "top": 90,
+        "right": 1052,
+        "bottom": 706,
+        "left": 16
+      },
+      "matrix": {
+        "x": 16,
+        "y": 90,
+        "width": 1021,
+        "height": 601,
+        "top": 90,
+        "right": 1037,
+        "bottom": 691,
+        "left": 16
+      },
+      "rowTrack": {
+        "x": 1062,
+        "y": 90,
+        "width": 100,
+        "height": 601,
+        "top": 90,
+        "right": 1162,
+        "bottom": 691,
+        "left": 1062
+      },
+      "columnTrack": {
+        "x": 16,
+        "y": 716,
+        "width": 1021,
+        "height": 100,
+        "top": 716,
+        "right": 1037,
+        "bottom": 816,
+        "left": 16
+      },
+      "rowData": {
+        "x": 1062,
+        "y": 90,
+        "width": 100,
+        "height": 601,
+        "top": 90,
+        "right": 1162,
+        "bottom": 691,
+        "left": 1062
+      },
+      "columnData": {
+        "x": 16,
+        "y": 716,
+        "width": 1021,
+        "height": 100,
+        "top": 716,
+        "right": 1037,
+        "bottom": 816,
+        "left": 16
+      },
+      "low": {
+        "x": 1062,
+        "y": 56,
+        "width": 12.046875,
+        "height": 11,
+        "top": 56,
+        "right": 1074.046875,
+        "bottom": 67,
+        "left": 1062
+      },
+      "high": {
+        "x": 1155.96875,
+        "y": 68,
+        "width": 6.03125,
+        "height": 11,
+        "top": 68,
+        "right": 1162,
+        "bottom": 79,
+        "left": 1155.96875
+      }
+    },
+    {
+      "suffix": "1440",
+      "view": {
+        "dpr": 1,
+        "scaleX": 2,
+        "scaleY": 2,
+        "x": 0,
+        "y": 0,
+        "width": 1283,
+        "height": 601,
+        "cssWidth": 1283,
+        "cssHeight": 601,
+        "scrollWidth": 2048,
+        "scrollHeight": 12288
+      },
+      "client": [
+        1283,
+        601
+      ],
+      "gutter": [
+        15,
+        15
+      ],
+      "viewport": {
+        "x": 16,
+        "y": 90,
+        "width": 1298,
+        "height": 616,
+        "top": 90,
+        "right": 1314,
+        "bottom": 706,
+        "left": 16
+      },
+      "matrix": {
+        "x": 16,
+        "y": 90,
+        "width": 1283,
+        "height": 601,
+        "top": 90,
+        "right": 1299,
+        "bottom": 691,
+        "left": 16
+      },
+      "rowTrack": {
+        "x": 1324,
+        "y": 90,
+        "width": 100,
+        "height": 601,
+        "top": 90,
+        "right": 1424,
+        "bottom": 691,
+        "left": 1324
+      },
+      "columnTrack": {
+        "x": 16,
+        "y": 716,
+        "width": 1283,
+        "height": 100,
+        "top": 716,
+        "right": 1299,
+        "bottom": 816,
+        "left": 16
+      },
+      "rowData": {
+        "x": 1324,
+        "y": 90,
+        "width": 100,
+        "height": 601,
+        "top": 90,
+        "right": 1424,
+        "bottom": 691,
+        "left": 1324
+      },
+      "columnData": {
+        "x": 16,
+        "y": 716,
+        "width": 1283,
+        "height": 100,
+        "top": 716,
+        "right": 1299,
+        "bottom": 816,
+        "left": 16
+      },
+      "low": {
+        "x": 1324,
+        "y": 56,
+        "width": 12.046875,
+        "height": 11,
+        "top": 56,
+        "right": 1336.046875,
+        "bottom": 67,
+        "left": 1324
+      },
+      "high": {
+        "x": 1417.96875,
+        "y": 68,
+        "width": 6.03125,
+        "height": 11,
+        "top": 68,
+        "right": 1424,
+        "bottom": 79,
+        "left": 1417.96875
+      }
+    },
+    {
+      "suffix": "1178-short-dpr2",
+      "view": {
+        "dpr": 2,
+        "scaleX": 16.734375,
+        "scaleY": 16.734375,
+        "x": 0,
+        "y": 0,
+        "width": 2142,
+        "height": 66,
+        "cssWidth": 1071,
+        "cssHeight": 33,
+        "scrollWidth": 1071,
+        "scrollHeight": 33.46875
+      },
+      "client": [
+        1071,
+        666
+      ],
+      "gutter": [
+        15,
+        0
+      ],
+      "viewport": {
+        "x": 16,
+        "y": 90,
+        "width": 1086,
+        "height": 666,
+        "top": 90,
+        "right": 1102,
+        "bottom": 756,
+        "left": 16
+      },
+      "matrix": {
+        "x": 16,
+        "y": 406.5,
+        "width": 1071,
+        "height": 33,
+        "top": 406.5,
+        "right": 1087,
+        "bottom": 439.5,
+        "left": 16
+      },
+      "rowTrack": {
+        "x": 1112,
+        "y": 406.5,
+        "width": 50,
+        "height": 33,
+        "top": 406.5,
+        "right": 1162,
+        "bottom": 439.5,
+        "left": 1112
+      },
+      "columnTrack": {
+        "x": 16,
+        "y": 449.5,
+        "width": 1071,
+        "height": 50,
+        "top": 449.5,
+        "right": 1087,
+        "bottom": 499.5,
+        "left": 16
+      },
+      "rowData": {
+        "x": 1112,
+        "y": 406.5,
+        "width": 50,
+        "height": 33,
+        "top": 406.5,
+        "right": 1162,
+        "bottom": 439.5,
+        "left": 1112
+      },
+      "columnData": {
+        "x": 16,
+        "y": 449.5,
+        "width": 1071,
+        "height": 50,
+        "top": 449.5,
+        "right": 1087,
+        "bottom": 499.5,
+        "left": 16
+      },
+      "low": {
+        "x": 1112,
+        "y": 372.5,
+        "width": 36.125,
+        "height": 11,
+        "top": 372.5,
+        "right": 1148.125,
+        "bottom": 383.5,
+        "left": 1112
+      },
+      "high": {
+        "x": 1131.890625,
+        "y": 384.5,
+        "width": 30.109375,
+        "height": 11,
+        "top": 384.5,
+        "right": 1162,
+        "bottom": 395.5,
+        "left": 1131.890625
+      }
+    }
+  ]
+}

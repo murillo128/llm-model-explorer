@@ -7,6 +7,7 @@ import type { RendererOptions } from './tensor-renderer';
 import { TensorViewport } from './tensor-viewport';
 import type { TensorDescriptor, ViewGeometry } from './geometry';
 import { DistributionScale } from './distribution-scale';
+import { MatrixScrollbars } from './matrix-scrollbars';
 import type { DistributionDomain } from './distribution-scale';
 import './distribution-scale.css';
 
@@ -30,6 +31,7 @@ export class MatrixViewport {
   private cameraNavigation?: MatrixCameraNavigation;
   private rowScale?: DistributionScale;
   private columnScale?: DistributionScale;
+  private scrollbars?: MatrixScrollbars;
   private readonly observer: ResizeObserver;
 
   constructor(readonly host: HTMLElement, descriptor: TensorDescriptor, options: MatrixViewportOptions = {}) {
@@ -38,15 +40,14 @@ export class MatrixViewport {
     host.classList.add('matrix-surfaces');
     Object.assign(host.style, { display: 'grid', position: 'relative', gap: '10px', alignItems: 'start', alignContent: 'start', minWidth: '0' });
     this.main.className = 'matrix-scroll';
-    Object.assign(this.main.style, { gridColumn: '1', gridRow: '1', minWidth: '0', minHeight: '0', height: descriptor.rank === 2 ? 'var(--matrix-height)' : 'auto', overflowY: 'scroll', overscrollBehavior: 'contain' });
+    Object.assign(this.main.style, { gridColumn: '1', gridRow: '1', minWidth: '0', minHeight: descriptor.rank === 2 ? '0' : '18px', height: descriptor.rank === 2 ? 'var(--matrix-height)' : 'auto', overflowY: 'auto', overscrollBehavior: 'contain' });
     this.main.setAttribute('role', 'region');
     this.main.setAttribute('aria-label', 'Tensor matrix; scroll to inspect all values');
     this.main.tabIndex = 0;
     this.rowHost.className = 'row-distributions';
     this.columnHost.className = 'column-distributions';
     host.append(this.main);
-    // Auto height includes native horizontal scrollbar chrome in addition to the
-    // intrinsic data extent. A fixed data-height border box can hide a short strip.
+    // Rank-1 keeps its exact strip within a small usable scroll-control viewport.
     const hostMaxHeight = getComputedStyle(this.main).maxHeight;
     this.main.style.maxHeight = hostMaxHeight === 'none' ? 'var(--matrix-height)' : `min(var(--matrix-height), ${hostMaxHeight})`;
     try {
@@ -79,10 +80,7 @@ export class MatrixViewport {
         const gap = this.rows ? parseFloat(getComputedStyle(host).rowGap) : 0;
         const scaleHeight = this.rowScale ? this.rowScale.ruler.offsetHeight + gap : 0;
         host.style.setProperty('--matrix-height', `${Math.max(0, host.clientHeight - depth - gap - scaleHeight)}px`);
-        // The vertical scrollbar reserves space even without overflow. Include it in
-        // the native-width track so a tall, otherwise fitting tensor stays fitting.
-        const gutter = this.main.offsetWidth - this.main.clientWidth;
-        host.style.gridTemplateColumns = `${descriptor.rank === 2 ? 'minmax(0, 1fr)' : `minmax(0, ${descriptor.shape.at(-1)! / dpr + gutter}px)`}${this.rows ? ` ${depth}px` : ''}`;
+        host.style.gridTemplateColumns = `${descriptor.rank === 2 ? 'minmax(0, 1fr)' : `minmax(0, ${descriptor.shape.at(-1)! / dpr}px)`}${this.rows ? ` ${depth}px` : ''}`;
         host.style.gridTemplateRows = this.rows ? `${this.rowScale!.ruler.offsetHeight}px var(--matrix-height) ${depth}px` : 'var(--matrix-height)';
       };
       layout();
@@ -92,9 +90,12 @@ export class MatrixViewport {
       }, onViewChange: (view) => {
         layout();
         this.align(view);
+        this.scrollbars?.refresh();
         this.zoomSelection?.refresh();
         this.inspection?.refresh();
       } });
+      this.scrollbars = new MatrixScrollbars(this.main, descriptor.rank === 1 ? this.main : host);
+      this.matrix.attachOverlay(this.scrollbars.element);
       if (descriptor.rank === 2 && options.onInspection) this.inspection = new MatrixInspection(this, options.onInspection);
       if (descriptor.rank === 2 && descriptor.numel > 0) this.zoomSelection = new MatrixZoomSelection(this,
         (active) => this.inspection?.suspend(active));
@@ -112,22 +113,21 @@ export class MatrixViewport {
 
   private align(view: ViewGeometry) {
     if (!this.rows || !this.columns) return;
-    // Keep the full native scroll viewport, but attach profiles and their rulers
-    // to the actual visible matrix. Underfilled axes share its centered offset.
+    // Fixed containers occupy the viewer edges. Only their scientific canvases
+    // follow the matrix's device-snapped presentation offsets on the shared axis.
     // During TensorViewport construction its callback precedes field assignment.
     const canvas = this.main.querySelector('canvas')!;
     const matrix = canvas.getBoundingClientRect();
+    const viewport = this.main.getBoundingClientRect();
     const pane = this.host.getBoundingClientRect();
     const gap = parseFloat(getComputedStyle(this.host).columnGap);
     const rowGap = parseFloat(getComputedStyle(this.host).rowGap);
-    const gutterX = view.width >= Math.floor(this.main.clientWidth * view.dpr) ? this.main.offsetWidth - this.main.clientWidth : 0;
-    const gutterY = view.height >= Math.floor(this.main.clientHeight * view.dpr) ? this.main.offsetHeight - this.main.clientHeight : 0;
-    const left = matrix.left - pane.left - this.host.clientLeft;
-    const top = matrix.top - pane.top - this.host.clientTop;
-    const right = left + view.cssWidth + gap + gutterX;
-    const bottom = top + view.cssHeight + rowGap + gutterY;
-    Object.assign(this.rowHost.style, { left: `${right}px`, top: `${top}px` });
-    Object.assign(this.columnHost.style, { left: `${left}px`, top: `${bottom}px` });
+    const left = viewport.left - pane.left - this.host.clientLeft;
+    const top = viewport.top - pane.top - this.host.clientTop;
+    const right = left + this.main.clientWidth + gap;
+    const bottom = top + this.main.clientHeight + rowGap;
+    Object.assign(this.rowHost.style, { left: `${right}px`, top: `${top}px`, width: `${100 / view.dpr}px`, height: `${this.main.clientHeight}px` });
+    Object.assign(this.columnHost.style, { left: `${left}px`, top: `${bottom}px`, width: `${this.main.clientWidth}px`, height: `${100 / view.dpr}px` });
     Object.assign(this.rowScale!.ruler.style, { left: `${right}px`, top: `${top - rowGap - this.rowScale!.ruler.offsetHeight}px`, width: `${100 / view.dpr}px` });
     Object.assign(this.columnScale!.ruler.style, { left: `${right}px`, top: `${bottom}px`, width: `${100 / view.dpr}px` });
     const pairs = [
@@ -135,12 +135,10 @@ export class MatrixViewport {
       [this.columns, this.columnHost, view.cssWidth, 100 / view.dpr, view.x * view.scaleX / view.dpr, 0, view.scaleX, 1],
     ] as const;
     for (const [renderer, host, width, height, x, y, scaleX, scaleY] of pairs) {
-      host.style.width = `${width}px`;
-      host.style.height = `${height}px`;
       if (renderer.state !== 'ready') continue;
       const rect = host.getBoundingClientRect();
-      renderer.canvas.style.left = `${Math.round(rect.left * view.dpr) / view.dpr - rect.left}px`;
-      renderer.canvas.style.top = `${Math.round(rect.top * view.dpr) / view.dpr - rect.top}px`;
+      renderer.canvas.style.left = `${(renderer === this.columns ? matrix.left : Math.round(rect.left * view.dpr) / view.dpr) - rect.left}px`;
+      renderer.canvas.style.top = `${(renderer === this.rows ? matrix.top : Math.round(rect.top * view.dpr) / view.dpr) - rect.top}px`;
       if (renderer === this.rows) {
         this.rowScale?.alignBinAxis(renderer.canvas.style.left);
         this.rowScale!.ruler.style.left = `${right + parseFloat(renderer.canvas.style.left)}px`;
@@ -149,6 +147,10 @@ export class MatrixViewport {
         this.columnScale!.ruler.style.top = `${bottom + parseFloat(renderer.canvas.style.top)}px`;
       }
       const panelView = renderer.setView(width, height, x, y, view.dpr, scaleX, scaleY);
+      // Zero references cover real data only, leaving underfill margins empty.
+      const guide = (renderer === this.rows ? this.rowScale : this.columnScale)!.guide;
+      if (renderer === this.rows) Object.assign(guide.style, { top: renderer.canvas.style.top, bottom: 'auto', height: `${height}px` });
+      else Object.assign(guide.style, { left: renderer.canvas.style.left, right: 'auto', width: `${width}px` });
       renderer.canvas.dataset.origin = `${panelView.x},${panelView.y}`;
       renderer.draw();
     }
@@ -176,6 +178,7 @@ export class MatrixViewport {
     this.zoomSelection?.dispose();
     this.cameraNavigation?.dispose();
     this.inspection?.dispose();
+    this.scrollbars?.dispose();
     this.matrix.dispose();
     this.rows?.dispose();
     this.columns?.dispose();

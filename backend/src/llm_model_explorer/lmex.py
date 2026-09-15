@@ -65,7 +65,7 @@ class LMEXWriter:
         parsed = METADATA.validate_python(value)
         payload = _json(value)
         self.expected = parsed.byte_length
-        self.statistics = parsed.kind == "tensor_statistics"
+        self.statistics = parsed.kind in ("tensor_statistics", "input_embeddings_statistics")
         return _frame(FrameType.META_JSON, payload)
 
     def data(self, value: bytes | memoryview) -> Frame:

@@ -8,10 +8,10 @@
 .distribution-scale-columns { grid-column: 2; grid-row: 3; height: var(--distribution-depth); top: var(--distribution-offset, 0px); border-left: 1px solid #a1a39b; }
 .distribution-scale:not([data-minimum]), .distribution-scale-constant { border-color: transparent; }
 .distribution-endpoint, .distribution-zero-tick { position: absolute; white-space: nowrap; }
-/* Separate captions even when the fixed 100-device-pixel axis is only 50 CSS
-   pixels wide. Zero uses the existing grid gap; no data geometry changes. */
-.distribution-scale-rows .distribution-endpoint { line-height: 11px; }
-.distribution-scale-rows .distribution-low { left: 0; top: 0; }
+/* Both endpoints share a baseline; a shared exponent uses the line above them. */
+.distribution-scale-rows .distribution-endpoint { line-height: 11px; max-width: 50%; overflow: hidden; text-overflow: ellipsis; }
+.distribution-exponent { position: absolute; top: 0; left: 50%; transform: translateX(-50%); font-size: 9px; line-height: 10px; white-space: nowrap; }
+.distribution-scale-rows .distribution-low { left: 0; top: 12px; }
 .distribution-scale-rows .distribution-high { right: 0; top: 12px; }
 .distribution-scale-rows .distribution-zero-tick { left: var(--distribution-zero); top: 100%; line-height: 10px; transform: translateX(-50%); }
 .distribution-scale-columns .distribution-low { left: 4px; top: 0; }

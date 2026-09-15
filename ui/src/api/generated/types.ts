@@ -216,6 +216,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{session_id}/embeddings/statistics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stream exact input embedding statistics
+         * @description Starts a cancelable long operation with LMEX result kind `input_embeddings_statistics`.
+         *     Validate all token IDs against the session model vocabulary before META/DATA.
+         *     Return unsupported_representation when a trustworthy input-embedding source
+         *     or its hidden size cannot be resolved. No full vocabulary table transfer or
+         *     eager full-table materialization is required. Analyze only the ordered requested
+         *     float32 rows, preserving duplicate positions. Results are ephemeral. See contract.md.
+         */
+        post: operations["streamInputEmbeddingsStatistics"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{session_id}/embeddings/distributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stream exact input embedding row and column distributions
+         * @description Starts a cancelable long operation with LMEX result kind `input_embeddings_distributions`.
+         *     Validate all token IDs against the session model vocabulary before META/DATA.
+         *     Return unsupported_representation when a trustworthy input-embedding source
+         *     or its hidden size cannot be resolved. No full vocabulary table transfer or
+         *     eager full-table materialization is required. Analyze only the ordered requested
+         *     float32 rows, preserving duplicate positions. Results are ephemeral. See contract.md.
+         */
+        post: operations["streamInputEmbeddingsDistributions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/{operation_id}": {
         parameters: {
             query?: never;
@@ -440,8 +494,77 @@ export interface components {
              */
             kind: "tensor_distributions";
         });
+        /** @description count = finite_count + non_finite_count. No DATA frames, including empty DATA. Finite fields are all null iff finite_count = 0. See contract.md for numeric semantics. */
+        InputEmbeddingsStatisticsMetadata: {
+            /** @constant */
+            kind: "input_embeddings_statistics";
+            /** @description Exact ordered echo of the submitted token IDs. */
+            token_ids: components["schemas"]["SafeInteger"][];
+            shape: [
+                components["schemas"]["SafeInteger"],
+                number
+            ];
+            count: components["schemas"]["SafeInteger"];
+            finite_count: components["schemas"]["SafeInteger"];
+            non_finite_count: components["schemas"]["SafeInteger"];
+            minimum: components["schemas"]["NullableFiniteNumber"];
+            maximum: components["schemas"]["NullableFiniteNumber"];
+            mean: components["schemas"]["NullableFiniteNumber"];
+            stddev: components["schemas"]["NullableFiniteNumber"];
+            percentiles: {
+                p01: components["schemas"]["NullableFiniteNumber"];
+                p05: components["schemas"]["NullableFiniteNumber"];
+                p50: components["schemas"]["NullableFiniteNumber"];
+                p95: components["schemas"]["NullableFiniteNumber"];
+                p99: components["schemas"]["NullableFiniteNumber"];
+            };
+            /** @constant */
+            byte_length: 0;
+        } & (unknown & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "input_embeddings_statistics";
+        });
+        /** @description row_counts shape [rows,100], offset 0; column_counts shape [100,columns], offset row byte length. Total length is section sum. Both domain endpoints null iff no finite source values; counts then all zero. See contract.md. */
+        InputEmbeddingsDistributionsMetadata: {
+            /** @constant */
+            kind: "input_embeddings_distributions";
+            /** @description Exact ordered echo of the submitted token IDs. */
+            token_ids: components["schemas"]["SafeInteger"][];
+            rows: components["schemas"]["SafeInteger"];
+            columns: number;
+            /** @constant */
+            bin_count: 100;
+            /** @constant */
+            binning: "linear-full-range";
+            domain_minimum: components["schemas"]["NullableFiniteNumber"];
+            domain_maximum: components["schemas"]["NullableFiniteNumber"];
+            /** @constant */
+            dtype: "uint32";
+            /** @constant */
+            byte_order: "little";
+            sections: [
+                components["schemas"]["DistributionSection"] & {
+                    /** @constant */
+                    name?: "row_counts";
+                },
+                components["schemas"]["DistributionSection"] & {
+                    /** @constant */
+                    name?: "column_counts";
+                }
+            ];
+            byte_length: components["schemas"]["SafeInteger"];
+        } & (unknown & {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "input_embeddings_distributions";
+        });
         /** @description JSON payload of META_JSON; never a JSON encoding of numeric DATA. */
-        StreamMetadata: components["schemas"]["TensorMetadata"] | components["schemas"]["InputEmbeddingsMetadata"] | components["schemas"]["TensorStatisticsMetadata"] | components["schemas"]["TensorDistributionsMetadata"];
+        StreamMetadata: components["schemas"]["TensorMetadata"] | components["schemas"]["InputEmbeddingsMetadata"] | components["schemas"]["InputEmbeddingsDistributionsMetadata"] | components["schemas"]["InputEmbeddingsStatisticsMetadata"] | components["schemas"]["TensorStatisticsMetadata"] | components["schemas"]["TensorDistributionsMetadata"];
         /** @description Advisory PROGRESS_JSON payload. When total is present, completed <= total. Does not change metadata. */
         StreamProgress: {
             completed: components["schemas"]["SafeInteger"];
@@ -1087,6 +1210,54 @@ export interface operations {
         };
     };
     streamInputEmbeddings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InputEmbeddingsRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["BinaryStream"];
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModelChanged"];
+            422: components["responses"]["Unprocessable"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ResourceExhausted"];
+        };
+    };
+    streamInputEmbeddingsStatistics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InputEmbeddingsRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["BinaryStream"];
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModelChanged"];
+            422: components["responses"]["Unprocessable"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ResourceExhausted"];
+        };
+    };
+    streamInputEmbeddingsDistributions: {
         parameters: {
             query?: never;
             header?: never;

@@ -1,13 +1,13 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import type { ReactNode } from 'react';
 import type { ApiClient } from '../api/client';
 import type { ExplorerContextValue } from '../app/explorer-context';
-import { MatrixExplorer, PanelHeader } from '../matrix-explorer';
+import { MatrixExplorer, PanelHeader, ViewerPanel } from '../matrix-explorer';
 import { PromptTokenizer } from './PromptTokenizer';
 import type { CurrentTokenization } from './PromptTokenizer';
 import { EmbeddingController } from './embedding-controller';
 import type { EmbeddingState } from './embedding-controller';
+import { EmbeddingHeader } from './EmbeddingHeader';
 import { usePanelLayout } from './use-panel-layout';
 import './embeddings.css';
 
@@ -23,6 +23,7 @@ interface Props {
 export function TokenizerWorkspace({ client, sessionId, ...props }: Props) {
   const panelId = useId();
   const { workspace: workspaceRef, ...layout } = usePanelLayout();
+  const [resizing, setResizing] = useState(false);
   const drag = useRef<{ pointer: number; y: number; height: number; moved: boolean } | null>(null);
   const activation = useRef<number | null>(null);
   const [linkedSignal, setLinkedSignal] = useState<AbortSignal>();
@@ -47,7 +48,7 @@ export function TokenizerWorkspace({ client, sessionId, ...props }: Props) {
   const divider = <div role="separator" aria-label="Resize prompt and embeddings" aria-orientation="horizontal"
     aria-controls={panelId} aria-valuemin={layout.minimum} aria-valuemax={layout.maximum} aria-valuenow={layout.height}
     aria-valuetext={`${layout.height} pixels, ${layout.automatic ? 'automatic' : 'manual'}`}
-    aria-describedby={`${panelId}-resize-help`} tabIndex={0} className="tokenizer-resizer"
+    aria-describedby={`${panelId}-resize-help`} tabIndex={0} className="tokenizer-resizer" data-resizing={resizing || undefined}
     title="Drag or use Up/Down to resize. Double-click or press Enter twice to reset to automatic sizing."
     onDoubleClick={layout.reset}
     onKeyDown={event => {
@@ -68,6 +69,7 @@ export function TokenizerWorkspace({ client, sessionId, ...props }: Props) {
       event.currentTarget.setPointerCapture(event.pointerId);
       event.currentTarget.focus({ preventScroll: true });
       drag.current = { pointer: event.pointerId, y: event.clientY, height: layout.height, moved: false };
+      setResizing(true);
       event.preventDefault();
     }}
     onPointerMove={event => {
@@ -77,11 +79,11 @@ export function TokenizerWorkspace({ client, sessionId, ...props }: Props) {
     }}
     onPointerUp={event => {
       if (drag.current?.pointer === event.pointerId) {
-        event.currentTarget.releasePointerCapture(event.pointerId); drag.current = null;
+        event.currentTarget.releasePointerCapture(event.pointerId); drag.current = null; setResizing(false);
       }
     }}
-    onPointerCancel={() => { drag.current = null; }}
-    onLostPointerCapture={() => { drag.current = null; }} />;
+    onPointerCancel={() => { drag.current = null; setResizing(false); }}
+    onLostPointerCapture={() => { drag.current = null; setResizing(false); }} />;
   return <div className="tokenizer-workspace" ref={workspaceRef} data-sizing={layout.automatic ? 'auto' : 'manual'}
     style={{ gridTemplateRows: `${layout.height}px 12px minmax(0, 1fr)` }}>
     <span id={`${panelId}-resize-help`} className="visually-hidden">Up and Down resize by 16 pixels. Home and End reach the bounds. Double-click or press Enter or Space twice to reset to automatic sizing.</span>
@@ -100,16 +102,12 @@ export function TokenizerWorkspace({ client, sessionId, ...props }: Props) {
   </div>;
 }
 
-function EmbeddingHeader({ summary, status, actions }: { summary?: ReactNode; status: string; actions?: ReactNode }) {
-  return <PanelHeader identity={<h2>Input Embeddings</h2>} summary={summary}
-    status={status && <span role="status">{status}</span>} actions={actions} />;
-}
-
 interface EmbeddingSnapshot {
   generation: number;
   signal: AbortSignal;
   state: EmbeddingState;
   renderingFailed: () => void;
+  cancel: EmbeddingController['cancel'];
 }
 
 function EmbeddingRegion({ client, sessionId, current, highlightedRow, revealRow, onRowSelect, onLinkedGeneration }: {
@@ -125,7 +123,7 @@ function EmbeddingRegion({ client, sessionId, current, highlightedRow, revealRow
     if (!data?.tokens.length || !signal) return;
     const identity = ++generation.current;
     const controller = new EmbeddingController(client, sessionId, data.tokens.map(token => token.id), signal, (state, allocate) => {
-      const snapshot = { generation: identity, signal, state, renderingFailed: controller.renderingFailed };
+      const snapshot = { generation: identity, signal, state, renderingFailed: controller.renderingFailed, cancel: controller.cancel };
       const update = () => setResult(previous => ({ latest: snapshot,
         ...(state.status === 'complete' && state.source ? { complete: snapshot }
           : previous.complete ? { complete: previous.complete } : {}),
@@ -155,12 +153,11 @@ function EmbeddingRegion({ client, sessionId, current, highlightedRow, revealRow
   const stale = !!visible && !linked;
   const message = status + (stale ? ' Previous matrix is stale; token linkage is disabled.' : '');
   return <div className="embedding-layers" data-embeddings={stale ? 'stale' : 'current'}>
-    {!visible && <EmbeddingHeader status={message} />}
+    {!visible && <ViewerPanel header={<EmbeddingHeader status={message} state={state} cancel={latest?.cancel} />} />}
     {[visible, staging].map(snapshot => {
       const source = snapshot?.state.source;
       if (!snapshot || !source) return null;
       const hidden = snapshot === staging;
-      const summary = <span className="embedding-shape">[{source.descriptor.shape.join(' × ')}] · {source.descriptor.logical_dtype}</span>;
       return <div key={snapshot.generation} className="embedding-layer" data-staging={hidden || undefined}
         aria-hidden={hidden || undefined} inert={hidden || undefined}>
         <MatrixExplorer source={source} highlightedRow={!hidden && linked ? highlightedRow : null}
@@ -169,7 +166,8 @@ function EmbeddingRegion({ client, sessionId, current, highlightedRow, revealRow
           onRenderingStateChange={state => {
             if (hidden && ['failed', 'lost', 'needs-reconstruction'].includes(state)) snapshot.renderingFailed();
           }}
-          header={controls => <EmbeddingHeader summary={summary} status={message} actions={controls} />}
+          header={(controls, domain) => <EmbeddingHeader state={state} metadataState={snapshot.state}
+            domain={domain} status={message} actions={controls} cancel={latest?.cancel} />}
           label={stale ? 'Previous input embeddings (stale); token linkage disabled'
             : 'Input embeddings; rows are token sequence positions, columns are hidden dimensions'} />
       </div>;

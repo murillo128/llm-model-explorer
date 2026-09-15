@@ -1,7 +1,9 @@
-.matrix-explorer { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
-.matrix-explorer > :not(.matrix-surfaces) { flex-shrink: 0; }
-.matrix-explorer > .matrix-surfaces { flex: 1; min-height: 0; }
-.matrix-explorer-header { font-size: 13px; line-height: 20px; }
+.viewer-panel { display: flex; flex-direction: column; flex: 1; width: 100%; min-width: 0; min-height: 0; }
+.viewer-panel-body { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; box-sizing: border-box; padding: 12px; border: 1px solid var(--ui-border, #d7d3ca); border-radius: 9px; background: var(--ui-surface, #fff); box-shadow: var(--ui-shadow, 0 1px 2px #2b271f0a); }
+.viewer-panel-body > :not(.matrix-surfaces) { flex-shrink: 0; }
+.viewer-panel-body > .matrix-surfaces { flex: 1; min-height: 0; }
+.matrix-explorer-header { flex: none; min-width: 0; font-size: 13px; line-height: 20px; }
+@media (max-width: 760px) { .viewer-panel-body { padding: 8px; } }
 .matrix-scroll { background: var(--ui-surface-soft, #fbfaf7); }
 
 .matrix-inspectable {
@@ -20,7 +22,7 @@
 
 .matrix-inspection, .matrix-inspection * { box-sizing: border-box; }
 
-.matrix-panel-header { position: sticky; top: 0; z-index: 21; display: flex; align-items: center; gap: 8px; box-sizing: border-box; height: 40px; min-height: 40px; max-height: 40px; min-width: 0; padding: 0 6px; border-bottom: 1px solid var(--ui-border, #d7d3ca); background: var(--ui-surface-soft, #fbfaf7); font-size: 13px; line-height: 20px; }
+.matrix-panel-header { position: relative; z-index: 21; display: flex; align-items: center; gap: 8px; box-sizing: border-box; width: 100%; height: 40px; min-height: 40px; max-height: 40px; min-width: 0; padding: 0 6px; border-bottom: 1px solid var(--ui-border, #d7d3ca); background: var(--ui-surface-soft, #fbfaf7); font-size: 13px; line-height: 20px; }
 .matrix-panel-context { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
 .matrix-panel-context:has(.tensor-identity) { min-width: 64px; }
 .matrix-panel-status { flex: 0 1 auto; max-width: 40%; min-width: 0; overflow: auto; scrollbar-width: thin; }

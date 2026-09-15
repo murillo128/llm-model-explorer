@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 import type { Tokenization } from '../src/tokenizer/annotations';
 
 import { color } from './scalar-oracle';
-import { frame, meta, data, values } from './embedding-fixtures';
+import { frame, meta, data, values, analysis } from './embedding-fixtures';
 
 function tokens(text: string, ids = [2, 0, 2], special = true): Tokenization {
   return { text, add_special_tokens: special, tokens: text ? ids.map((id, index) => ({ index, id, token: 'fixture', decoded: '', special: false,
@@ -32,6 +32,27 @@ async function start(page: Page) {
   await expect(page.getByText('No tokens to embed.')).toBeVisible();
   return page.getByRole('textbox', { name: 'Prompt', exact: true });
 }
+
+test('empty and unavailable embeddings share the full-width title/body composition', async ({ page }) => {
+  const editor = await start(page);
+  async function fullWidthHeader() {
+    const panel = page.locator('.input-embeddings');
+    await expect(panel.locator('.matrix-panel-header')).toHaveCount(1);
+    const region = (await panel.boundingBox())!, title = (await panel.locator('.matrix-panel-header').boundingBox())!;
+    const body = (await panel.locator('.viewer-panel-body').boundingBox())!;
+    expect(title).toEqual({ x: region.x, y: region.y, width: region.width, height: 40 });
+    expect(body.x).toBe(title.x); expect(body.width).toBe(title.width);
+    expect(body.y).toBe(title.y + title.height);
+  }
+  await fullWidthHeader();
+  await editor.fill('A'); await count(page, 2); await tokenize(page, 1, tokens('A'));
+  await embeddingCount(page, 1);
+  await fullWidthHeader();
+  await page.evaluate(() => window.embeddingHarness.headers(0, 422));
+  await expect(page.getByText('Input embeddings are unavailable for this model. Tokenization remains usable.')).toBeVisible();
+  await fullWidthHeader();
+  expect(await page.evaluate(() => window.embeddingHarness.auxiliary.length)).toBe(0);
+});
 
 for (const dpr of [1, 2]) test(`exact progressive rows, linked annotations and frozen editor at DPR ${dpr}`, async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -101,7 +122,7 @@ for (const dpr of [1, 2]) test(`exact progressive rows, linked annotations and f
   expect(await page.evaluate(() => window.tokenizerHarness.selection())).toEqual(selection);
   expect(await page.evaluate(() => window.tokenizerHarness.source())).toBe('A😀A');
   expect((await page.locator('.tokenizer-editor').boundingBox())!.height).toBe(before!.height);
-  await expect(page.locator('.row-distributions, .column-distributions')).toHaveCount(0);
+  await expect(page.locator('.row-distributions, .column-distributions')).toHaveCount(2);
   await expect(page.getByRole('textbox')).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
@@ -257,9 +278,11 @@ for (const dpr of [1, 2]) test(`panel cameras and offscreen token reveal stay in
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: page.viewportSize()!.width, height: page.viewportSize()!.height, deviceScaleFactor: dpr, mobile: false });
   const editor = await start(page);
-  // Keep the final row offscreen at native scale even at DPR 2 with the new
-  // remaining-space allocation, so this still exercises explicit row reveal.
-  await page.getByRole('separator', { name: 'Resize prompt and embeddings' }).press('End');
+  // Reserve enough room for the full fixed histogram tracks and the 65px
+  // camera gesture, while keeping the last row offscreen at native DPR 1/2.
+  const split = page.getByRole('separator', { name: 'Resize prompt and embeddings' });
+  await split.press('End');
+  for (let step = 0; step < 8; step++) await split.press('ArrowUp');
   const text = 'A'.repeat(400);
   const ids = Array.from({ length: 400 }, (_, i) => i % 4);
   await editor.fill(text); await count(page, 2); await tokenize(page, 1, tokens(text, ids));
@@ -304,7 +327,10 @@ for (const dpr of [1, 2]) test(`panel cameras and offscreen token reveal stay in
   const zoomed = await camera();
   await page.mouse.move(box.x + 12, box.y + 12); await page.mouse.down();
   await page.mouse.move(box.x + 65, box.y + 65, { steps: 5 });
-  await expect(page.locator('.matrix-zoom-preview')).toBeVisible();
+  await expect(page.locator('.matrix-zoom-preview')).toHaveCount(3);
+  await expect(page.locator('.matrix-zoom-preview[data-surface=matrix]')).toBeVisible();
+  await expect(page.locator('.matrix-zoom-preview[data-surface=rows]')).toBeVisible();
+  await expect(page.locator('.matrix-zoom-preview[data-surface=columns]')).toBeVisible();
   await page.mouse.up();
   await expect(page.locator('.matrix-zoom-preview')).toHaveCount(0);
   await expect.poll(async () => (await camera()).scale).toBeGreaterThan(zoomed.scale);
@@ -497,4 +523,111 @@ test('a lost staging WebGL context cannot replace the previous completed matrix'
   await expect(page.locator('[data-original-matrix]')).toBeVisible();
   await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
   await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'current');
+});
+
+async function auxiliary(page: Page, index: number, bytes: number[], close = true) {
+  await page.evaluate(({ index, bytes, close }) => {
+    window.embeddingHarness.auxiliaryHeaders(index);
+    window.embeddingHarness.auxiliarySend(index, bytes, close);
+  }, { index, bytes, close });
+}
+
+for (const early of [true, false]) test(`real protocol auxiliary counts ${early ? 'before' : 'after'} values preserve geometry, information and subscriptions`, async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1);
+  const fixture = analysis([2, 0, 2]);
+  const deliver = async () => {
+    await auxiliary(page, 0, fixture.statisticsStream);
+    await auxiliary(page, 1, fixture.distributionStream);
+  };
+  await page.evaluate(() => window.embeddingHarness.headers(0));
+  await send(page, 0, meta([2, 0, 2]));
+  if (early) await deliver();
+  await send(page, 0, [...data([2, 0, 2]), ...frame(4)], true);
+  const matrix = page.locator('.matrix-scroll');
+  await expect(matrix).toBeVisible();
+  const geometry = () => page.locator('.tokenizer-workspace').evaluate(workspace =>
+    [...workspace.querySelectorAll('.prompt-panel, .input-embeddings, .matrix-scroll, .row-distributions, .column-distributions')]
+      .map(node => node.getBoundingClientRect().toJSON()));
+  const before = await geometry();
+  if (!early) await deliver();
+  await expect(page.locator('.input-embeddings .matrix-panel-status')).toBeEmpty();
+  expect(await geometry()).toEqual(before);
+  await nativeCamera(page);
+  const actual = await page.evaluate(() => window.embeddingHarness.countRenderers.filter(r => r.state !== 'disposed').map(r => ({
+    shape: [r.geometry.rows, r.geometry.columns],
+    counts: Array.from({ length: r.geometry.count }, (_, index) => r.readCell(Math.floor(index / r.geometry.columns), index % r.geometry.columns)?.value),
+  })));
+  expect(actual).toEqual([
+    { shape: [3, 100], counts: [...fixture.counts.slice(0, 300)] },
+    { shape: [100, 7], counts: [...fixture.counts.slice(300)] },
+  ]);
+  const resources = await page.evaluate(() => ({
+    renderers: window.embeddingHarness.renderers.length, counts: window.embeddingHarness.countRenderers.length,
+    requests: window.embeddingHarness.requests.length, auxiliary: window.embeddingHarness.auxiliary.length,
+    uploads: window.embeddingHarness.renderers.at(-1)!.diagnostics.scalarUploadCalls,
+  }));
+  const info = page.getByRole('button', { name: 'Input embeddings information', exact: true });
+  await info.click();
+  const dialog = page.getByRole('dialog', { name: 'Input embeddings information' });
+  await expect(dialog).toContainText('21');
+  await expect(dialog).toContainText('Full-range bins');
+  await expect(dialog).toContainText('Luminosity anchors');
+  await expect(dialog).not.toContainText('Storage dtype');
+  await expect(page.getByRole('button', { name: 'Close input embeddings information' })).toBeFocused();
+  await page.keyboard.press('Escape'); await expect(info).toBeFocused();
+  await page.getByRole('separator').press('ArrowDown');
+  await page.getByRole('button', { name: 'Fit width' }).click();
+  expect(await page.evaluate(() => ({
+    renderers: window.embeddingHarness.renderers.length, counts: window.embeddingHarness.countRenderers.length,
+    requests: window.embeddingHarness.requests.length, auxiliary: window.embeddingHarness.auxiliary.length,
+    uploads: window.embeddingHarness.renderers.at(-1)!.diagnostics.scalarUploadCalls,
+  }))).toEqual(resources);
+  expect(await page.evaluate(() => window.tokenizerHarness.source())).toBe('ABC');
+  await page.getByRole('button', { name: 'Close workspace' }).click();
+  expect(await page.evaluate(() => [...window.embeddingHarness.renderers, ...window.embeddingHarness.countRenderers]
+    .every(r => r.state === 'disposed' && r.diagnostics.cpuBytes === 0))).toBe(true);
+});
+
+test('failed statistics and cancelled distributions leave successful values and current tokens usable', async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2]);
+  await page.evaluate(() => window.embeddingHarness.auxiliaryHeaders(0, 500));
+  await expect(page.locator('[data-result="statistics"]')).toHaveAttribute('data-state', 'failed');
+  await page.getByRole('button', { name: 'Cancel embedding distributions' }).click();
+  await expect(page.locator('[data-result="distributions"]')).toHaveAttribute('data-state', 'cancelled');
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+  await page.locator('.matrix-scroll').focus();
+  await expect(page.locator('.inspection-readout')).toContainText('0.4375');
+  await expect(page.locator('[data-token-index="0"]')).toHaveAttribute('data-active-token', '');
+  await expect(page.getByText(/unavailable for this model/)).toHaveCount(0);
+  expect(await page.evaluate(() => window.embeddingHarness.auxiliary.map(r => r.aborted))).toEqual([false, true]);
+});
+
+test('old histograms stay with stale values while equal-shaped replacement promotes with its own pending analysis', async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2]);
+  await auxiliary(page, 0, analysis([2, 0, 2]).statisticsStream);
+  await auxiliary(page, 1, analysis([2, 0, 2]).distributionStream);
+  await expect(page.locator('.input-embeddings .matrix-panel-status')).toBeEmpty();
+  const oldDomain = await page.locator('.distribution-scale-rows').getAttribute('aria-label');
+  await editor.fill('DEF'); await count(page, 3); await tokenize(page, 2, tokens('DEF', [0, 0, 0]));
+  await embeddingCount(page, 2);
+  await page.evaluate(() => window.embeddingHarness.headers(1));
+  await send(page, 1, [...meta([0, 0, 0]), ...data([0, 0, 0])]);
+  await expect(page.locator('[data-staging]')).toHaveCount(1);
+  expect(await page.locator('.embedding-layer:not([data-staging]) .distribution-scale-rows').getAttribute('aria-label')).toBe(oldDomain);
+  await send(page, 1, frame(4), true);
+  await expect(page.locator('[data-staging]')).toHaveCount(0);
+  await expect(page.locator('.distribution-scale-rows')).not.toHaveAttribute('data-minimum');
+  expect(await page.evaluate(() => window.embeddingHarness.countRenderers.filter(r => r.state !== 'disposed').map(r => r.populatedPrefix))).toEqual([0, 0]);
+  await auxiliary(page, 2, analysis([0, 0, 0]).statisticsStream);
+  await auxiliary(page, 3, analysis([0, 0, 0]).distributionStream);
+  await expect(page.locator('.input-embeddings .matrix-panel-status')).toBeEmpty();
+  expect(await page.locator('.distribution-scale-rows').getAttribute('aria-label')).not.toBe(oldDomain);
+  expect(await page.evaluate(() => window.embeddingHarness.countRenderers.filter(r => r.state !== 'disposed').length)).toBe(2);
+  expect(await page.evaluate(() => window.embeddingHarness.countRenderers.filter(r => r.state === 'disposed').every(r => r.diagnostics.cpuBytes === 0))).toBe(true);
 });

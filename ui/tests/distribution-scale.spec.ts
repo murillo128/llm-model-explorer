@@ -40,6 +40,8 @@ async function expectAlignedRulers(page: Page, finite: boolean, zero: number | n
   expect(geometry.columnRuler.top).toBeCloseTo(geometry.column.top, 1);
   expect(geometry.columnRuler.bottom).toBeCloseTo(geometry.column.bottom, 1);
   if (finite) {
+    expect(geometry.low!.top).toBe(geometry.high!.top);
+    expect(geometry.low!.top - geometry.ruler.top).toBe(12);
     expect(geometry.low!.left).toBeCloseTo(geometry.row.left, 1);
     expect(geometry.high!.right).toBeCloseTo(geometry.row.right, 1);
     const labels = [geometry.low!, geometry.high!, geometry.zero].filter(label => label && label.width > 0 && label.height > 0);
@@ -168,6 +170,9 @@ for (const fixture of cases) test(`${fixture.name}: authoritative domain, bin pl
 test.describe('DPR 2 decimal ruler labels', () => {
   test.use({ deviceScaleFactor: 2 });
   const decimalDomains = [
+    { name: 'float32 extremes', low: -3.4028234663852886e38, high: 3.4028234663852886e38 },
+    { name: 'subnormal', low: -(2 ** -149), high: 2 ** -149 },
+    { name: 'unequal orders', low: -(2 ** -149), high: 3.4028234663852886e38 },
     { name: 'signed symmetric', low: -0.124, high: 0.124 },
     { name: 'signed asymmetric', low: -0.124, high: 0.372 },
     { name: 'zero near low endpoint', low: -0.00124, high: 0.124 },
@@ -205,6 +210,7 @@ test.describe('DPR 2 decimal ruler labels', () => {
     await expect(ruler.locator('.distribution-high')).toHaveAttribute('title', `Bin domain high: ${high}`);
     const zero = low < 0 && high > 0 ? -low / (high - low) : null;
     await expectAlignedRulers(page, true, zero);
+    expect(await ruler.locator('.distribution-endpoint').evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth))).toBe(true);
     expect(await scientificGeometry()).toEqual(before);
     expect(await page.locator('.row-distributions canvas').evaluate(canvas => canvas.getBoundingClientRect().width)).toBe(50);
     expect(await page.locator('.column-distributions canvas').evaluate(canvas => canvas.getBoundingClientRect().height)).toBe(50);

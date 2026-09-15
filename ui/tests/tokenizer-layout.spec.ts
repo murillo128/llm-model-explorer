@@ -199,10 +199,14 @@ test('pointer dragging continuously reallocates space and clamps both panel boun
   await start(page);
   await fill(page, 'A short prompt');
   const before = await geometry(page);
+  expect(before.divider.height).toBe(12);
+  expect(await divider(page).evaluate(node => getComputedStyle(node, '::before').backgroundColor)).toBe('rgba(0, 0, 0, 0)');
   await page.mouse.move(before.divider.x + before.divider.width / 2, before.divider.y + before.divider.height / 2);
   await page.mouse.down();
   await page.mouse.move(before.divider.x + before.divider.width / 2, before.divider.y + before.divider.height / 2 + 35, { steps: 4 });
   const moved = await geometry(page);
+  await expect(divider(page)).toHaveAttribute('data-resizing', 'true');
+  expect(await divider(page).evaluate(node => getComputedStyle(node).cursor)).toBe('row-resize');
   expect(moved.prompt.height).toBeCloseTo(before.prompt.height + 35, 0);
   expect(moved.embeddings.height).toBeCloseTo(before.embeddings.height - 35, 0);
   await page.mouse.move(before.divider.x + before.divider.width / 2, before.divider.y + before.divider.height / 2);
@@ -212,6 +216,7 @@ test('pointer dragging continuously reallocates space and clamps both panel boun
   await page.mouse.move(before.divider.x + 10, 0, { steps: 4 });
   expect((await geometry(page)).prompt.height).toBeCloseTo(before.min, 0);
   await page.mouse.up();
+  await expect(divider(page)).not.toHaveAttribute('data-resizing');
   await expect(page.locator('.tokenizer-workspace')).toHaveAttribute('data-sizing', 'manual');
   await bounded(page);
 });
@@ -239,7 +244,7 @@ test('browser resizing recomputes automatic height and preserves a bounded manua
   await page.setViewportSize(original);
   await layoutSettled(page);
   await divider(page).press('Home');
-  await divider(page).press('ArrowDown');
+  for (let step = 0; step < 4; step++) await divider(page).press('ArrowDown');
   const manual = (await geometry(page)).prompt.height;
   await fill(page, 'Short again');
   expect((await geometry(page)).prompt.height).toBeCloseTo(manual, 0);
@@ -250,7 +255,7 @@ test('browser resizing recomputes automatic height and preserves a bounded manua
   await bounded(page);
 
   // A severely constrained workspace must relax minimums without page overflow.
-  await page.setViewportSize({ width: original.width, height: 480 });
+  await page.setViewportSize({ width: original.width, height: 400 });
   await layoutSettled(page);
   expect((await geometry(page)).prompt.height).toBeLessThan(manual);
   await bounded(page);

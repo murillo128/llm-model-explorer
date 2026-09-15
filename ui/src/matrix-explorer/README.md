@@ -30,6 +30,12 @@ units are elements, and each surface accepts a consecutive C-order prefix starti
 at zero. No accumulated chunk list or extra scalar copy lives in this composition.
 The renderer's optional CPU array remains the exact inspection copy.
 
+The first scalar upload is presented immediately. Later uploads remain synchronous
+and exact while redraws are coalesced to one animation frame. No scalar queue or
+replay buffer is added. `updates.flush?.()` presents pending uploads synchronously
+when a consumer needs to promote a completed staging view atomically. Detaching
+cancels the pending frame and fences retained upload/flush callbacks.
+
 Omit `distributions` for matrix-only mode. When authoritative profiles exist,
 set `distributions: true` and deliver `updates.distribution('rows', counts, offset)`
 for `[rows, 100]` counts and `'columns'` for `[100, columns]`. Profiles use the
@@ -73,6 +79,15 @@ local selection is reported. Clearing the external row does not clear a newer
 local cell.
 
 `PanelHeader` composes identity, information, summary, status, and right-side actions in a fixed 40px scientific toolbar. Pass it through `MatrixExplorer.header`; status changes do not restart the source. `InfoPopover` supplies hover/focus previews and click/tap/keyboard pinning, with pinned-only close, outside/Escape dismissal, and focus restoration. Neither primitive depends on tensor transport or tokenizer state.
+
+`MatrixExplorer` uses `ViewerPanel` to place this title above a sibling padded
+content card. The card owns the scientific viewport, rendering errors and local
+inspection; its border/padding never wraps the title. Use
+`<ViewerPanel header={<PanelHeader ... />}>…</ViewerPanel>` for empty or unavailable
+states without allocating a source. Both forms fill the bounded parent width.
+Consumers should supply the header once and avoid wrapping the whole viewer in
+another padded card. This composition is shared by Tensor and Input Embeddings;
+it does not own the Tokenizer workspace split or prompt editor.
 
 Every rank-2 instance owns a fit-width camera with wheel/pinch zoom and native
 scroll navigation. `Fit width` resets its scale/origins; replacing `source` starts

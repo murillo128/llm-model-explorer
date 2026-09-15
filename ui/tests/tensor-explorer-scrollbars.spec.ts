@@ -2,10 +2,84 @@ import { nativeCamera } from './native-camera';
 import { green } from './scalar-oracle';
 import { expect, test } from '@playwright/test';
 
-// This project runs headed under Xvfb in CI. The positive scrollbar-thickness
-// assertion prevents overlay/headless scrollbars from silently masking the bug.
+// Headed Chromium has consuming native chrome by default. Require our overlays
+// to eliminate that gutter while preserving exact rendering and native scroll.
 for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
+  test('rank-1 real wheel pans equally over native rim, revealed data strip and thumb', async ({ page, context }) => {
+    await page.setViewportSize({ width: 780, height: 844 });
+    await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);
+    await expect(page.getByRole('combobox')).toBeEnabled();
+    await page.getByRole('combobox').selectOption('lab/alpha');
+    await page.getByRole('button', { name: /^wide-vector \[/ }).click();
+    await page.evaluate(() => {
+      const f = window.explorerFixture;
+      f.emit(0, 1, f.metadata(0));
+      const values = Array<number>(1536).fill(0); values[1535] = 2;
+      f.data(0, values); f.end(0);
+    });
+    await expect(page.locator('[data-result="tensor"]')).toHaveCount(0);
+    const host = page.locator('.matrix-scroll');
+    const bar = page.getByRole('scrollbar', { name: 'Scroll matrix horizontally' });
+    const geometry = () => host.evaluate(node => {
+      const host = node as HTMLElement, f = window.explorerFixture, view = f.renderers[0]!.view!;
+      return { scroll: host.scrollLeft, maximum: host.scrollWidth - host.clientWidth,
+        client: [host.clientWidth, host.clientHeight], view,
+        allocations: [f.metrics.scalarAllocations, f.metrics.textureCreates, f.metrics.displayAllocations],
+        requests: f.requests.length, window: [scrollX, scrollY] };
+    });
+    const initial = await geometry();
+    expect(initial.maximum).toBeGreaterThan(120);
+    await expect(page.getByRole('scrollbar')).toHaveCount(1);
+    for (const location of ['rim', 'strip', 'thumb'] as const) {
+      await host.evaluate(node => { node.scrollLeft = 0; });
+      const point = await host.evaluate((node, location) => {
+        const rect = node.getBoundingClientRect();
+        const target = document.querySelector(location === 'thumb' ? '.matrix-scrollbar-thumb' : '.matrix-scroll canvas')!.getBoundingClientRect();
+        return { x: location === 'rim' ? rect.left + 20 : target.left + target.width / 2,
+          y: location === 'rim' ? rect.bottom - 1 : target.top + target.height / 2 };
+      }, location);
+      await page.mouse.move(point.x, point.y);
+      if (location !== 'rim') {
+        await expect(bar).toHaveAttribute('data-near', '');
+        expect(await page.evaluate(({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest('.matrix-scrollbar')), point)).toBe(true);
+      }
+      await page.mouse.wheel(120, 0);
+      await expect.poll(async () => (await geometry()).scroll).toBe(120);
+      await expect.poll(async () => (await geometry()).view.x).toBe(120 * dpr);
+      await page.mouse.wheel(-120, 0);
+      await expect.poll(async () => (await geometry()).scroll).toBe(0);
+      await page.keyboard.down('Shift');
+      try { await page.mouse.wheel(0, 80); } finally { await page.keyboard.up('Shift'); }
+      await expect.poll(async () => (await geometry()).scroll).toBe(80);
+    }
+    await bar.locator('.matrix-scrollbar-thumb').hover();
+    await page.mouse.wheel(10000, 0);
+    await expect.poll(async () => (await geometry()).scroll).toBe(initial.maximum);
+    await expect.poll(async () => { const { view } = await geometry(); return view.x + view.width; }).toBe(1536);
+    expect(await page.evaluate(() => window.explorerFixture.renderers[0]!.readCell(0, 1535))).toMatchObject({ value: 2 });
+    expect(await geometry()).toMatchObject({ client: initial.client, allocations: initial.allocations,
+      requests: initial.requests, window: [0, 0], view: { height: 1, scaleX: 1, scaleY: 1 } });
+    // A new physical pixel ratio changes native extent while the sticky controls
+    // are at the far end. Their old geometry must not retain extra scroll range.
+    const cdp = await context.newCDPSession(page), changedDpr = dpr === 1 ? 2 : 1;
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 780, height: 844, deviceScaleFactor: changedDpr, mobile: false,
+    });
+    await expect.poll(() => page.evaluate(() => devicePixelRatio)).toBe(changedDpr);
+    // Headed Chromium emulation does not always emit the monitor resize signal.
+    await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+    await expect.poll(async () => (await geometry()).view.dpr).toBe(changedDpr);
+    const resized = await geometry();
+    expect(resized.maximum).toBe(1536 / changedDpr - resized.client[0]!);
+    await bar.locator('.matrix-scrollbar-thumb').hover();
+    await page.mouse.wheel(-10000, 0);
+    await expect.poll(async () => (await geometry()).scroll).toBe(0);
+    await page.mouse.wheel(10000, 0);
+    await expect.poll(async () => (await geometry()).scroll).toBe(resized.maximum);
+    await expect.poll(async () => { const { view } = await geometry(); return view.x + view.width; }).toBe(1536);
+    expect((await geometry()).allocations[0]).toBe(initial.allocations[0]);
+  });
   for (const [name, rows] of [['wide-vector', 1], ['short-matrix', 2]] as const) {
     test(`${name} retains visible exact data and reaches the final column`, async ({ page }, testInfo) => {
       await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);
@@ -30,7 +104,8 @@ for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () =>
       });
       await expect.poll(async () => (await geometry()).height).toBe(rows);
       const first = await geometry();
-      expect(first.scrollbar).toBeGreaterThan(0);
+      expect(first.scrollbar).toBe(0);
+      await expect(page.getByRole('scrollbar', { name: 'Scroll matrix horizontally' })).toBeVisible();
       expect(first.clientHeight).toBeGreaterThan(0);
       expect(first.canvasHeight).toBe(rows);
       expect(first.width).toBeLessThan(1536);
@@ -62,7 +137,8 @@ for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () =>
       expect((await geometry()).scrollbar).toBe(0);
       expect((await geometry()).height).toBe(rows);
       await page.setViewportSize({ width: 390, height: 844 });
-      await expect.poll(async () => (await geometry()).scrollbar).toBeGreaterThan(0);
+      await expect(page.getByRole('scrollbar', { name: 'Scroll matrix horizontally' })).toBeVisible();
+      expect((await geometry()).scrollbar).toBe(0);
       expect((await geometry()).height).toBe(rows);
       expect(await page.evaluate(() => window.explorerFixture.metrics.scalarAllocations)).toBe(1);
       await testInfo.attach('data and scrollbar geometry', {
@@ -130,8 +206,9 @@ for (const dpr of [1, 2]) test.describe(`workspace panes at DPR ${dpr}`, () => {
         await expect(matrix).toBeVisible();
         await expect.poll(async () => { const g = await geometry(); return [g.horizontal, g.vertical]; }).toEqual([horizontal, vertical]);
         const initial = await geometry();
-        expect(initial.gutter).toBeGreaterThan(0); // Real, non-overlay native scrollbar coverage.
-        expect(initial.scrollbar > 0).toBe(horizontal);
+        expect(initial.gutter).toBe(0); // Native chrome is hidden even in headed Chromium.
+        expect(initial.scrollbar).toBe(0);
+        await expect(page.getByRole('scrollbar')).toHaveCount(Number(horizontal) + Number(vertical));
         expect(initial.client[0]).toBeGreaterThan(0);
         expect(initial.client[1]).toBeGreaterThan(0);
         // Inventory scrolling must not move either scientific data or chrome.

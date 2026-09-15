@@ -102,7 +102,7 @@ export class MatrixInspection {
     const rect = this.viewport.matrix.canvas.getBoundingClientRect();
     const pane = this.viewport.host.getBoundingClientRect();
     const panels = [this.viewport.rows, this.viewport.columns].flatMap((panel) =>
-      panel ? [panel.canvas.parentElement!.getBoundingClientRect()] : []);
+      panel ? [panel.canvas.getBoundingClientRect()] : []);
     return { rect, pane, panels, key: [window.innerWidth, window.innerHeight, window.devicePixelRatio,
       ...[rect, pane, ...panels].flatMap((r) => [r.left, r.top, r.right, r.bottom])].join(',') };
   }

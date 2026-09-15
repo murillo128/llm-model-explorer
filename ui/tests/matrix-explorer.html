@@ -1,5 +1,11 @@
 <!doctype html><html><head><meta charset="UTF-8"><title>Standalone Matrix Explorer fixture</title>
 <style>
-* { box-sizing: border-box; } body { margin: 16px; font-family: system-ui; }
-#workspace { display: flex; width: min(600px, 100%); height: 260px; }
+/* Numerical fixtures reserve their pre-card dimensions (including the 40px
+   title). Add the card's border/padding outside that budget so zoom, magnifier
+   thresholds and exact-pixel oracles continue to exercise the same data area. */
+:root { --fixture-card-inset: 26px; }
+@media (max-width: 760px) { :root { --fixture-card-inset: 18px; } }
+* { box-sizing: border-box; }
+body { margin: calc(16px - var(--fixture-card-inset) / 2); font-family: system-ui; }
+#workspace { display: flex; width: min(calc(var(--fixture-viewer-width, 600px) + var(--fixture-card-inset)), 100%); height: calc(var(--fixture-viewer-height, 260px) + var(--fixture-card-inset)); }
 </style></head><body><div id="root"></div><script type="module" src="/tests/matrix-explorer-harness.tsx"></script></body></html>

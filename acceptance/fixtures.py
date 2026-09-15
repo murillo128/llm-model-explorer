@@ -68,7 +68,6 @@ def generate(root: Path, *, extended: bool = False) -> Path:
             tensors[f"scale.{name}.weight"] = torch.tensor(samples).reshape(20, 20)
         for i in range(80):
             tensors[f"inventory.{i:02}.weight"] = torch.zeros(1)
-    save_file(tensors, directory / "model.safetensors")
     # Explicit byte alphabet and no training remove randomized trainer ordering.
     vocab = {
         word: i
@@ -89,6 +88,12 @@ def generate(root: Path, *, extended: bool = False) -> Path:
         bos_token="<bos>",
         additional_special_tokens=["<special>"],
     )
+    # The same small logical matrix can be opened through both real consumers.
+    # Browser acceptance independently derives its values from ordered IDs.
+    tensors["embedding.parity.weight"] = tensors["model.embed_tokens.weight"][
+        native.encode("A😀A").ids
+    ].clone()
+    save_file(tensors, directory / "model.safetensors")
     tokenizer.save_pretrained(directory)
     if extended:
         for family, architecture, key in (

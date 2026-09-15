@@ -18,6 +18,10 @@ EMBEDDINGS: dict[str, Any] = json.loads(
     (Path(__file__).resolve().parents[2] / "api/fixtures/embeddings.json").read_text()
 )
 
+ANALYSIS: dict[str, Any] = json.loads(
+    (Path(__file__).resolve().parents[2] / "api/fixtures/embedding-analysis.json").read_text()
+)
+
 
 def metadata(length: int = 8) -> dict[str, object]:
     return dict(
@@ -36,7 +40,7 @@ def metadata(length: int = 8) -> dict[str, object]:
     "case",
     [
         c
-        for c in FIXTURES["wire_cases"] + EMBEDDINGS["wire_cases"]
+        for c in FIXTURES["wire_cases"] + EMBEDDINGS["wire_cases"] + ANALYSIS["wire_cases"]
         if c["expected"]["outcome"] != "reject"
     ],
     ids=lambda c: c["name"],
@@ -69,7 +73,7 @@ def test_shared_wire_bytes(case: dict[str, Any]) -> None:
     "case",
     [
         c
-        for c in FIXTURES["schema_cases"] + EMBEDDINGS["schema_cases"]
+        for c in FIXTURES["schema_cases"] + EMBEDDINGS["schema_cases"] + ANALYSIS["schema_cases"]
         if c["schema"] in ("StreamMetadata", "InputEmbeddingsMetadata", "StreamProgress", "Error")
     ],
     ids=lambda c: c["name"],
