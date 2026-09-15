@@ -1,0 +1,381 @@
+{
+  "method": "Independent bounded Python scalar reference; production decode_range seam",
+  "decoder_source_sha256": "4beaf7dc0d21eeb3a188e2b585f577ee6fe24a9fd87b1a828dc2186bb36dfdaa",
+  "environment": {
+    "python": "3.12.14",
+    "torch": "2.14.0+cpu",
+    "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39"
+  },
+  "reproduce": "PYTHONPATH=backend/src python backend/scripts/check_quantized_reference.py --references \"$LMEX_ARCHITECTURE_REFERENCES\" --sources \"$LMEX_QUANTIZED_REFERENCE_SOURCES\" --output backend/evidence/quantized-reference-comparison.json",
+  "reference_sources": {
+    "gptq": {
+      "file": "gptq-cuda-reference.py",
+      "url": "https://github.com/AutoGPTQ/AutoGPTQ/blob/9f7d37072917ab3a7545835f23e808294a542153/auto_gptq/nn_modules/qlinear/qlinear_cuda.py",
+      "sha256": "5a6a483784adc7d9ee55e62f6dc4fdaf3a642f56796d2a6b8afea0b2364d751d",
+      "lines": "258-304"
+    },
+    "nvfp4": {
+      "file": "modelopt-export-reference.py",
+      "url": "https://github.com/NVIDIA/Model-Optimizer/blob/82f1d216d1a9022e60b8e1143a77f36c00b885a4/modelopt/torch/quantization/qtensor/nvfp4_tensor.py",
+      "sha256": "bd2073b89d45965011aa7cc3b80b7aae1472b9fa10b6c72dd50f648eb93e509e",
+      "lines": "314-377"
+    }
+  },
+  "scope": "One complete projection per format plus selected ranges across other layers; no inference or whole-checkpoint equivalence claim",
+  "maximum_decode_chunk_elements": 65536,
+  "precision_notes": [
+    "GPTQ restores masked qzeros + 1 without wrapping, uses stored g_idx, and preserves logical float32 before an upstream inference float16 rounding step.",
+    "NVFP4 rounds block_scale * weight_scale_2 to float32 before multiplying E2M1. input_scale is activation metadata and is excluded.",
+    "Canonical E2M1 retains negative zero; ModelOpt slow Python LUT collapses its sign. Reported LUT differences are distinct from canonical bit comparisons."
+  ],
+  "checkpoints": {
+    "qwen3": {
+      "status": "PASS",
+      "repository": "JunHowie/Qwen3-0.6B-GPTQ-Int4",
+      "revision": "b9d87006067b0c0c2dea836370d6288e14f112ab",
+      "revision_source": "Operator manifest; present Hugging Face download metadata checked",
+      "fingerprint": "31bd7a3f28c9ef9a65b5c6039eec5d4defe5a0e75148af472bde6c3ca4864be2",
+      "physical_tensor_count": 898,
+      "weight_file_bytes": 541343840,
+      "compared_float32_values": 1105522,
+      "canonical_bit_mismatches": 0,
+      "layers": [
+        {
+          "parameter": "model.layers.0.self_attn.k_proj.weight",
+          "shape": [
+            1024,
+            1024
+          ],
+          "complete_parameter": true,
+          "ranges": [
+            {
+              "kind": "complete-projection",
+              "start": 0,
+              "count": 1048576
+            }
+          ],
+          "compared_float32_values": 1048576,
+          "canonical_bit_mismatches": 0,
+          "canonical_max_absolute_error": 0.0,
+          "canonical_sample_sha256": "b647bae66ef801c24ba07a10a19a8db9ba8993af9847097c3d2fd2683fbf26ff",
+          "observed_nibble_codes_hex": "0123456789abcdef",
+          "observed_groups": {
+            "count": 8,
+            "minimum": 0,
+            "maximum": 7
+          },
+          "oracle_storage_bytes_read": 610304,
+          "upstream_inference_or_lut_bit_differences": 176601,
+          "upstream_inference_or_lut_max_absolute_error": 0.0001220703125
+        },
+        {
+          "parameter": "model.layers.0.self_attn.q_proj.weight",
+          "shape": [
+            2048,
+            1024
+          ],
+          "complete_parameter": false,
+          "ranges": [
+            {
+              "kind": "first-eight-rows",
+              "start": 0,
+              "count": 8192
+            },
+            {
+              "kind": "row-boundary",
+              "start": 1017,
+              "count": 37
+            },
+            {
+              "kind": "middle-row-multiple-groups",
+              "start": 1048693,
+              "count": 513
+            },
+            {
+              "kind": "last-row",
+              "start": 2096128,
+              "count": 1024
+            }
+          ],
+          "compared_float32_values": 9766,
+          "canonical_bit_mismatches": 0,
+          "canonical_max_absolute_error": 0.0,
+          "canonical_sample_sha256": "38d2d773a4926d5a5897141452344dfd9e1a9ef29f7fa8a385590f763809160f",
+          "observed_nibble_codes_hex": "0123456789abcdef",
+          "observed_groups": {
+            "count": 8,
+            "minimum": 0,
+            "maximum": 7
+          },
+          "oracle_storage_bytes_read": 15530,
+          "upstream_inference_or_lut_bit_differences": 1488,
+          "upstream_inference_or_lut_max_absolute_error": 3.0517578125e-05
+        },
+        {
+          "parameter": "model.layers.13.mlp.down_proj.weight",
+          "shape": [
+            1024,
+            3072
+          ],
+          "complete_parameter": false,
+          "ranges": [
+            {
+              "kind": "first-eight-rows",
+              "start": 0,
+              "count": 24576
+            },
+            {
+              "kind": "row-boundary",
+              "start": 3065,
+              "count": 37
+            },
+            {
+              "kind": "middle-row-multiple-groups",
+              "start": 1572981,
+              "count": 513
+            },
+            {
+              "kind": "last-row",
+              "start": 3142656,
+              "count": 3072
+            }
+          ],
+          "compared_float32_values": 28198,
+          "canonical_bit_mismatches": 0,
+          "canonical_max_absolute_error": 0.0,
+          "canonical_sample_sha256": "25aa34d8f80837d21e2d5264d01dd358cda48d513b2f48ce2bb52656b9f5fd5f",
+          "observed_nibble_codes_hex": "0123456789abcdef",
+          "observed_groups": {
+            "count": 24,
+            "minimum": 0,
+            "maximum": 23
+          },
+          "oracle_storage_bytes_read": 41546,
+          "upstream_inference_or_lut_bit_differences": 3420,
+          "upstream_inference_or_lut_max_absolute_error": 4.57763671875e-05
+        },
+        {
+          "parameter": "model.layers.27.self_attn.o_proj.weight",
+          "shape": [
+            1024,
+            2048
+          ],
+          "complete_parameter": false,
+          "ranges": [
+            {
+              "kind": "first-eight-rows",
+              "start": 0,
+              "count": 16384
+            },
+            {
+              "kind": "row-boundary",
+              "start": 2041,
+              "count": 37
+            },
+            {
+              "kind": "middle-row-multiple-groups",
+              "start": 1048693,
+              "count": 513
+            },
+            {
+              "kind": "last-row",
+              "start": 2095104,
+              "count": 2048
+            }
+          ],
+          "compared_float32_values": 18982,
+          "canonical_bit_mismatches": 0,
+          "canonical_max_absolute_error": 0.0,
+          "canonical_sample_sha256": "f8aef9cfee45cfb62619ea5ce1939aca8ce8fdcfc93b699d797e17eb24c025f9",
+          "observed_nibble_codes_hex": "0123456789abcdef",
+          "observed_groups": {
+            "count": 16,
+            "minimum": 0,
+            "maximum": 15
+          },
+          "oracle_storage_bytes_read": 28538,
+          "upstream_inference_or_lut_bit_differences": 3072,
+          "upstream_inference_or_lut_max_absolute_error": 6.103515625e-05
+        }
+      ]
+    },
+    "qwen35": {
+      "status": "PASS",
+      "repository": "AxionML/Qwen3.5-0.8B-NVFP4",
+      "revision": "2ac1e750cda67cc8538d731f6216f77b9c3a6f72",
+      "revision_source": "Operator manifest; present Hugging Face download metadata checked",
+      "fingerprint": "907c94e9c7953070c91e7e94d0a09dff0dc1e6f2b230530bd7eecc6e984909e0",
+      "physical_tensor_count": 1046,
+      "weight_file_bytes": 1031686072,
+      "compared_float32_values": 68722,
+      "canonical_bit_mismatches": 0,
+      "layers": [
+        {
+          "parameter": "model.language_model.layers.0.linear_attn.in_proj_a.weight",
+          "shape": [
+            16,
+            1024
+          ],
+          "complete_parameter": true,
+          "ranges": [
+            {
+              "kind": "complete-projection",
+              "start": 0,
+              "count": 16384
+            }
+          ],
+          "compared_float32_values": 16384,
+          "canonical_bit_mismatches": 0,
+          "canonical_max_absolute_error": 0.0,
+          "canonical_sample_sha256": "8ad0e7c98e49fbbf2bb06648c91b545ef3395fdd87aeab64d9ae97074d70f3e5",
+          "observed_nibble_codes_hex": "0123456789abcdef",
+          "observed_groups": {
+            "count": 64,
+            "minimum": 0,
+            "maximum": 63
+          },
+          "oracle_storage_bytes_read": 9224,
+          "upstream_inference_or_lut_bit_differences": 510,
+          "upstream_inference_or_lut_max_absolute_error": 0.0,
+          "input_scale_excluded": 0.0037434897385537624,
+          "weight_scale_2": 0.0001714797253953293
+        },
+        {
+          "parameter": "model.language_model.layers.3.self_attn.q_proj.weight",
+          "shape": [
+            4096,
+            1024
+          ],
+          "complete_parameter": false,
+          "ranges": [
+            {
+              "kind": "first-eight-rows",
+              "start": 0,
+              "count": 8192
+            },
+            {
+              "kind": "row-boundary",
+              "start": 1017,
+              "count": 37
+            },
+            {
+              "kind": "middle-row-multiple-groups",
+              "start": 2097269,
+              "count": 513
+            },
+            {
+              "kind": "last-row",
+              "start": 4193280,
+              "count": 1024
+            }
+          ],
+          "compared_float32_values": 9766,
+          "canonical_bit_mismatches": 0,
+          "canonical_max_absolute_error": 0.0,
+          "canonical_sample_sha256": "182c6d20f543a182250888909eccd35f236ac5eeaabde7e8a4c53b560e8ef767",
+          "observed_nibble_codes_hex": "0123456789abcdef",
+          "observed_groups": {
+            "count": 64,
+            "minimum": 0,
+            "maximum": 63
+          },
+          "oracle_storage_bytes_read": 5528,
+          "upstream_inference_or_lut_bit_differences": 386,
+          "upstream_inference_or_lut_max_absolute_error": 0.0,
+          "input_scale_excluded": 0.01120721735060215,
+          "weight_scale_2": 9.300595411332324e-05
+        },
+        {
+          "parameter": "model.language_model.layers.11.mlp.down_proj.weight",
+          "shape": [
+            1024,
+            3584
+          ],
+          "complete_parameter": false,
+          "ranges": [
+            {
+              "kind": "first-eight-rows",
+              "start": 0,
+              "count": 28672
+            },
+            {
+              "kind": "row-boundary",
+              "start": 3577,
+              "count": 37
+            },
+            {
+              "kind": "middle-row-multiple-groups",
+              "start": 1835125,
+              "count": 513
+            },
+            {
+              "kind": "last-row",
+              "start": 3666432,
+              "count": 3584
+            }
+          ],
+          "compared_float32_values": 32806,
+          "canonical_bit_mismatches": 0,
+          "canonical_max_absolute_error": 0.0,
+          "canonical_sample_sha256": "b58c01f354470ac4787aaf7c148bb9ece5709e88df812749be38a8334e927911",
+          "observed_nibble_codes_hex": "0123456789abcdef",
+          "observed_groups": {
+            "count": 224,
+            "minimum": 0,
+            "maximum": 223
+          },
+          "oracle_storage_bytes_read": 18488,
+          "upstream_inference_or_lut_bit_differences": 1329,
+          "upstream_inference_or_lut_max_absolute_error": 0.0,
+          "input_scale_excluded": 0.0024995349813252687,
+          "weight_scale_2": 5.994524326524697e-05
+        },
+        {
+          "parameter": "model.language_model.layers.23.self_attn.q_proj.weight",
+          "shape": [
+            4096,
+            1024
+          ],
+          "complete_parameter": false,
+          "ranges": [
+            {
+              "kind": "first-eight-rows",
+              "start": 0,
+              "count": 8192
+            },
+            {
+              "kind": "row-boundary",
+              "start": 1017,
+              "count": 37
+            },
+            {
+              "kind": "middle-row-multiple-groups",
+              "start": 2097269,
+              "count": 513
+            },
+            {
+              "kind": "last-row",
+              "start": 4193280,
+              "count": 1024
+            }
+          ],
+          "compared_float32_values": 9766,
+          "canonical_bit_mismatches": 0,
+          "canonical_max_absolute_error": 0.0,
+          "canonical_sample_sha256": "b00097b02fa756a7f5ded7dabd09fd0f1c561af8a87aadca1bca1e9c34e9263c",
+          "observed_nibble_codes_hex": "0123456789abcdef",
+          "observed_groups": {
+            "count": 64,
+            "minimum": 0,
+            "maximum": 63
+          },
+          "oracle_storage_bytes_read": 5528,
+          "upstream_inference_or_lut_bit_differences": 402,
+          "upstream_inference_or_lut_max_absolute_error": 0.0,
+          "input_scale_excluded": 0.00934709794819355,
+          "weight_scale_2": 0.00020054409105796367
+        }
+      ]
+    }
+  }
+}

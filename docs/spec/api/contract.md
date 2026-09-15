@@ -8,7 +8,7 @@ The API is a first-class, contract-first project boundary. It is not generated c
 
 The proof of concept does not expose public API versions such as `/v1` and does not require backwards compatibility with older contract revisions. Backend and UI evolve together against the current accepted contract. The `version: current` field required by OpenAPI is document metadata, not a public protocol version.
 
-The Architecture Explorer endpoint/records and inventory capability extension are published in OpenAPI, conformance fixtures, and generated UI bindings together. [architecture-explorer.md](architecture-explorer.md) owns the graph semantics. The runtime architecture route remains pending implementation.
+The Architecture Explorer endpoint/records and inventory capability extension are published in OpenAPI, conformance fixtures, and generated UI bindings together. [architecture-explorer.md](architecture-explorer.md) owns the graph semantics. The runtime implements prepared architecture retrieval; observed acceptance is recorded separately in [architecture evidence](../../../acceptance/architecture-evidence.md).
 
 ## Design rules
 
@@ -58,7 +58,7 @@ The UI builds its hierarchical inventory from the returned logical path segments
 
 The current canonical logical visualization dtype is always `float32`. Physical representations such as FP16, BF16, INT8, NF4, or another quantized format remain backend concerns.
 
-For the accepted quantized-architecture extension, [capability separation](architecture-explorer.md#quantized-checkpoint-capability-separation) defines explicit inventory coverage and exclusion of packed/unresolved storage from the existing logical data path. Existing native inventories/IDs/bytes remain unchanged. Parameter/storage references that cannot be served numerically remain descriptive graph records, never falsely materializable tensor identities.
+For the accepted quantized-architecture extension, [capability separation](architecture-explorer.md#quantized-checkpoint-capability-separation) defines explicit inventory coverage and distinguishes actionable native/admitted decoded logical tensors from unresolved storage. Existing native inventories/IDs/bytes remain unchanged. Parameter/storage references that cannot be served numerically remain descriptive graph records, never falsely materializable tensor identities.
 
 ## Logical tensor data
 

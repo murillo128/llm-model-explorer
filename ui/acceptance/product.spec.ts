@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Test-only browser observer and JSON evidence. */
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Page, TestInfo } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { installProbe } from './probe';
-import { camera, zoom, drag, panelGeometry, promptViewport } from './usability';
+import { camera, zoom, drag, panelGeometry, promptViewport, tokenizerGeometry, settledPrompt } from './usability';
 import { nativeCamera } from '../tests/native-camera';
 import { revealTensor } from '../tests/tensor-tree-helpers';
 
@@ -75,6 +75,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   test.skip(isReference && !process.env.LMEX_REFERENCE_MODEL_DIR,
     'LMEX_REFERENCE_MODEL_DIR not supplied; local SmolLM2-135M Base UI not tested');
   let command = ['-m', 'acceptance.server', '--port', String(ports.backend), '--origin', uiOrigin];
+  if (testInfo.title.startsWith('expanded model coverage')) command.push('--polish');
   if (isReference) {
     const directory = process.env.LMEX_REFERENCE_MODEL_DIR!;
     referenceSamples = JSON.parse(execFileSync(`${repo}backend/.venv/bin/python`,
@@ -97,7 +98,11 @@ test.beforeEach(async ({ page }, testInfo) => {
   page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') log += `\nBrowser: ${message.text()}`; });
   page.on('pageerror', (error) => { log += `\nPage: ${error.message}`; });
   await page.addInitScript(installProbe);
-  if (isReference) await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
+  // Layout/capture cases inspect DOM, numeric readouts and screenshots. Full
+  // framebuffer readback on every streamed draw is reserved for pixel oracles.
+  if (isReference || testInfo.title.startsWith('polish ') || testInfo.title.startsWith('expanded model coverage')) {
+    await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
+  }
   await page.goto('/');
   await expect(page.getByTestId('backend-url')).toHaveText(backend);
 });
@@ -379,8 +384,8 @@ async function closeSession(page: Page) {
   await expect.poll(async () => (await metrics(page)).textures).toBe(0);
   await expect.poll(async () => (await metrics(page)).readers).toBe(0);
 }
-async function embeddingDone(page: Page, rows: number) {
-  await expect(page.getByText(`[${rows} × 576] · float32`).filter({ visible: true })).toBeVisible();
+async function embeddingDone(page: Page, rows: number, timeout = 15_000) {
+  await expect(page.getByText(`[${rows} × 576] · float32`).filter({ visible: true })).toBeVisible({ timeout });
   await expect(page.locator('.input-embeddings [data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
   await expect(page.locator('.input-embeddings .embedding-layer:not([data-staging]) .matrix-panel-status')).toBeEmpty();
 }
@@ -1043,4 +1048,216 @@ test('production inspection tolerates DPR change before viewport resize notifica
   await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 1${value(1)}`);
   expect(await metrics(page)).toMatchObject({ uploads: before.uploads, createdTextures: before.createdTextures });
   await closeSession(page);
+});
+
+async function polishCapture(page: Page, info: TestInfo, name: string) {
+  await page.mouse.move(0, 0);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  const path = info.outputPath(`${name}.png`);
+  await page.screenshot({ path, animations: 'disabled' });
+  await info.attach(name, { path, contentType: 'image/png' });
+}
+
+for (const width of [1178, 1440]) {
+  test(`polish inventory captures retain selected scientific work at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await open(page); await complete(page);
+    await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+    const canvas = await page.locator('.matrix-scroll canvas').elementHandle();
+    const aligned = async () => {
+      await expect.poll(() => page.evaluate(() => {
+        const box = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+        const matrix = box('.matrix-scroll canvas'), rows = box('.row-distributions canvas'), columns = box('.column-distributions canvas');
+        const style = getComputedStyle(document.querySelector('.matrix-surfaces')!);
+        const host = document.querySelector<HTMLElement>('.matrix-scroll')!;
+        // Filled axes retain native scrollbar clearance; underfilled axes attach
+        // profiles to the data directly (the dedicated centering case covers it).
+        const gutterX = matrix.width >= host.clientWidth - 1 / devicePixelRatio ? host.offsetWidth - host.clientWidth : 0;
+        const gutterY = matrix.height >= host.clientHeight - 1 / devicePixelRatio ? host.offsetHeight - host.clientHeight : 0;
+        return Math.max(Math.abs(rows.left - matrix.right - parseFloat(style.columnGap) - gutterX),
+          Math.abs(columns.top - matrix.bottom - parseFloat(style.rowGap) - gutterY),
+          Math.abs(rows.top - matrix.top), Math.abs(columns.left - matrix.left));
+      })).toBeLessThanOrEqual(1);
+    };
+    const resources = await metrics(page);
+    const expanded = await page.locator('.tensor-tree details').evaluateAll(nodes => nodes.map(n => n.hasAttribute('open')));
+    await aligned(); await polishCapture(page, info, `tensor-expanded-${width}`);
+    await page.getByRole('button', { name: 'Collapse inventory' }).click();
+    const restore = page.getByRole('button', { name: 'Expand inventory' });
+    await expect(restore).toBeFocused();
+    expect(await restore.textContent()).toBe('');
+    const rail = page.locator('.inventory-rail');
+    expect((await rail.boundingBox())!.width).toBe(40);
+    expect(await canvas!.evaluate(n => n === document.querySelector('.matrix-scroll canvas'))).toBe(true);
+    await restore.blur();
+    await aligned(); await polishCapture(page, info, `tensor-collapsed-${width}`);
+    await restore.press('Enter');
+    expect(await page.locator('.tensor-tree details').evaluateAll(nodes => nodes.map(n => n.hasAttribute('open')))).toEqual(expanded);
+    expect(await metrics(page)).toMatchObject({ uploads: resources.uploads, createdTextures: resources.createdTextures });
+    await documentFits(page); await closeSession(page);
+  });
+
+  test(`polish real tokenizer auto sizing and accessible manual split at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    const editor = await tokenizer(page);
+    const fill = async (text: string) => {
+      const response = page.waitForResponse(r => r.url().endsWith('/tokenize') && r.request().postDataJSON().text === text);
+      await editor.press('ControlOrMeta+A'); await page.keyboard.insertText(text);
+      const tokens = (await (await response).json()).tokens;
+      // Hundreds of progressive row uploads can exceed the ordinary 15 s wait
+      // under DPR 2 SwiftShader. This is a completion/geometry gate, not latency.
+      await embeddingDone(page, tokens.length, 45_000); await settledPrompt(page);
+      return tokens.length as number;
+    };
+    const bounded = async () => {
+      const g = await tokenizerGeometry(page);
+      expect(g.prompt.height).toBeGreaterThanOrEqual(g.min - 1);
+      expect(g.prompt.height).toBeLessThanOrEqual(g.max + 1);
+      expect(g.divider.top).toBeCloseTo(g.prompt.bottom, 0);
+      expect(g.embeddings.top).toBeCloseTo(g.divider.bottom, 0);
+      expect(g.embeddings.bottom).toBeCloseTo(g.workspace.bottom, 0);
+      await documentFits(page);
+      return g;
+    };
+    const rows = await fill('one two');
+    const short = await bounded();
+    expect(short.prompt.height).toBeLessThan(short.workspace.height / 2);
+    expect(short.scrollHeight).toBeLessThanOrEqual(short.clientHeight + 1);
+    await editor.blur(); await polishCapture(page, info, `tokenizer-auto-${width}`);
+    const split = page.getByRole('separator', { name: 'Resize prompt and embeddings', exact: true });
+    await expect(split).toHaveAttribute('aria-orientation', 'horizontal');
+    await split.press('ArrowDown'); await expect(split).toBeFocused();
+    await expect(page.locator('.tokenizer-workspace')).toHaveAttribute('data-sizing', 'manual');
+    expect((await bounded()).prompt.height).toBeCloseTo(short.prompt.height + 16, 0);
+    await split.press('ArrowUp');
+    expect((await bounded()).prompt.height).toBeCloseTo(short.prompt.height, 0);
+    const start = (await split.boundingBox())!;
+    await drag(page, { x: start.x + start.width / 2, y: start.y + start.height / 2 },
+      { x: start.x + start.width / 2, y: start.y + start.height / 2 + 64 });
+    await page.mouse.up();
+    const manual = await bounded();
+    expect(manual.prompt.height).toBeCloseTo(short.prompt.height + 64, 0);
+    await split.blur(); await polishCapture(page, info, `tokenizer-manual-${width}`);
+    await zoom(page, rows, 576, 4);
+    expect((await bounded()).prompt).toEqual(manual.prompt);
+    await page.locator('.matrix-scroll:visible').focus();
+    await expect(page.locator('[data-token-index="0"]')).toHaveAttribute('data-active-token', '');
+    expect((await bounded()).prompt).toEqual(manual.prompt);
+    await split.press('Home');
+    expect((await bounded()).prompt.height).toBeCloseTo(short.min, 0);
+    await split.press('End');
+    expect((await bounded()).prompt.height).toBeCloseTo(short.max, 0);
+    await split.dblclick(); await settledPrompt(page);
+    await expect(page.locator('.tokenizer-workspace')).toHaveAttribute('data-sizing', 'auto');
+    expect((await bounded()).prompt.height).toBeCloseTo(short.prompt.height, 0);
+    await fill(Array.from({ length: 40 }, (_, i) => `Line ${i} one two`).join('\n'));
+    const long = await bounded();
+    expect(long.prompt.height).toBeGreaterThan(short.prompt.height + 30);
+    expect(long.prompt.height).toBeLessThanOrEqual((long.workspace.height - long.divider.height) * .46);
+    expect(long.scrollHeight).toBeGreaterThan(long.clientHeight * 2);
+    await page.locator('.tokenizer-editor').evaluate(n => { n.scrollTop = 100; });
+    await expect.poll(() => page.locator('.tokenizer-editor').evaluate(n => n.scrollTop)).toBeGreaterThan(0);
+    expect((await bounded()).embeddings).toEqual(long.embeddings);
+    await polishCapture(page, info, `tokenizer-long-${width}`);
+    await page.setViewportSize({ width, height: 740 }); await settledPrompt(page);
+    expect((await bounded()).prompt.height).toBeLessThan(long.prompt.height - 30);
+    await split.press('Home'); await split.press('ArrowDown');
+    const preferred = (await bounded()).prompt.height;
+    await fill('short again');
+    expect((await bounded()).prompt.height).toBeCloseTo(preferred, 0);
+    await page.setViewportSize({ width: 640, height: 740 }); await settledPrompt(page);
+    expect((await bounded()).prompt.height).toBeCloseTo(preferred, 0);
+    await info.attach('panel-allocation', { body: JSON.stringify({ short, manual, long }), contentType: 'application/json' });
+    await closeSession(page);
+  });
+}
+
+test('polish magnifier follows edges after scrolling resize DPR and source replacement', async ({ page }, info) => {
+  await open(page); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await zoom(page, 576, 1536, 2);
+  const resources = await metrics(page);
+  const captures: object[] = [];
+  const sweep = async () => {
+    const c = await camera(page, 576, 1536);
+    let first: object | undefined;
+    for (const [fx, fy] of [[.3, .3], [.35, .35], [0, 0], [1, 0], [1, 1], [0, 1], [.5, .5]]) {
+      const x = Math.min(c.rect.width - 2, Math.max(2, c.rect.width * fx!));
+      const y = Math.min(c.rect.height - 2, Math.max(2, c.rect.height * fy!));
+      await page.mouse.move(c.rect.left + x, c.rect.top + y);
+      await expect(page.locator('.inspection-readout')).toBeVisible();
+      const g = await page.evaluate(() => {
+        const rect = (s: string) => document.querySelector(s)!.getBoundingClientRect().toJSON() as DOMRect;
+        return { card: rect('.matrix-inspection'), pane: rect('.matrix-surfaces'),
+          profiles: [rect('.row-distributions canvas'), rect('.column-distributions canvas')] };
+      });
+      expect(g.card.left).toBeGreaterThanOrEqual(g.pane.left);
+      expect(g.card.top).toBeGreaterThanOrEqual(g.pane.top);
+      expect(g.card.right).toBeLessThanOrEqual(g.pane.right);
+      expect(g.card.bottom).toBeLessThanOrEqual(g.pane.bottom);
+      for (const p of g.profiles) expect(g.card.right <= p.left || g.card.left >= p.right || g.card.bottom <= p.top || g.card.top >= p.bottom).toBe(true);
+      if (fx === .3) first = g.card;
+      if (fx === .35) expect(g.card).not.toEqual(first);
+      captures.push(g);
+    }
+  };
+  await page.locator('.matrix-scroll').evaluate(n => { n.scrollLeft = 180; n.scrollTop = 140; });
+  await expect.poll(async () => (await camera(page, 576, 1536)).y).toBeGreaterThan(0);
+  await sweep();
+  const before = await camera(page, 576, 1536);
+  await page.setViewportSize({ width: 1178, height: 900 }); await sweep();
+  let current = await camera(page, 576, 1536);
+  expect(current.scaleX).toBeCloseTo(before.scaleX);
+  expect(current.x).toBeCloseTo(before.x); expect(current.y).toBeCloseTo(before.y);
+  const cdp = await page.context().newCDPSession(page);
+  const changedDpr = current.dpr === 1 ? 2 : 1;
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1178, height: 900, deviceScaleFactor: changedDpr, mobile: false });
+  await expect.poll(() => page.evaluate(() => devicePixelRatio)).toBe(changedDpr);
+  await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+  await sweep();
+  current = await camera(page, 576, 1536);
+  // A DPR increase can make the entire data axis fit. Preserve the previous
+  // logical origin only within the new native scrollbar bounds.
+  for (const [axis, length, viewport, scale] of [
+    ['x', 1536, current.width, current.scaleX], ['y', 576, current.height, current.scaleY],
+  ] as const) {
+    const expected = Math.min(before[axis], Math.max(0, length - viewport * current.dpr / scale));
+    expect(Math.abs(current[axis] - expected)).toBeLessThanOrEqual(current.dpr / scale);
+  }
+  expect(current.scaleX).toBe(current.scaleY);
+  expect(await metrics(page)).toMatchObject({ uploads: resources.uploads, createdTextures: resources.createdTextures, errors: [] });
+  await cdp.detach();
+  await open(page, 'layout.fits.weight'); await complete(page);
+  await expect(page.locator('.inspection-readout')).toHaveCount(0);
+  const replacement = await camera(page, 32, 32);
+  expect(replacement.scaleX).toBeCloseTo(Math.max(1, Math.floor(replacement.width * replacement.dpr) / 32));
+  await page.locator('.matrix-scroll').focus(); await page.keyboard.press('Escape');
+  expect(await camera(page, 32, 32)).toEqual(replacement);
+  await documentFits(page);
+  await info.attach('edge-placements', { body: JSON.stringify(captures), contentType: 'application/json' });
+  await closeSession(page);
+});
+
+test('expanded model coverage links native embeddings in GPTQ and NVFP4 checkpoints', async ({ page }) => {
+  await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
+  for (const [family, columns] of [['smollm2', 12], ['qwen3', 128], ['qwen35', 32]] as const) {
+    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(family);
+    const editor = page.getByRole('textbox', { name: 'Prompt', exact: true });
+    await editor.fill('one two one');
+    await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+    await expect(page.getByText(`[4 × ${columns}] · float32`)).toBeVisible();
+    await expect(page.locator('.token-ids')).toHaveText(['1', '2', '3', '2']);
+    await zoom(page, 4, columns, 8);
+    const c = await camera(page, 4, columns);
+    await page.mouse.move(c.rect.left + 4, c.rect.top + 3 * 8 + 4);
+    await expect(page.locator('[data-token-index="3"]')).toHaveAttribute('data-active-token', '');
+    await expect(page.locator('.inspection-readout')).toHaveText(`row 3 · column 0${((2 * columns) % 29 - 14) / 8}`);
+    await page.locator('[data-token-index="1"]').hover();
+    await expect(page.locator('[data-token-index="1"]')).toHaveAttribute('data-active-token', '');
+    await expect(page.locator('[data-token-index="3"]')).not.toHaveAttribute('data-active-token', '');
+  }
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('vjepa2');
+  await expect(page.getByText('Tokenizer unavailable for this model. You can still edit the prompt.')).toBeVisible();
+  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  await documentFits(page); await closeSession(page);
 });

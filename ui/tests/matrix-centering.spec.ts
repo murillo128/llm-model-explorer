@@ -33,8 +33,10 @@ for (const dpr of [1, 1.25, 2]) test.describe(`centered scientific content DPR $
           Math.abs(g.matrix.top - (Math.round(g.host.top * dpr) / dpr + offsetY)),
           // Host CSS bounds change before ResizeObserver resolves the available
           // scientific height. Wait for that complete layout, not an old camera
-          // still centered within its old client box.
-          g.column.bottom - g.pane.bottom, g.row.right - g.pane.right);
+          // still centered within its old client box. Integer client dimensions
+          // can exceed fractional CSS pane bounds by less than a device pixel;
+          // use the same containment allowance as the final assertions below.
+          g.column.bottom - g.pane.bottom - 1 / dpr, g.row.right - g.pane.right - 1 / dpr);
       }).toBeLessThan(0.03);
       const g = await geometry(page);
       expect(g.view.scaleX).toBe(1); expect(g.view.scaleY).toBe(1);

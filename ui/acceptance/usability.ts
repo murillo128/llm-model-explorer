@@ -58,3 +58,26 @@ export async function promptViewport(page: Page) {
       anchorText: selection.anchorNode?.textContent, focusText: selection.focusNode?.textContent };
   });
 }
+
+export async function tokenizerGeometry(page: Page) {
+  return page.locator('.tokenizer-workspace').evaluate(workspace => {
+    const rect = (selector: string) => workspace.querySelector(selector)!.getBoundingClientRect().toJSON() as DOMRect;
+    const editor = workspace.querySelector<HTMLElement>('.tokenizer-editor')!;
+    const splitter = workspace.querySelector('[role="separator"]')!;
+    return { workspace: workspace.getBoundingClientRect().toJSON() as DOMRect,
+      prompt: rect('.prompt-panel'), embeddings: rect('.input-embeddings'), divider: rect('[role="separator"]'),
+      scrollHeight: editor.scrollHeight, clientHeight: editor.clientHeight,
+      min: Number(splitter.getAttribute('aria-valuemin')), max: Number(splitter.getAttribute('aria-valuemax')) };
+  });
+}
+
+export async function settledPrompt(page: Page) {
+  await expect.poll(async () => page.locator('.prompt-panel').evaluate(async panel => {
+    const heights: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      await new Promise(requestAnimationFrame);
+      heights.push(panel.getBoundingClientRect().height);
+    }
+    return Math.max(...heights) - Math.min(...heights);
+  })).toBeLessThan(.5);
+}
