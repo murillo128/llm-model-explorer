@@ -1,7 +1,7 @@
 # Codex operating policy
 
 This guide covers the CLI and shared App Server on the runner machine.
-Desktop is outside this maintenance scope. Runtime settings do not authorize
+Desktop installation and configuration are outside this maintenance scope. Runtime settings do not authorize
 issue execution, release holds or replace the existing audit/ownership rules.
 See [the original maintenance evidence](./codex-maintenance-evidence.md) for the
 0.154.0 host observations and limitations. That dated record predates the optional
@@ -177,6 +177,35 @@ coordinate thread ownership, and never steer a thread another actor is using.
 Audit uses a fresh detached worktree/thread; explicit settings do not grant
 reviewers permission to implement or change the reviewed head.
 
+## Desktop project assignment
+
+Execution, epic-scheduler resumes and fresh audit threads use the same project
+assignment code. The launcher discovers existing projects with experimental
+`project/list`, matching an exact canonical root to the verified persistent
+repository checkout (`SKILLFORGE_REPO_ROOT_RESOLVED`), not the issue/review
+worktree, project name or a path prefix. It follows bounded pagination and only
+uses a unique match; it never creates or edits projects or guesses by name.
+
+Discovery happens before start/resume. The resulting fresh thread snapshot must
+explicitly report `projectId: null` before `thread/metadata/update` assigns the
+project, immediately before `turn/start`. Existing non-null assignments, including
+manual Desktop moves, are preserved. Missing `projectId` is unknown, not permission
+to overwrite it. Assignment does not change `cwd`, environments, writable roots,
+models, permissions, branches or audit isolation. It does not resume audit history,
+migrate old sessions in bulk, restart the server or interrupt active work. Existing
+unassigned execution threads are handled only on their next permitted resume.
+As with turn launch, the protocol provides no atomic cross-client lock: avoid
+concurrent manual metadata edits during the small snapshot-to-update window.
+
+`thread_project_assigned` is logged only when the metadata response confirms the
+same thread and requested project. `thread_project_preserved` records an existing
+assignment. Missing/ambiguous matches, unsupported experimental RPCs or fields,
+invalid pagination and unconfirmed writes produce `thread_project_warning` in the
+local event log and continue without retrying thread creation. Transport failures
+and core thread/turn failures remain errors. The target project must already exist
+on the serving App Server with the repository root; offline tests do not establish
+that the runner version exposes the API or that Desktop displays the association.
+
 ## Validation and activation
 
 The optional-settings regression suite exercises actual executor and generated
@@ -190,8 +219,10 @@ python3 -m unittest discover -s .github/scripts -p 'test_codex_profile.py' -v
 It covers native launches with no profile files, legacy/null-effort resumes,
 inline/profile overrides on new and inactive sessions, profile precedence,
 malformed/unavailable choices, fresh audit and active-turn guards, bounded
-catalog handling, and settings-only preparation. Offline tests are not a claim
-of live-host validation. Check both new and resumed behavior on an isolated idle
+catalog handling, and settings-only preparation. Project regressions cover new and
+resumed execution, fresh audits, canonical root matching, manual assignments,
+bounded/ambiguous discovery, unsupported APIs and confirmation of metadata writes.
+Offline tests are not a claim of live-host validation. Check both new and resumed behavior on an isolated idle
 smoke thread before claiming runtime adoption; do not use real issue transitions,
 interrupt manual #114 or release #124/#125 as a smoke test.
 
