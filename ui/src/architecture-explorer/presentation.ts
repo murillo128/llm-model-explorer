@@ -1,5 +1,6 @@
 import type { Graph, GraphNode } from './graph';
 import type { ProjectedNode } from './projection';
+import { semanticRole } from './semantic-role';
 
 /** Labels are presentation aliases; inspection always receives the original record. */
 export function displayLabel(node: ProjectedNode, graph: Graph): string {
@@ -14,6 +15,9 @@ export function displayLabel(node: ProjectedNode, graph: Graph): string {
   const instance = graph.repetitions.flatMap((r) => r.instances).find((i) => i.node_id === record.id);
   if (instance) return `Layer ${instance.index}`;
   if (record.references.some((r) => r.kind === 'tokenizer')) return 'Tokenizer capability';
+  const role = semanticRole(record);
+  if ((record.kind === 'group' && (role === 'attention' || role === 'mlp')) ||
+    (record.kind === 'operation' && role)) return record.label;
   if (record.kind === 'group') {
     const path = record.references.find((r) => r.kind === 'module')?.name ?? record.label;
     const end = path.split('.').at(-1)!;

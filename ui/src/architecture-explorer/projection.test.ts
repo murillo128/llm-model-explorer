@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { assertTraceability } from '../../tests/architecture-invariants';
+import { assertSemanticEquivalent, assertTraceability } from '../../tests/architecture-invariants';
+import { makeExplicitFixture } from '../../tests/architecture-explicit-fixture';
 import { makeProjectionFixture, type ProjectionFixtureOptions } from '../../tests/architecture-projection-fixture';
 import { validateArchitecture } from '../api/architecture-validation';
 import { deriveMlpGroups } from './derived-groups';
+import { displayLabel } from './presentation';
 import { connectionSet, endpointKey, projectGraph, type Endpoint, type Projection } from './projection';
 
 const ep = (node_id: string, port_id: string): Endpoint => ({ node_id, port_id });
@@ -212,6 +214,29 @@ describe('source-preserving visible projection', () => {
 });
 
 describe('justified derived MLP presentation', () => {
+  it('prefers authored components without a duplicate MLP and preserves legacy semantics', () => {
+    const legacy = fixture(), graph = makeExplicitFixture();
+    assertSemanticEquivalent(legacy, graph);
+    expect(deriveMlpGroups(graph)).toEqual([]);
+    expect(deriveMlpGroups(legacy)).toHaveLength(4);
+    for (const options of [selected(3), selected(3, ['layer-3.mlp', 'layer-3.attention']),
+      { ...selected(3), deriveMlp: false }, { expanded: [], exhaustive: true }]) {
+      const projection = projectGraph(graph, options);
+      expect(projection.nodes.some((node) => node.presentation === 'mlp')).toBe(false);
+      const mlp = projection.nodes.find((node) => node.id === 'layer-3.mlp')!;
+      expect(mlp.record).toBe(graph.nodes.find((node) => node.id === mlp.id));
+      expect(displayLabel(mlp, graph)).toBe('MLP');
+      const attention = projection.nodes.find((node) => node.id === 'layer-3.attention')!;
+      expect(displayLabel(attention, graph)).toBe(attention.record!.label);
+      assertTraceability(graph, projection, 'exhaustive' in options);
+    }
+    // A producer's query/gate distinction wins over the older q_proj alias.
+    const query = graph.nodes.find((node) => node.id === 'layer-3.attention.Q')!;
+    query.label = 'Query and gate projection';
+    query.attributes.push({ name: 'semantic_role', value: 'query_gate_projection', provenance: [] });
+    const projection = projectGraph(graph, { expanded: [], exhaustive: true });
+    expect(displayLabel(projection.nodes.find((node) => node.id === query.id)!, graph)).toBe(query.label);
+  });
   it('groups exactly five supported operations, exposes real selected references and reverses without changing edges', () => {
     const graph = fixture();
     const groups = deriveMlpGroups(graph); expect(groups).toHaveLength(4);

@@ -1,6 +1,7 @@
 import { layoutGraph } from './auto-layout';
 import { describe, expect, it } from 'vitest';
 import { makeProjectionFixture } from '../../tests/architecture-projection-fixture';
+import { makeExplicitFixture } from '../../tests/architecture-explicit-fixture';
 import { groupHeaderHeight, layerGap } from './auto-layout';
 import { deriveMlpGroups } from './derived-groups';
 import type { Box, Graph, Layout, Point } from './graph';
@@ -115,6 +116,17 @@ function layerStages(layout: Layout, graph: Graph, id: string) {
 }
 
 describe('generated horizontal graph geometry', () => {
+  it.each([16, 29])('keeps explicit Attention/MLP boundaries horizontal at width %i', async (hiddenSize) => {
+    const graph = makeExplicitFixture({ count: 2, hiddenSize, variants: ['full_attention', 'linear_attention'] });
+    for (const index of [0, 1]) {
+      const id = `layer-${index}`;
+      const layout = await layoutGraph(graph, { expanded: ['model', id, `${id}.attention`, `${id}.mlp`] });
+      horizontal(layout, [`${id}.input-norm`, `${id}.attention`, `${id}.residual-1`, `${id}.post-norm`, `${id}.mlp`, `${id}.residual-2`]);
+      horizontal(layout, [`${id}.gate`, `${id}.silu`, `${id}.multiply`, `${id}.down`]);
+      horizontal(layout, [`${id}.up`, `${id}.multiply`]);
+      geometry(layout); distinguishSignals(layout);
+    }
+  });
   it('lays out the model overview and a bounded serial-layer window in actual dependency order', async () => {
     const graph = makeProjectionFixture({ count: 7 });
     const overview = await layoutGraph(graph, { expanded: ['model'] });

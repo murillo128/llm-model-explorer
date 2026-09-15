@@ -85,3 +85,28 @@ These observations are synthetic/source-metadata evidence. Complete local
 checkpoint and built-browser evidence is recorded separately after UI integration;
 fixture success is not a claim of actual reference acceptance or inference
 equivalence.
+
+
+## Intermediate independent review and complete local checkpoints
+
+The independent read-only [checkpoint review](https://github.com/murillo128/llm-model-explorer/pull/144#issuecomment-5686215639)
+returned **PASS**, safe to integrate UI preference, for
+`a82a1033b18eb575b41f13c6782cee496bd5b1a6..a83783ef06e1330cbb778f069b4223ffee1ef2bc`.
+It was not final-capable. The reviewer additionally removed only newly added
+groups and independently checked original ordered hierarchy, interfaces,
+directed-edge multiplicity and forwarding shapes. No material findings.
+
+The full backend suite passed 1,224 tests with 19 explicit CUDA-only skips.
+The existing TCP Architecture acceptance passed all seven tests with no skips,
+including all four approved local reference checkpoints. It ran from an isolated
+archive of the reviewed backend commit, with CPU native threads bounded to one,
+the existing approved reference manifest, offline model access and fresh temporary
+caches. The [reference receipt](evidence/architecture-grouping/references.json)
+records fingerprints, inventories, upstream and producer revisions, cold/warm
+readiness, memory and exact graph identities. Startup measurements include model
+root discovery/hashing; they are not isolated per-model compute benchmarks.
+
+The four fixture checkpoints remain a separate test input. No checkpoint weights,
+cache payloads or private model paths are committed. The subsequent browser gate
+checks source groups/labels, recursive horizontal geometry, native shared-trunk
+and port hover, and logical weight modals against the built UI.

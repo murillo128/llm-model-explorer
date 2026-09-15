@@ -1,7 +1,7 @@
 import { findComponent, graphAction, graphPreference, viewOptions } from '../tests/architecture-controls';
 /* eslint-disable @typescript-eslint/no-explicit-any -- Native test-only observations and evidence. */
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Page, TestInfo } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -71,6 +71,54 @@ async function selectGraph(page: Page): Promise<Graph> {
   return body.graph;
 }
 
+async function inspectComponents(page: Page, graph: Graph, info: TestInfo, family: string, reference: boolean) {
+  const role = (node: Graph['nodes'][number], value: string) => node.attributes.some((a) => a.name === 'semantic_role' && a.value === value);
+  const components = graph.nodes.filter((node) => node.kind === 'group' && (role(node, 'attention') || role(node, 'mlp')));
+  expect(components).toHaveLength(2 * graph.repetitions.reduce((n, r) => n + r.instances.length, 0));
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
+  const capture = async (name: string) => {
+    if (info.project.name !== 'dpr1') return;
+    const path = info.outputPath(`${reference ? 'reference' : 'fixture'}-${family}-${name}.png`);
+    await page.screenshot({ path });
+    await info.attach(`components-${name}`, { path, contentType: 'image/png' });
+  };
+  const nodeBox = (id: string) => page.locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`);
+  const horizontal = async (before: string, after: string) => {
+    const a = await nodeBox(before).boundingBox(), b = await nodeBox(after).boundingBox();
+    expect(a).toBeTruthy(); expect(b).toBeTruthy();
+    expect(b!.x).toBeGreaterThanOrEqual(a!.x + a!.width - 1);
+  };
+  for (const repetition of graph.repetitions) {
+    const instances = family === 'qwen35' ? repetition.instances.slice(0, 2) : repetition.instances.slice(0, 1);
+    for (const instance of instances) {
+      const attention = components.find((n) => n.parent_id === instance.node_id && role(n, 'attention'))!;
+      const mlp = components.find((n) => n.parent_id === instance.node_id && role(n, 'mlp'))!;
+      await findComponent(page, instance.node_id);
+      await graphAction(page, 'Focus layer'); await ready();
+      await horizontal(attention.id, mlp.id);
+      await expect(page.locator('.architecture-node[data-presentation="mlp"]')).toHaveCount(0);
+      const label = `${graph.repetitions.indexOf(repetition)}-${instance.index}`;
+      await capture(`${label}-compact`);
+      await findComponent(page, attention.id);
+      await graphAction(page, 'Toggle selected group'); await ready();
+      await page.getByRole('button', { name: 'Center selected', exact: true }).click(); await ready();
+      const projections = graph.nodes.filter((n) => n.parent_id === attention.id &&
+        (role(n, 'query_projection') || role(n, 'query_gate_projection')));
+      const output = graph.nodes.find((n) => n.parent_id === attention.id && role(n, 'output_projection'));
+      if (projections.length && output) await horizontal(projections[0]!.id, output.id);
+      await capture(`${label}-attention`);
+      await graphAction(page, 'Focus MLP'); await ready();
+      await expect(page.getByRole('button', { name: 'MLP', exact: true })).toBeVisible();
+      await expect(page.getByText('MLP (derived)', { exact: true })).toHaveCount(0);
+      const up = graph.nodes.find((n) => n.parent_id === mlp.id && role(n, 'up_projection'))!;
+      const down = graph.nodes.find((n) => n.parent_id === mlp.id && role(n, 'down_projection'))!;
+      await horizontal(up.id, down.id);
+      await capture(`${label}-mlp`);
+    }
+  }
+}
+
 test.beforeEach(async ({ page }, info) => {
   const family = /\[(\w+)\]/.exec(info.title)![1]!;
   const reference = info.title.startsWith('complete local reference');
@@ -133,6 +181,7 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
       assertTraceability(graph, projectGraph(graph, { expanded }));
     }
     const canvas = page.getByLabel('Architecture graph', { exact: true });
+    await inspectComponents(page, graph, info, family, reference);
     await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).not.toBeChecked();
     await page.keyboard.press('Escape');

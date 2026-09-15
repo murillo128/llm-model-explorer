@@ -83,6 +83,13 @@ Keep the received graph unchanged. Visible presentation records retain source no
 
 A reversible derived MLP group requires matching parameter/module ownership and exact gate/up/SiLU/multiply/down topology. Mark it as derived; unmatched operations remain explicit. A presentation boundary alias is not a new mathematical operation or backend identity.
 
+Prefer received Attention/MLP groups identified by the API's optional
+`semantic_role` attribute. Keep their source-backed labels and original node
+identity for expansion, inspection, search and component focus. Do not add a
+derived MLP container inside an explicit MLP group. The existing bounded fallback
+remains reversible for valid legacy graphs without explicit MLP ownership; it
+does not recognize additional attention patterns or reconstruct missing math.
+
 Declared interfaces remain inspectable when unconsumed branches are filtered. Determine consumption from source connectivity, with an explicit reversible filter. State focus shows existing prior/next dependencies owned by the selected instance, keeps K/V distinct and identifies excluded flows. Exhaustive expansion restores original operations and interfaces without a representative or layer-count limit.
 
 ## Automatic layout and directional routing

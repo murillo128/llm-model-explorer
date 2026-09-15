@@ -8,6 +8,7 @@ import { requestLayout } from './layout';
 import type { ProjectedNode, ProjectionOptions } from './projection';
 import { connectionSet, endpointKey } from './projection';
 import { deriveMlpGroups } from './derived-groups';
+import { semanticRole } from './semantic-role';
 import { displayLabel, instanceOf } from './presentation';
 import { ArchitectureControls } from './ArchitectureControls';
 import type { NavigationItem, ControlSelection } from './ArchitectureControls';
@@ -94,7 +95,11 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
   const boxes = useMemo(() => new Map(result.layout?.boxes.map((b) => [b.id, b])), [result.layout]);
   const projected = useMemo(() => new Map(result.layout?.projection.nodes.map((n) => [n.id, n])), [result.layout]);
   const variants = useMemo(() => new Map(graph.repetitions.flatMap((r) => r.instances.map((i) => [i.node_id, `Instance ${i.index} · ${i.variant.replaceAll('_', ' ')}`] as const))), [graph]);
-  const mlps = useMemo(() => deriveMlpGroups(graph), [graph]);
+  const mlps = useMemo(() => [
+    ...graph.nodes.flatMap((node) => node.kind === 'group' && node.parent_id && semanticRole(node) === 'mlp'
+      ? [{ id: node.id, parentId: node.parent_id, label: node.label, sourceIds: node.children }] : []),
+    ...deriveMlpGroups(graph),
+  ], [graph]);
   const diagnosed = useMemo(() => new Set(graph.diagnostics.map((d) => d.node_id)), [graph.diagnostics]);
   const instance = useMemo(() => instanceOf(graph, mlps.find((g) => g.id === focusId)?.parentId ?? focusId), [focusId, graph, mlps]);
   const stack = graph.repetitions.find((r) => r.id === activeStack);
@@ -313,7 +318,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     ancestor = ancestor.parent_id ? records.get(ancestor.parent_id) : undefined;
   }
   if (stack && !breadcrumbs.some((item) => item.kind === 'stack')) breadcrumbs.push({ id: stack.id, kind: 'stack', label: stack.label });
-  if (focusedMlp) breadcrumbs.push({ id: focusedMlp.id, kind: 'node', label: 'MLP (derived)' });
+  if (focusedMlp) breadcrumbs.push({ id: focusedMlp.id, kind: 'node', label: records.has(focusedMlp.id) ? focusedMlp.label : 'MLP (derived)' });
   const selectedRecord = selected ? records.get(selected) : undefined;
   const selectedEdge = result.layout?.projection.edges.find((e) => e.id === pinned);
   const controlSelection: ControlSelection | undefined = selectedEdge ? {
