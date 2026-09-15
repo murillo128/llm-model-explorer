@@ -1,0 +1,19 @@
+/* Keep native scrolling without allocating any space to platform chrome. */
+.matrix-scroll { scrollbar-width: none; scrollbar-gutter: auto; }
+.matrix-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.matrix-scrollbars { position: absolute; pointer-events: none; z-index: 2; overflow: hidden; }
+.matrix-scrollbar { position: absolute; pointer-events: none; touch-action: none; outline: none; }
+.matrix-scrollbar[hidden] { display: none; }
+/* Keep the transparent outer 3px available for exact edge-cell inspection.
+   The inward target is still 15px wide around the visible 6px thumb. */
+.matrix-scrollbar-horizontal { left: 0; bottom: 3px; height: 15px; }
+.matrix-scrollbar-vertical { top: 0; right: 3px; width: 15px; }
+.matrix-scrollbar-thumb { position: absolute; pointer-events: auto; border-radius: 4px; background: #b8ac98; box-shadow: 0 0 0 1px #34312bc7; opacity: .4; }
+.matrix-scrollbar-horizontal .matrix-scrollbar-thumb { bottom: 0; height: 6px; }
+.matrix-scrollbar-vertical .matrix-scrollbar-thumb { right: 0; width: 6px; }
+.matrix-scrollbars[data-active] .matrix-scrollbar,
+.matrix-scrollbar:is([data-near], :focus-visible, [data-dragging]) { pointer-events: auto; }
+.matrix-scrollbars[data-active] .matrix-scrollbar-thumb,
+.matrix-scrollbar:is([data-near], :focus, [data-dragging]) .matrix-scrollbar-thumb { opacity: .95; }
+.matrix-scrollbar:is(:hover, :focus-visible, [data-dragging]) .matrix-scrollbar-thumb { background: #e2a558; }
+.matrix-scrollbar:focus-visible .matrix-scrollbar-thumb { outline: 2px solid #fff5df; outline-offset: 1px; }
