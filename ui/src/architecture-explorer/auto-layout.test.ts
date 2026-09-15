@@ -116,6 +116,20 @@ function layerStages(layout: Layout, graph: Graph, id: string) {
 }
 
 describe('generated horizontal graph geometry', () => {
+  it('isolates the same component geometry regardless of surrounding model size', async () => {
+    const small = makeExplicitFixture({ count: 4 }), large = makeExplicitFixture({ count: 48 });
+    for (const scope of ['layer-3.attention', 'layer-3.mlp', 'layer-3.attention.core']) {
+      const options = { scope, expanded: [scope] };
+      const before = await layoutGraph(small, options), after = await layoutGraph(large, options);
+      expect(after.boxes).toEqual(before.boxes); expect(after.ports).toEqual(before.ports);
+      expect(after.routes).toEqual(before.routes);
+      expect([after.width, after.height]).toEqual([before.width, before.height]);
+      expect(before.boxes.some((box) => box.id === 'model' || box.id === 'layer-3')).toBe(false);
+      geometry(before); distinguishSignals(before);
+      if (scope.endsWith('.mlp')) horizontal(before, ['layer-3.gate', 'layer-3.silu', 'layer-3.multiply', 'layer-3.down']);
+      if (scope.endsWith('.attention')) horizontal(before, ['layer-3.attention.Q', 'layer-3.attention.rope-Q', 'layer-3.attention.core', 'layer-3.attention.output']);
+    }
+  }, 30_000);
   it.each([16, 29])('keeps explicit Attention/MLP boundaries horizontal at width %i', async (hiddenSize) => {
     const graph = makeExplicitFixture({ count: 2, hiddenSize, variants: ['full_attention', 'linear_attention'] });
     for (const index of [0, 1]) {

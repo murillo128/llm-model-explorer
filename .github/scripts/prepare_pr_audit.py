@@ -24,7 +24,8 @@ FRESH_THREAD = '''    if os.path.exists(THREAD_FILE):
             **policy.thread_options(),
         },
     )
-    thread_id = (started.get("thread") or {}).get("id")
+    live_thread = started.get("thread") or {}
+    thread_id = live_thread.get("id")
     if not thread_id:
         raise RuntimeError("thread/start returned no thread id")
     write_atomic(THREAD_FILE, thread_id)

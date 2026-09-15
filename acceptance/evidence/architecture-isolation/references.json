@@ -1,0 +1,146 @@
+{
+  "source_head": "bd787a137e13c71ecb3c007dd48c6f48ddbf9885",
+  "gate": "acceptance/test_architecture.py",
+  "passed": 8,
+  "failed": 0,
+  "skipped": 0,
+  "seconds": 155.92,
+  "references": {
+    "smollm2": {
+      "repository": "HuggingFaceTB/SmolLM2-135M",
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "revision_source": "operator manifest",
+      "revision_absence_reason": null,
+      "fingerprint": "aeda1cbf6516239fa4d305117c5a70ca5f4a3af06ef7575544dc97914c61e57e",
+      "total_bytes": 272437465,
+      "physical_tensors": 272,
+      "tokenizer_available": true,
+      "scope": "language_model",
+      "coverage": "complete",
+      "nodes": 1031,
+      "edges": 1596,
+      "parameters": 273,
+      "graph_id": "b6dd19862b0010730e7fa7bc9a50f09d92ed8bbd0e1bda3784e34952294f942c",
+      "environment": {
+        "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+        "python": "3.12.14",
+        "machine": "x86_64",
+        "cpu_count": 16
+      },
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 17.69181972500519,
+          "peak_rss_kib": 403388
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 6.546901506982977,
+          "peak_rss_kib": 389104
+        }
+      ]
+    },
+    "qwen3": {
+      "repository": "JunHowie/Qwen3-0.6B-GPTQ-Int4",
+      "revision": "b9d87006067b0c0c2dea836370d6288e14f112ab",
+      "revision_source": "operator manifest",
+      "revision_absence_reason": null,
+      "fingerprint": "31bd7a3f28c9ef9a65b5c6039eec5d4defe5a0e75148af472bde6c3ca4864be2",
+      "total_bytes": 557224424,
+      "physical_tensors": 898,
+      "tokenizer_available": true,
+      "scope": "language_model",
+      "coverage": "complete",
+      "nodes": 1019,
+      "edges": 1546,
+      "parameters": 311,
+      "graph_id": "067d60a31eca18dd3fb0ffc7b0f83aacc6f20a698417502b6b03af5ca2d61ba8",
+      "environment": {
+        "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+        "python": "3.12.14",
+        "machine": "x86_64",
+        "cpu_count": 16
+      },
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 23.690102280001156,
+          "peak_rss_kib": 403788
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 10.123703473014757,
+          "peak_rss_kib": 391196
+        }
+      ]
+    },
+    "qwen35": {
+      "repository": "AxionML/Qwen3.5-0.8B-NVFP4",
+      "revision": "2ac1e750cda67cc8538d731f6216f77b9c3a6f72",
+      "revision_source": "operator manifest",
+      "revision_absence_reason": null,
+      "fingerprint": "907c94e9c7953070c91e7e94d0a09dff0dc1e6f2b230530bd7eecc6e984909e0",
+      "total_bytes": 1051242308,
+      "physical_tensors": 1046,
+      "tokenizer_available": true,
+      "scope": "language_model",
+      "coverage": "complete",
+      "nodes": 972,
+      "edges": 1377,
+      "parameters": 333,
+      "graph_id": "18e2e0cc2b90b81e62f712c4d072f4e5d5b1e2186f868e1534fd86be96d82343",
+      "environment": {
+        "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+        "python": "3.12.14",
+        "machine": "x86_64",
+        "cpu_count": 16
+      },
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 19.77590304100886,
+          "peak_rss_kib": 403580
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 7.870620920002693,
+          "peak_rss_kib": 385252
+        }
+      ]
+    },
+    "vjepa2": {
+      "repository": "facebook/vjepa2-vitl-fpc64-256",
+      "revision": "b3c1679b7c34d3255ef3547f27c7b226aefab26f",
+      "revision_source": "operator manifest",
+      "revision_absence_reason": null,
+      "fingerprint": "062f2bf6be583704b8285ceec1359f066eebf7af344924f8ac4568d8b8b2e8fa",
+      "total_bytes": 1303949947,
+      "physical_tensors": 587,
+      "tokenizer_available": false,
+      "scope": "visual_encoder_predictor",
+      "coverage": "complete",
+      "nodes": 854,
+      "edges": 1259,
+      "parameters": 587,
+      "graph_id": "8227916aed7ae9833de3d1860b719f37dc49e503691c0863986d041c130589a6",
+      "environment": {
+        "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+        "python": "3.12.14",
+        "machine": "x86_64",
+        "cpu_count": 16
+      },
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 17.84393082401948,
+          "peak_rss_kib": 403496
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 10.99772968099569,
+          "peak_rss_kib": 384400
+        }
+      ]
+    }
+  }
+}

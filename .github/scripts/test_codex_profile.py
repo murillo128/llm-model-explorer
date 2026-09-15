@@ -1,4 +1,4 @@
-"""Offline regression tests for optional issue settings and both real launchers.
+"""Offline regressions for issue settings, project assignment and both launchers.
 
 Run: python3 -m unittest discover -s .github/scripts -p 'test_codex_profile.py'
 No model turn, host config, GitHub mutation or product suite is used.
@@ -34,6 +34,12 @@ class Server:
         self.local = {'model': 'local-model', 'reasoningEffort': None}
         self.status = self.resumed_status = 'idle'
         self.start_override = {}
+        self.project_id = None
+        self.project_supported = True
+        self.errors = {}
+        self.metadata_response = None
+        self.project_pages = [{'data': [{'id': 'repo-project', 'name': 'Renamed project',
+                               'roots': [{'path': '/repos/test/repo'}]}], 'nextCursor': None}]
         self.pages = [{'data': [
             {'model': 'gpt-6-astra', 'supportedReasoningEfforts': [
                 {'reasoningEffort': value} for value in ('xhigh', 'max', 'ultra')]},
@@ -45,6 +51,16 @@ class Server:
 
     def request(self, method, params):
         self.calls.append((method, params))
+        if method in self.errors:
+            raise self.errors[method]
+        project_fields = {'projectId': self.project_id} if self.project_supported else {}
+        if method == 'project/list':
+            return self.project_pages[0 if params['cursor'] is None else int(params['cursor'])]
+        if method == 'thread/metadata/update':
+            if self.metadata_response is not None:
+                return self.metadata_response
+            self.project_id = params['projectId']
+            return {'thread': {'id': params['threadId'], 'projectId': self.project_id}}
         if method == 'initialize':
             return {'codexHome': str(self.home), 'platformOs': 'linux'}
         if method == 'model/list':
@@ -52,9 +68,9 @@ class Server:
         if method == 'thread/read':
             return {'thread': {'status': self.status}}
         if method == 'thread/resume':
-            return {'thread': {'id': 'saved', 'status': self.resumed_status}, **self.saved}
+            return {'thread': {'id': 'saved', 'status': self.resumed_status, **project_fields}, **self.saved}
         if method == 'thread/start':
-            return {'thread': {'id': 'new', 'status': 'idle'},
+            return {'thread': {'id': 'new', 'status': 'idle', **project_fields},
                     'model': params.get('model', self.local['model']),
                     'reasoningEffort': params['config'].get('model_reasoning_effort', self.local['reasoningEffort']),
                     **self.start_override}
@@ -87,7 +103,9 @@ class LauncherTests(unittest.TestCase):
         (self.home / 'codex-settings.json').write_text(json.dumps(settings or {}))
         source = build_audit_client(WORKFLOW) if role == 'audit' else EXECUTOR
         tree = ast.parse(source)
-        body = ast.Module(body=[tree.body[-1]], type_ignores=[])
+        helpers = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+                   and node.name in {'resolve_project_id', 'assign_thread_project'}]
+        body = ast.Module(body=[*helpers, tree.body[-1]], type_ignores=[])
         env = {'CODEX_LAUNCH_ROLE': role, 'GITHUB_REPOSITORY': 'test/repo',
                'PR_NUMBER': '7', 'GITHUB_RUN_ATTEMPT': '1', 'REVIEW_HEAD_SHA': 'a' * 40,
                'SKILLFORGE_TASK_PROMPT': 'Review the exact target'}
@@ -97,7 +115,7 @@ class LauncherTests(unittest.TestCase):
             'WebSocketUnix': lambda path: None, 'AppServerClient': lambda ws: self.server,
             'SOCKET_PATH': 'unused', 'WORKTREE': '/isolated/issue-worktree', 'ISSUE_NUMBER': '1',
             'ISSUE_TITLE': 'Test', 'RUN_ID': 'test', 'THREAD_FILE': str(thread_file),
-            'STATE_DIR': str(self.home),
+            'STATE_DIR': str(self.home), 'REPO_ROOT': '/repos/test/repo',
             'log': lambda event, **fields: self.logs.append({'event': event, **fields}),
             'write_atomic': lambda path, value: Path(path).write_text(value),
             'status_is_active': lambda status: status == 'active' or status == {'type': 'active'},
@@ -199,12 +217,14 @@ class LauncherTests(unittest.TestCase):
             self.launch({'model': 'gpt-6-astra', 'model_reasoning_effort': 'ultra'}, existing=True)
         self.assertNotIn('thread/resume', self.methods())
         self.assertNotIn('turn/start', self.methods())
+        self.assertNotIn('thread/metadata/update', self.methods())
 
     def test_thread_becoming_active_after_resume_is_not_steered(self):
         self.server.resumed_status = 'active'
         with self.assertRaisesRegex(RuntimeError, 'became active'):
             self.launch(existing=True)
         self.assertNotIn('turn/start', self.methods())
+        self.assertNotIn('thread/metadata/update', self.methods())
 
     def test_native_audit_is_fresh_without_requiring_profile(self):
         self.launch(role='audit')
@@ -265,6 +285,165 @@ class LauncherTests(unittest.TestCase):
             self.assertNotIn('GITHUB_TOKEN=', detached)
         self.assertIn('  issues: read', WORKFLOW)
         self.assertLess(WORKFLOW.index('if process_from_pid_file_is_alive'), WORKFLOW.index('prepare-issue'))
+
+
+    def test_projects_cover_new_resumed_and_fresh_audit_threads(self):
+        for role, existing in (('execution', False), ('execution', True), ('audit', False)):
+            with self.subTest(role=role, existing=existing):
+                self.setUp()
+                self.launch(role=role, existing=existing)
+                target = 'saved' if existing else 'new'
+                self.assertEqual(self.params('thread/metadata/update'),
+                                 {'threadId': target, 'projectId': 'repo-project'})
+                methods = self.methods()
+                self.assertLess(methods.index('thread/metadata/update'), methods.index('turn/start'))
+                self.assertEqual(methods.count('thread/start'), 0 if existing else 1)
+                self.assertEqual(methods.count('turn/start'), 1)
+                self.assertEqual(self.params('turn/start')['environments'],
+                                 [{'environmentId': 'local', 'cwd': '/isolated/issue-worktree'}])
+                self.assertEqual(self.params('turn/start')['sandboxPolicy']['writableRoots'],
+                                 ['/isolated/issue-worktree'])
+                self.assertEqual(self.params('initialize')['capabilities'], {'experimentalApi': True})
+                self.assertFalse(set(methods) & {'project/create', 'project/import', 'project/update'})
+                if role == 'audit':
+                    self.assertFalse(set(methods) & {'thread/read', 'thread/resume', 'thread/fork'})
+                self.assertTrue(any(item['event'] == 'thread_project_assigned' for item in self.logs))
+
+    def test_existing_project_assignments_are_never_retargeted(self):
+        for project_id in ('manual-project', 'repo-project'):
+            for role, existing in (('execution', True), ('audit', False)):
+                with self.subTest(project=project_id, role=role):
+                    self.setUp()
+                    self.server.project_id = project_id
+                    self.launch(role=role, existing=existing)
+                    self.assertNotIn('thread/metadata/update', self.methods())
+                    self.assertEqual(self.server.project_id, project_id)
+                    self.assertTrue(any(item['event'] == 'thread_project_preserved' for item in self.logs))
+                    self.assertIn('turn/start', self.methods())
+
+    def test_manual_move_during_project_lookup_is_preserved_on_resume(self):
+        request = self.server.request
+        def move_then_request(method, params):
+            if method == 'project/list':
+                self.server.project_id = 'moved-in-desktop'
+            return request(method, params)
+        self.server.request = move_then_request
+        self.launch(existing=True)
+        self.assertNotIn('thread/metadata/update', self.methods())
+        self.assertEqual(self.server.project_id, 'moved-in-desktop')
+
+    def test_project_match_uses_all_pages_and_canonical_roots_not_names(self):
+        link = self.home / 'repo-link'
+        link.symlink_to('/repos/test/repo', target_is_directory=True)
+        self.server.project_pages = [
+            {'data': [], 'nextCursor': '1'},
+            {'data': [{'id': 'correct', 'name': 'Anything',
+                       'roots': [{'path': '/unrelated'}, {'path': str(link) + '/.'}]}],
+             'nextCursor': None},
+        ]
+        self.launch()
+        self.assertEqual(self.params('thread/metadata/update')['projectId'], 'correct')
+        self.assertEqual([p['cursor'] for m, p in self.server.calls if m == 'project/list'], [None, '1'])
+
+    def test_same_name_parent_prefix_and_issue_worktree_do_not_match(self):
+        for path in ('/other/repo', '/repos/test', '/repos/test/repo-extra', '/isolated/issue-worktree'):
+            with self.subTest(path=path):
+                self.setUp()
+                self.server.project_pages[0]['data'][0].update(
+                    name='repo', roots=[{'path': path}])
+                self.launch()
+                self.assertNotIn('thread/metadata/update', self.methods())
+                self.assertIn('turn/start', self.methods())
+                self.assertTrue(any('found 0' in item.get('reason', '') for item in self.logs))
+
+    def test_ambiguous_project_on_later_page_is_not_guessed(self):
+        first = self.server.project_pages[0]
+        first['nextCursor'] = '1'
+        self.server.project_pages.append({'data': [{'id': 'duplicate',
+            'roots': [{'path': '/repos/test/repo'}]}], 'nextCursor': None})
+        self.launch(role='audit')
+        self.assertNotIn('thread/metadata/update', self.methods())
+        self.assertTrue(any('found 2' in item.get('reason', '') for item in self.logs))
+        self.assertIn('turn/start', self.methods())
+
+    def test_missing_project_field_does_not_mean_unassigned(self):
+        self.server.project_supported = False
+        self.launch(existing=True)
+        self.assertNotIn('thread/metadata/update', self.methods())
+        self.assertTrue(any('did not expose' in item.get('reason', '') for item in self.logs))
+        self.assertIn('turn/start', self.methods())
+
+    def test_unsupported_project_rpcs_warn_without_duplicate_launches(self):
+        for method in ('project/list', 'thread/metadata/update'):
+            for role in ('execution', 'audit'):
+                with self.subTest(method=method, role=role):
+                    self.setUp()
+                    self.server.errors[method] = RuntimeError('method not found or experimental field unavailable')
+                    self.launch(role=role)
+                    self.assertEqual(self.methods().count('thread/start'), 1)
+                    self.assertEqual(self.methods().count('turn/start'), 1)
+                    self.assertFalse(any(item['event'] == 'thread_project_assigned' for item in self.logs))
+                    self.assertTrue(any(item['event'] == 'thread_project_warning' and
+                                        item['level'] == 'warning' for item in self.logs))
+
+    def test_ignored_or_unconfirmed_assignment_is_not_reported_as_success(self):
+        for response in ({}, {'thread': {'id': 'new', 'projectId': None}},
+                         {'thread': {'id': 'other', 'projectId': 'repo-project'}},
+                         {'thread': {'id': 'new', 'projectId': 'different'}}):
+            with self.subTest(response=response):
+                self.setUp()
+                self.server.metadata_response = response
+                self.launch()
+                self.assertEqual(self.methods().count('thread/metadata/update'), 1)
+                self.assertEqual(self.methods().count('thread/start'), 1)
+                self.assertIn('turn/start', self.methods())
+                self.assertFalse(any(item['event'] == 'thread_project_assigned' for item in self.logs))
+                self.assertTrue(any('did not confirm' in item.get('reason', '') for item in self.logs))
+
+    def test_invalid_project_pages_do_not_authorize_a_partial_match(self):
+        cases = [None, [], {}, {'data': None, 'nextCursor': None},
+                 {'data': [], 'nextCursor': 0}, {'data': [], 'nextCursor': ''},
+                 {'data': [None], 'nextCursor': None},
+                 {'data': [{'id': '', 'roots': []}], 'nextCursor': None},
+                 {'data': [{'id': 'bad', 'roots': [{'path': 'relative'}]}], 'nextCursor': None},
+                 {'data': [{'id': 'bad', 'roots': [None]}], 'nextCursor': None}]
+        for page in cases:
+            with self.subTest(page=page):
+                self.setUp()
+                self.server.project_pages = [page]
+                self.launch()
+                self.assertNotIn('thread/metadata/update', self.methods())
+                self.assertIn('turn/start', self.methods())
+                self.assertTrue(any(item['event'] == 'thread_project_warning' for item in self.logs))
+
+    def test_project_pagination_cycle_and_page_limit_do_not_block_execution(self):
+        for cycle in (True, False):
+            with self.subTest(cycle=cycle):
+                self.setUp()
+                first = self.server.project_pages[0]
+                first['nextCursor'] = '0' if cycle else '1'
+                if not cycle:
+                    self.server.project_pages.extend(
+                        {'data': [], 'nextCursor': str(i + 1)} for i in range(1, 20))
+                self.launch()
+                self.assertNotIn('thread/metadata/update', self.methods())
+                self.assertEqual(self.methods().count('project/list'), 2 if cycle else 20)
+                self.assertIn('turn/start', self.methods())
+
+    def test_transport_and_core_lifecycle_errors_are_not_swallowed(self):
+        for method, error in (('project/list', OSError('disconnected')),
+                              ('thread/metadata/update', EOFError('closed')),
+                              ('thread/start', RuntimeError('start failed')),
+                              ('turn/start', RuntimeError('turn failed'))):
+            with self.subTest(method=method):
+                self.setUp()
+                self.server.errors[method] = error
+                with self.assertRaises(type(error)):
+                    self.launch()
+                self.assertEqual(self.methods().count(method), 1)
+                self.assertTrue(any(item['event'] == 'fatal' for item in self.logs))
+                if method != 'turn/start':
+                    self.assertNotIn('turn/start', self.methods())
 
 
 class SettingsTests(unittest.TestCase):
