@@ -8,7 +8,9 @@ import { requestLayout } from './layout';
 import type { ProjectedNode, ProjectionOptions } from './projection';
 import { connectionSet, endpointKey } from './projection';
 import { deriveMlpGroups } from './derived-groups';
-import { displayLabel, instanceOf, patternSummary } from './presentation';
+import { displayLabel, instanceOf } from './presentation';
+import { ArchitectureControls } from './ArchitectureControls';
+import type { NavigationItem, ControlSelection } from './ArchitectureControls';
 import { Connection, ConnectionInspection } from './Connection';
 import { ConnectionContext } from './connection-context';
 import { connectionHitResolver } from './connection-hit';
@@ -77,12 +79,13 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     ...(view.stateScope ? { stateScope: view.stateScope } : {}) }));
   const [selected, setSelected] = useState(view.selected), [dimensions, setDimensions] = useState(view.dimensions);
   const [focusId, setFocusId] = useState(view.focus), [pinned, setPinned] = useState(view.edge);
+  const [activeStack, setActiveStack] = useState(view.activeStack);
   const [temporary, setTemporary] = useState<EmphasisTarget | null>(null), [focused, setFocused] = useState<EmphasisTarget | null>(null);
   const [inspection, setInspection] = useState<{ edgeId?: string; nodeId?: string; trigger: HTMLElement } | null>(null);
   const [result, setResult] = useState<{ layout?: Layout; error?: string; options?: ProjectionOptions; invocation?: number }>({});
   const [retry, setRetry] = useState(0), [zoom, setZoom] = useState(view.viewport?.zoom ?? 1);
   const [panelWidth, setPanelWidth] = useState(1178);
-  const panel = useRef<HTMLDivElement>(null), picker = useRef<HTMLSelectElement>(null);
+  const panel = useRef<HTMLDivElement>(null), picker = useRef<HTMLButtonElement>(null);
   const appliedLayout = useRef<Layout | null>(null);
   const layoutCount = useRef(0), hoverFrame = useRef(0), focusFrame = useRef(0);
   const anchor = useRef<{ id: string; sourceId?: string | undefined; x: number; y: number } | null>(null);
@@ -93,9 +96,11 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
   const variants = useMemo(() => new Map(graph.repetitions.flatMap((r) => r.instances.map((i) => [i.node_id, `Instance ${i.index} · ${i.variant.replaceAll('_', ' ')}`] as const))), [graph]);
   const mlps = useMemo(() => deriveMlpGroups(graph), [graph]);
   const diagnosed = useMemo(() => new Set(graph.diagnostics.map((d) => d.node_id)), [graph.diagnostics]);
-  const instance = useMemo(() => instanceOf(graph, selected), [graph, selected]);
+  const instance = useMemo(() => instanceOf(graph, mlps.find((g) => g.id === focusId)?.parentId ?? focusId), [focusId, graph, mlps]);
+  const stack = graph.repetitions.find((r) => r.id === activeStack);
+  const stackContext = useCallback((id: string | null) => { view.update({ activeStack: id }); setActiveStack(id); }, [view]);
   const windowSize = Math.max(2, Math.min(8, Math.floor((panelWidth - 140) / 240)));
-  const select = useCallback((id: string) => { view.update({ selected: id }); setSelected(id); }, [view]);
+  const select = useCallback((id: string) => { view.update({ selected: id, edge: null }); setSelected(id); setPinned(null); setInspection(null); }, [view]);
   const focusContext = useCallback((id: string | null) => { view.update({ focus: id }); setFocusId(id); }, [view]);
   const change = useCallback((patch: Partial<ProjectionOptions>) => {
     setOptions((previous) => {
@@ -132,10 +137,10 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     }
     withAncestors(id, expanded); if (open) expanded.add(info.instance.node_id);
     const start = info.repetition.instances.findIndex((i) => i.node_id === info.instance.node_id);
-    select(id); focusContext(info.instance.node_id);
+    select(id); focusContext(info.instance.node_id); stackContext(info.repetition.id);
     if (anchor.current) { anchor.current.id = info.instance.node_id; anchor.current.sourceId = info.instance.node_id; }
     change({ expanded: [...expanded], repetitions: { ...options.repetitions, [info.repetition.id]: { start, count: 1 } }, stateScope: undefined });
-  }, [change, focusContext, graph, options, projected, rememberAnchor, select, selected, withAncestors]);
+  }, [change, focusContext, graph, options, projected, rememberAnchor, select, selected, stackContext, withAncestors]);
   const exploreStack = useCallback((id: string, start?: number) => {
     const repetition = graph.repetitions.find((r) => r.id === id)!;
     const current = options.repetitions?.[id];
@@ -143,10 +148,10 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     if (range) rememberAnchor(range.id);
     const expanded = withAncestors(repetition.instances[0]!.node_id, new Set(options.expanded));
     for (const item of repetition.instances) expanded.delete(item.node_id);
-    focusContext(repetition.parent_id);
+    focusContext(repetition.parent_id); stackContext(id);
     change({ expanded: [...expanded], exhaustive: false, stateScope: undefined,
       repetitions: { ...options.repetitions, [id]: { start: Math.max(0, Math.min(repetition.instances.length - 1, start ?? current?.start ?? 0)), count: windowSize } } });
-  }, [change, focusContext, graph.repetitions, options, projected, rememberAnchor, windowSize, withAncestors]);
+  }, [change, focusContext, graph.repetitions, options, projected, rememberAnchor, stackContext, windowSize, withAncestors]);
   const toggle = useCallback((id: string) => {
     const node = projected.get(id);
     if (node?.repetitionId) { exploreStack(node.repetitionId, node.instances ? graph.repetitions.find((r) => r.id === node.repetitionId)!.instances.findIndex((i) => i.node_id === node.instances![0]!.node_id) : 0); return; }
@@ -158,6 +163,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
   const reveal = useCallback((id: string) => {
     select(id);
     const info = instanceOf(graph, id);
+    focusContext(info?.instance.node_id ?? id); stackContext(info?.repetition.id ?? null);
     const expanded = withAncestors(id, new Set(options.expanded));
     const repetitions = { ...options.repetitions };
     if (info) repetitions[info.repetition.id] = { start: info.repetition.instances.findIndex((i) => i.node_id === info.instance.node_id), count: 1 };
@@ -165,7 +171,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     if (mlp && options.deriveMlp !== false && !options.exhaustive) expanded.add(mlp.id);
     centerPending.current = id;
     change({ expanded: [...expanded], repetitions, stateScope: undefined });
-  }, [change, graph, mlps, options, select, withAncestors]);
+  }, [change, focusContext, graph, mlps, options, select, stackContext, withAncestors]);
   const nativeInspect = useCallback((record: GraphNode, trigger: HTMLElement) => {
     select(record.id); setInspection(null);
     const filteredInputs = options.exhaustive || options.showUnused ? [] : result.layout?.projection.unusedInputs.filter((p) => p.node_id === record.id).map((p) => p.port_id) ?? [];
@@ -181,9 +187,9 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     else inspect(node, trigger);
   }, [exploreStack, focusContext, inspect, toggle]);
   const overview = useCallback(() => {
-    focusContext(null); fitPending.current = true;
+    focusContext(null); stackContext(null); fitPending.current = true;
     change({ expanded: graph.nodes.filter((n) => n.kind === 'group' && !n.parent_id).map((n) => n.id), repetitions: {}, exhaustive: false, stateScope: undefined });
-  }, [change, focusContext, graph.nodes]);
+  }, [change, focusContext, graph.nodes, stackContext]);
   const focusLayer = useCallback(() => {
     if (!instance) return;
     chooseInstance(instance.instance.node_id);
@@ -282,63 +288,68 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     const represented = new Set(result.layout?.projection.nodes.flatMap((n) => n.sourceIds));
     return graph.nodes.filter((n) => represented.has(n.id)).map((n) => n.id);
   }, [graph.nodes, result.layout]);
+  const focusMlp = () => {
+    const mlp = mlps.find((g) => g.parentId === instance?.instance.node_id);
+    if (!mlp || !instance) return;
+    const expanded = withAncestors(instance.instance.node_id, new Set(options.expanded)); expanded.add(instance.instance.node_id); expanded.add(mlp.id);
+    focusContext(mlp.id); centerPending.current = mlp.id; change({ expanded: [...expanded], deriveMlp: true, exhaustive: false, stateScope: undefined });
+  };
+  const breadcrumbs: NavigationItem[] = [];
+  const focusedMlp = mlps.find((g) => g.id === focusId);
+  let ancestor = records.get(focusedMlp?.parentId ?? focusId ?? '');
+  while (ancestor) {
+    if (ancestor.parent_id || ancestor.kind !== 'group') {
+      const record = ancestor;
+      const info = instanceOf(graph, record.id);
+      breadcrumbs.unshift({ id: record.id, kind: 'node', label: info?.instance.node_id === record.id ? `Layer ${info.instance.index}` :
+        displayLabel({ id: record.id, kind: record.kind, label: record.label, record, sourceIds: [record.id], ports: [], expanded: false }, graph) });
+      if (info?.instance.node_id === record.id) breadcrumbs.unshift({ id: info.repetition.id, kind: 'stack', label: info.repetition.label });
+    }
+    ancestor = ancestor.parent_id ? records.get(ancestor.parent_id) : undefined;
+  }
+  if (stack && !breadcrumbs.some((item) => item.kind === 'stack')) breadcrumbs.push({ id: stack.id, kind: 'stack', label: stack.label });
+  if (focusedMlp) breadcrumbs.push({ id: focusedMlp.id, kind: 'node', label: 'MLP (derived)' });
+  const selectedRecord = selected ? records.get(selected) : undefined;
+  const selectedEdge = result.layout?.projection.edges.find((e) => e.id === pinned);
+  const controlSelection: ControlSelection | undefined = selectedEdge ? {
+    edge: true,
+    label: `${projected.get(selectedEdge.source.node_id)?.label ?? 'Source'} → ${projected.get(selectedEdge.target.node_id)?.label ?? 'Destination'}`,
+    detail: `${selectedEdge.source.port_id} → ${selectedEdge.target.port_id} · ${selectedEdge.originalEdgeIds.join(', ')}`,
+    inspect: (trigger) => setInspection({ edgeId: selectedEdge.id, trigger }),
+    center: () => { void flow.fitView({ nodes: flow.getNodes().filter((n) => n.id === selectedEdge.source.node_id || n.id === selectedEdge.target.node_id), padding: 0.2, minZoom: 0.00001, maxZoom: 1 }); },
+    clear: () => { setPinned(null); view.update({ edge: null }); setInspection(null); },
+  } : selectedRecord ? {
+    edge: false, nodeId: selectedRecord.id,
+    label: displayLabel({ id: selectedRecord.id, kind: selectedRecord.kind, label: selectedRecord.label, record: selectedRecord, sourceIds: [selectedRecord.id], ports: [], expanded: false }, graph),
+    detail: `${selectedRecord.label} · ${selectedRecord.id}`,
+    inspect: onInspect ? (trigger) => nativeInspect(selectedRecord, trigger) : undefined,
+    center: () => reveal(selectedRecord.id),
+    clear: () => { setSelected(null); view.update({ selected: null }); },
+  } : undefined;
   return <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
     data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
     data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options}
     data-source-node-ids={JSON.stringify(sourceNodeIds)} data-represented-edge-ids={JSON.stringify(result.layout?.edgeIds ?? [])}>
-    <div className="architecture-toolbar" aria-label="Graph navigation">
-      <button onClick={overview}>Overview</button>
-      <button onClick={() => { focusContext(null); change({ expanded: graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id), exhaustive: true, stateScope: undefined }); }}>Expand all</button>
-      <button onClick={() => { focusContext(null); change({ expanded: [], repetitions: {}, exhaustive: false, stateScope: undefined }); }}>Collapse all</button>
-      <button onClick={fit}>Fit graph</button>
-      <button disabled={!selected} onClick={() => selected && reveal(selected)}>Center selected</button>
-      <button aria-label="Zoom graph in" onClick={() => { void flow.zoomIn(); }}>+</button>
-      <button aria-label="Zoom graph out" onClick={() => { void flow.zoomOut(); }}>−</button>
-      <label><input type="checkbox" checked={dimensions} onChange={(event) => { if (selected) rememberAnchor(selected); view.update({ dimensions: event.target.checked }); setDimensions(event.target.checked); change({ dimensions: event.target.checked }); }} /> Show dimensions</label>
-      <label>Component <select ref={picker} aria-label="Select graph component" value={selected ?? ''} onChange={(event) => reveal(event.target.value)}>
-        <option value="" disabled>Select…</option>{graph.nodes.map((n) => <option key={n.id} value={n.id}>{n.label} · {variants.get(n.id) ?? n.id}</option>)}
-      </select></label>
-      {selected && records.get(selected)?.kind === 'group' && <button onClick={() => toggle(selected)}>Toggle selected group</button>}
-      {selected && onInspect && <button onClick={(event) => nativeInspect(records.get(selected)!, event.currentTarget)}>Inspect selected</button>}
-    </div>
-    {graph.repetitions.length > 0 && <div className="architecture-repetitions" aria-label="Repeated groups">
-      {graph.repetitions.map((r) => {
-        const window = options.repetitions?.[r.id];
-        return <div className="architecture-repetition" key={r.id}>
-          <label>{r.label} ({r.instances.length}) <select aria-label={`Expand instance of ${r.label}`} value={instance?.repetition.id === r.id ? instance.instance.node_id : ''} onChange={(event) => chooseInstance(event.target.value)}>
-            <option value="" disabled>Choose instance…</option>{r.instances.map((i) => <option key={i.node_id} value={i.node_id}>{i.index} · {i.variant} · {records.get(i.node_id)!.label}</option>)}
-          </select></label>
-          <button aria-label={`Explore stack ${r.label}`} onClick={() => exploreStack(r.id)}>Explore stack</button>
-          {window && <>
-            <button aria-label={`Previous window ${r.label}`} disabled={window.start === 0} onClick={() => exploreStack(r.id, Math.max(0, window.start - windowSize))}>←</button>
-            <span>{r.instances[window.start]?.index}–{r.instances[Math.min(r.instances.length - 1, window.start + window.count - 1)]?.index}</span>
-            <button aria-label={`Next window ${r.label}`} disabled={window.start + window.count >= r.instances.length} onClick={() => exploreStack(r.id, window.start + windowSize)}>→</button>
-          </>}
-          <span className="architecture-pattern" title={patternSummary(r.instances)}>{patternSummary(r.instances)}</span>
-        </div>;
-      })}
-    </div>}
-    <div className="architecture-focus-controls">
-      {instance && <><span>Layer {instance.instance.index} · {instance.instance.variant.replaceAll('_', ' ')}</span>
-        <button onClick={focusLayer}>{options.stateScope ? 'Back to layer' : 'Focus layer'}</button>
-        {mlps.some((g) => g.parentId === instance.instance.node_id) && <button onClick={() => {
-          const mlp = mlps.find((g) => g.parentId === instance.instance.node_id)!;
-          const expanded = withAncestors(instance.instance.node_id, new Set(options.expanded)); expanded.add(instance.instance.node_id); expanded.add(mlp.id);
-          focusContext(mlp.id); centerPending.current = mlp.id; change({ expanded: [...expanded], deriveMlp: true, exhaustive: false, stateScope: undefined });
-        }}>Focus MLP</button>}
-        <button onClick={stateFocus}>State dependencies</button></>}
-      <label><input type="checkbox" checked={options.showUnused === true} onChange={(event) => change({ showUnused: event.target.checked })} /> Unused interfaces</label>
-      <label><input type="checkbox" checked={options.showContext !== false} onChange={(event) => change({ showContext: event.target.checked })} /> Context</label>
-      <label><input type="checkbox" checked={options.deriveMlp !== false} onChange={(event) => change({ deriveMlp: event.target.checked })} /> Group MLP</label>
-      {pinned && <button onClick={() => { setPinned(null); view.update({ edge: null }); setInspection(null); }}>Clear connection selection</button>}
-    </div>
-    <div className="architecture-coverage">{graph.coverage === 'partial' ? 'Partial architecture coverage' : 'Complete within declared scope'} · {graph.scope.replaceAll('_', ' ')}
-      {options.stateScope && ' · State dependencies only; other flows are filtered'}
-      {!options.exhaustive && !options.showUnused && result.layout?.projection.filteredEdgeIds.length ? ' · Unconsumed interface branches filtered' : ''}
-      {selected && <> · Selected: {records.get(selected)?.label} ({variants.get(selected) ?? selected})</>}
-    </div>
-    {graph.diagnostics.length > 0 && <details className="architecture-diagnostics"><summary>{graph.diagnostics.length} architecture diagnostics</summary>
-      {graph.diagnostics.map((d, i) => <p key={i}>{d.message}</p>)}</details>}
+    <ArchitectureControls graph={graph} focus={focusId} stack={stack} options={options} picker={picker}
+      instanceId={instance?.instance.node_id ?? (stack ? stack.instances[options.repetitions?.[stack.id]?.start ?? 0]?.node_id : undefined)}
+      visibleInstances={stack?.instances.filter((i) => projected.has(i.node_id)).map((i) => i.node_id) ?? []}
+      breadcrumbs={breadcrumbs} selection={controlSelection} reveal={reveal} navigate={(item) => {
+        if (item.kind === 'stack') exploreStack(item.id);
+        else if (mlps.some((g) => g.id === item.id)) focusMlp();
+        else { const info = instanceOf(graph, item.id); if (info?.instance.node_id === item.id) chooseInstance(item.id); else reveal(item.id); }
+      }} overview={overview} fit={fit} chooseInstance={chooseInstance} exploreStack={exploreStack} windowSize={windowSize}
+      expandAll={() => { focusContext(null); stackContext(null); change({ expanded: graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id), exhaustive: true, stateScope: undefined }); }}
+      collapseAll={() => { focusContext(null); stackContext(null); change({ expanded: [], repetitions: {}, exhaustive: false, stateScope: undefined }); }}
+      focusLayer={instance ? focusLayer : undefined} focusMlp={instance && mlps.some((g) => g.parentId === instance.instance.node_id) ? focusMlp : undefined}
+      stateFocus={instance ? stateFocus : undefined} toggleSelected={selected && records.get(selected)?.kind === 'group' ? () => toggle(selected) : undefined}
+      preferences={(patch) => {
+        if (patch.dimensions !== undefined) {
+          if (selected) rememberAnchor(selected);
+          view.update({ dimensions: patch.dimensions }); setDimensions(patch.dimensions);
+        }
+        change(patch);
+      }} zoomIn={() => { void flow.zoomIn(); }} zoomOut={() => { void flow.zoomOut(); }}
+      filtered={!options.exhaustive && !options.showUnused && !!result.layout?.projection.filteredEdgeIds.length} />
     {result.error && <div role="alert">{result.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button></div>}
     {!result.layout && !result.error && <p role="status">Laying out architecture…</p>}
     <div className="architecture-flow">

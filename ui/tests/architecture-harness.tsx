@@ -7,6 +7,11 @@ import { makeProjectionFixture } from './architecture-projection-fixture';
 import '../src/app/styles.css';
 
 function fixture(name: string) {
+  if (name === 'mixed-stacks') return { model_id: 'mixed-stacks', status: 'available' as const, diagnostics: [],
+    graph: makeProjectionFixture({ variants: ['full_attention', 'linear_attention', 'full_attention', 'full_attention', 'linear_attention'], secondStack: 2 }) };
+
+  if (name === 'partial') return { model_id: 'partial', status: 'available' as const, diagnostics: [],
+    graph: makeProjectionFixture({ count: 1, partial: true, repetitions: false }) };
   if (name === 'contract') return contractResponse;
   if (name === 'hybrid' || name === 'connections' || name === 'visual-stacks') return {
     model_id: `authored-${name}`, status: 'available' as const, diagnostics: [],
@@ -31,7 +36,7 @@ function Harness() {
   });
   return <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
     <div><select aria-label="Fixture" value={name} onChange={(e) => { setName(e.target.value); setResponse(fixture(e.target.value)); }}>
-      {['contract', 'hybrid', 'connections', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
+      {['contract', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
     </select><button onClick={() => setShown(!shown)}>Toggle explorer</button><output>{inspection}</output></div>
     <div contentEditable suppressContentEditableWarning aria-label="Untransformed prompt">Prompt remains outside graph camera</div>
     {shown && <ArchitectureCanvas key={name} graph={response.graph} modelId={response.model_id} sessionId="fixture-session"

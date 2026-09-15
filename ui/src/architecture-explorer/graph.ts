@@ -14,6 +14,7 @@ export class GraphView {
   dimensions = false;
   edge: string | null = null;
   focus: string | null = null;
+  activeStack: string | null = null;
   repetitions: NonNullable<ProjectionOptions['repetitions']> = {};
   exhaustive = false;
   showUnused = false;
@@ -37,6 +38,8 @@ export class GraphViews {
     const ids = new Set(graph.nodes.map((n) => n.id));
     view.expanded = view.expanded.filter((id) => ids.has(id) || id.startsWith('mlp:') && ids.has(id.slice(4)));
     view.repetitions = Object.fromEntries(Object.entries(view.repetitions).filter(([id]) => graph.repetitions.some((r) => r.id === id)));
+    if (view.activeStack && !graph.repetitions.some((r) => r.id === view.activeStack)) view.activeStack = null;
+    if (view.focus && !ids.has(view.focus) && !(view.focus.startsWith('mlp:') && ids.has(view.focus.slice(4)))) view.focus = null;
     if (view.stateScope && !ids.has(view.stateScope)) view.stateScope = undefined;
     if (view.selected && !ids.has(view.selected)) view.selected = null;
     return view;

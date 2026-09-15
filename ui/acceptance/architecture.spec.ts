@@ -1,3 +1,4 @@
+import { findComponent, graphAction, graphPreference, viewOptions } from '../tests/architecture-controls';
 /* eslint-disable @typescript-eslint/no-explicit-any -- Native test-only observations and evidence. */
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -46,7 +47,7 @@ async function control(path: string, body?: object) {
 }
 async function openParameter(page: Page, graph: Graph, parameter: Graph['parameters'][number]) {
   const node = graph.nodes.find((n) => n.parameter_ids.includes(parameter.id))!;
-  await page.getByLabel('Select graph component', { exact: true }).selectOption(node.id);
+  await findComponent(page, node.id);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
   await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
   await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
@@ -132,10 +133,14 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
       assertTraceability(graph, projectGraph(graph, { expanded }));
     }
     const canvas = page.getByLabel('Architecture graph', { exact: true });
+    await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).not.toBeChecked();
-    const ids = await page.getByLabel('Select graph component', { exact: true }).locator('option').evaluateAll((options) => options.map((o) => (o as HTMLOptionElement).value).filter(Boolean));
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Find component', exact: true }).click();
+    const ids = await page.getByRole('listbox', { name: 'Components', exact: true }).getByRole('option').evaluateAll((options) => options.map((o) => (o as HTMLElement).dataset.nodeId));
     expect(ids).toEqual(graph.nodes.map((n) => n.id));
-    await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await graphAction(page, 'Show all operations');
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
     // Visible routes compose boundary forwarding. Every original edge remains
     // traceable even though one route may represent several source segments.
@@ -144,11 +149,13 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     const roots = new Set(graph.nodes.filter((n) => !n.parent_id).map((n) => n.id));
     for (const repetition of graph.repetitions) {
       const last = repetition.instances.at(-1)!;
-      await page.getByLabel('Select graph component', { exact: true }).selectOption(last.node_id);
-      await expect(page.locator('.architecture-coverage')).toContainText(new RegExp(`instance ${last.index}`, 'i'));
+      await findComponent(page, last.node_id);
+      await expect(page.getByRole('combobox', { name: /Expand instance of/ }).locator('option:checked')).toContainText(new RegExp(`instance ${last.index}`, 'i'));
     }
-    await page.getByLabel('Show dimensions').check();
+    await graphPreference(page, 'Show dimensions', true);
+    await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).toBeChecked();
+    await page.keyboard.press('Escape');
     const client = await page.context().newCDPSession(page);
     await info.attach('production-architecture-layout', { body: JSON.stringify({ kind: reference ? 'actual checkpoint' : 'synthetic checkpoint', family,
       nodes: graph.nodes.length, edges: graph.edges.length, layoutMs: Number(await canvas.getAttribute('data-layout-ms')),
@@ -241,9 +248,11 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
     await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).toBeChecked();
+    await page.keyboard.press('Escape');
     if (family === 'vjepa2') expect(observed.some((p) => p.endsWith('/tokenize'))).toBe(false);
-    await page.getByRole('button', { name: 'Collapse all', exact: true }).click();
+    await graphAction(page, 'Collapse all');
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(roots.size));
     expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(
       graph.edges.filter((edge) => roots.has(edge.source.node_id) && roots.has(edge.target.node_id)).map((edge) => edge.id));

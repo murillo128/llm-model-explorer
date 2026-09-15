@@ -24,6 +24,59 @@ Viewport culling and asynchronous layout are allowed optimizations; discarding g
 
 React Flow and ELK are implementation candidates, not mandatory backend dependencies or reasons to change the graph contract. The layout implementation may be replaced without changing model semantics. Do not add a second matrix renderer, graph editor, export suite, or complex navigation framework in this increment.
 
+## Contextual navigation controls
+
+Keep navigation within the Architecture panel in at most two compact rows at
+reference desktop widths. The primary row contains a navigable Model breadcrumb,
+short containment/repetition breadcrumbs for the current focus, **Find component**,
+**Fit view**, and **View options**. Breadcrumbs represent the current expansion
+context on the same global canvas. Connection hover, pinning and inspection do
+not change that navigation context.
+
+At model level the contextual row offers compact entry choices for available
+stacks and components. Within a stack it shows its name/count, concrete instance
+index and actual variant, previous/next instance actions with correct endpoints,
+and the currently visible instances. Range navigation uses the existing
+viewport-dependent window size; long ranges scroll within the control. Preserve
+source ordering, including nonperiodic variants. Only the currently focused stack
+needs controls; other stacks retain their own expansion/window state. Returning
+to Model restores the compact overview. Retain active stack/focus state with the
+existing model/graph-keyed browser-session view state.
+
+Find component searches all already received source graph nodes, including
+collapsed interiors. Results show concise readable labels with containment and
+stack/instance context that distinguishes repeated names. Name, path and exact
+identity queries are local filters; they do not fetch graphs, execute operations
+or load tensor data. Arrow keys choose a result and Enter invokes the existing
+reveal/selection behavior, opening its ancestors and selecting the exact concrete
+instance when needed. Inspection remains a separate explicit action.
+
+View options provides exhaustive **Show all operations**, collapse, center
+selection, zoom, dimensions (initially off), context, unused-interface and derived
+MLP preferences, plus the existing applicable group/layer/MLP/state navigation.
+Fit view changes the camera; Show all operations changes visible detail.
+Unused interfaces refers specifically to unconsumed interface branches, not every
+auxiliary signal. A state-focused view identifies its filtered context. Partial
+coverage remains visible; full scope, paths, IDs and diagnostics are available
+on demand in details/inspection.
+
+Show a concise selected node or pinned connection with applicable inspect, center
+and clear actions. Selection and navigation focus are separate. Opening a menu,
+typing a query, changing emphasis or inspecting selection must preserve the
+mounted canvas, graph retrieval and existing numeric lifetimes, source/projection
+records, generated coordinates/routes, layout invocation count and camera.
+Explicit reveal, expansion, presentation-preference and camera commands retain
+their intended effects.
+
+Controls use the shared neutral/graphite/amber language, visible keyboard focus,
+English labels and explicit accessible names. Search and options popovers stay
+inside the panel, dismiss on Escape and restore focus to their trigger. Moving
+focus outside dismisses them. Text-entry keys retain their editing meaning.
+At constrained widths use bounded horizontal control overflow and bounded
+popover scrolling, without body scrolling or shrinking graph labels. Toolbar
+height may reclaim graph work area; shared shell and scientific geometry remain
+unchanged.
+
 ## Source-preserving visible projection
 
 Keep the received graph unchanged. Visible presentation records retain source node IDs, repetition/instance identity, and exact original edge/port references. Compose boundary forwarding without traversing computational operations. Model, stack, layer, MLP and state focus are expansion/filter states of the same canvas, with an explicit return to global context. Stack window size depends on the view/context rather than a globally fixed layer count.

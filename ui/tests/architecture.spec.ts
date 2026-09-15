@@ -1,3 +1,4 @@
+import { findComponent, graphAction, graphPreference, viewOptions } from './architecture-controls';
 import { expect, test } from '@playwright/test';
 import { contractResponse, referenceFixture, references } from './architecture-fixtures';
 
@@ -6,10 +7,10 @@ test('nested expansion, instance identity, ports, dimensions, keyboard and camer
   await page.goto(harness);
   const graph = page.getByLabel('Architecture graph', { exact: true });
   await expect(graph).toHaveAttribute('data-visible-nodes', '3');
-  const instance = page.getByRole('combobox', { name: /Expand instance of/ });
-  await instance.selectOption('layer1');
+  await page.getByRole('button', { name: /Explore stack/ }).click();
+  await page.getByRole('combobox', { name: /Expand instance of/ }).selectOption('layer1');
   await expect(graph).toHaveAttribute('data-visible-nodes', '5');
-  await expect(page.getByRole('combobox', { name: 'Select graph component' })).toHaveValue('layer1');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer1');
   await expect(page.getByRole('button', { name: 'Select linear1', exact: true })).toBeVisible();
   const label = page.getByRole('button', { name: 'Select layer1', exact: true });
   await label.focus();
@@ -20,20 +21,20 @@ test('nested expansion, instance identity, ports, dimensions, keyboard and camer
     return Math.max(Math.abs(after.x - before!.x), Math.abs(after.y - before!.y));
   }).toBeLessThan(2);
   await page.keyboard.press('ArrowRight'); await expect(graph).toHaveAttribute('data-visible-nodes', '5');
-  await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+  await graphAction(page, 'Show all operations');
   await expect(graph).toHaveAttribute('data-visible-nodes', '6');
-  await page.getByRole('button', { name: 'Fit graph', exact: true }).click();
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
   expect(JSON.parse((await graph.getAttribute('data-represented-edge-ids'))!)).toEqual(contractResponse.graph.edges.map((edge) => edge.id));
   // The leave + between forwarding segments form one complete visible route.
   await expect(page.locator('.architecture-connection[data-source-node="linear0"][data-source-port="out"][data-target-node="layer1"][data-target-port="in"]')).toHaveCount(1);
   const shapeText = page.locator('.architecture-edge-label').filter({ hasText: /\[2\]/ });
   await expect(shapeText).toHaveCount(0);
-  await page.getByLabel('Show dimensions').check(); await expect(shapeText.first()).toBeVisible();
+  await graphPreference(page, 'Show dimensions', true); await expect(shapeText.first()).toBeVisible();
   await info.attach('expanded-port-graph', { body: await page.screenshot(), contentType: 'image/png' });
-  await page.getByRole('combobox', { name: 'Select graph component' }).selectOption('linear1');
+  await findComponent(page, 'linear1');
   await page.getByRole('button', { name: 'Inspect selected', exact: true }).focus(); await page.keyboard.press('Enter');
   await expect(page.locator('output')).toContainText('linear1');
-  await page.getByRole('button', { name: 'Zoom graph in' }).click();
+  await graphAction(page, 'Zoom graph in');
   const camera = page.locator('.react-flow__viewport');
   const transform = await camera.getAttribute('style');
   expect(await page.getByLabel('Untransformed prompt').evaluate((e) => getComputedStyle(e).transform)).toBe('none');
@@ -42,8 +43,10 @@ test('nested expansion, instance identity, ports, dimensions, keyboard and camer
   await page.getByRole('button', { name: 'Toggle explorer' }).click();
   await expect(graph).toHaveAttribute('data-visible-nodes', '6');
   await expect(camera).toHaveAttribute('style', transform!);
+  await viewOptions(page);
   await expect(page.getByLabel('Show dimensions')).toBeChecked();
-  await expect(page.getByRole('combobox', { name: 'Select graph component' })).toHaveValue('linear1');
+  await page.keyboard.press('Escape');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'linear1');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
 });
 
@@ -62,14 +65,14 @@ test('safe labels and expressions remain inert; repeated unmount terminates work
   page.on('dialog', (dialog) => { dialogs.push(dialog.message()); void dialog.dismiss(); });
   await page.goto(`${harness}?inert`);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '3');
-  await page.getByRole('button', { name: 'Expand all', exact: true }).click();
-  await page.getByRole('button', { name: 'Fit graph', exact: true }).click();
+  await graphAction(page, 'Show all operations');
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Select <img src=x onerror=alert(1)>', exact: true })).toBeVisible();
-  await page.getByLabel('Show dimensions').check();
+  await graphPreference(page, 'Show dimensions', true);
   await expect(page.locator('.architecture-edge-label').filter({ hasText: 'window.alert(1)' })).toBeVisible();
   expect(dialogs).toEqual([]); await expect(page.locator('img')).toHaveCount(0);
   for (let i = 0; i < 3; i++) {
-    await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+    await graphAction(page, 'Show all operations');
     await page.getByRole('button', { name: 'Toggle explorer' }).click();
     await expect.poll(() => page.evaluate(() => (window as typeof window & { architectureWorkers: { live: number } }).architectureWorkers.live)).toBe(0);
     await page.getByRole('button', { name: 'Toggle explorer' }).click();
@@ -83,11 +86,11 @@ for (const reference of references) test(`full-size ${reference.name}: all insta
   const graph = page.getByLabel('Architecture graph', { exact: true });
   await expect(graph).toHaveAttribute('data-graph-id', `fixture-${reference.name}`);
   const started = performance.now();
-  await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+  await graphAction(page, 'Show all operations');
   const fixture = referenceFixture(reference.name);
   await expect(graph).toHaveAttribute('data-visible-nodes', String(fixture.graph.nodes.length));
   const elapsed = performance.now() - started;
-  await page.getByRole('combobox', { name: 'Select graph component' }).selectOption(`layer-${reference.stacks.length - 1}-${reference.stacks.at(-1)! - 1}-op-31`);
+  await findComponent(page, `layer-${reference.stacks.length - 1}-${reference.stacks.at(-1)! - 1}-op-31`);
   await expect(page.getByRole('button', { name: 'Select full_attention operation 31', exact: true }).last()).toBeVisible();
   await expect(graph).toHaveAttribute('data-node-count', String(fixture.graph.nodes.length));
   const client = await page.context().newCDPSession(page);
@@ -98,7 +101,7 @@ for (const reference of references) test(`full-size ${reference.name}: all insta
   console.log(JSON.stringify(metrics));
   expect(metrics.renderedNodes).toBeLessThan(metrics.nodes);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
-  await page.getByRole('button', { name: 'Collapse all' }).click();
+  await graphAction(page, 'Collapse all');
   await expect(graph).toHaveAttribute('data-visible-nodes', '3');
   // Selection stays concrete even while its ancestors hide it; Center selected reveals it again.
   await page.getByRole('button', { name: 'Center selected' }).click();
