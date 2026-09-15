@@ -1,17 +1,19 @@
 """Decoder checkpoint: independent numeric references before logical integration."""
 
-import mmap
 import struct
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import BinaryIO, cast
+from unittest.mock import Mock
 
 import pytest
 import torch
 from quantized_oracles import PackedFixture, e2m1, e4m3, gptq_fixture, nvfp4_fixture
 
 from llm_model_explorer import quantized_decoding
-from llm_model_explorer.model_files import ModelError
+from llm_model_explorer.model_files import FileSnapshot, ModelError
 from llm_model_explorer.models import ModelCatalogue
 from llm_model_explorer.tensor_source import DEFAULT_CHUNK_ELEMENTS, ModelSource
 
@@ -166,14 +168,22 @@ def test_small_range_copies_only_bounded_storage_and_owns_output(
 ) -> None:
     source = pin(tmp_path, packed, split=True)
     files = {path: path.read_bytes() for path in source._snapshot.directory.glob("*.safetensors")}
-    mappings: list[mmap.mmap] = []
+    reads: list[int] = []
     selected_counts: list[int] = []
-    original_mapping, original_select = mmap.mmap, torch.index_select
+    original_open, original_select = FileSnapshot.open, torch.index_select
 
-    def observed_mapping(*args: Any, **kwargs: Any) -> mmap.mmap:
-        mapping = original_mapping(*args, **kwargs)
-        mappings.append(mapping)
-        return mapping
+    @contextmanager
+    def observed_open(snapshot: FileSnapshot, name: str) -> Iterator[BinaryIO]:
+        with original_open(snapshot, name) as stream:
+            proxy = Mock(wraps=stream)
+
+            def read(size: int) -> bytes:
+                assert 0 < size <= 5 * 4
+                reads.append(size)
+                return stream.read(size)
+
+            proxy.read.side_effect = read
+            yield cast(BinaryIO, proxy)
 
     def observed_select(
         values: torch.Tensor, dimension: int, indices: torch.Tensor
@@ -183,16 +193,63 @@ def test_small_range_copies_only_bounded_storage_and_owns_output(
         assert indices.numel() <= 5 * 4
         return original_select(values, dimension, indices)
 
-    monkeypatch.setattr(mmap, "mmap", observed_mapping)
+    monkeypatch.setattr(FileSnapshot, "open", observed_open)
     monkeypatch.setattr(torch, "index_select", observed_select)
     values = decode(source, packed, 3, 5)
     assert raw(values) == packed.expected()[12:32]
     assert selected_counts
-    assert mappings and all(mapping.closed for mapping in mappings)
+    assert reads and sum(reads) <= 4 * 5 * 4
     assert values.untyped_storage().nbytes() == 5 * 4
     values.fill_(987.0)
     assert {path: path.read_bytes() for path in files} == files
     assert raw(decode(source, packed, 3, 5)) == packed.expected()[12:32]
+
+
+@pytest.mark.parametrize("stage", ["before_read", "after_read", "before_gather"])
+def test_concurrent_truncation_invalidates_owned_read(
+    tmp_path: Path, packed: PackedFixture, stage: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = pin(tmp_path, packed, split=True)
+    original_open, original_select = FileSnapshot.open, torch.index_select
+    mutated = False
+
+    def truncate(path: Path) -> None:
+        nonlocal mutated
+        if not mutated:
+            with path.open("r+b") as writer:
+                writer.truncate(0)
+            mutated = True
+
+    @contextmanager
+    def racing_open(snapshot: FileSnapshot, name: str) -> Iterator[BinaryIO]:
+        with original_open(snapshot, name) as stream:
+            proxy = Mock(wraps=stream)
+
+            def read(size: int) -> bytes:
+                if stage == "before_read":
+                    truncate(snapshot.directory / name)
+                data = stream.read(size)
+                if stage == "after_read":
+                    truncate(snapshot.directory / name)
+                return data
+
+            proxy.read.side_effect = read
+            yield cast(BinaryIO, proxy)
+
+    def racing_select(values: torch.Tensor, dimension: int, indices: torch.Tensor) -> torch.Tensor:
+        if stage == "before_gather":
+            # Gather operates on owned bytes, so truncation cannot cause SIGBUS.
+            for item in source._physical:
+                if item.name.endswith(".g_idx" if packed.encoding == "gptq-int4" else ".weight"):
+                    truncate(source._snapshot.directory / item.file)
+                    break
+        return original_select(values, dimension, indices)
+
+    monkeypatch.setattr(FileSnapshot, "open", racing_open)
+    monkeypatch.setattr(torch, "index_select", racing_select)
+    with pytest.raises(ModelError) as raised:
+        decode(source, packed, 3, 5)
+    assert mutated and raised.value.code == "model_content_changed"
 
 
 def test_decoder_detects_source_mutation(tmp_path: Path, packed: PackedFixture) -> None:

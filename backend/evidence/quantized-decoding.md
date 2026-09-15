@@ -24,16 +24,23 @@ tables. They record these exact reviewed implementations:
   upstream Python lookup collapses it to positive zero, a sign-bit distinction
   called out separately from nonzero numerical agreement.
 
-Production arithmetic and gathering use PyTorch kernels. Private lazy mappings
-reserve physical tensor address space without reading whole arrays. Each gather
-copies only requested storage elements; the touched-page bound is proportional
-to the requested chunk, including strided GPTQ columns. Each mapping is closed
-before returning, and no mapped view escapes. The source snapshot is guarded
-before/after reads. There is no full-checkpoint float32 allocation or new cache
-product.
+Production arithmetic and gathering use PyTorch kernels. Each gather coalesces
+requested unique storage positions into contiguous file spans and reads them
+into owned bytes, then restores requested order with PyTorch. Python loops over
+I/O spans only. Read lengths and total copied bytes are proportional to the
+requested chunk, including strided GPTQ columns. Snapshot and short-read checks
+detect concurrent mutation/truncation without dereferencing live file mappings.
+There is no full-checkpoint float32 allocation or new cache product.
 
 Fixture tests cover complete matrices, every nibble position, signed zeros,
 zero-point endpoints, multiple/nontrivial repeated group mappings, half and
 float32 scales, E4M3 boundaries, arbitrary range alignment, separated companion
 shards, invalid group indices, safe ranges, source mutation, and bounded owned
 output. Their synthetic bytes are distinct from actual-checkpoint evidence.
+
+The corrected standalone decoder checkpoint passes 34 focused tests, Ruff and
+mypy using the locked Python 3.12 CPU environment. The six concurrent-truncation
+cases cover both formats before a file read, after a read, and immediately before
+the vectorized gather; each yields `model_content_changed` without a process
+crash. The earlier live-mapping implementation was rejected at intermediate
+review after a SIGBUS reproduction and is replaced by owned file reads.

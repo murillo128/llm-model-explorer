@@ -1,16 +1,15 @@
 """Bounded logical float32 reads for the two admitted packed weight layouts.
 
-Only requested storage elements are gathered from private lazy mappings. Never
-convert a complete physical array or leave a mapping/view owned by the caller.
+Only requested storage elements are gathered through bounded owned file reads.
+Never convert a complete physical array or expose a live file mapping.
 Admission owns configuration, companion membership, dtypes and physical geometry.
 """
 
-import mmap
 import sys
 
 import torch
 
-from .model_files import FileSnapshot, ModelError
+from .model_files import FileSnapshot, ModelError, changed
 from .tensor_source import DEFAULT_CHUNK_ELEMENTS, PhysicalTensor, safe_integer
 
 _DTYPES = {
@@ -23,34 +22,33 @@ _DTYPES = {
 
 
 def _gather(snapshot: FileSnapshot, storage: PhysicalTensor, indices: torch.Tensor) -> torch.Tensor:
-    """Read O(requested elements) bytes/pages, including strided GPTQ columns.
+    """Read O(requested elements) owned bytes, including strided GPTQ columns.
 
-    A mapping reserves address space only; index_select touches the requested
-    pages. Its resident footprint is bounded by the requested elements times a
-    page (plus page alignment), independent of checkpoint size. ACCESS_COPY
-    permits a PyTorch buffer view without making model files writable. The view
-    is never modified and is destroyed before the mapping is closed.
+    Coalesce adjacent unique storage positions into bounded I/O spans, then
+    restore requested order with a vectorized gather. Python iterates file spans
+    only; all per-value indexing and numeric decoding remain PyTorch operations.
+    Owned reads let concurrent truncation fail through snapshot/short-read checks
+    instead of risking SIGBUS by dereferencing a live file mapping.
     """
     dtype, width = _DTYPES[storage.dtype]
     if bool(torch.any(indices < 0)) or bool(torch.any(indices >= storage.numel)):
         raise ModelError("unsupported_representation", "Invalid packed tensor storage index.")
-    page_offset = storage.offset // mmap.ALLOCATIONGRANULARITY * mmap.ALLOCATIONGRANULARITY
-    delta = storage.offset - page_offset
+    unique, inverse = torch.unique(indices, sorted=True, return_inverse=True)
+    breaks = torch.nonzero(unique[1:] != unique[:-1] + 1).flatten() + 1
+    boundaries = [0, *breaks.tolist(), unique.numel()]
+    starts = unique[boundaries[:-1]].tolist()
+    raw = bytearray(unique.numel() * width)
     with snapshot.open(storage.file) as stream:
-        with mmap.mmap(
-            stream.fileno(),
-            delta + storage.byte_length,
-            access=mmap.ACCESS_COPY,
-            offset=page_offset,
-        ) as mapping:
-            view = torch.frombuffer(
-                mapping, dtype=torch.uint8, count=storage.byte_length, offset=delta
-            )
-            try:
-                positions = indices[:, None] * width + torch.arange(width)
-                selected = torch.index_select(view, 0, positions.reshape(-1))
-            finally:
-                del view
+        for start, begin, end in zip(starts, boundaries[:-1], boundaries[1:], strict=True):
+            stream.seek(storage.offset + start * width)
+            length = (end - begin) * width
+            block = stream.read(length)
+            if len(block) != length:
+                raise changed()
+            raw[begin * width : end * width] = block
+    view = torch.frombuffer(raw, dtype=torch.uint8)
+    positions = inverse[:, None] * width + torch.arange(width)
+    selected = torch.index_select(view, 0, positions.reshape(-1))
     if sys.byteorder != "little" and width > 1:
         selected = selected.reshape(-1, width).flip(1).contiguous().reshape(-1)
     return selected.view(dtype)

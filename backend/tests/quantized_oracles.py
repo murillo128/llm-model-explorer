@@ -11,6 +11,8 @@ Reviewed primary sources:
 - Selected ModelOpt producer's low-first packing and block * global weight scale:
   https://github.com/NVIDIA/Model-Optimizer/blob/82f1d216d1a9022e60b8e1143a77f36c00b885a4/modelopt/torch/quantization/qtensor/nvfp4_tensor.py
   Activation scaling is a separate export method and absent from dequantize().
+- E2M1/E4M3 sign/exponent/mantissa definitions: OCP MX v1.0, Tables 2 and 5
+  https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
   The standard E2M1 sign bit is retained, including -0; ModelOpt's slow Python
   lookup happens to collapse negative zero, so compare its nonzero values only
   when using that path as an external reference.
