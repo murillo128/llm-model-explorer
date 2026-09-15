@@ -1090,7 +1090,11 @@ for (const width of [1178, 1440]) test(`architecture safety baseline preserves s
   await polishCapture(page, info, `safety-tensor-${width}`);
   observations.tensor = baseline;
 
-  const editor = await tokenizer(page);
+  // Keep the selected session: tokenizer() is an independent-test setup helper
+  // that deliberately creates a new session, so use navigation directly here.
+  await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
+  await embeddingDone(page, 1);
+  const editor = page.getByRole('textbox', { name: 'Prompt', exact: true });
   await editor.fill('Hello, architecture!');
   await expect(page.getByText(/tokens · current prompt/)).toBeVisible();
   await expect(page.locator('.input-embeddings [data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
