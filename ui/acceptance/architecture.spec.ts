@@ -157,15 +157,21 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
       await expect(root).toBeAttached();
       const camera = await page.locator('.react-flow__viewport').getAttribute('style');
       const count = await canvas.getAttribute('data-layout-count');
+      if (reference && info.project.name === 'dpr1' && ['qwen3', 'vjepa2'].includes(family)) {
+        const path = info.outputPath(`isolated-${family}-${name}-${width}-initial.png`);
+        await page.screenshot({ path }); await info.attach(`isolated-${name}-${width}-initial`, { path, contentType: 'image/png' });
+      }
+      // Explicit Fit includes every context endpoint. Sample real pointer hits
+      // only after culling has exposed the complete generated scope geometry.
+      await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready();
       const connections = page.locator('.architecture-connection[data-source-node^="external:"]');
       const targets = await connections.evaluateAll((elements) => elements.map((element) => ({
         source: element.getAttribute('data-source-node')!, port: element.getAttribute('data-source-port')!,
         id: element.getAttribute('data-edge-id')!,
       })));
       const fanout = targets.find((item) => targets.filter((other) => item.source === other.source && item.port === other.port).length > 1);
+      if (family === 'qwen3') expect(fanout, 'Dense Attention/MLP inputs retain their genuine shared fan-out').toBeTruthy();
       if (fanout) {
-        // A fitted scope contains its external context as well as its internal body.
-        await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready();
         const branches = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(fanout.source)}][data-source-port=${JSON.stringify(fanout.port)}]`);
         const branchList = await branches.all();
         const expected = (await branches.evaluateAll((elements) => elements.map((element) => element.getAttribute('data-edge-id')!))).sort();

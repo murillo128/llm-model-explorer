@@ -1145,6 +1145,18 @@ for (const width of [390, 1178, 1440]) test(`architecture safety baseline preser
   await expect(page.getByRole('button', { name: 'Close connection inspection' })).toBeFocused();
   await page.keyboard.press('Escape');
   await boundedControls(); await polishCapture(page, info, `controls-edge-${width}`);
+  await findComponent(page, 'layer-3.attention'); await readyGraph();
+  const scopeCamera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const scopeResources = await metrics(page);
+  await page.getByRole('button', { name: 'Explore component', exact: true }).click();
+  await boundedControls();
+  await expect(canvas).toHaveAttribute('data-scope-id', 'layer-3.attention');
+  await polishCapture(page, info, `isolation-shell-${width}`);
+  observations.isolationShell = await shell();
+  const isolatedResources = await metrics(page);
+  expect([isolatedResources.textures, isolatedResources.readers]).toEqual([scopeResources.textures, scopeResources.readers]);
+  await page.getByRole('button', { name: 'Back', exact: true }).click(); await boundedControls();
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(scopeCamera);
   await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
   await complete(page); await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
   await documentFits(page); expect(await shell()).toEqual(baseline);
