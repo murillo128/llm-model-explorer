@@ -52,9 +52,14 @@ async function recordGraph(page: Page, info: TestInfo, label: string, graph: Gra
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
   await info.attach(label, { body: JSON.stringify({ sourceNodes: graph.nodes.length, sourceEdges: graph.edges.length,
     viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), ...await graphObservation(page) }), contentType: 'application/json' });
-  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-  const path = info.outputPath(`${label}.png`);
-  await page.screenshot({ path }); await info.attach(`${label}-capture`, { path, contentType: 'image/png' });
+  const viewport = page.viewportSize()!;
+  const widths = info.title.startsWith('complete local reference') && info.project.name === 'dpr1' ? [1178, viewport.width] : [viewport.width];
+  for (const width of widths) {
+    await page.setViewportSize({ ...viewport, width });
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const path = info.outputPath(`${label}-${width}.png`);
+    await page.screenshot({ path }); await info.attach(`${label}-${width}-capture`, { path, contentType: 'image/png' });
+  }
 }
 async function control(path: string, body?: object) {
   const response = await fetch(`${backend}/__test/${path}`, body ? {
@@ -103,9 +108,14 @@ async function inspectComponents(page: Page, graph: Graph, info: TestInfo, famil
   const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
   const capture = async (name: string) => {
     if (info.project.name !== 'dpr1') return;
-    const path = info.outputPath(`${reference ? 'reference' : 'fixture'}-${family}-${name}.png`);
-    await page.screenshot({ path });
-    await info.attach(`components-${name}`, { path, contentType: 'image/png' });
+    const viewport = page.viewportSize()!;
+    for (const width of reference && family === 'qwen35' ? [1178, viewport.width] : [viewport.width]) {
+      await page.setViewportSize({ ...viewport, width });
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const path = info.outputPath(`${reference ? 'reference' : 'fixture'}-${family}-${name}-${width}.png`);
+      await page.screenshot({ path });
+      await info.attach(`components-${name}-${width}`, { path, contentType: 'image/png' });
+    }
   };
   const nodeBox = (id: string) => page.locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`);
   const horizontal = async (before: string, after: string) => {
@@ -372,7 +382,7 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
       }).toBe(expectedValue);
     }
     await page.keyboard.press('Escape'); await released(page);
-    if (!reference && ['qwen3', 'qwen35'].includes(family)) {
+    if (['qwen3', 'qwen35'].includes(family)) {
       const packed = graph.parameters.filter((p) => p.binding === 'quantized' && p.inspection.status === 'available' && p.name.includes('.1.'))
         .sort((a, b) => size(a) - size(b))[0]!;
       expect(packed).toBeTruthy();
@@ -386,16 +396,25 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
       const packedMatch = /^row (\d+) · column (\d+)$/.exec((await coordinate.textContent())!)!;
       const packedRow = Number(packedMatch[1]), packedColumn = Number(packedMatch[2]);
       const packedColumns = (packed.logical_shape![1] as { value: number }).value;
+      const packedSamples = [];
       for (const selectedColumn of [packedColumn, Math.min(packedColumn + 1, packedColumns - 1)]) {
         if (selectedColumn !== packedColumn) await scroller.press('ArrowRight');
         await expect(coordinate).toHaveText(`row ${packedRow} · column ${selectedColumn}`);
-        await expect.poll(async () => Number(await scalar.textContent())).toBe(
-          packedValue(family, packedRow, selectedColumn, packedColumns));
+        const expected = reference ? JSON.parse(execFileSync(python,
+          ['-m', 'acceptance.architecture_reference', family, '--tensor', packed.name, '--packed',
+            '--row', String(packedRow), '--column', String(selectedColumn)],
+          { cwd: repo, encoding: 'utf8' })).samples[0].value : packedValue(family, packedRow, selectedColumn, packedColumns);
+        await expect.poll(async () => Number(await scalar.textContent())).toBe(expected);
+        packedSamples.push({ row: packedRow, column: selectedColumn, value: expected });
       }
       const tensor = packed.inspection.status === 'available' ? packed.inspection.tensor_id : '';
       expect(observed.slice(packedRequests).filter((path) => path.endsWith('/data'))).toEqual([
         expect.stringMatching(new RegExp(`/tensors/${tensor}/data$`)),
       ]);
+      await info.attach('decoded-concrete-binding', { body: JSON.stringify({ kind: reference ? 'actual checkpoint' : 'synthetic checkpoint',
+        parameter: packed.name, tensor, shape: packed.logical_shape, samples: packedSamples,
+        oracle: reference ? 'Independent scalar_reference from check_quantized_reference.py; bounded physical reads' : 'Authored fixture scalar formula' }),
+      contentType: 'application/json' });
       await page.keyboard.press('Escape'); await released(page);
       await page.getByRole('button', { name: 'Back', exact: true }).click();
       await expect(canvas).toHaveAttribute('aria-busy', 'false');
