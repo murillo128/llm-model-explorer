@@ -80,8 +80,39 @@ Tokenizer Explorer composes two vertically stacked, visually distinct panels:
 **Prompt / Tokens** wraps the existing editable annotation surface, and
 **Input Embeddings** uses the same reusable `MatrixExplorer` as Tensor Explorer.
 Both use compact structural inspector headers. Wrapping the prompt must preserve
-its inline text/bracket/ID layout, native editor behavior and resize affordance;
-it must not introduce another token strip or prompt camera.
+its inline text/bracket/ID layout and native editor behavior; it must not
+introduce another token strip or prompt camera.
+
+The workspace is bounded by the application shell. By default, Prompt / Tokens
+sizes to the editor's actual content, including wrapped lines, with a comfortable
+minimum and a maximum derived from the available workspace height. It grows as
+the prompt grows, then scrolls internally at the maximum. Browser resizing
+recomputes the automatic allocation. Input Embeddings fills all remaining height,
+including for short token sequences; underfilled matrix content follows the
+shared Matrix Explorer's geometry rather than a tokenizer-specific camera.
+
+A subtle focusable horizontal divider is the primary panel-height resize control.
+Pointer dragging adjusts the split continuously. Up/Down change the prompt height
+by 16 CSS pixels; Home/End reach the allowed bounds. Expose orientation, the
+controlled panel, current height and bounds accessibly, with a resize cursor and
+visible keyboard focus. Double-click or two Enter/Space activations within
+500 ms reset to automatic sizing for the current content and workspace.
+
+Manual sizing overrides content-based allocation for the mounted workspace only.
+Keep the preferred manual height on browser resize, clamping its displayed height
+to the new bounds; returning to a larger workspace restores that preference.
+Do not store the split in backend or session state. The editor fills the allocated
+panel without a competing native resize handle. Reserve the token count/status
+row in every generation state and avoid redundant headings or inter-panel space.
+
+The sizing baseline is a 160 CSS pixel Prompt / Tokens minimum, a 180 CSS pixel
+Input Embeddings minimum and a 12 CSS pixel divider. Automatic prompt sizing is
+capped at 45% of the height left after the divider, within the panel bounds. At
+workspace heights too short for both minima, relax them proportionally so the
+panels remain bounded and the document never scrolls. These are panel dimensions;
+they never scale scientific matrix cells or text. Retokenization status and matrix
+scrolling, zoom or selection must not change the split; actual edited or wrapped
+content may change the automatic prompt height.
 
 The Input Embeddings header uses the shared Matrix Explorer header composition
 for matrix identity, available shape and logical dtype, operation status, and

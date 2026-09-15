@@ -13,6 +13,8 @@ interface Props {
   tokenizerAvailable?: boolean;
   signal?: AbortSignal;
   header?: ReactNode;
+  panelId?: string;
+  onContentHeight?: (height: number) => void;
   activeRow?: { signal: AbortSignal; row: number | null } | undefined;
   onRowSelect?: (row: number | null, current: CurrentTokenization | undefined) => void;
   onRowActivate?: (row: number, current: CurrentTokenization | undefined) => void;
@@ -28,7 +30,7 @@ interface Result {
 
 /** The editor document owns source and history. Responses change decorations
  * only; every request/result is fenced by editor and context generations. */
-export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, tokenizerAvailable = true, signal, header, activeRow, onRowSelect, onRowActivate, downstream }: Props) {
+export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, tokenizerAvailable = true, signal, header, panelId, onContentHeight, activeRow, onRowSelect, onRowActivate, downstream }: Props) {
   const id = useId();
   const [editor, setEditor] = useState<Editor>({ text: '', generation: 0, composing: false, promptly: false });
   const [result, setResult] = useState<Result>();
@@ -86,7 +88,7 @@ export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, to
   const prompt = <section className="prompt-tokenizer" aria-label="Live prompt tokenization">
     <label className="section-label" htmlFor={id}>Prompt</label>
     <p id={`${id}-help`} className="tokenizer-help">Edit the prompt directly. Gray brackets and IDs annotate source spans. Gray token text is an annotation without a source span.</p>
-    <InlineEditor id={id} result={current?.data} onEdit={edit}
+    <InlineEditor id={id} result={current?.data} onEdit={edit} onContentHeight={onContentHeight}
       activeRow={activeRow?.signal === current?.signal ? activeRow?.row : null}
       onRowSelect={row => onRowSelect?.(row, tokenization)}
       onRowActivate={row => onRowActivate?.(row, tokenization)} />
@@ -98,6 +100,6 @@ export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, to
         onClick={() => edit(editor.text, false, true)}>Retry tokenization</button>
     </div>
   </section>;
-  return <>{header ? <section className="prompt-panel" aria-label="Prompt / Tokens">{header}{prompt}</section> : prompt}
+  return <>{header ? <section id={panelId} className="prompt-panel" aria-label="Prompt / Tokens">{header}{prompt}</section> : prompt}
     {downstream?.(tokenization)}</>;
 }
