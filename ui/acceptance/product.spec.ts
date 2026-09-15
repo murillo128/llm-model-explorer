@@ -588,7 +588,7 @@ test.describe('production native pane geometry', () => {
             origins: ['.matrix-scroll canvas', '.row-distributions canvas', '.column-distributions canvas'].map(s => document.querySelector(s)!.getAttribute('data-origin')) };
         });
         await expect.poll(async () => { const g = await geometry(); return [g.horizontal, g.vertical]; }).toEqual([horizontal, vertical]);
-        const initial = await geometry(); expect(initial.gutter).toBeGreaterThan(0);
+        const initial = await geometry(); expect(initial.gutter).toBe(0);
         const inventory = page.getByRole('complementary', { name: 'Tensor inventory' });
         await inventory.evaluate(e => { e.scrollTop = e.scrollHeight; });
         expect(await inventory.evaluate(e => e.scrollTop)).toBeGreaterThan(0);
@@ -734,7 +734,7 @@ test('integrated inventory preferences and metadata preserve streaming panel geo
   await closeSession(page);
 });
 
-test('production matrix navigation centers underfilled data and links zoom selection across attached profiles', async ({ page }, testInfo) => {
+test('production matrix navigation centers underfilled data and links zoom selection across fixed profile tracks', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await open(page, 'layout.fits.weight'); await complete(page);
   await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
@@ -764,8 +764,8 @@ test('production matrix navigation centers underfilled data and links zoom selec
   expect(underfilled.rows.height).toBe(underfilled.matrix.height);
   expect(underfilled.columns.left).toBe(underfilled.matrix.left);
   expect(underfilled.columns.width).toBe(underfilled.matrix.width);
-  expect(underfilled.rows.left - underfilled.matrix.right).toBeCloseTo(underfilled.gap.x, 1);
-  expect(underfilled.columns.top - underfilled.matrix.bottom).toBeCloseTo(underfilled.gap.y, 1);
+  expect(underfilled.rows.left - underfilled.viewport.left - underfilled.viewport.width).toBeCloseTo(underfilled.gap.x, 1);
+  expect(underfilled.columns.top - underfilled.viewport.top - underfilled.viewport.height).toBeCloseTo(underfilled.gap.y, 1);
   expect(underfilled.rows.width * before.dpr).toBe(100);
   expect(underfilled.columns.height * before.dpr).toBe(100);
   await page.mouse.move(0, 0);
@@ -894,7 +894,7 @@ test('integrated camera gestures, exact selection, aligned scales and adaptive i
       expect(card.x).toBeGreaterThanOrEqual(pane.x); expect(card.y).toBeGreaterThanOrEqual(pane.y);
       expect(card.x + card.width).toBeLessThanOrEqual(pane.x + pane.width);
       expect(card.y + card.height).toBeLessThanOrEqual(pane.y + pane.height);
-      for (const panel of await page.locator('.row-distributions, .column-distributions').all()) {
+      for (const panel of await page.locator('.row-distributions canvas, .column-distributions canvas').all()) {
         const p = (await panel.boundingBox())!;
         expect(card.x + card.width <= p.x || card.x >= p.x + p.width || card.y + card.height <= p.y || card.y >= p.y + p.height).toBe(true);
       }
@@ -1070,12 +1070,9 @@ for (const width of [1178, 1440]) {
         const matrix = box('.matrix-scroll canvas'), rows = box('.row-distributions canvas'), columns = box('.column-distributions canvas');
         const style = getComputedStyle(document.querySelector('.matrix-surfaces')!);
         const host = document.querySelector<HTMLElement>('.matrix-scroll')!;
-        // Filled axes retain native scrollbar clearance; underfilled axes attach
-        // profiles to the data directly (the dedicated centering case covers it).
-        const gutterX = matrix.width >= host.clientWidth - 1 / devicePixelRatio ? host.offsetWidth - host.clientWidth : 0;
-        const gutterY = matrix.height >= host.clientHeight - 1 / devicePixelRatio ? host.offsetHeight - host.clientHeight : 0;
-        return Math.max(Math.abs(rows.left - matrix.right - parseFloat(style.columnGap) - gutterX),
-          Math.abs(columns.top - matrix.bottom - parseFloat(style.rowGap) - gutterY),
+        const viewport = host.getBoundingClientRect();
+        return Math.max(Math.abs(rows.left - viewport.left - host.clientWidth - parseFloat(style.columnGap)),
+          Math.abs(columns.top - viewport.top - host.clientHeight - parseFloat(style.rowGap)),
           Math.abs(rows.top - matrix.top), Math.abs(columns.left - matrix.left));
       })).toBeLessThanOrEqual(1);
     };

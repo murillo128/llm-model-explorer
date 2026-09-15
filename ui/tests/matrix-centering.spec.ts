@@ -7,6 +7,7 @@ const geometry = (page: Page) => page.evaluate(() => {
   const v = window.matrixFixture.viewports.at(-1)!;
   const rect = (node: Element) => node.getBoundingClientRect().toJSON();
   return { matrix: rect(v.canvas), host: rect(v.host), pane: rect(document.querySelector('.matrix-surfaces')!),
+    rowTrack: rect(document.querySelector('.row-distributions')!), columnTrack: rect(document.querySelector('.column-distributions')!),
     row: rect(document.querySelector('.row-distributions canvas')!), column: rect(document.querySelector('.column-distributions canvas')!),
     clientWidth: v.host.clientWidth, clientHeight: v.host.clientHeight,
     horizontal: v.host.scrollWidth > v.host.clientWidth, vertical: v.host.scrollHeight > v.host.clientHeight,
@@ -15,7 +16,7 @@ const geometry = (page: Page) => page.evaluate(() => {
 
 for (const dpr of [1, 1.25, 2]) test.describe(`centered scientific content DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
-  for (const name of ['short', 'tall', 'full', 'square'] as const) test(`${name}: independent centering, attached profiles, resize and source reset`, async ({ page }) => {
+  for (const name of ['short', 'tall', 'full', 'square'] as const) test(`${name}: independent centering, fixed profile tracks, resize and source reset`, async ({ page }) => {
     await page.goto(url);
     await expect(page.locator('.matrix-scroll')).toBeVisible();
     await page.addStyleTag({ content: '#workspace { height: min(600px, 70vh); }' });
@@ -40,12 +41,16 @@ for (const dpr of [1, 1.25, 2]) test.describe(`centered scientific content DPR $
       }).toBeLessThan(0.03);
       const g = await geometry(page);
       expect(g.view.scaleX).toBe(1); expect(g.view.scaleY).toBe(1);
+      expect(g.rowTrack.top).toBeCloseTo(g.host.top, 3);
+      expect(g.rowTrack.height).toBe(g.clientHeight);
+      expect(g.columnTrack.left).toBeCloseTo(g.host.left, 3);
+      expect(g.columnTrack.width).toBe(g.clientWidth);
       expect(g.row.top).toBeCloseTo(g.matrix.top, 3);
       expect(g.row.height).toBeCloseTo(g.matrix.height, 3);
       expect(g.column.left).toBeCloseTo(g.matrix.left, 3);
       expect(g.column.width).toBeCloseTo(g.matrix.width, 3);
-      expect(Math.abs(g.row.left - g.matrix.right - 10)).toBeLessThan(1 / dpr);
-      expect(Math.abs(g.column.top - g.matrix.bottom - 10)).toBeLessThan(1 / dpr);
+      expect(Math.abs(g.row.left - (g.host.left + g.clientWidth) - 10)).toBeLessThan(1 / dpr);
+      expect(Math.abs(g.column.top - (g.host.top + g.clientHeight) - 10)).toBeLessThan(1 / dpr);
       expect(g.vertical).toBe(g.view.scrollHeight > g.clientHeight);
       expect(g.horizontal).toBe(false);
       expect(g.row.right).toBeLessThanOrEqual(g.pane.right + 1 / dpr);
