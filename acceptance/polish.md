@@ -124,8 +124,9 @@ negative-zero LUT conventions.
 
 Actual-reference browser checks were run at DPR 1; actual-reference DPR 2 and
 CUDA were not validated. The mandatory deterministic browser run covers both
-DPR settings. Full component-browser checks also run on the published PR head in
-CI; the local corrected run isolates the 30 cases affected by the readiness fix.
+DPR settings. The published-head CI component gate runs desktop and native
+scrollbars; the local full run also covers narrow layouts, and the corrected run
+isolates all 30 cases affected by the readiness fix.
 
 Selected production captures use deterministic fixtures, DPR 1 and a 900 px
 viewport height. All eight were visually inspected in addition to the automated
