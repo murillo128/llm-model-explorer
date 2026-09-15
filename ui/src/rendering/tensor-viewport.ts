@@ -28,6 +28,7 @@ export class TensorViewport {
   private media: MediaQueryList | null = null;
   private frame = 0;
   private disposed = false;
+  private readonly zoomTargets = new Set<HTMLElement>();
   private readonly originalStyle: string | null;
 
   constructor(readonly host: HTMLElement, descriptor: TensorDescriptor, private readonly options: ViewportOptions = {}) {
@@ -78,17 +79,24 @@ export class TensorViewport {
     host.addEventListener('scroll', this.schedule);
     if (options.zoom) {
       host.style.touchAction = 'pan-x pan-y';
-      host.addEventListener('wheel', this.wheel, { passive: false });
-      host.addEventListener('touchstart', this.touchStart, { passive: false });
-      host.addEventListener('touchmove', this.touchMove, { passive: false });
-      host.addEventListener('touchend', this.touchEnd);
-      host.addEventListener('touchcancel', this.touchEnd);
+      this.addZoomTarget(host);
     }
     window.addEventListener('resize', this.dprChanged);
     try { this.dprChanged(); } catch (error) { this.dispose(); throw error; }
   }
 
   private readonly setCeilings: () => void;
+
+  /** Overlay chrome uses the same gesture handlers and camera as the data. */
+  addZoomTarget(target: HTMLElement) {
+    if (!this.options.zoom || this.zoomTargets.has(target)) return;
+    this.zoomTargets.add(target);
+    target.addEventListener('wheel', this.wheel, { passive: false });
+    target.addEventListener('touchstart', this.touchStart, { passive: false });
+    target.addEventListener('touchmove', this.touchMove, { passive: false });
+    target.addEventListener('touchend', this.touchEnd);
+    target.addEventListener('touchcancel', this.touchEnd);
+  }
 
   private dprChanged = () => {
     this.media?.removeEventListener('change', this.dprChanged);
@@ -319,11 +327,14 @@ export class TensorViewport {
     this.media?.removeEventListener('change', this.dprChanged);
     window.removeEventListener('resize', this.dprChanged);
     this.host.removeEventListener('scroll', this.schedule);
-    this.host.removeEventListener('wheel', this.wheel);
-    this.host.removeEventListener('touchstart', this.touchStart);
-    this.host.removeEventListener('touchmove', this.touchMove);
-    this.host.removeEventListener('touchend', this.touchEnd);
-    this.host.removeEventListener('touchcancel', this.touchEnd);
+    for (const target of this.zoomTargets) {
+      target.removeEventListener('wheel', this.wheel);
+      target.removeEventListener('touchstart', this.touchStart);
+      target.removeEventListener('touchmove', this.touchMove);
+      target.removeEventListener('touchend', this.touchEnd);
+      target.removeEventListener('touchcancel', this.touchEnd);
+    }
+    this.zoomTargets.clear();
     this.renderer.dispose();
     this.host.replaceChildren();
     if (this.originalStyle === null) this.host.removeAttribute('style');

@@ -88,13 +88,15 @@ A rank-2 Tensor Explorer uses three aligned surfaces:
 The current design uses a small gap between the main matrix and each distribution panel so the surfaces remain visually distinct while preserving obvious alignment.
 
 Distribution thickness is fixed at 100 device pixels (100 bins), independent of
-matrix zoom. CSS chrome/gaps remain fixed. Treat the matrix and its right/bottom
-profiles as one aligned scientific object: center independently on each axis
-where the data underfills the available matrix viewport at the current scale.
-Attach each profile to the corresponding visible matrix bound, including when
-the data is short or narrow; do not leave a gap to a viewport edge. Overflowing
-axes retain normal native scrolling and scrollbar clearance. Their visible
-data-axis extents match the matrix canvas, excluding native scrollbars.
+matrix zoom. CSS chrome/gaps remain fixed. The row-profile container stays at
+the right viewer edge and the column-profile container at the bottom viewer
+edge, independent of the rendered matrix bounds. Center only matrix data on
+underfilled axes using device-snapped offsets. Within the fixed tracks, row
+data shares that exact Y offset/origin/scale and column data the exact X
+offset/origin/scale. Their visible data extents match the matrix canvas; preserve
+blank margins without stretching short sequences or fabricating data. Profile
+hit testing and projected selection guides use the data canvas offsets, so blank
+margins never identify a logical row/column. The lower-right corner stays quiet.
 Centering changes only device-snapped presentation offsets, never camera scale,
 logical origins, square cells, sampling, or scalar/count storage.
 
@@ -147,6 +149,11 @@ The right-hand row-profile ruler runs horizontally above the histogram width,
 with low at its left edge, high at its right edge, and zero at its actual numeric
 position when present. Align its ticks and labels to the histogram data rectangle,
 including any device-pixel alignment offset; they must not drift from its edges.
+Both horizontal endpoint captions use `top: 12px`, sharing one baseline. At
+narrow widths/DPR 2, use concise numeric labels with a shared power-of-ten
+caption above them when needed, plus exact tooltips and accessible domain values. Never stagger the
+endpoints, enlarge the bin depth, or change domain/zero placement to fit text.
+The column ruler retains its low-at-top/high-at-bottom orientation.
 Use the distribution metadata's endpoints, never the matrix's robust luminosity
 anchors. The current API uses the full finite range; label it as full-range bins
 and show the authoritative true finite `min` and `max` in the tensor information
@@ -200,7 +207,7 @@ On release, fit the entire rectangle with the largest uniform square-cell scale
 allowed by the available matrix viewport dimensions, retaining the native 1:1
 minimum. Center the selected region in any spare dimension and clamp origins to
 matrix bounds. Use the full available viewport even when current data underfills
-it; account for native scrollbar geometry. Zero-width/height selections are no-ops.
+it; overlay scrollbar visibility must not change that available geometry. Zero-width/height selections are no-ops.
 A movement below the threshold remains ordinary exact cell click/tap inspection.
 During an active drag, suspend hover inspection and suppress the release click so
 navigation does not become data selection. Resume normal inspection afterward.
@@ -265,14 +272,30 @@ scientific pane. The inventory's compact controls remain reachable
 while its tree scrolls. Native data geometry never shrinks to fit.
 
 The matrix viewport receives the scientific pane's remaining height after context,
-transient feedback, distribution depth, and gaps. Reserve its vertical scrollbar
-gutter deterministically, excluding that gutter from the available fit width.
-The baseline keeps the native vertical scrollbar track present even for short
-tensors, avoiding changes to content width when vertical overflow changes.
-Use the viewport's actual client dimensions, excluding scrollbars, for rendering.
-A tall tensor whose native width fits must not gain horizontal overflow merely
-because a vertical scrollbar appears. Genuine excess width retains horizontal
-scrolling. Short matrices retain their zoomed data height within the bounded viewport; rank-1 strips retain their full native data height plus horizontal scrollbar chrome.
+transient feedback, distribution depth, and gaps. Hide native scrollbar chrome
+without disabling native scrolling or reserving a gutter. Horizontal/vertical
+overlay controls sit inside the matrix viewport at its bottom/right edges,
+before the fixed profile tracks, and exist only on overflowing axes. Use a
+6 CSS-pixel rounded warm-neutral thumb with contrast over green data, a wider
+usable target when revealed, and amber hover/focus/drag treatment. No arrows,
+opaque lane, duplicate visible scrollbar, or OS-dependent gutter behavior.
+
+Native scroll positions remain the sole panning state. Reveal/strengthen controls
+on scrolling, edge approach, focus and dragging, then attenuate after inactivity;
+focus and drag remain visible. An inactive control must not intercept matrix
+selection through a wide invisible strip. Keep a usable minimum thumb length,
+nonoverlapping corner targets, clamped endpoints, pointer capture/cancellation,
+and disposal of listeners/timers. Expose accessible names, orientation,
+controlled region, current value/range, and arrow/Page/Home/End navigation.
+Preserve native keyboard/scroll panning and existing wheel/trackpad/pinch zoom.
+
+At fixed workspace/camera state, chrome visibility, hover, focus and dragging
+never alter client dimensions, scientific origin, fit width, scale or profile
+positions. Actual resize retains the fit/manual camera policy. Use actual client
+dimensions for rendering; no layout oscillation, synthetic duplicate scroll
+events or document scrolling. Short matrices retain their data height within
+the bounded viewport. Rank-1 retains its complete native strip in a viewport at
+least 18 CSS pixels high so its overlay control is usable; it gains no profiles.
 
 Scrolling and zoom preserve distribution alignment:
 

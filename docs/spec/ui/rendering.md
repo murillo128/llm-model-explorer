@@ -28,7 +28,8 @@ compositing interpolation. Zoom is a shader camera transform, never CSS scaling
 of a previously rasterized tensor. DPR changes recompute framebuffer/CSS extents
 while preserving logical camera origins as far as native scroll bounds permit.
 
-Oversized content uses normal scrollbars. Internal texture/band partitioning may
+Oversized content uses native scroll positions. Matrix Explorer presents
+non-consuming overlay scroll controls as defined in `tensor-explorer.md`. Internal texture/band partitioning may
 accommodate WebGL2 limits but must preserve exact scalar identity and sampling.
 
 Query actual texture, renderbuffer and viewport limits. Use a bounded visible

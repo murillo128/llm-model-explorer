@@ -2,8 +2,8 @@ import { nativeCamera } from './native-camera';
 import { green } from './scalar-oracle';
 import { expect, test } from '@playwright/test';
 
-// This project runs headed under Xvfb in CI. The positive scrollbar-thickness
-// assertion prevents overlay/headless scrollbars from silently masking the bug.
+// Headed Chromium has consuming native chrome by default. Require our overlays
+// to eliminate that gutter while preserving exact rendering and native scroll.
 for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
   for (const [name, rows] of [['wide-vector', 1], ['short-matrix', 2]] as const) {
@@ -30,7 +30,8 @@ for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () =>
       });
       await expect.poll(async () => (await geometry()).height).toBe(rows);
       const first = await geometry();
-      expect(first.scrollbar).toBeGreaterThan(0);
+      expect(first.scrollbar).toBe(0);
+      await expect(page.getByRole('scrollbar', { name: 'Scroll matrix horizontally' })).toBeVisible();
       expect(first.clientHeight).toBeGreaterThan(0);
       expect(first.canvasHeight).toBe(rows);
       expect(first.width).toBeLessThan(1536);
@@ -62,7 +63,8 @@ for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () =>
       expect((await geometry()).scrollbar).toBe(0);
       expect((await geometry()).height).toBe(rows);
       await page.setViewportSize({ width: 390, height: 844 });
-      await expect.poll(async () => (await geometry()).scrollbar).toBeGreaterThan(0);
+      await expect(page.getByRole('scrollbar', { name: 'Scroll matrix horizontally' })).toBeVisible();
+      expect((await geometry()).scrollbar).toBe(0);
       expect((await geometry()).height).toBe(rows);
       expect(await page.evaluate(() => window.explorerFixture.metrics.scalarAllocations)).toBe(1);
       await testInfo.attach('data and scrollbar geometry', {
@@ -130,8 +132,9 @@ for (const dpr of [1, 2]) test.describe(`workspace panes at DPR ${dpr}`, () => {
         await expect(matrix).toBeVisible();
         await expect.poll(async () => { const g = await geometry(); return [g.horizontal, g.vertical]; }).toEqual([horizontal, vertical]);
         const initial = await geometry();
-        expect(initial.gutter).toBeGreaterThan(0); // Real, non-overlay native scrollbar coverage.
-        expect(initial.scrollbar > 0).toBe(horizontal);
+        expect(initial.gutter).toBe(0); // Native chrome is hidden even in headed Chromium.
+        expect(initial.scrollbar).toBe(0);
+        await expect(page.getByRole('scrollbar')).toHaveCount(Number(horizontal) + Number(vertical));
         expect(initial.client[0]).toBeGreaterThan(0);
         expect(initial.client[1]).toBeGreaterThan(0);
         // Inventory scrolling must not move either scientific data or chrome.

@@ -52,8 +52,8 @@ for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
       expect(c.rows.scaleY).toBe(c.view.scaleY); expect(c.columns.scaleX).toBe(c.view.scaleX);
       expect(c.rows.width).toBe(100); expect(c.columns.height).toBe(100);
       expect(c.rowRect!.top).toBeCloseTo(c.rect.top, 3); expect(c.columnRect!.left).toBeCloseTo(c.rect.left, 3);
-      expect(c.rowRect!.left - c.rect.right).toBeCloseTo(10, 0);
-      expect(c.columnRect!.top - c.rect.bottom).toBeCloseTo(10, 0);
+      expect(c.rowRect!.left - c.host.left - c.width).toBeCloseTo(10, 0);
+      expect(c.columnRect!.top - c.host.top - c.height).toBeCloseTo(10, 0);
     }
     await page.evaluate(() => {
       const v = window.matrixFixture.viewports.at(-1)!;

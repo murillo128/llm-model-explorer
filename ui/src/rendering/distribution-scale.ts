@@ -24,6 +24,7 @@ export function compactValue(value: number): string {
 export class DistributionScale {
   readonly ruler = document.createElement('div');
   readonly guide = document.createElement('div');
+  private captionKey = '';
   constructor(private readonly orientation: 'rows' | 'columns', panel: HTMLElement) {
     this.ruler.className = `distribution-scale distribution-scale-${orientation}`;
     this.ruler.setAttribute('role', 'img');
@@ -34,6 +35,7 @@ export class DistributionScale {
   }
 
   setDomain(domain?: DistributionDomain) {
+    this.captionKey = '';
     this.ruler.replaceChildren();
     delete this.ruler.dataset.minimum;
     delete this.ruler.dataset.maximum;
@@ -57,6 +59,7 @@ export class DistributionScale {
       tick.title = `Bin domain ${name}: ${value}`;
       this.ruler.append(tick);
     }
+    this.fitCaptions();
     const zero = distributionZero(domain);
     if (zero === null) return;
     const position = `${zero * 100}%`;
@@ -75,5 +78,43 @@ export class DistributionScale {
   alignBinAxis(offset: string) {
     this.ruler.style.setProperty('--distribution-offset', offset);
     this.guide.style.setProperty('--distribution-offset', offset);
+    this.fitCaptions();
+  }
+
+  private fitCaptions() {
+    if (this.orientation !== 'rows' || !this.ruler.hasAttribute('data-minimum')) return;
+    const width = this.ruler.getBoundingClientRect().width;
+    if (!width) return;
+    const key = `${width},${this.ruler.dataset.minimum},${this.ruler.dataset.maximum}`;
+    if (key === this.captionKey) return;
+    this.captionKey = key;
+    const endpoints = Array.from(this.ruler.querySelectorAll<HTMLElement>('.distribution-endpoint'));
+    const values = [Number(this.ruler.dataset.minimum), Number(this.ruler.dataset.maximum)];
+    this.ruler.querySelector('.distribution-exponent')?.remove();
+    endpoints.forEach((node, i) => { node.style.maxWidth = 'none'; node.textContent = compactValue(values[i]!); });
+    const fits = () => endpoints.reduce((sum, node) => sum + node.getBoundingClientRect().width, 0) <= width - 2;
+    if (fits()) return;
+    // Share a power of ten when the narrow physical bin axis cannot fit two
+    // decimal captions. Only display precision changes; endpoints/ticks do not.
+    const magnitude = Math.max(...values.map(Math.abs));
+    const exponent = magnitude ? Math.floor(Math.log10(magnitude)) : 0;
+    for (const precision of [2, 1]) {
+      endpoints.forEach((node, i) => {
+        node.textContent = String(Number((values[i]! / 10 ** exponent).toPrecision(precision)))
+          .replace(/^(-?)0\./, '$1.').replace('e+', 'e');
+      });
+      if (fits()) break;
+    }
+    if (exponent) {
+      const scale = document.createElement('span');
+      scale.className = 'distribution-exponent';
+      const superscript = String(exponent).split('').map(c => '⁰¹²³⁴⁵⁶⁷⁸⁹' [Number(c)] ?? '⁻').join('');
+      scale.textContent = `×10${superscript}`;
+      scale.title = `Endpoint captions multiplied by 10^${exponent}`;
+      scale.setAttribute('aria-hidden', 'true');
+      this.ruler.append(scale);
+    }
+    // Extremely constrained tracks still keep exact values in tooltips/ARIA.
+    if (!fits()) endpoints.forEach(node => { node.style.maxWidth = '50%'; });
   }
 }
