@@ -119,6 +119,7 @@ jobs:
           SKILLFORGE_REPO_ROOT_RESOLVED: ${{ steps.worktree.outputs.repo_root }}
           SKILLFORGE_ISSUE_WORKTREE: ${{ steps.worktree.outputs.path }}
           SKILLFORGE_ISSUE_BRANCH: ${{ steps.worktree.outputs.branch }}
+          CODEX_PROFILE_NAME: ${{ vars.CODEX_EXECUTION_PROFILE || 'codex-critical' }}
         run: |
           set -euo pipefail
           command -v python3 >/dev/null
@@ -180,6 +181,7 @@ jobs:
 
           rm -f "$pid_file" "$ready_file" "$error_file" "$completed_file" "$turn_file"
 
+          git -C "$SKILLFORGE_REPO_ROOT_RESOLVED" show "${GITHUB_SHA}:.github/scripts/codex_profile.py" > "${state_dir}/codex_profile.py"
           cat > "$client" <<'PY'
           #!/usr/bin/env python3
           import base64
@@ -190,6 +192,7 @@ jobs:
           import socket
           import struct
           import traceback
+          from codex_profile import ProfilePolicy
 
           SOCKET_PATH = os.environ["SKILLFORGE_APP_SERVER_SOCKET"]
           REPO_ROOT = os.environ["SKILLFORGE_REPO_ROOT_RESOLVED"]
@@ -439,7 +442,9 @@ jobs:
               )
               client.send_notification("initialized")
               log("initialized", codexHome=init.get("codexHome"), platformOs=init.get("platformOs"))
+              policy = ProfilePolicy(client, init.get("codexHome"), os.environ["CODEX_PROFILE_NAME"], os.environ["CODEX_LAUNCH_ROLE"])
 
+              was_resumed = False
               thread_id = None
               if os.path.exists(THREAD_FILE):
                   with open(THREAD_FILE, "r", encoding="utf-8") as handle:
@@ -464,6 +469,7 @@ jobs:
                           "approvalPolicy": "on-request",
                           "approvalsReviewer": "auto_review",
                           "sandbox": "workspace-write",
+                          **policy.thread_options(resumed=True),
                       },
                   )
                   live_thread = resumed.get("thread") or {}
@@ -471,6 +477,8 @@ jobs:
                       raise RuntimeError(
                           f"Resumed thread {thread_id} became active before launch; refusing to steer it"
                       )
+                  policy.confirm(resumed, resumed=True)
+                  was_resumed = True
                   log("thread_resumed", threadId=thread_id)
               else:
                   started = client.request(
@@ -481,6 +489,7 @@ jobs:
                           "approvalsReviewer": "auto_review",
                           "sandbox": "workspace-write",
                           "serviceName": "skillforge",
+                          **policy.thread_options(),
                       },
                   )
                   live_thread = started.get("thread") or {}
@@ -488,6 +497,7 @@ jobs:
                   if not thread_id:
                       raise RuntimeError("thread/start returned no thread id")
                   write_atomic(THREAD_FILE, thread_id)
+                  policy.confirm(started)
                   display_name = f"#{ISSUE_NUMBER}"
                   if ISSUE_TITLE:
                       display_name += f" — {ISSUE_TITLE}"
@@ -497,6 +507,7 @@ jobs:
                   )
                   log("thread_started", threadId=thread_id, name=display_name, cwd=WORKTREE)
 
+              policy.log_confirmation(log, thread_id=thread_id, cwd=WORKTREE, resumed=was_resumed)
               client.thread_id = thread_id
               prompt = f"Execute GitHub issue #{ISSUE_NUMBER} according to AGENTS.md."
               turn_result = client.request(
@@ -505,6 +516,7 @@ jobs:
                       "threadId": thread_id,
                       "clientUserMessageId": f"skillforge:{os.environ.get('GITHUB_REPOSITORY', 'repo')}:{ISSUE_NUMBER}:{RUN_ID}",
                       "input": [{"type": "text", "text": prompt}],
+                      **policy.turn_options(),
                       "environments": [{"environmentId": "local", "cwd": WORKTREE}],
                       "approvalPolicy": "on-request",
                       "approvalsReviewer": "auto_review",
@@ -546,6 +558,7 @@ jobs:
               SKILLFORGE_STATE_DIR="$state_dir" \
               SKILLFORGE_REPO_ROOT_RESOLVED="$SKILLFORGE_REPO_ROOT_RESOLVED" \
               SKILLFORGE_ISSUE_WORKTREE="$SKILLFORGE_ISSUE_WORKTREE" \
+              CODEX_PROFILE_NAME="$CODEX_PROFILE_NAME" CODEX_LAUNCH_ROLE="execution" \
               ISSUE_NUMBER="$ISSUE_NUMBER" \
               ISSUE_TITLE="$ISSUE_TITLE" \
               GITHUB_REPOSITORY="$GITHUB_REPOSITORY" \

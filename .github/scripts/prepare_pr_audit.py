@@ -21,12 +21,14 @@ FRESH_THREAD = '''    if os.path.exists(THREAD_FILE):
             "approvalsReviewer": "auto_review",
             "sandbox": "workspace-write",
             "serviceName": "skillforge",
+            **policy.thread_options(),
         },
     )
     thread_id = (started.get("thread") or {}).get("id")
     if not thread_id:
         raise RuntimeError("thread/start returned no thread id")
     write_atomic(THREAD_FILE, thread_id)
+    policy.confirm(started)
     display_name = (
         f"Review PR #{os.environ['PR_NUMBER']} / issue #{ISSUE_NUMBER}"
         f" / {os.environ['REVIEW_HEAD_SHA'][:12]}"
@@ -55,7 +57,7 @@ def build_audit_client(workflow: str) -> str:
     source = textwrap.dedent(body.split(end, 1)[0]) + "\n"
 
     start_marker = '    thread_id = None\n    if os.path.exists(THREAD_FILE):\n'
-    end_marker = '    client.thread_id = thread_id\n'
+    end_marker = '    policy.log_confirmation(log, thread_id=thread_id, cwd=WORKTREE, resumed=was_resumed)\n'
     if source.count(start_marker) != 1 or source.count(end_marker) != 1:
         raise ValueError("Published thread lifecycle contract changed")
     start = source.index(start_marker)
