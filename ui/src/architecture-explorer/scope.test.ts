@@ -152,4 +152,21 @@ describe('isolated component projection', () => {
     expect(() => componentScope(graph, 'missing')).toThrow('no longer available');
     expect(() => componentScope(graph, 'mlp:missing')).toThrow('no longer available');
   });
+
+  it('isolates either leaf of a valid graph with no groups or repetition metadata', () => {
+    const base = { parameter_ids: [], references: [], attributes: [], provenance: [] };
+    const graph: Graph = { graph_id: 'no-groups', scope: 'language_model', coverage: 'partial', symbols: [], parameters: [], repetitions: [], diagnostics: [],
+      nodes: [{ ...base, id: 'a', kind: 'operation', label: 'First', ports: [{ id: 'out', label: 'out', direction: 'output', shape: [] }] },
+        { ...base, id: 'b', kind: 'operation', label: 'Second', ports: [{ id: 'in', label: 'in', direction: 'input', shape: [] }] }],
+      edges: [{ id: 'link', source: ep('a', 'out'), target: ep('b', 'in'), kind: 'data', provenance: [] }] };
+    validate(graph);
+    for (const scope of ['a', 'b']) {
+      const projection = sourcePaths(graph, scope);
+      expect(projection.scope!.nodeIds).toEqual([scope]);
+      expect(projection.nodes.filter((node) => node.record).map((node) => node.id)).toEqual([scope]);
+      expect(projection.nodes.filter((node) => node.presentation === 'external')).toHaveLength(1);
+      expect(projection.edges[0]!.paths).toEqual([graph.edges]);
+      assertTraceability(graph, projection);
+    }
+  });
 });

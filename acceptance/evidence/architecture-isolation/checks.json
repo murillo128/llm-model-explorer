@@ -1,0 +1,1264 @@
+{
+  "runtime_source_head": "9adaf7d291028a226dfb6c5f545aa73d5b008e57",
+  "acceptance_source_head": "cd09e738b8f2072d89e3d1917eadfd59d4e0950b",
+  "ui_check": {
+    "source_head": "9adaf7d291028a226dfb6c5f545aa73d5b008e57",
+    "unit_tests": 730,
+    "generated_bindings": "PASS",
+    "typecheck": "PASS",
+    "eslint": "PASS",
+    "production_build": "PASS"
+  },
+  "additional_group_free_regression": {
+    "scope_tests_passed": 13,
+    "final_unit_case_count": 731
+  },
+  "architecture_browser": {
+    "startTime": "2026-09-15T20:47:13.579Z",
+    "duration": 536174.9689999999,
+    "expected": 80,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "production_backend_browser": {
+    "startTime": "2026-09-15T20:56:21.490Z",
+    "duration": 1023719.015,
+    "expected": 9,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "shell_and_other_explorers": {
+    "startTime": "2026-09-15T21:13:48.970Z",
+    "duration": 62646.526000000005,
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "reference_cases": [
+    {
+      "title": "deterministic production [smollm2] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 31905
+    },
+    {
+      "title": "deterministic production [qwen3] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 33026
+    },
+    {
+      "title": "deterministic production [qwen35] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 33203
+    },
+    {
+      "title": "deterministic production [vjepa2] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 24477
+    },
+    {
+      "title": "complete local reference [smollm2] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 67678
+    },
+    {
+      "title": "complete local reference [qwen3] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 406182
+    },
+    {
+      "title": "complete local reference [qwen35] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 363293
+    },
+    {
+      "title": "complete local reference [vjepa2] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 53319
+    },
+    {
+      "title": "deterministic production [smollm2] close during progressive data cancels and releases modal resources",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 8650
+    }
+  ],
+  "global_baseline": {
+    "source_head": "5d3522272cae1a7da8afcdf47017702b7698b36c",
+    "compared_candidate": "cd09e738b8f2072d89e3d1917eadfd59d4e0950b",
+    "views": 24,
+    "equal": [
+      "projection",
+      "boxes",
+      "ports",
+      "routes",
+      "source_edge_ids",
+      "bounds"
+    ],
+    "excluded": [
+      "layout_elapsed_time"
+    ]
+  },
+  "isolated_geometry": [
+    {
+      "width": 1440,
+      "graph": "6f1a89f323d8678452980b911e0ced4f841db28707d09ea3b91e2986765c1a02",
+      "scope": "72db7e2468b7914ac267cf8d3039a932ba08acd8a590437e0b647451a5a7da22",
+      "sourceNodes": 78,
+      "visibleNodes": 28,
+      "visibleEdges": 30,
+      "layoutMs": 281,
+      "initialCamera": "transform: translate(-590.6px, 174.2px) scale(0.8);",
+      "component": {
+        "x": 180.3199005126953,
+        "y": 444.0667419433594,
+        "width": 1097.3804168701172,
+        "height": 211.86648559570312
+      },
+      "boundaryFanout": 3
+    },
+    {
+      "width": 1440,
+      "graph": "6f1a89f323d8678452980b911e0ced4f841db28707d09ea3b91e2986765c1a02",
+      "scope": "dfa517299579fa4e68401f56b4b20211629312ce82ecb81981ff9dd0001e927c",
+      "sourceNodes": 78,
+      "visibleNodes": 8,
+      "visibleEdges": 7,
+      "layoutMs": 264.40000000596046,
+      "initialCamera": "transform: translate(85px, 215px) scale(1);",
+      "component": {
+        "x": 336,
+        "y": 384,
+        "width": 776,
+        "height": 332
+      },
+      "boundaryFanout": 2
+    },
+    {
+      "width": 1440,
+      "graph": "82d2af00593f65682e1924ed0000edac7b187e746932bd911eb3a745ef820972",
+      "scope": "430b097084aa0a7d9bd6adbab78d0e130cbefd42497951120c92e8031a6db148",
+      "sourceNodes": 82,
+      "visibleNodes": 30,
+      "visibleEdges": 32,
+      "layoutMs": 249.89999997615814,
+      "initialCamera": "transform: translate(-666.6px, 174.2px) scale(0.8);",
+      "component": {
+        "x": 173.93939208984375,
+        "y": 450.0463562011719,
+        "width": 1107.2371215820312,
+        "height": 199.90731811523438
+      },
+      "boundaryFanout": 3
+    },
+    {
+      "width": 1440,
+      "graph": "82d2af00593f65682e1924ed0000edac7b187e746932bd911eb3a745ef820972",
+      "scope": "5ef51988b22b4a78303a1b694232abbb8f7ac4f08c33538ab82a5721b9f8534e",
+      "sourceNodes": 82,
+      "visibleNodes": 8,
+      "visibleEdges": 7,
+      "layoutMs": 213.30000001192093,
+      "initialCamera": "transform: translate(85px, 215px) scale(1);",
+      "component": {
+        "x": 336,
+        "y": 384,
+        "width": 776,
+        "height": 332
+      },
+      "boundaryFanout": 2
+    },
+    {
+      "width": 1440,
+      "graph": "bab0b3a5d95674b687abb336f7ab9b350e87b1a2be530865b3882035e687851b",
+      "scope": "4e9bc703165c9e6402fb883b192888ae6e88ef527ab5c955c411870ee45f0df9",
+      "sourceNodes": 91,
+      "visibleNodes": 32,
+      "visibleEdges": 35,
+      "layoutMs": 225.5,
+      "initialCamera": "transform: translate(-673px, 111.4px) scale(0.8);",
+      "component": {
+        "x": 162.47842407226562,
+        "y": 420.99468994140625,
+        "width": 1120.0520935058594,
+        "height": 258.01068115234375
+      },
+      "boundaryFanout": 0
+    },
+    {
+      "width": 1440,
+      "graph": "bab0b3a5d95674b687abb336f7ab9b350e87b1a2be530865b3882035e687851b",
+      "scope": "59d5d153f410b90f20863a580d8fe893f03af9984b9b3851b0202d19dfcc0005",
+      "sourceNodes": 91,
+      "visibleNodes": 8,
+      "visibleEdges": 7,
+      "layoutMs": 210.2000000178814,
+      "initialCamera": "transform: translate(85px, 215px) scale(1);",
+      "component": {
+        "x": 336,
+        "y": 384,
+        "width": 776,
+        "height": 332
+      },
+      "boundaryFanout": 2
+    },
+    {
+      "width": 1440,
+      "graph": "e06d738e9c2f1a1e780b516a762a37699f1d9cffe6e4209914140d3e85af52a6",
+      "scope": "09e3d49c283b45b615757aba8ff685331832257fb99c6d912547fcab59c9e191",
+      "sourceNodes": 95,
+      "visibleNodes": 17,
+      "visibleEdges": 18,
+      "layoutMs": 149.60000002384186,
+      "initialCamera": "transform: translate(-109px, 192.2px) scale(0.8);",
+      "component": {
+        "x": 227.19676208496094,
+        "y": 393.90264892578125,
+        "width": 1001.0872955322266,
+        "height": 312.19476318359375
+      },
+      "boundaryFanout": 3
+    },
+    {
+      "width": 1440,
+      "graph": "e06d738e9c2f1a1e780b516a762a37699f1d9cffe6e4209914140d3e85af52a6",
+      "scope": "370572cf9854403375e585f0cc43a793db8dbe32dc9dcfc879c9a0ebdea60312",
+      "sourceNodes": 95,
+      "visibleNodes": 6,
+      "visibleEdges": 4,
+      "layoutMs": 319.09999999403954,
+      "initialCamera": "transform: translate(188px, 279px) scale(1);",
+      "component": {
+        "x": 431,
+        "y": 448,
+        "width": 578,
+        "height": 204
+      },
+      "boundaryFanout": 0
+    },
+    {
+      "width": 1440,
+      "graph": "b6dd19862b0010730e7fa7bc9a50f09d92ed8bbd0e1bda3784e34952294f942c",
+      "scope": "bc9bf7804bbb80b527e678f69ebd9ed0794a3aef50cdd1c93b2139c18a2f32ae",
+      "sourceNodes": 1031,
+      "visibleNodes": 28,
+      "visibleEdges": 30,
+      "layoutMs": 232.7999999821186,
+      "initialCamera": "transform: translate(-590.6px, 174.2px) scale(0.8);",
+      "component": {
+        "x": 180.3199005126953,
+        "y": 444.0667419433594,
+        "width": 1097.3804168701172,
+        "height": 211.86648559570312
+      },
+      "boundaryFanout": 3
+    },
+    {
+      "width": 1440,
+      "graph": "b6dd19862b0010730e7fa7bc9a50f09d92ed8bbd0e1bda3784e34952294f942c",
+      "scope": "c751fd09409ead93732a8c50d5e76f8314a712c44f534b55d540a33d94c1e892",
+      "sourceNodes": 1031,
+      "visibleNodes": 8,
+      "visibleEdges": 7,
+      "layoutMs": 175.5,
+      "initialCamera": "transform: translate(85px, 215px) scale(1);",
+      "component": {
+        "x": 336,
+        "y": 384,
+        "width": 776,
+        "height": 332
+      },
+      "boundaryFanout": 2
+    },
+    {
+      "width": 1178,
+      "graph": "067d60a31eca18dd3fb0ffc7b0f83aacc6f20a698417502b6b03af5ca2d61ba8",
+      "scope": "c13dda116ae703f3fa50a1d0093de43c8e4888ae3dd298b2907e80d9e1793328",
+      "sourceNodes": 1019,
+      "visibleNodes": 30,
+      "visibleEdges": 32,
+      "layoutMs": 264.80000001192093,
+      "initialCamera": "transform: translate(-797.6px, 174.2px) scale(0.8);",
+      "component": {
+        "x": 145.11111450195312,
+        "y": 468.7483825683594,
+        "width": 900.0653991699219,
+        "height": 162.50326538085938
+      },
+      "boundaryFanout": 3
+    },
+    {
+      "width": 1178,
+      "graph": "067d60a31eca18dd3fb0ffc7b0f83aacc6f20a698417502b6b03af5ca2d61ba8",
+      "scope": "cbc9509082b1529d533e51298e9433caab09b76e8100091cc2f837faa8985b83",
+      "sourceNodes": 1019,
+      "visibleNodes": 8,
+      "visibleEdges": 7,
+      "layoutMs": 202.80000001192093,
+      "initialCamera": "transform: translate(29.9695px, 238.508px) scale(0.876271);",
+      "component": {
+        "x": 252.51187133789062,
+        "y": 404.5389709472656,
+        "width": 679.9864196777344,
+        "height": 290.9220275878906
+      },
+      "boundaryFanout": 2
+    },
+    {
+      "width": 1440,
+      "graph": "067d60a31eca18dd3fb0ffc7b0f83aacc6f20a698417502b6b03af5ca2d61ba8",
+      "scope": "c13dda116ae703f3fa50a1d0093de43c8e4888ae3dd298b2907e80d9e1793328",
+      "sourceNodes": 1019,
+      "visibleNodes": 30,
+      "visibleEdges": 32,
+      "layoutMs": 237.19999998807907,
+      "initialCamera": "transform: translate(-666.6px, 174.2px) scale(0.8);",
+      "component": {
+        "x": 173.93939208984375,
+        "y": 450.0463562011719,
+        "width": 1107.2371215820312,
+        "height": 199.90731811523438
+      },
+      "boundaryFanout": 3
+    },
+    {
+      "width": 1440,
+      "graph": "067d60a31eca18dd3fb0ffc7b0f83aacc6f20a698417502b6b03af5ca2d61ba8",
+      "scope": "cbc9509082b1529d533e51298e9433caab09b76e8100091cc2f837faa8985b83",
+      "sourceNodes": 1019,
+      "visibleNodes": 8,
+      "visibleEdges": 7,
+      "layoutMs": 180.2999999821186,
+      "initialCamera": "transform: translate(85px, 215px) scale(1);",
+      "component": {
+        "x": 336,
+        "y": 384,
+        "width": 776,
+        "height": 332
+      },
+      "boundaryFanout": 2
+    },
+    {
+      "width": 1440,
+      "graph": "18e2e0cc2b90b81e62f712c4d072f4e5d5b1e2186f868e1534fd86be96d82343",
+      "scope": "a8613bbf3c16a1b445f859079c4e8ef32de40e20df403aea5540bfa8c1db7d9f",
+      "sourceNodes": 972,
+      "visibleNodes": 32,
+      "visibleEdges": 35,
+      "layoutMs": 181.40000000596046,
+      "initialCamera": "transform: translate(-673px, 111.4px) scale(0.8);",
+      "component": {
+        "x": 162.47842407226562,
+        "y": 420.99468994140625,
+        "width": 1120.0520935058594,
+        "height": 258.01068115234375
+      },
+      "boundaryFanout": 0
+    },
+    {
+      "width": 1440,
+      "graph": "18e2e0cc2b90b81e62f712c4d072f4e5d5b1e2186f868e1534fd86be96d82343",
+      "scope": "31a905154b52d2df5183c0b90d7a9334c06e9b11f8003fa98b71aacfe0b999d3",
+      "sourceNodes": 972,
+      "visibleNodes": 8,
+      "visibleEdges": 7,
+      "layoutMs": 125.69999998807907,
+      "initialCamera": "transform: translate(85px, 215px) scale(1);",
+      "component": {
+        "x": 336,
+        "y": 384,
+        "width": 776,
+        "height": 332
+      },
+      "boundaryFanout": 2
+    },
+    {
+      "width": 1178,
+      "graph": "8227916aed7ae9833de3d1860b719f37dc49e503691c0863986d041c130589a6",
+      "scope": "8a8d39a9604f4380e15fc0c33c2f80eb158785602d3dbcc8f7b87827c25ea59a",
+      "sourceNodes": 854,
+      "visibleNodes": 17,
+      "visibleEdges": 18,
+      "layoutMs": 135,
+      "initialCamera": "transform: translate(-240px, 192.2px) scale(0.8);",
+      "component": {
+        "x": 188.4036407470703,
+        "y": 423.1095275878906,
+        "width": 813.7768402099609,
+        "height": 253.78097534179688
+      },
+      "boundaryFanout": 3
+    },
+    {
+      "width": 1178,
+      "graph": "8227916aed7ae9833de3d1860b719f37dc49e503691c0863986d041c130589a6",
+      "scope": "c40adb5fb5e12a76d1da1a9ef6748827e137ee0bcb053f30ea10a74e2c14a29d",
+      "sourceNodes": 854,
+      "visibleNodes": 6,
+      "visibleEdges": 4,
+      "layoutMs": 111.2999999821186,
+      "initialCamera": "transform: translate(57px, 279px) scale(1);",
+      "component": {
+        "x": 300,
+        "y": 448,
+        "width": 578,
+        "height": 204
+      },
+      "boundaryFanout": 0
+    },
+    {
+      "width": 1440,
+      "graph": "8227916aed7ae9833de3d1860b719f37dc49e503691c0863986d041c130589a6",
+      "scope": "8a8d39a9604f4380e15fc0c33c2f80eb158785602d3dbcc8f7b87827c25ea59a",
+      "sourceNodes": 854,
+      "visibleNodes": 17,
+      "visibleEdges": 18,
+      "layoutMs": 145.40000000596046,
+      "initialCamera": "transform: translate(-109px, 192.2px) scale(0.8);",
+      "component": {
+        "x": 227.19676208496094,
+        "y": 393.90264892578125,
+        "width": 1001.0872955322266,
+        "height": 312.19476318359375
+      },
+      "boundaryFanout": 3
+    },
+    {
+      "width": 1440,
+      "graph": "8227916aed7ae9833de3d1860b719f37dc49e503691c0863986d041c130589a6",
+      "scope": "c40adb5fb5e12a76d1da1a9ef6748827e137ee0bcb053f30ea10a74e2c14a29d",
+      "sourceNodes": 854,
+      "visibleNodes": 6,
+      "visibleEdges": 4,
+      "layoutMs": 114.59999999403954,
+      "initialCamera": "transform: translate(188px, 279px) scale(1);",
+      "component": {
+        "x": 431,
+        "y": 448,
+        "width": 578,
+        "height": 204
+      },
+      "boundaryFanout": 0
+    }
+  ],
+  "shell_observations": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "browser": "153.0.8010.12",
+      "project": "dpr1",
+      "observations": {
+        "tensor": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 390,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 390,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 390,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 8,
+            "y": 0,
+            "width": 190.84375,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 202.84375,
+            "y": 9.5,
+            "width": 107.15625,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "tokenizer": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 390,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 390,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 390,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 8,
+            "y": 0,
+            "width": 192.75,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 204.75,
+            "y": 9.5,
+            "width": 105.25,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "architectureShell": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 390,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 390,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 390,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 8,
+            "y": 0,
+            "width": 195.203125,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 207.203125,
+            "y": 9.5,
+            "width": 102.796875,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "architecture": {
+          ".architecture-toolbar": {
+            "x": 13,
+            "y": 65,
+            "width": 364,
+            "height": 40
+          },
+          ".architecture-context-row": {
+            "x": 13,
+            "y": 105,
+            "width": 364,
+            "height": 50
+          },
+          ".architecture-flow": {
+            "x": 13,
+            "y": 155,
+            "width": 364,
+            "height": 704
+          }
+        },
+        "isolationShell": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 390,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 390,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 390,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 8,
+            "y": 0,
+            "width": 195.203125,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 207.203125,
+            "y": 9.5,
+            "width": 102.796875,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        }
+      }
+    },
+    {
+      "viewport": {
+        "width": 1178,
+        "height": 900
+      },
+      "browser": "153.0.8010.12",
+      "project": "dpr1",
+      "observations": {
+        "tensor": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1178,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1178,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1178,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 403.09375,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 635,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "tokenizer": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1178,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1178,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1178,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 405.171875,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 635,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "architectureShell": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1178,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1178,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1178,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 407.828125,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 635,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "architecture": {
+          ".architecture-toolbar": {
+            "x": 21,
+            "y": 69,
+            "width": 1136,
+            "height": 40
+          },
+          ".architecture-context-row": {
+            "x": 21,
+            "y": 109,
+            "width": 1136,
+            "height": 36
+          },
+          ".architecture-flow": {
+            "x": 21,
+            "y": 145,
+            "width": 1136,
+            "height": 710
+          }
+        },
+        "isolationShell": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1178,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1178,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1178,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 407.828125,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 635,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        }
+      }
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "browser": "153.0.8010.12",
+      "project": "dpr1",
+      "observations": {
+        "tensor": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1440,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1440,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 403.09375,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 897,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "tokenizer": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1440,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1440,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 405.171875,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 897,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "architectureShell": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1440,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1440,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 407.828125,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 897,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "architecture": {
+          ".architecture-toolbar": {
+            "x": 21,
+            "y": 69,
+            "width": 1398,
+            "height": 40
+          },
+          ".architecture-context-row": {
+            "x": 21,
+            "y": 109,
+            "width": 1398,
+            "height": 36
+          },
+          ".architecture-flow": {
+            "x": 21,
+            "y": 145,
+            "width": 1398,
+            "height": 710
+          }
+        },
+        "isolationShell": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1440,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1440,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 407.828125,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 897,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        }
+      }
+    }
+  ],
+  "post_114_pixel_comparison": [
+    {
+      "image": "safety-tensor-1178.png",
+      "different_pixels": 0,
+      "maximum_channel_difference": 0,
+      "excluded_architecture_interior": null
+    },
+    {
+      "image": "safety-tokenizer-1178.png",
+      "different_pixels": 0,
+      "maximum_channel_difference": 0,
+      "excluded_architecture_interior": null
+    },
+    {
+      "image": "safety-architecture-1178.png",
+      "different_pixels": 0,
+      "maximum_channel_difference": 0,
+      "excluded_architecture_interior": [
+        21,
+        69,
+        1157,
+        855
+      ]
+    },
+    {
+      "image": "isolation-shell-1178.png",
+      "baseline": "safety-architecture-1178.png",
+      "different_pixels": 0,
+      "maximum_channel_difference": 0,
+      "excluded_architecture_interior": [
+        21,
+        69,
+        1157,
+        855
+      ]
+    },
+    {
+      "image": "safety-tensor-1440.png",
+      "different_pixels": 0,
+      "maximum_channel_difference": 0,
+      "excluded_architecture_interior": null
+    },
+    {
+      "image": "safety-tokenizer-1440.png",
+      "different_pixels": 0,
+      "maximum_channel_difference": 0,
+      "excluded_architecture_interior": null
+    },
+    {
+      "image": "safety-architecture-1440.png",
+      "different_pixels": 0,
+      "maximum_channel_difference": 0,
+      "excluded_architecture_interior": [
+        21,
+        69,
+        1419,
+        855
+      ]
+    },
+    {
+      "image": "isolation-shell-1440.png",
+      "baseline": "safety-architecture-1440.png",
+      "different_pixels": 0,
+      "maximum_channel_difference": 0,
+      "excluded_architecture_interior": [
+        21,
+        69,
+        1419,
+        855
+      ]
+    }
+  ],
+  "images": {
+    "isolated-qwen3-attention-1178-boundary.png": {
+      "sha256": "34e1471aff8cd11371c2a2a2fe0625b47232eaaa879fe8bd28916a4db6853e4f",
+      "bytes": 64928
+    },
+    "isolated-qwen3-attention-1178-initial.png": {
+      "sha256": "d5e53197feac6d901e45b4cda4758927ac1495c610d1ab21b46c0ce4ec89bf23",
+      "bytes": 74908
+    },
+    "isolated-qwen3-attention-1178.png": {
+      "sha256": "34e1471aff8cd11371c2a2a2fe0625b47232eaaa879fe8bd28916a4db6853e4f",
+      "bytes": 64928
+    },
+    "isolated-qwen3-attention-1440-boundary.png": {
+      "sha256": "a2997d269e525de6037b85b148dff6e9507be26a4ae17090df0ec3a8760f7cf3",
+      "bytes": 76487
+    },
+    "isolated-qwen3-attention-1440-initial.png": {
+      "sha256": "d272dc1607e51cb8da73242d248f1d0c247071d3c206abe9663c47bd7d487cac",
+      "bytes": 83441
+    },
+    "isolated-qwen3-attention-1440.png": {
+      "sha256": "a2997d269e525de6037b85b148dff6e9507be26a4ae17090df0ec3a8760f7cf3",
+      "bytes": 76487
+    },
+    "isolated-qwen3-mlp-1178-boundary.png": {
+      "sha256": "9701d9bb8320d01d7af497b94f28f00b002b97af4b55935b78bb1cc3b920fa77",
+      "bytes": 62709
+    },
+    "isolated-qwen3-mlp-1178-initial.png": {
+      "sha256": "b9ebb8be897bbd23f582ffa864cdb443e28589fd79f62277fe115734b605c0a5",
+      "bytes": 61534
+    },
+    "isolated-qwen3-mlp-1178.png": {
+      "sha256": "9701d9bb8320d01d7af497b94f28f00b002b97af4b55935b78bb1cc3b920fa77",
+      "bytes": 62709
+    },
+    "isolated-qwen3-mlp-1440-boundary.png": {
+      "sha256": "9dd40ed551ce1838cf608d213d17df925d5889f5b1715c0788e7ac2725789d4c",
+      "bytes": 64432
+    },
+    "isolated-qwen3-mlp-1440-initial.png": {
+      "sha256": "cb829d1a4f2290d73e105172314223dd8ffcdb9067de9feac2e5de7f43946ff1",
+      "bytes": 63023
+    },
+    "isolated-qwen3-mlp-1440.png": {
+      "sha256": "9dd40ed551ce1838cf608d213d17df925d5889f5b1715c0788e7ac2725789d4c",
+      "bytes": 64432
+    },
+    "isolated-vjepa2-attention-1178-boundary.png": {
+      "sha256": "a4ce9d84ca096068d32189d0c697c16d7d91aaf2e27f01e056f6909f4743387d",
+      "bytes": 79313
+    },
+    "isolated-vjepa2-attention-1178-initial.png": {
+      "sha256": "4e27ddfa1d3a964b7d0e0903ac7f681325a06c4939a4c75148713b3fb153f821",
+      "bytes": 80432
+    },
+    "isolated-vjepa2-attention-1178.png": {
+      "sha256": "a4ce9d84ca096068d32189d0c697c16d7d91aaf2e27f01e056f6909f4743387d",
+      "bytes": 79313
+    },
+    "isolated-vjepa2-attention-1440-boundary.png": {
+      "sha256": "c6308407ac9916a2c2ac68ad25d102677b5d0e994f194a1d6ca79ef0d65f9fe5",
+      "bytes": 93969
+    },
+    "isolated-vjepa2-attention-1440-initial.png": {
+      "sha256": "530f5620523930e4ede7ac35410cde8ef973efd4cd7520b084ff3aee4779a49b",
+      "bytes": 91184
+    },
+    "isolated-vjepa2-attention-1440.png": {
+      "sha256": "c6308407ac9916a2c2ac68ad25d102677b5d0e994f194a1d6ca79ef0d65f9fe5",
+      "bytes": 93969
+    },
+    "isolation-shell-1178.png": {
+      "sha256": "9e8ee3e735345baf3e1167d8d4b41e0beefb9fc3d5114294c2ec50b3e9604696",
+      "bytes": 101655
+    },
+    "isolation-shell-1440.png": {
+      "sha256": "deb771c3fddbbe44b1e5bed9ab6de7730287b1d94ba9e97568f5a879a67ec18b",
+      "bytes": 129358
+    }
+  }
+}
