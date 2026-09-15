@@ -1,5 +1,6 @@
 import { MatrixInspection } from './matrix-inspection';
 import { MatrixZoomSelection } from './matrix-zoom-selection';
+import { MatrixCameraNavigation } from './matrix-camera-navigation';
 import type { Inspection } from './matrix-inspection';
 import { DistributionRenderer } from './tensor-renderer';
 import type { RendererOptions } from './tensor-renderer';
@@ -26,6 +27,7 @@ export class MatrixViewport {
   private disposed = false;
   private inspection?: MatrixInspection;
   private zoomSelection?: MatrixZoomSelection;
+  private cameraNavigation?: MatrixCameraNavigation;
   private rowScale?: DistributionScale;
   private columnScale?: DistributionScale;
   private readonly observer: ResizeObserver;
@@ -34,7 +36,7 @@ export class MatrixViewport {
     if (host.childNodes.length) throw new Error('MatrixViewport requires an empty host.');
     this.originalStyle = host.getAttribute('style');
     host.classList.add('matrix-surfaces');
-    Object.assign(host.style, { display: 'grid', gap: '10px', alignItems: 'start', alignContent: 'start', minWidth: '0' });
+    Object.assign(host.style, { display: 'grid', position: 'relative', gap: '10px', alignItems: 'start', alignContent: 'start', minWidth: '0' });
     this.main.className = 'matrix-scroll';
     Object.assign(this.main.style, { gridColumn: '1', gridRow: '1', minWidth: '0', minHeight: '0', height: descriptor.rank === 2 ? 'var(--matrix-height)' : 'auto', overflowY: 'scroll', overscrollBehavior: 'contain' });
     this.main.setAttribute('role', 'region');
@@ -42,8 +44,6 @@ export class MatrixViewport {
     this.main.tabIndex = 0;
     this.rowHost.className = 'row-distributions';
     this.columnHost.className = 'column-distributions';
-    Object.assign(this.rowHost.style, { gridColumn: '2', gridRow: '1' });
-    Object.assign(this.columnHost.style, { gridColumn: '1', gridRow: '2' });
     host.append(this.main);
     // Auto height includes native horizontal scrollbar chrome in addition to the
     // intrinsic data extent. A fixed data-height border box can hide a short strip.
@@ -54,7 +54,7 @@ export class MatrixViewport {
         for (const [panel, label] of [[this.rowHost, 'Row distributions'], [this.columnHost, 'Column distributions']] as const) {
           const canvas = document.createElement('canvas');
           canvas.setAttribute('aria-label', label);
-          Object.assign(panel.style, { position: 'relative', overflow: 'hidden' });
+          Object.assign(panel.style, { position: 'absolute', overflow: 'hidden' });
           Object.assign(canvas.style, { position: 'absolute', display: 'block' });
           panel.append(canvas);
           host.append(panel);
@@ -64,8 +64,10 @@ export class MatrixViewport {
         this.rowScale = new DistributionScale('rows', this.rowHost);
         this.columnScale = new DistributionScale('columns', this.columnHost);
         host.append(this.rowScale.ruler, this.columnScale.ruler);
-        this.main.style.gridRow = this.rowHost.style.gridRow = '2';
-        this.columnHost.style.gridRow = '3';
+        this.main.style.gridRow = '2';
+        for (const ruler of [this.rowScale.ruler, this.columnScale.ruler]) {
+          Object.assign(ruler.style, { position: 'absolute', gridColumn: 'auto', gridRow: 'auto' });
+        }
       }
       const layout = () => {
         const dpr = window.devicePixelRatio;
@@ -96,6 +98,7 @@ export class MatrixViewport {
       if (descriptor.rank === 2 && options.onInspection) this.inspection = new MatrixInspection(this, options.onInspection);
       if (descriptor.rank === 2 && descriptor.numel > 0) this.zoomSelection = new MatrixZoomSelection(this,
         (active) => this.inspection?.suspend(active));
+      if (descriptor.rank === 2 && descriptor.numel > 0) this.cameraNavigation = new MatrixCameraNavigation(this);
       this.observer = new ResizeObserver(() => { layout(); this.matrix.refresh(); });
       this.observer.observe(host);
     } catch (error) {
@@ -109,6 +112,24 @@ export class MatrixViewport {
 
   private align(view: ViewGeometry) {
     if (!this.rows || !this.columns) return;
+    // Keep the full native scroll viewport, but attach profiles and their rulers
+    // to the actual visible matrix. Underfilled axes share its centered offset.
+    // During TensorViewport construction its callback precedes field assignment.
+    const canvas = this.main.querySelector('canvas')!;
+    const matrix = canvas.getBoundingClientRect();
+    const pane = this.host.getBoundingClientRect();
+    const gap = parseFloat(getComputedStyle(this.host).columnGap);
+    const rowGap = parseFloat(getComputedStyle(this.host).rowGap);
+    const gutterX = view.width >= Math.floor(this.main.clientWidth * view.dpr) ? this.main.offsetWidth - this.main.clientWidth : 0;
+    const gutterY = view.height >= Math.floor(this.main.clientHeight * view.dpr) ? this.main.offsetHeight - this.main.clientHeight : 0;
+    const left = matrix.left - pane.left - this.host.clientLeft;
+    const top = matrix.top - pane.top - this.host.clientTop;
+    const right = left + view.cssWidth + gap + gutterX;
+    const bottom = top + view.cssHeight + rowGap + gutterY;
+    Object.assign(this.rowHost.style, { left: `${right}px`, top: `${top}px` });
+    Object.assign(this.columnHost.style, { left: `${left}px`, top: `${bottom}px` });
+    Object.assign(this.rowScale!.ruler.style, { left: `${right}px`, top: `${top - rowGap - this.rowScale!.ruler.offsetHeight}px`, width: `${100 / view.dpr}px` });
+    Object.assign(this.columnScale!.ruler.style, { left: `${right}px`, top: `${bottom}px`, width: `${100 / view.dpr}px` });
     const pairs = [
       [this.rows, this.rowHost, 100 / view.dpr, view.cssHeight, 0, view.y * view.scaleY / view.dpr, 1, view.scaleY],
       [this.columns, this.columnHost, view.cssWidth, 100 / view.dpr, view.x * view.scaleX / view.dpr, 0, view.scaleX, 1],
@@ -120,8 +141,13 @@ export class MatrixViewport {
       const rect = host.getBoundingClientRect();
       renderer.canvas.style.left = `${Math.round(rect.left * view.dpr) / view.dpr - rect.left}px`;
       renderer.canvas.style.top = `${Math.round(rect.top * view.dpr) / view.dpr - rect.top}px`;
-      if (renderer === this.rows) this.rowScale?.alignBinAxis(renderer.canvas.style.left);
-      else this.columnScale?.alignBinAxis(renderer.canvas.style.top);
+      if (renderer === this.rows) {
+        this.rowScale?.alignBinAxis(renderer.canvas.style.left);
+        this.rowScale!.ruler.style.left = `${right + parseFloat(renderer.canvas.style.left)}px`;
+      } else {
+        this.columnScale?.alignBinAxis(renderer.canvas.style.top);
+        this.columnScale!.ruler.style.top = `${bottom + parseFloat(renderer.canvas.style.top)}px`;
+      }
       const panelView = renderer.setView(width, height, x, y, view.dpr, scaleX, scaleY);
       renderer.canvas.dataset.origin = `${panelView.x},${panelView.y}`;
       renderer.draw();
@@ -148,6 +174,7 @@ export class MatrixViewport {
     this.disposed = true;
     this.observer.disconnect();
     this.zoomSelection?.dispose();
+    this.cameraNavigation?.dispose();
     this.inspection?.dispose();
     this.matrix.dispose();
     this.rows?.dispose();

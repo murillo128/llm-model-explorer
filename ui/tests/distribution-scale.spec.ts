@@ -135,7 +135,11 @@ for (const fixture of cases) test(`${fixture.name}: authoritative domain, bin pl
   }
   expect(drawing.guides.every(g => fixture.zero === null ? g.hidden : !g.hidden && g.position === `${fixture.zero * 100}%`)).toBe(true);
   if (fixture.zero !== null) for (const guide of drawing.guides) expect(guide.fraction).toBeCloseTo(fixture.zero, 4);
-  const before = await scales.evaluateAll(elements => elements.map(e => e.outerHTML));
+  const domainMarkup = () => scales.evaluateAll(elements => elements.map(e => ({
+    label: e.getAttribute('aria-label'), minimum: e.getAttribute('data-minimum'), maximum: e.getAttribute('data-maximum'),
+    ticks: e.innerHTML, zero: (e as HTMLElement).style.getPropertyValue('--distribution-zero'),
+  })));
+  const before = await domainMarkup();
   // Late robust statistics can alter weight luminosity, never the full bin domain.
   await page.evaluate((fixture) => {
     const f = window.explorerFixture;
@@ -155,7 +159,9 @@ for (const fixture of cases) test(`${fixture.name}: authoritative domain, bin pl
   await page.locator('.matrix-scroll').focus();
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('Escape');
-  expect(await scales.evaluateAll(elements => elements.map(e => e.outerHTML))).toEqual(before);
+  // Escape can restore the prior camera, moving attached rulers. Their numeric
+  // domain and ticks remain authoritative and independent of that presentation.
+  expect(await domainMarkup()).toEqual(before);
   expect(await page.evaluate(() => window.explorerFixture.metrics.uploads)).toBe(drawing.uploads);
 });
 

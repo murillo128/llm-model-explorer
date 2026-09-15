@@ -14,6 +14,7 @@ export interface Inspection extends Selection {
   readonly magnifier: boolean;
   readonly width: number;
   readonly draw: (canvas: HTMLCanvasElement) => void;
+  readonly onReadoutResize?: (height: number) => void;
 }
 
 /** Native-coordinate interaction, independent of React and transport. */
@@ -24,6 +25,10 @@ export class MatrixInspection {
   private disposed = false;
   private suspended = false;
   private showMagnifier = true;
+  private layoutKey = '';
+  private animationFrame: number | undefined;
+  private measuredReadout: { key: string; height: number } | undefined;
+  private readoutKey = '';
   constructor(private readonly viewport: MatrixViewport, private readonly changed: (value: Inspection | null) => void) {
     const { canvas, host } = viewport.matrix;
     canvas.classList.add('matrix-inspectable');
@@ -51,7 +56,6 @@ export class MatrixInspection {
     if (view) { this.cell = { row: Math.floor(view.y), column: Math.floor(view.x) }; this.refresh(); }
   };
   private key = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') { this.leave(); return; }
     const step = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[event.key];
     if (!step) return;
     event.preventDefault();
@@ -94,13 +98,34 @@ export class MatrixInspection {
     this.refresh();
   }
 
+  private layout() {
+    const rect = this.viewport.matrix.canvas.getBoundingClientRect();
+    const pane = this.viewport.host.getBoundingClientRect();
+    const panels = [this.viewport.rows, this.viewport.columns].flatMap((panel) =>
+      panel ? [panel.canvas.parentElement!.getBoundingClientRect()] : []);
+    return { rect, pane, panels, key: [window.innerWidth, window.innerHeight, window.devicePixelRatio,
+      ...[rect, pane, ...panels].flatMap((r) => [r.left, r.top, r.right, r.bottom])].join(',') };
+  }
+
+  private watchLayout = () => {
+    this.animationFrame = undefined;
+    if (this.disposed || this.suspended || !this.cell) return;
+    // ResizeObserver cannot detect a translated ancestor or layout shifts that
+    // preserve dimensions. Measure only while inspecting and redraw on change.
+    if (this.layout().key !== this.layoutKey) this.refresh();
+    if (this.cell && this.animationFrame === undefined) this.animationFrame = requestAnimationFrame(this.watchLayout);
+  };
+
   refresh() {
     if (this.disposed || this.suspended) return;
-    const { renderer, canvas } = this.viewport.matrix;
-    if (renderer.state !== 'ready' || renderer.view?.dpr !== window.devicePixelRatio) { this.leave(); return; }
+    const { renderer } = this.viewport.matrix;
+    if (renderer.state !== 'ready') { this.leave(); return; }
+    // The viewport's DPR notification will rebuild geometry and refresh us.
+    if (renderer.view?.dpr !== window.devicePixelRatio) return;
     const cellSize = renderer.view!.scaleX / renderer.view!.dpr;
     this.showMagnifier = magnifierVisible(this.showMagnifier, cellSize);
-    const rect = canvas.getBoundingClientRect();
+    const { rect, pane, panels, key } = this.layout();
+    this.layoutKey = key;
     if (this.pointer) this.cell = renderer.cellAt(this.pointer.x - rect.left, this.pointer.y - rect.top);
     if (!this.cell) { this.leave(); return; }
     const { row, column } = this.cell;
@@ -110,20 +135,32 @@ export class MatrixInspection {
     const view = renderer.view!;
     const x = this.pointer?.x ?? rect.left + (column - view.x + 0.5) * view.scaleX / view.dpr;
     const y = this.pointer?.y ?? rect.top + (row - view.y + 0.5) * view.scaleY / view.dpr;
-    const pane = this.viewport.host.getBoundingClientRect();
     const bounds = { left: Math.max(0, pane.left), top: Math.max(0, pane.top),
       right: Math.min(window.innerWidth, pane.right), bottom: Math.min(window.innerHeight, pane.bottom) };
-    const panels = [this.viewport.rows, this.viewport.columns].flatMap((panel) =>
-      panel ? [panel.canvas.parentElement!.getBoundingClientRect()] : []);
+    const text = 'value' in value ? formatFloat32(value.value) : 'Unavailable — not received';
+    const contentKey = `${row},${column},${text},${Math.min(INSPECTION.width, bounds.right - bounds.left)}`;
+    this.readoutKey = contentKey;
+    const readoutHeight = this.measuredReadout?.key === contentKey ? this.measuredReadout.height : INSPECTION.readoutHeight;
+    if (this.animationFrame === undefined) this.animationFrame = requestAnimationFrame(this.watchLayout);
     let magnifier = this.showMagnifier;
-    let position = magnifier ? inspectionPosition(x, y, bounds, rect, panels, cellSize) : null;
+    let position = magnifier && bounds.right - bounds.left >= INSPECTION.width ?
+      inspectionPosition(x, y, bounds, rect, panels, cellSize, INSPECTION.height - INSPECTION.readoutHeight + readoutHeight) : null;
     if (!position) {
       magnifier = false;
-      position = inspectionPosition(x, y, bounds, rect, panels, cellSize, INSPECTION.readoutHeight);
+      position = inspectionPosition(x, y, bounds, rect, panels, cellSize, readoutHeight);
     }
     if (!position) { this.changed(null); return; }
-    this.changed({ row, column, magnifier, value: 'value' in value ? formatFloat32(value.value) : 'Unavailable — not received',
+    this.changed({ row, column, magnifier, value: text,
       ...position,
+      onReadoutResize: (height) => {
+        // A queued observer may belong to a replaced cell/source or old width.
+        if (this.disposed || this.readoutKey !== contentKey || this.cell?.row !== row || this.cell.column !== column ||
+          !Number.isFinite(height) || height <= 0) return;
+        const measured = Math.max(INSPECTION.readoutHeight, Math.ceil(height));
+        if (this.measuredReadout?.key === contentKey && this.measuredReadout.height === measured) return;
+        this.measuredReadout = { key: contentKey, height: measured };
+        if (measured !== readoutHeight) this.refresh();
+      },
       draw: (target) => {
         // A queued React render cannot read a disposed/replaced/lost tensor.
         if (this.disposed || renderer.state !== 'ready' || this.cell?.row !== row || this.cell.column !== column) return;
@@ -138,6 +175,8 @@ export class MatrixInspection {
   clear = () => { this.leave(); };
   suspend(active: boolean) { this.suspended = active; if (active) this.clear(); }
   private leave = () => {
+    if (this.animationFrame !== undefined) cancelAnimationFrame(this.animationFrame);
+    this.animationFrame = undefined;
     this.pointer = null;
     this.cell = null;
     this.select(null);

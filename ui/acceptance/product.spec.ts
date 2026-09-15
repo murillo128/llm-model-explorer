@@ -729,6 +729,93 @@ test('integrated inventory preferences and metadata preserve streaming panel geo
   await closeSession(page);
 });
 
+test('production matrix navigation centers underfilled data and links zoom selection across attached profiles', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page, 'layout.fits.weight'); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await nativeCamera(page);
+  const before = await camera(page, 32, 32), resources = await metrics(page);
+  expect(before.scaleX).toBe(1); expect(before.scaleY).toBe(1);
+  const geometry = () => page.evaluate(() => {
+    const host = document.querySelector<HTMLElement>('.matrix-scroll')!;
+    const scientific = document.querySelector<HTMLElement>('.matrix-surfaces')!;
+    const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
+    const h = host.getBoundingClientRect(), style = getComputedStyle(scientific);
+    return { matrix: box('.matrix-scroll canvas'), rows: box('.row-distributions canvas'), columns: box('.column-distributions canvas'),
+      viewport: { left: h.left + host.clientLeft, top: h.top + host.clientTop, width: host.clientWidth, height: host.clientHeight },
+      scroll: { width: host.scrollWidth, height: host.scrollHeight }, gap: { x: parseFloat(style.columnGap), y: parseFloat(style.rowGap) } };
+  });
+  const underfilled = await geometry();
+  expect(underfilled.matrix.width * before.dpr).toBe(32);
+  expect(underfilled.matrix.height * before.dpr).toBe(32);
+  expect(underfilled.viewport.width).toBeGreaterThan(underfilled.matrix.width * 10);
+  expect(underfilled.viewport.height).toBeGreaterThan(underfilled.matrix.height * 10);
+  for (const [axis, size] of [['left', 'width'], ['top', 'height']] as const) {
+    const centered = underfilled.viewport[axis] + (underfilled.viewport[size] - underfilled.matrix[size]) / 2;
+    expect(Math.abs(underfilled.matrix[axis] - centered)).toBeLessThanOrEqual(1 / before.dpr);
+    expect(underfilled.scroll[size]).toBe(underfilled.viewport[size]);
+  }
+  expect(underfilled.rows.top).toBe(underfilled.matrix.top);
+  expect(underfilled.rows.height).toBe(underfilled.matrix.height);
+  expect(underfilled.columns.left).toBe(underfilled.matrix.left);
+  expect(underfilled.columns.width).toBe(underfilled.matrix.width);
+  expect(underfilled.rows.left - underfilled.matrix.right).toBeCloseTo(underfilled.gap.x, 1);
+  expect(underfilled.columns.top - underfilled.matrix.bottom).toBeCloseTo(underfilled.gap.y, 1);
+  expect(underfilled.rows.width * before.dpr).toBe(100);
+  expect(underfilled.columns.height * before.dpr).toBe(100);
+  await page.mouse.move(0, 0);
+  if (process.env.CAPTURE_MATRIX_NAVIGATION_EVIDENCE === '1' && testInfo.project.name === 'dpr1') {
+    await page.screenshot({ path: 'evidence/matrix-navigation-underfilled.png' });
+  }
+  const point = (c: typeof before, column: number, row: number) => ({
+    x: c.rect.left + (column - c.x) * c.scaleX / c.dpr,
+    y: c.rect.top + (row - c.y) * c.scaleY / c.dpr,
+  });
+  const bounds = { columns: [4, 24], rows: [8, 24] };
+  const previews = page.locator('.matrix-zoom-preview');
+  const expectPreview = async (selection: typeof bounds) => {
+    await expect(previews).toHaveCount(3);
+    await expect(page.locator('.matrix-zoom-preview[data-surface=matrix]')).toHaveAttribute('data-bounds', JSON.stringify(selection));
+    for (const axis of ['rows', 'columns'] as const) {
+      await expect(page.locator(`.matrix-zoom-preview[data-surface=${axis}]`)).toHaveAttribute('data-bounds', JSON.stringify({ [axis]: selection[axis] }));
+    }
+    const m = (await page.locator('.matrix-zoom-preview[data-surface=matrix]').boundingBox())!;
+    const r = (await page.locator('.matrix-zoom-preview[data-surface=rows]').boundingBox())!;
+    const c = (await page.locator('.matrix-zoom-preview[data-surface=columns]').boundingBox())!;
+    expect(r.y).toBeCloseTo(m.y, 1); expect(r.height).toBeCloseTo(m.height, 1);
+    expect(c.x).toBeCloseTo(m.x, 1); expect(c.width).toBeCloseTo(m.width, 1);
+  };
+  await drag(page, point(before, 4, 8), point(before, 24, 24));
+  await expectPreview(bounds);
+  await page.mouse.up(); await expect(previews).toHaveCount(0);
+  const selected = await camera(page, 32, 32), zoomed = await geometry();
+  expect(selected.scaleX).toBeCloseTo(Math.min(selected.width * before.dpr / 20, selected.height * before.dpr / 16));
+  expect(selected.scaleY).toBe(selected.scaleX);
+  await expect(page.locator('.row-distributions canvas')).toHaveAttribute('data-origin', `0,${selected.y}`);
+  await expect(page.locator('.column-distributions canvas')).toHaveAttribute('data-origin', `${selected.x},0`);
+  // A second preview proves synchronized bounds on the enlarged view. Escape
+  // cancels this transient range first; the next Escape restores the prior camera.
+  const inner = { columns: [8, 20], rows: [10, 22] };
+  await drag(page, point(selected, 8, 10), point(selected, 20, 22));
+  await expectPreview(inner);
+  if (process.env.CAPTURE_MATRIX_NAVIGATION_EVIDENCE === '1' && testInfo.project.name === 'dpr1') {
+    await page.screenshot({ path: 'evidence/matrix-navigation-zoomed.png' });
+  }
+  await page.keyboard.press('Escape'); await page.mouse.up();
+  await expect(previews).toHaveCount(0);
+  expect(await camera(page, 32, 32)).toEqual(selected);
+  await page.locator('.matrix-scroll').focus();
+  await page.keyboard.press('Escape');
+  expect(await camera(page, 32, 32)).toEqual(before);
+  await drag(page, point(before, 4, 8), point(before, 24, 24)); await page.mouse.up();
+  await page.locator('.matrix-scroll canvas').click({ button: 'right', position: { x: 10, y: 10 } });
+  expect(await camera(page, 32, 32)).toEqual(before);
+  expect(await metrics(page)).toMatchObject({ uploads: resources.uploads, createdTextures: resources.createdTextures, gpuBytes: resources.gpuBytes, errors: [] });
+  await testInfo.attach('matrix-navigation-geometry', { body: JSON.stringify({ underfilled, zoomed, bounds, selected, resources: await metrics(page) }, null, 2), contentType: 'application/json' });
+  await documentFits(page);
+  await closeSession(page);
+});
+
 test('integrated camera gestures, exact selection, aligned scales and adaptive inspection retain scalar storage', async ({ page }, testInfo) => {
   await open(page, 'layout.fits.weight'); await complete(page);
   await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
@@ -766,8 +853,8 @@ test('integrated camera gestures, exact selection, aligned scales and adaptive i
     await drag(page, { x: box.x + 12, y: box.y + 12 },
       { x: box.x + (axis === 'rows' ? 12 : 72), y: box.y + (axis === 'columns' ? 12 : 42) });
     const bounds = axis === 'matrix' ? { columns: [2, 12], rows: [2, 7] } : { [axis]: [2, axis === 'rows' ? 7 : 12] };
-    await expect(page.locator('.matrix-zoom-preview')).toHaveAttribute('data-bounds', JSON.stringify(bounds));
-    expect(await page.locator('.matrix-zoom-preview').evaluate(n => getComputedStyle(n).borderTopColor)).toBe('rgb(245, 154, 56)');
+    await expect(page.locator('.matrix-zoom-preview[data-surface=matrix]')).toHaveAttribute('data-bounds', JSON.stringify(bounds));
+    expect(await page.locator('.matrix-zoom-preview[data-surface=matrix]').evaluate(n => getComputedStyle(n).borderTopColor)).toBe('rgb(245, 154, 56)');
     expect((await camera(page, 576, 1536)).scaleX).toBeCloseTo(c.scaleX);
     await page.mouse.up(); await expect(page.locator('.matrix-zoom-preview')).toHaveCount(0);
     const selected = await camera(page, 576, 1536);

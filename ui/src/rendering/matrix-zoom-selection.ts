@@ -5,27 +5,30 @@ import type { MatrixViewport } from './matrix-viewport';
 import { selectionBoundary } from './zoom-selection-geometry';
 import type { ZoomBounds } from './zoom-selection-geometry';
 
-type Surface = { renderer: GridRenderer; axis?: 'rows' | 'columns' };
+type Surface = { renderer: GridRenderer; axis?: 'rows' | 'columns'; overlay: HTMLDivElement };
 type Gesture = { surface: Surface; id: number; x: number; y: number; view: ViewGeometry;
-  startColumn: number; startRow: number; bounds: ZoomBounds; active: boolean };
+  viewportWidth: number; viewportHeight: number; startColumn: number; startRow: number; bounds: ZoomBounds; active: boolean };
 
 /** Transient view navigation; never touches scalar/count storage. */
 export class MatrixZoomSelection {
   private readonly surfaces: Surface[];
   private gesture: Gesture | null = null;
   private readonly touches = new Set<number>();
-  private readonly overlay = document.createElement('div');
   private suppressClick = false;
   private readonly previousTouch: string[];
 
   constructor(private readonly viewport: MatrixViewport, private readonly suspendInspection: (active: boolean) => void) {
-    this.surfaces = [{ renderer: viewport.matrix.renderer },
+    this.surfaces = ([{ renderer: viewport.matrix.renderer },
       ...(viewport.rows ? [{ renderer: viewport.rows, axis: 'rows' as const }] : []),
-      ...(viewport.columns ? [{ renderer: viewport.columns, axis: 'columns' as const }] : [])];
-    this.overlay.className = 'matrix-zoom-preview';
-    this.overlay.setAttribute('aria-hidden', 'true');
-    Object.assign(this.overlay.style, { position: 'absolute', pointerEvents: 'none', boxSizing: 'border-box',
-      border: '1px solid #f59a38', background: 'rgba(245, 154, 56, 0.08)', zIndex: '1' });
+      ...(viewport.columns ? [{ renderer: viewport.columns, axis: 'columns' as const }] : [])] as Omit<Surface, 'overlay'>[])
+      .map((surface) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'matrix-zoom-preview';
+        overlay.dataset.surface = surface.axis ?? 'matrix';
+        overlay.setAttribute('aria-hidden', 'true');
+        Object.assign(overlay.style, { position: 'absolute', pointerEvents: 'none', boxSizing: 'border-box', zIndex: '1' });
+        return { ...surface, overlay };
+      });
     this.previousTouch = this.surfaces.map(({ renderer }) => renderer.canvas.style.touchAction);
     for (const { renderer } of this.surfaces) {
       // Keep native scrollbars available; a one-finger data-surface drag is selection.
@@ -67,6 +70,7 @@ export class MatrixZoomSelection {
     if (!surface.renderer.cellAt(event.clientX - rect.left, event.clientY - rect.top)) return;
     const { columns, rows } = this.viewport.matrix.renderer.geometry;
     this.gesture = { surface, id: event.pointerId, x: event.clientX, y: event.clientY, view,
+      viewportWidth: this.viewport.matrix.host.clientWidth, viewportHeight: this.viewport.matrix.host.clientHeight,
       startColumn: selectionBoundary(view, event.clientX - rect.left, 'columns', columns),
       startRow: selectionBoundary(view, event.clientY - rect.top, 'rows', rows), bounds: {}, active: false };
     surface.renderer.canvas.setPointerCapture(event.pointerId);
@@ -81,7 +85,6 @@ export class MatrixZoomSelection {
       g.active = true;
       this.suppressClick = true;
       this.suspendInspection(true);
-      g.surface.renderer.canvas.parentElement!.append(this.overlay);
     }
     event.preventDefault();
     event.stopPropagation();
@@ -93,16 +96,35 @@ export class MatrixZoomSelection {
       ...(g.surface.axis !== 'rows' ? { columns: [Math.min(column, g.startColumn), Math.max(column, g.startColumn)] as const } : {}),
       ...(g.surface.axis !== 'columns' ? { rows: [Math.min(row, g.startRow), Math.max(row, g.startRow)] as const } : {}),
     };
-    this.overlay.dataset.bounds = JSON.stringify(g.bounds);
-    const v = g.view;
-    const left = g.bounds.columns ? rasterEdge(g.bounds.columns[0], v.x, v.scaleX) / v.dpr : 0;
-    const right = g.bounds.columns ? rasterEdge(g.bounds.columns[1], v.x, v.scaleX) / v.dpr : v.cssWidth;
-    const top = g.bounds.rows ? rasterEdge(g.bounds.rows[0], v.y, v.scaleY) / v.dpr : 0;
-    const bottom = g.bounds.rows ? rasterEdge(g.bounds.rows[1], v.y, v.scaleY) / v.dpr : v.cssHeight;
-    Object.assign(this.overlay.style, { left: `${parseFloat(g.surface.renderer.canvas.style.left || '0') + left}px`,
-      top: `${parseFloat(g.surface.renderer.canvas.style.top || '0') + top}px`,
-      width: `${right - left}px`, height: `${bottom - top}px` });
+    this.preview(g.bounds);
   };
+
+  private preview(bounds: ZoomBounds) {
+    for (const { renderer, axis, overlay } of this.surfaces) {
+      const v = renderer.view;
+      const projected = axis ? bounds[axis] && { [axis]: bounds[axis] } : bounds;
+      if (!v || renderer.state !== 'ready' || !projected) { overlay.remove(); continue; }
+      const span = (range: readonly [number, number] | undefined, origin: number, scale: number, extent: number) => {
+        if (!range) return [0, extent] as const;
+        let start = rasterEdge(range[0], origin, scale), end = rasterEdge(range[1], origin, scale);
+        // Match the exact centered, one-device-pixel single-cell inspection guide.
+        if (range[1] - range[0] === 1) { start = Math.floor((start + end) / 2); end = start + 1; }
+        return [Math.max(0, Math.min(extent, start)), Math.max(0, Math.min(extent, end))] as const;
+      };
+      const [left, right] = span(projected.columns, v.x, v.scaleX, v.width);
+      const [top, bottom] = span(projected.rows, v.y, v.scaleY, v.height);
+      const thin = Object.values(projected).some((range) => range[1] - range[0] === 1);
+      overlay.dataset.bounds = JSON.stringify(projected);
+      Object.assign(overlay.style, {
+        left: `${parseFloat(renderer.canvas.style.left || '0') + left / v.dpr}px`,
+        top: `${parseFloat(renderer.canvas.style.top || '0') + top / v.dpr}px`,
+        width: `${(right - left) / v.dpr}px`, height: `${(bottom - top) / v.dpr}px`,
+        border: thin ? 'none' : `${1 / v.dpr}px solid #f59a38`,
+        background: thin ? 'rgba(245, 154, 56, 0.65)' : 'rgba(245, 154, 56, 0.08)',
+      });
+      renderer.canvas.parentElement!.append(overlay);
+    }
+  }
   private up = (event: PointerEvent) => {
     if (this.gesture?.id !== event.pointerId) return;
     this.move(event); // Include the final release position even without a last move.
@@ -121,20 +143,22 @@ export class MatrixZoomSelection {
   private cancelPointer = (event: PointerEvent) => { if (this.gesture?.id === event.pointerId) this.cancel(); };
   private key = (event: KeyboardEvent) => {
     if (event.key !== 'Escape' || !this.gesture) return;
-    event.preventDefault(); event.stopPropagation(); this.cancel();
+    event.preventDefault(); event.stopImmediatePropagation(); this.cancel();
   };
   cancel = () => {
     const g = this.gesture;
     this.gesture = null;
-    this.overlay.remove();
+    this.surfaces.forEach(({ overlay }) => overlay.remove());
     if (g?.active) this.suspendInspection(false);
     if (g && g.surface.renderer.canvas.hasPointerCapture(g.id)) g.surface.renderer.canvas.releasePointerCapture(g.id);
   };
 
-  /** A changed camera invalidates a gesture; progressive uploads alone do not. */
+  /** Camera/viewport changes invalidate a gesture; progressive uploads alone do not. */
   refresh() {
     const g = this.gesture, view = g?.surface.renderer.view;
-    if (g && (!view || (['x', 'y', 'scaleX', 'scaleY', 'dpr', 'width', 'height'] as const)
+    // Underfilled data can move within a resized viewport without changing view.
+    if (g && (this.viewport.matrix.host.clientWidth !== g.viewportWidth ||
+      this.viewport.matrix.host.clientHeight !== g.viewportHeight || !view || (['x', 'y', 'scaleX', 'scaleY', 'dpr', 'width', 'height'] as const)
       .some((key) => view[key] !== g.view[key]))) this.cancel();
   }
 
