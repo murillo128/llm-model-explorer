@@ -95,7 +95,10 @@ reference runs remain separate from those deterministic browser results.
 Using the repository-locked Python 3.12 / PyTorch 2.14 CPU and Node 24.14 environments:
 
 - Backend Ruff/format/mypy pass; full backend suite: **1,057 passed, 19 skipped**
-  (CUDA unavailable).
+  (CUDA unavailable). A final diagnostic-length correction then passed **107
+  focused model/flow tests**, including two new oversized-name regressions, plus
+  focused Ruff/format/mypy. Long unresolved names retain their module prefix and
+  storage suffix without exceeding the published diagnostic-text bound.
 - API validation: **283 references, 88 instance cases, 144 architecture cases,
   76 wire fixtures**; regeneration is reproducible. UI generated bindings remain
   unchanged.

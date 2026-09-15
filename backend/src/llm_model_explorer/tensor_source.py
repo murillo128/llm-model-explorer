@@ -167,6 +167,11 @@ class ModelSource:
             )
         }
         unresolved = [item.name for item in self._physical if item.name not in accounted]
+        # Safetensors names can exceed the API's diagnostic-text bound. Retain
+        # both the module prefix and storage suffix for a useful bounded message.
+        diagnostic_names = [
+            name if len(name) <= 1024 else name[:512] + "…" + name[-512:] for name in unresolved
+        ]
         return {
             "tensors": [tensor.model_dump(mode="json") for tensor in tensors],
             "coverage": "partial" if unresolved else "complete",
@@ -175,7 +180,7 @@ class ModelSource:
                     "code": "unsupported_representation",
                     "message": f"No verified logical tensor or encoding group owns storage {name}.",
                 }
-                for name in unresolved
+                for name in diagnostic_names
             ],
         }
 

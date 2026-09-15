@@ -126,6 +126,25 @@ def test_rows_keep_requested_order_duplicates_and_unaligned_chunks(
         assert raised.value.code == "validation_error"
 
 
+def test_long_unknown_name_keeps_inventory_diagnostic_within_api_contract(
+    settings: Settings, packed: PackedFixture
+) -> None:
+    name = "unknown." + "module." * 3000 + "region"
+    unknown = Stored(name, "I32", (1,), struct.pack("<i", 1))
+    replace(packed, storage=(*packed.storage, unknown)).write(settings.model_root, split=True)
+    with TestClient(create_app(settings)) as client:
+        session = client.post("/sessions", json={"model_id": "numeric"}).json()
+        response = client.get(f"/sessions/{session['id']}/tensors")
+        assert response.status_code == 200
+        inventory = response.json()
+        assert inventory["coverage"] == "partial"
+        assert [tensor["name"] for tensor in inventory["tensors"]] == [packed.name]
+        (diagnostic,) = inventory["diagnostics"]
+        # InventoryDiagnostic.message uses ArchitectureText's published maxLength.
+        assert 0 < len(diagnostic["message"]) <= 16_384
+        assert "unknown." in diagnostic["message"] and "region" in diagnostic["message"]
+
+
 def test_http_data_statistics_histograms_and_persistent_warm_reuse(
     settings: Settings, packed: PackedFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
