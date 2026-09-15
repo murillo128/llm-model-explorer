@@ -183,6 +183,25 @@ The concatenated `DATA` stream is the concatenation of those two sections. Indiv
 
 The binning algorithm and finite/non-finite handling are normative in `contract.md`.
 
+## Input-embedding analysis results
+
+`input_embeddings_statistics` uses `InputEmbeddingsStatisticsMetadata`: exact ordered
+`token_ids`, shape `[token_ids.length, hidden_size]`, and the tensor-statistics fields
+above, with count equal to the shape product and zero byte length. It has no
+checkpoint ID/name and rejects every DATA frame. Its numeric definitions are the
+same as tensor statistics over the complete requested float32 matrix.
+
+`input_embeddings_distributions` uses `InputEmbeddingsDistributionsMetadata`: exact
+ordered `token_ids` in place of `tensor_id`, with `rows == token_ids.length` and positive
+`columns == hidden_size`. All other distribution metadata and binary section rules
+above apply unchanged. Duplicate token positions remain distinct rows and contribute
+repeated counts to columns. Empty input retains the all-zero `[100, hidden_size]`
+column section and a null domain.
+
+Both results retain the existing 1 MiB control limit, four-byte DATA alignment,
+request identity validation and common ERROR/CANCELLED/COMPLETE behavior. Only
+successful validation through body EOF establishes a complete auxiliary result.
+
 ## Progress result
 
 `PROGRESS_JSON` is optional and advisory, and validates against `StreamProgress` in `openapi.yaml`. Its UTF-8 JSON payload has:

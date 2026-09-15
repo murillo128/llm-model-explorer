@@ -150,6 +150,67 @@ def _count_bytes(counts: torch.Tensor) -> bytes:
     return raw
 
 
+def statistics_fields(raw: bytes) -> dict[str, object]:
+    count, finite, nonfinite, *scalars = STATISTICS.unpack(raw)
+    fields = [None if finite == 0 else value for value in scalars]
+    return dict(
+        count=count,
+        finite_count=finite,
+        non_finite_count=nonfinite,
+        minimum=fields[0],
+        maximum=fields[1],
+        mean=fields[2],
+        stddev=fields[3],
+        percentiles=dict(zip(PERCENTILES, fields[4:], strict=True)),
+        byte_length=0,
+    )
+
+
+def distribution_fields(raw: bytes, rows: int, columns: int) -> dict[str, object]:
+    lo, hi = DOMAIN.unpack(raw)
+    row_bytes, column_bytes = rows * BIN_COUNT * 4, columns * BIN_COUNT * 4
+    return dict(
+        rows=rows,
+        columns=columns,
+        bin_count=BIN_COUNT,
+        binning="linear-full-range",
+        domain_minimum=None if math.isnan(lo) else lo,
+        domain_maximum=None if math.isnan(hi) else hi,
+        dtype="uint32",
+        byte_order="little",
+        sections=[
+            dict(name="row_counts", shape=[rows, BIN_COUNT], offset=0, byte_length=row_bytes),
+            dict(
+                name="column_counts",
+                shape=[BIN_COUNT, columns],
+                offset=row_bytes,
+                byte_length=column_bytes,
+            ),
+        ],
+        byte_length=row_bytes + column_bytes,
+    )
+
+
+def calculate(
+    values: torch.Tensor,
+    kind: Kind,
+    shape: tuple[int, ...],
+    device: str,
+    cancellation: Cancellation,
+) -> tuple[bytes, torch.Tensor | None]:
+    try:
+        values = values.to(device)
+        cancellation.check()
+        if kind == "tensor_statistics":
+            return statistics(values, cancellation), None
+        rows, columns = shape
+        return distributions(values, rows, columns, cancellation)
+    finally:
+        # The queue slot owns all kernels, including cancellation/error paths.
+        if device != "cpu":
+            torch.cuda.synchronize(device)
+
+
 @dataclass(frozen=True)
 class TensorAnalysis:
     tensor: LogicalTensor
@@ -160,18 +221,13 @@ class TensorAnalysis:
     def _calculate(
         self, values: torch.Tensor, cancellation: Cancellation
     ) -> tuple[bytes, torch.Tensor | None]:
-        device = self.tensors.runtime.device
-        try:
-            values = values.to(device)
-            cancellation.check()
-            if self.kind == "tensor_statistics":
-                return statistics(values, cancellation), None
-            rows, columns = self.tensor.descriptor.shape
-            return distributions(values, rows, columns, cancellation)
-        finally:
-            # The queue slot owns all kernels, including cancellation/error paths.
-            if device != "cpu":
-                torch.cuda.synchronize(device)
+        return calculate(
+            values,
+            self.kind,
+            self.tensor.descriptor.shape,
+            self.tensors.runtime.device,
+            cancellation,
+        )
 
     async def produce(self, context: ProducerContext) -> None:
         try:
@@ -223,46 +279,10 @@ class TensorAnalysis:
             # Wait for publication before the metadata-only result succeeds.
             if await consumer.read():
                 raise ValueError("unexpected statistics payload")
-            count, finite, nonfinite, *scalars = STATISTICS.unpack(raw)
-            fields = [None if finite == 0 else value for value in scalars]
-            return dict(
-                kind=self.kind,
-                tensor_id=tensor_id,
-                count=count,
-                finite_count=finite,
-                non_finite_count=nonfinite,
-                minimum=fields[0],
-                maximum=fields[1],
-                mean=fields[2],
-                stddev=fields[3],
-                percentiles=dict(zip(PERCENTILES, fields[4:], strict=True)),
-                byte_length=0,
-            )
-        lo, hi = DOMAIN.unpack(raw)
-        rows, columns = self.tensor.descriptor.shape
-        row_bytes, column_bytes = rows * BIN_COUNT * 4, columns * BIN_COUNT * 4
-        return dict(
-            kind=self.kind,
-            tensor_id=tensor_id,
-            rows=rows,
-            columns=columns,
-            bin_count=BIN_COUNT,
-            binning="linear-full-range",
-            domain_minimum=None if math.isnan(lo) else lo,
-            domain_maximum=None if math.isnan(hi) else hi,
-            dtype="uint32",
-            byte_order="little",
-            sections=[
-                dict(name="row_counts", shape=[rows, BIN_COUNT], offset=0, byte_length=row_bytes),
-                dict(
-                    name="column_counts",
-                    shape=[BIN_COUNT, columns],
-                    offset=row_bytes,
-                    byte_length=column_bytes,
-                ),
-            ],
-            byte_length=row_bytes + column_bytes,
-        )
+            fields = statistics_fields(bytes(raw))
+        else:
+            fields = distribution_fields(bytes(raw), *self.tensor.descriptor.shape)
+        return dict(kind=self.kind, tensor_id=tensor_id, **fields)
 
 
 async def subscribe_analysis(

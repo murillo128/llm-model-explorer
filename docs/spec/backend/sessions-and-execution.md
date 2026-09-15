@@ -37,3 +37,19 @@ Equivalent operations requested by multiple sessions are deduplicated when they 
 Multiple sessions, disk reads, cache hits, tokenization requests, and HTTP streams may proceed concurrently after readiness. Expensive GPU work is serialized through one execution queue per GPU device. CPU and CUDA expose the same logical API result.
 
 Static architecture analysis performs no GPU computation and must not acquire or hold a GPU compute slot. Its blocking startup lifecycle is distinct from future inference pause/resume scheduling, which remains outside this increment.
+
+## Input embedding analysis lifetime
+
+Input-embedding values, statistics and distributions are independent cancellable
+consumers. Analysis gathers only the ordered requested float32 rows into one
+request-owned CPU buffer using bounded reads. It finishes the input dependency
+before acquiring the configured device queue, then reuses the existing native
+statistics and histogram kernels. Source checks guard gathering, computation,
+metadata and output delivery. CPU and CUDA retain the same mathematical contract.
+
+The temporary source buffer and any uint32 result buffer belong to the consumer.
+Cancellation, disconnect, session deletion and failures settle owned blocking work
+before closing readers and releasing buffers. Successful completion also releases
+them. These operations never publish per-prompt cache artifacts or retain token
+sequences as history. They introduce no new sharing or artifact lifecycle. An
+auxiliary failure leaves the independent value consumer usable.

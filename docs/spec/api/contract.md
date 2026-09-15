@@ -36,6 +36,8 @@ The currently published API includes the proof-of-concept operations and the acc
 | Stream row/column distributions | `GET /sessions/{session_id}/tensors/{tensor_id}/distributions` | Binary stream |
 | Tokenize text | `POST /sessions/{session_id}/tokenize` | JSON |
 | Look up input embeddings | `POST /sessions/{session_id}/embeddings` | Binary stream |
+| Analyze input embedding statistics | `POST /sessions/{session_id}/embeddings/statistics` | Binary stream |
+| Analyze input embedding row/column distributions | `POST /sessions/{session_id}/embeddings/distributions` | Binary stream |
 | Cancel long operation | `DELETE /operations/{operation_id}` | Empty |
 
 The published architecture addition is `GET /sessions/{session_id}/architecture` (`getArchitecture`), returning the prepared structural result under the [architecture contract](architecture-explorer.md#prepared-architecture-endpoint). It is read-only retrieval, not an analysis trigger or a numerical long operation. No generic operation endpoint is introduced.
@@ -140,7 +142,40 @@ Validate the entire request before emitting META/DATA: each ID is a nonnegative 
 
 Metadata uses `InputEmbeddingsMetadata` with exact ordered `token_ids` echo and shape, but no checkpoint `tensor_id` or `name`. Consumers check echoed IDs against the request/session before display; shape/length alone cannot detect stale data. IDs are control metadata; values are binary. If META exceeds the 1 MiB control-frame limit, reject `unsupported_size` before META/DATA; never truncate. Safe shape/product/byte limits apply before allocation.
 
-Reuse `BinaryStream`, `X-Operation-Id`, CORS exposure, `Cache-Control: no-store`, progressive delivery, independent cancellation, and terminal semantics. Share work only for the same model content and ordered IDs; cancellation preserves other consumers. No new public artifact/statistics/distribution endpoint for this derived matrix is introduced.
+Reuse `BinaryStream`, `X-Operation-Id`, CORS exposure, `Cache-Control: no-store`, progressive delivery, independent cancellation, and terminal semantics. Share work only for the same model content and ordered IDs; cancellation preserves other consumers. The two explicit analysis operations below provide derived statistics and distributions without introducing a public artifact registry.
+
+## Input embedding analysis
+
+`POST /sessions/{session_id}/embeddings/statistics` (`streamInputEmbeddingsStatistics`)
+and `POST /sessions/{session_id}/embeddings/distributions`
+(`streamInputEmbeddingsDistributions`) accept the same `InputEmbeddingsRequest`.
+They reuse the lookup's session binding, full ordered-ID validation, trustworthy
+input-table resolution, control-frame limit, errors, cancellation and source checks.
+Each is a separate long-operation consumer; auxiliary work must not delay value
+stream rendering or invalidate a usable value result.
+
+The source is exactly the derived float32 matrix with row `i` equal to input-table
+row `token_ids[i]`. Order and repeated positions are preserved. Statistics and
+column histograms include every duplicate position with its multiplicity. The
+finite domain, statistics and counts belong to this matrix, never the full vocabulary
+or output head. The definitions and tolerances in [Tensor statistics](#tensor-statistics)
+and [Row and column distributions](#row-and-column-distributions) apply unchanged.
+
+Statistics use kind `input_embeddings_statistics`, ordered `token_ids`, shape
+`[N, hidden_size]`, and the existing statistics fields, with `count == N * hidden_size`
+and `byte_length: 0`. No DATA frame is allowed, including an empty one.
+Distributions use kind `input_embeddings_distributions`, ordered `token_ids`,
+`rows: N`, positive `columns: hidden_size`, and the existing 100-bin domain and
+binary uint32 sections. Neither result manufactures a checkpoint `tensor_id` or `name`.
+Consumers validate the expected kind and exact ordered echo before exposing metadata
+or data, as well as safe dimensions/products/section lengths and terminal validity.
+
+Empty IDs are valid when hidden size is known: zero counts and null finite-derived
+statistics/domain, an empty row section and an all-zero `[100, hidden_size]` column
+section. Invalid/unsupported/unsafe inputs never yield a valid prefix. Oversized
+control metadata and unrepresentable sizes/counts use `unsupported_size`; allocation
+failures use `resource_exhausted`. Analysis uses request-owned temporary storage,
+not persistent per-prompt artifacts or a persisted token sequence.
 
 ## Long operations, sharing, and cancellation
 

@@ -70,7 +70,7 @@ explicitly ordered alphabet with no stochastic training.
 
 | Gate | Real application evidence |
 | --- | --- |
-| All eleven routes | Model/session/inventory/three tensor streams/tokenize/embeddings/cancel over TCP; CORS preflight and structured pre-stream errors |
+| Core exploration routes | Model/session/inventory/three tensor streams/tokenize/embeddings/cancel over TCP; CORS preflight and structured pre-stream errors |
 | Scientific correctness | Exact fixture float32 bytes; independent NumPy float64 statistics/percentiles and independently accumulated uint32 row/column counts |
 | Progressive delivery | Hold the real producer after its first flushed block; observe DATA and rendered pixels while publication is still impossible; distributions have their own barrier |
 | Sharing and cache | Two sessions, distinct public operation IDs, late join from byte zero, parked slow reader, one producer, warm reuse with identical key/digest/inode/mtime |

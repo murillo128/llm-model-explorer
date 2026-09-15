@@ -759,6 +759,317 @@
           }
         ]
       },
+      "InputEmbeddingsStatisticsMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "token_ids",
+          "shape",
+          "count",
+          "finite_count",
+          "non_finite_count",
+          "minimum",
+          "maximum",
+          "mean",
+          "stddev",
+          "percentiles",
+          "byte_length"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "input_embeddings_statistics"
+          },
+          "token_ids": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SafeInteger"
+            },
+            "description": "Exact ordered echo of the submitted token IDs."
+          },
+          "shape": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/SafeInteger"
+            },
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/SafeInteger"
+              },
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              }
+            ]
+          },
+          "count": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "finite_count": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "non_finite_count": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "minimum": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "maximum": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "mean": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "stddev": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "percentiles": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "p01",
+              "p05",
+              "p50",
+              "p95",
+              "p99"
+            ],
+            "properties": {
+              "p01": {
+                "$ref": "#/components/schemas/NullableFiniteNumber"
+              },
+              "p05": {
+                "$ref": "#/components/schemas/NullableFiniteNumber"
+              },
+              "p50": {
+                "$ref": "#/components/schemas/NullableFiniteNumber"
+              },
+              "p95": {
+                "$ref": "#/components/schemas/NullableFiniteNumber"
+              },
+              "p99": {
+                "$ref": "#/components/schemas/NullableFiniteNumber"
+              }
+            }
+          },
+          "byte_length": {
+            "type": "integer",
+            "const": 0
+          }
+        },
+        "description": "count = finite_count + non_finite_count. No DATA frames, including empty DATA. Finite fields are all null iff finite_count = 0. See contract.md for numeric semantics.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "finite_count": {
+                  "const": 0
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "minimum": {
+                  "type": "null"
+                },
+                "maximum": {
+                  "type": "null"
+                },
+                "mean": {
+                  "type": "null"
+                },
+                "stddev": {
+                  "type": "null"
+                },
+                "percentiles": {
+                  "properties": {
+                    "p01": {
+                      "type": "null"
+                    },
+                    "p05": {
+                      "type": "null"
+                    },
+                    "p50": {
+                      "type": "null"
+                    },
+                    "p95": {
+                      "type": "null"
+                    },
+                    "p99": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "minimum": {
+                  "type": "number"
+                },
+                "maximum": {
+                  "type": "number"
+                },
+                "mean": {
+                  "type": "number"
+                },
+                "stddev": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "percentiles": {
+                  "properties": {
+                    "p01": {
+                      "type": "number"
+                    },
+                    "p05": {
+                      "type": "number"
+                    },
+                    "p50": {
+                      "type": "number"
+                    },
+                    "p95": {
+                      "type": "number"
+                    },
+                    "p99": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "InputEmbeddingsDistributionsMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "token_ids",
+          "rows",
+          "columns",
+          "bin_count",
+          "binning",
+          "domain_minimum",
+          "domain_maximum",
+          "dtype",
+          "byte_order",
+          "sections",
+          "byte_length"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "input_embeddings_distributions"
+          },
+          "token_ids": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SafeInteger"
+            },
+            "description": "Exact ordered echo of the submitted token IDs."
+          },
+          "rows": {
+            "$ref": "#/components/schemas/SafeInteger"
+          },
+          "columns": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "bin_count": {
+            "type": "integer",
+            "const": 100
+          },
+          "binning": {
+            "type": "string",
+            "const": "linear-full-range"
+          },
+          "domain_minimum": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "domain_maximum": {
+            "$ref": "#/components/schemas/NullableFiniteNumber"
+          },
+          "dtype": {
+            "type": "string",
+            "const": "uint32"
+          },
+          "byte_order": {
+            "type": "string",
+            "const": "little"
+          },
+          "sections": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "prefixItems": [
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/DistributionSection"
+                  },
+                  {
+                    "properties": {
+                      "name": {
+                        "const": "row_counts"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/DistributionSection"
+                  },
+                  {
+                    "properties": {
+                      "name": {
+                        "const": "column_counts"
+                      }
+                    }
+                  }
+                ]
+              }
+            ],
+            "items": false
+          },
+          "byte_length": {
+            "$ref": "#/components/schemas/SafeInteger"
+          }
+        },
+        "description": "row_counts shape [rows,100], offset 0; column_counts shape [100,columns], offset row byte length. Total length is section sum. Both domain endpoints null iff no finite source values; counts then all zero. See contract.md.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "domain_minimum": {
+                  "type": "null"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "domain_maximum": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "domain_maximum": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        ]
+      },
       "StreamMetadata": {
         "description": "JSON payload of META_JSON; never a JSON encoding of numeric DATA.",
         "oneOf": [
@@ -767,6 +1078,12 @@
           },
           {
             "$ref": "#/components/schemas/InputEmbeddingsMetadata"
+          },
+          {
+            "$ref": "#/components/schemas/InputEmbeddingsDistributionsMetadata"
+          },
+          {
+            "$ref": "#/components/schemas/InputEmbeddingsStatisticsMetadata"
           },
           {
             "$ref": "#/components/schemas/TensorStatisticsMetadata"
@@ -780,6 +1097,8 @@
           "mapping": {
             "tensor": "#/components/schemas/TensorMetadata",
             "input_embeddings": "#/components/schemas/InputEmbeddingsMetadata",
+            "input_embeddings_distributions": "#/components/schemas/InputEmbeddingsDistributionsMetadata",
+            "input_embeddings_statistics": "#/components/schemas/InputEmbeddingsStatisticsMetadata",
             "tensor_statistics": "#/components/schemas/TensorStatisticsMetadata",
             "tensor_distributions": "#/components/schemas/TensorDistributionsMetadata"
           }

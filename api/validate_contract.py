@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / 'docs/spec/api/openapi.yaml'
 GOLDEN = ROOT / 'api/fixtures/conformance.json'
 EMBEDDINGS_GOLDEN = ROOT / 'api/fixtures/embeddings.json'
+EMBEDDING_ANALYSIS_GOLDEN = ROOT / 'api/fixtures/embedding-analysis.json'
 ARCHITECTURE_GOLDEN = ROOT / 'api/fixtures/architecture.json'
 SAFE = 2**53 - 1
 U32 = 2**32 - 1
@@ -46,15 +47,24 @@ def product(shape):
 def semantics(schema, value):
     """Only cross-field JSON checks; there is deliberately no wire reader here."""
     if schema in ('StreamMetadata', 'TensorMetadata', 'TensorStatisticsMetadata',
-                  'TensorDistributionsMetadata', 'InputEmbeddingsMetadata'):
+                  'TensorDistributionsMetadata', 'InputEmbeddingsMetadata',
+                  'InputEmbeddingsStatisticsMetadata', 'InputEmbeddingsDistributionsMetadata'):
         kind = value['kind']
+        if kind.startswith('input_embeddings'):
+            require(len(json_bytes(value)) <= 1048576, 'unsupported_size')
+        if kind == 'input_embeddings_statistics':
+            require(value['shape'][0] == len(value['token_ids']) and
+                    value['count'] == product(value['shape']), 'embedding statistics geometry')
+        if kind == 'input_embeddings_distributions':
+            require(value['rows'] == len(value['token_ids']), 'embedding distribution rows')
+            require(value['rows'] != 0 or value['domain_minimum'] is None, 'empty domain')
         if kind in ('tensor', 'input_embeddings'):
             size = 4 * product(value['shape'])
             require(size <= SAFE and value['byte_length'] == size, 'tensor byte length')
             if kind == 'input_embeddings':
                 require(value['shape'][0] == len(value['token_ids']), 'embedding row count')
                 require(len(json_bytes(value)) <= 1048576, 'unsupported_size')
-        elif kind == 'tensor_statistics':
+        elif kind in ('tensor_statistics', 'input_embeddings_statistics'):
             require(value['count'] == value['finite_count'] + value['non_finite_count'],
                     'statistics count sum')
             if value['finite_count']:
@@ -62,7 +72,7 @@ def semantics(schema, value):
                 ps = list(value['percentiles'][p] for p in ('p01', 'p05', 'p50', 'p95', 'p99'))
                 require(lo <= value['mean'] <= hi and lo <= hi, 'statistics range')
                 require([lo, *ps, hi] == sorted([lo, *ps, hi]), 'percentile order')
-        elif kind == 'tensor_distributions':
+        elif kind in ('tensor_distributions', 'input_embeddings_distributions'):
             require(product([value['rows'], value['columns']]) <= SAFE, 'source size')
             offset = 0
             for section, shape in zip(value['sections'],
@@ -517,6 +527,90 @@ def embedding_fixtures(document):
                 association_cases=associations)
 
 
+def embedding_analysis_fixtures():
+    """Small independently gathered matrices; never use a backend implementation."""
+    cases, wire, schemas = [], [], []
+    extreme = struct.unpack('<f', bytes.fromhex('ffff7f7f'))[0]
+    table = [-4., 0., 4., -1000., 0., 1000., 1., 2., 3.]
+    for name, source, ids in [
+        ('duplicates', table, [2, 0, 2]), ('single', table, [2]), ('empty', table, []),
+        ('constant', [3.5]*9, [2, 0, 2]),
+        ('mixed', [math.nan, math.inf, -math.inf, -1000., 0., 1000., -4., 1., 4.], [2, 0, 2]),
+        ('nonfinite', [math.nan, math.inf, -math.inf]*3, [2, 0, 2]),
+        ('extremes', [extreme, 1., -extreme]*3, [2, 0, 2]),
+    ]:
+        values = [value for token in ids for value in source[token*3:token*3+3]]
+        stats = statistics(values)
+        stats.pop('tensor_id')
+        stats.update(kind='input_embeddings_statistics', token_ids=ids, shape=[len(ids), 3])
+        dist, payload, _, _ = distributions(len(ids), 3, values)
+        dist.pop('tensor_id')
+        dist.update(kind='input_embeddings_distributions', token_ids=ids)
+        cases.append(dict(name=name, table_shape=[3, 3],
+                          table_data_hex=struct.pack('<9f', *source).hex(), token_ids=ids,
+                          values_hex=struct.pack(f'<{len(values)}f', *values).hex(),
+                          statistics=stats, distributions=dist, counts_hex=payload.hex()))
+        for suffix, metadata, data in [('statistics', stats, b''), ('distributions', dist, payload)]:
+            wire.append(dict(name=f'embedding-{suffix}-{name}',
+                             wire_hex=(frame(1, metadata)+(frame(2, data) if data else b'')+frame(4)).hex(),
+                             expected=dict(outcome='complete', metadata=metadata, data_hex=data.hex())))
+            schemas.append(dict(name=f'embedding-{suffix}-{name}', schema='StreamMetadata',
+                                valid=True, value=metadata))
+
+    base = cases[0]
+    for suffix in ['statistics', 'distributions']:
+        metadata = base[suffix]
+        data = bytes.fromhex(base['counts_hex']) if suffix == 'distributions' else b''
+        meta = frame(1, metadata)
+        valid = meta+(frame(2, data) if data else b'')+frame(4)
+        for name, body in [
+            ('missing-terminal', valid[:-12]), ('duplicate-terminal', valid+frame(4)),
+            ('trailing-byte', valid+b'x'), ('truncated-header', valid[:-1]),
+            ('duplicate-meta', meta+valid),
+            ('invalid-data', meta+frame(2, b'')+frame(4) if not data else meta+frame(2, data[:-4])+frame(4)),
+            ('truncated-data', meta+header(2, 4)+b'xx'),
+            ('overrun', meta+frame(2, data+b'xxxx')+frame(4)),
+        ]:
+            wire.append(dict(name=f'embedding-{suffix}-{name}', wire_hex=body.hex(),
+                             expected=dict(outcome='reject')))
+        error = dict(code='resource_exhausted', message='Insufficient resources')
+        for name, terminal, outcome in [('cancelled', frame(6), 'cancelled'),
+                                         ('error', frame(5, error), 'error')]:
+            for stage, prefix in [('early', b''), ('after-meta', meta)]:
+                wire.append(dict(name=f'embedding-{suffix}-{stage}-{name}',
+                                 wire_hex=(prefix+terminal).hex(),
+                                 expected=dict(outcome=outcome)))
+            if data:
+                wire.append(dict(name=f'embedding-{suffix}-partial-{name}',
+                                 wire_hex=(meta+frame(2, data[:4])+terminal).hex(),
+                                 expected=dict(outcome=outcome)))
+
+        edits = [('row-count', dict(token_ids=[2, 0])), ('negative-id', dict(token_ids=[2, -1, 2])),
+                 ('checkpoint-id', dict(tensor_id='t'))]
+        if suffix == 'statistics':
+            edits += [('count', dict(count=8)), ('shape', dict(shape=[1, 9])),
+                      ('hidden-zero', dict(shape=[3, 0])), ('unsafe-product', dict(shape=[3, SAFE])),
+                      ('mean-outside-domain', dict(mean=100)), ('data-length', dict(byte_length=4))]
+        else:
+            edits += [('hidden-zero', dict(columns=0)), ('unsafe-product', dict(columns=SAFE)),
+                      ('section-length', dict(sections=[dict(metadata['sections'][0], byte_length=4),
+                                                        metadata['sections'][1]])),
+                      ('section-offset', dict(sections=[metadata['sections'][0],
+                                                       dict(metadata['sections'][1], offset=0)]))]
+        for name, update in edits:
+            invalid = dict(metadata, **update)
+            schemas.append(dict(name=f'embedding-{suffix}-{name}', schema='StreamMetadata',
+                                valid=False, value=invalid))
+            wire.append(dict(name=f'embedding-{suffix}-{name}',
+                             wire_hex=(frame(1, invalid)+frame(4)).hex(),
+                             expected=dict(outcome='reject')))
+    # Contextual identity is intentionally stricter than a valid metadata shape.
+    associations = [dict(token_ids=ids, valid=ids == [2, 0, 2])
+                    for ids in ([2, 0, 2], [0, 2, 2], [2, 0, 0], [2], [])]
+    return dict(numerical_cases=cases, association_cases=associations,
+                schema_cases=schemas, wire_cases=wire)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--write', action='store_true', help='Regenerate committed golden fixture')
@@ -528,13 +622,15 @@ def main():
         Draft202012Validator.check_schema(schema)
     expected_operations = {'listModels', 'createSession', 'getSession', 'deleteSession',
                            'listTensors', 'streamTensor', 'streamTensorStatistics',
-                           'streamTensorDistributions', 'streamInputEmbeddings', 'tokenize', 'cancelOperation', 'getArchitecture'}
+                           'streamTensorDistributions', 'streamInputEmbeddings',
+                           'streamInputEmbeddingsStatistics', 'streamInputEmbeddingsDistributions', 'tokenize', 'cancelOperation', 'getArchitecture'}
     operations = [op for item in document['paths'].values() for method, op in item.items()
                   if method in ('get', 'post', 'delete')]
-    require(len(operations) == 12 and {op['operationId'] for op in operations} == expected_operations,
+    require(len(operations) == 14 and {op['operationId'] for op in operations} == expected_operations,
             'operation set changed')
     golden = fixtures()
     embeddings = embedding_fixtures(document)
+    embedding_analysis = embedding_analysis_fixtures()
     architecture = architecture_fixtures()
     for case in architecture['cases']:
         value = apply_edits(architecture['response'], case['edits'])
@@ -582,7 +678,7 @@ def main():
         response = document['components']['responses']['ModelChanged']
         Draft202012Validator({**response['content']['application/json']['schema'],
                               'components': document['components']}).validate(case['value'])
-    for case in golden['schema_cases'] + embeddings['schema_cases']:
+    for case in golden['schema_cases'] + embeddings['schema_cases'] + embedding_analysis['schema_cases']:
         try:
             validate_instance(document, case['schema'], case['value'])
         except (ValidationError, ValueError):
@@ -594,7 +690,7 @@ def main():
     # Literal framing oracle independent from struct.pack arguments.
     require(frame(6).hex() == '4c4d45580600000000000000', 'header oracle')
     for path, fixture in [(GOLDEN, golden), (EMBEDDINGS_GOLDEN, embeddings),
-                          (ARCHITECTURE_GOLDEN, architecture)]:
+                          (ARCHITECTURE_GOLDEN, architecture), (EMBEDDING_ANALYSIS_GOLDEN, embedding_analysis)]:
         rendered = json.dumps(fixture, ensure_ascii=False, allow_nan=False, indent=2) + '\n'
         if args.write:
             path.write_text(rendered)
@@ -602,9 +698,9 @@ def main():
             require(path.exists() and path.read_text() == rendered,
                     f'{path.name} differs; run api/validate_contract.py --write')
     print(f"OpenAPI 3.1 valid; {references} references resolved; "
-          f"{len(golden['schema_cases']) + len(embeddings['schema_cases'])} instance cases checked; "
+          f"{len(golden['schema_cases']) + len(embeddings['schema_cases']) + len(embedding_analysis['schema_cases'])} instance cases checked; "
           f"{len(architecture['cases'])} architecture cases checked; "
-          f"{len(golden['wire_cases']) + len(embeddings['wire_cases'])} wire fixtures "
+          f"{len(golden['wire_cases']) + len(embeddings['wire_cases']) + len(embedding_analysis['wire_cases'])} wire fixtures "
           f"{'written' if args.write else 'reproducible'}.")
 
 
