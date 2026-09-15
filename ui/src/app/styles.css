@@ -81,8 +81,8 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .inventory-toggle { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; padding: 6px; border: 1px solid var(--ui-border); border-radius: 4px; background: var(--ui-surface); color: var(--ui-text); cursor: pointer; }
 .inventory-toggle:hover { background: var(--ui-accent-soft); }
 .inventory-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.3; }
-.inventory-rail { position: relative; align-self: start; display: flex; justify-content: flex-start; padding-top: 6px; }
-.inventory-rail [role="tooltip"] { visibility: hidden; position: absolute; top: 6px; left: 36px; z-index: 10; white-space: nowrap; padding: 6px 8px; font-size: 12px; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 4px; box-shadow: var(--ui-shadow-float); }
+.inventory-rail { position: relative; z-index: 1; align-self: start; display: flex; justify-content: flex-start; padding-top: 6px; }
+.inventory-rail [role="tooltip"] { visibility: hidden; position: absolute; top: 6px; left: 36px; width: max-content; max-width: var(--inventory-tooltip-width); overflow-wrap: anywhere; padding: 6px 8px; font-size: 12px; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 4px; box-shadow: var(--ui-shadow-float); }
 .inventory-rail:hover [role="tooltip"], .inventory-rail:focus-within [role="tooltip"] { visibility: visible; }
 .inventory-resizer { cursor: col-resize; touch-action: none; position: relative; }
 .inventory-resizer::before { content: ''; position: absolute; inset: 0 7px; background: var(--ui-border); }
@@ -102,9 +102,13 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .tensor-leaf-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .tensor-leaf-metadata { flex-shrink: 0; font-size: 11px; white-space: nowrap; }
 @container (max-width: 230px) { .tensor-leaf-metadata { display: none; } }
-.tensor-layout > .working-surface { display: flex; overflow: hidden; }
+.tensor-layout > .working-surface { display: flex; overflow: hidden; isolation: isolate; }
 .tensor-layout .surface-content { --tensor-pane-padding: 12px; position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: var(--tensor-pane-padding); gap: 8px; }
 .tensor-layout .surface-content > :not(.tensor-explorer) { flex-shrink: 0; }
+/* The shared viewer owns the scientific card; the Tensor wrapper only bounds it.
+   Isolation keeps its local overlays below the sibling inventory rail and native modals. */
+.tensor-layout > .working-surface:has(.tensor-explorer) { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.tensor-layout .surface-content:has(> .tensor-explorer) { padding: 0; gap: 0; }
 .tensor-identity { min-width: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #285b38; font: 600 13px/20px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .tensor-summary { min-width: 0; flex-shrink: 1; max-width: 45%; overflow: hidden; text-overflow: ellipsis; font-size: 12px; white-space: nowrap; }
 .matrix-info-popover .tensor-metadata { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 4px 8px; font-size: 12px; }

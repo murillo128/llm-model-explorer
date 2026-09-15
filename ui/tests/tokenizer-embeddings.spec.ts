@@ -33,6 +33,26 @@ async function start(page: Page) {
   return page.getByRole('textbox', { name: 'Prompt', exact: true });
 }
 
+test('empty and unavailable embeddings share the full-width title/body composition', async ({ page }) => {
+  const editor = await start(page);
+  async function fullWidthHeader() {
+    const panel = page.locator('.input-embeddings');
+    await expect(panel.locator('.matrix-panel-header')).toHaveCount(1);
+    const region = (await panel.boundingBox())!, title = (await panel.locator('.matrix-panel-header').boundingBox())!;
+    const body = (await panel.locator('.viewer-panel-body').boundingBox())!;
+    expect(title).toEqual({ x: region.x, y: region.y, width: region.width, height: 40 });
+    expect(body.x).toBe(title.x); expect(body.width).toBe(title.width);
+    expect(body.y).toBe(title.y + title.height);
+  }
+  await fullWidthHeader();
+  await editor.fill('A'); await count(page, 2); await tokenize(page, 1, tokens('A'));
+  await embeddingCount(page, 1);
+  await fullWidthHeader();
+  await page.evaluate(() => window.embeddingHarness.headers(0, 422));
+  await expect(page.getByText('Input embeddings are unavailable for this model. Tokenization remains usable.')).toBeVisible();
+  await fullWidthHeader();
+});
+
 for (const dpr of [1, 2]) test(`exact progressive rows, linked annotations and frozen editor at DPR ${dpr}`, async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const cdp = await page.context().newCDPSession(page);

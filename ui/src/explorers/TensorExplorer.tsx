@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { MatrixExplorer } from '../matrix-explorer';
+import { MatrixExplorer, ViewerPanel } from '../matrix-explorer';
 import type { MatrixSource } from '../matrix-explorer';
 import type { ExplorerContextValue } from '../app/explorer-context';
 import { TensorHeader } from '../components/TensorHeader';
@@ -14,7 +14,11 @@ const stateText: Record<ResultState, string> = {
 export function TensorExplorer(context: ExplorerContextValue & { showInformation?: boolean }) {
   const tensor = context.selectedTensor;
   if (!tensor || (tensor.rank !== 1 && tensor.rank !== 2)) return <p>Direct viewing supports rank-1 and rank-2 tensors.</p>;
-  if (tensor.numel === 0) return <><TensorHeader tensor={tensor} showInformation={context.showInformation} /><p role="status">Empty tensor — no values to render.</p></>;
+  if (tensor.numel === 0) return <section className="tensor-explorer" aria-label="Tensor scientific view">
+    <ViewerPanel header={<TensorHeader tensor={tensor} showInformation={context.showInformation} />}>
+      <p role="status">Empty tensor — no values to render.</p>
+    </ViewerPanel>
+  </section>;
   return <LoadedTensorExplorer {...context} />;
 }
 

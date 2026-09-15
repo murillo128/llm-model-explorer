@@ -136,7 +136,9 @@ When a compact inference layout needs less vertical space, compress this same co
 
 The reusable Matrix Explorer is the central scientific surface for rank-2 data and inherits its behavioral contract from `tensor-explorer.md` and `rendering.md`.
 
-Scientific context uses a reusable compact panel header with identity, information, secondary metadata, reserved operation status, and a composable right-side action slot. Its single row is approximately 36–44 CSS pixels high with a subtle separator and remains stationary above scrolling data. Transient status must not insert content between the header and matrix or change their geometry. Information floats below its trigger; it does not reserve a permanent metadata column. Tensor-specific fields and preview/pinned dismissal behavior belong to `tensor-explorer.md`.
+Scientific context uses a reusable compact title bar with identity, information, secondary metadata, reserved operation status, and a composable right-side action slot. The title bar is a structural sibling above the visualization content card, outside its border and padding, and spans the full panel width. Its single row is approximately 36–44 CSS pixels high with a neutral surface and subtle separator, and remains stationary above scrolling data. The card contains the scientific view and its local inspection/error surfaces. Transient status must not insert content between the title and matrix or change their geometry. Information floats below its trigger; it does not reserve a permanent metadata column. Tensor-specific fields and preview/pinned dismissal behavior belong to `tensor-explorer.md`.
+
+Tensor Explorer and Input Embeddings share this title/body composition, including a full-width title in empty or unavailable states. A consumer supplies its real identity, metadata, status and actions without inventing a second header structure. Changing these slots or opening information must preserve the mounted source, subscriptions, renderer, camera/history and operation ownership. Prompt / Tokens adopts the same heading language through its separately owned Tokenizer composition.
 
 For a rank-2 tensor, the visual composition is:
 
