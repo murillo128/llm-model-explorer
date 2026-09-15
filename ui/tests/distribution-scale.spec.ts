@@ -21,7 +21,7 @@ async function expectAlignedRulers(page: Page, finite: boolean, zero: number | n
   const geometry = await page.evaluate(() => {
     const bounds = (selector: string) => {
       const rect = document.querySelector(selector)?.getBoundingClientRect();
-      return rect && { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width };
+      return rect && { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height };
     };
     return {
       row: bounds('.row-distributions canvas')!, ruler: bounds('.distribution-scale-rows')!,
@@ -35,13 +35,23 @@ async function expectAlignedRulers(page: Page, finite: boolean, zero: number | n
   // layout offsets, rather than to their grid tracks or nominal 100-bin depth.
   expect(geometry.ruler.left).toBeCloseTo(geometry.row.left, 1);
   expect(geometry.ruler.right).toBeCloseTo(geometry.row.right, 1);
+  expect(geometry.ruler.height).toBe(24);
   expect(geometry.ruler.bottom).toBeLessThanOrEqual(geometry.row.top);
   expect(geometry.columnRuler.top).toBeCloseTo(geometry.column.top, 1);
   expect(geometry.columnRuler.bottom).toBeCloseTo(geometry.column.bottom, 1);
   if (finite) {
     expect(geometry.low!.left).toBeCloseTo(geometry.row.left, 1);
     expect(geometry.high!.right).toBeCloseTo(geometry.row.right, 1);
-    expect(geometry.low!.top).toBe(geometry.high!.top);
+    const labels = [geometry.low!, geometry.high!, geometry.zero].filter(label => label && label.width > 0 && label.height > 0);
+    for (let i = 0; i < labels.length; i++) {
+      const label = labels[i]!;
+      expect(label.bottom).toBeLessThanOrEqual(geometry.row.top);
+      for (let j = i + 1; j < labels.length; j++) {
+        const other = labels[j]!;
+        expect(label.right <= other.left || other.right <= label.left || label.bottom <= other.top || other.bottom <= label.top,
+          `row ruler labels ${i} and ${j} must not overlap`).toBe(true);
+      }
+    }
     expect(geometry.columnLow!.top).toBeCloseTo(geometry.column.top, 1);
     expect(geometry.columnHigh!.bottom).toBeCloseTo(geometry.column.bottom, 1);
   } else {
@@ -147,6 +157,52 @@ for (const fixture of cases) test(`${fixture.name}: authoritative domain, bin pl
   await page.keyboard.press('Escape');
   expect(await scales.evaluateAll(elements => elements.map(e => e.outerHTML))).toEqual(before);
   expect(await page.evaluate(() => window.explorerFixture.metrics.uploads)).toBe(drawing.uploads);
+});
+
+test.describe('DPR 2 decimal ruler labels', () => {
+  test.use({ deviceScaleFactor: 2 });
+  const decimalDomains = [
+    { name: 'signed symmetric', low: -0.124, high: 0.124 },
+    { name: 'signed asymmetric', low: -0.124, high: 0.372 },
+    { name: 'zero near low endpoint', low: -0.00124, high: 0.124 },
+    { name: 'zero near high endpoint', low: -0.124, high: 0.00124 },
+    { name: 'positive only', low: 0.124, high: 0.372 },
+    { name: 'negative only', low: -0.372, high: -0.124 },
+    { name: 'constant positive', low: 0.124, high: 0.124 },
+    { name: 'constant negative', low: -0.124, high: -0.124 },
+  ];
+
+  for (const domain of decimalDomains) test(`${domain.name}: readable labels preserve pending geometry and exact anchors`, async ({ page }) => {
+    await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);
+    await expect(page.getByRole('combobox')).toBeEnabled();
+    await page.getByRole('combobox').selectOption('lab/alpha');
+    await page.getByRole('button', { name: /^A \[/ }).click();
+    await nativeCamera(page);
+    await expect(page.locator('.distribution-scale-rows')).toHaveAttribute('aria-label', 'Row bin domain: unavailable');
+    await expectAlignedRulers(page, false, null);
+    const scientificGeometry = () => page.locator('.matrix-surfaces, .matrix-scroll, .matrix-scroll canvas, .row-distributions canvas, .column-distributions canvas')
+      .evaluateAll(elements => elements.map(element => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+      }));
+    const before = await scientificGeometry();
+    const low = Math.fround(domain.low), high = Math.fround(domain.high);
+    await page.evaluate(({ low, high }) => {
+      const f = window.explorerFixture;
+      f.emit(0, 1, f.metadata(0)); f.data(0, [low, high, low, high, low, high]); f.end(0);
+      f.emit(2, 1, { ...f.metadata(2), domain_minimum: low, domain_maximum: high });
+    }, { low, high });
+    const ruler = page.locator('.distribution-scale-rows');
+    await expect(ruler).toHaveAttribute('data-minimum', String(low));
+    await expect(ruler).toHaveAttribute('data-maximum', String(high));
+    await expect(ruler.locator('.distribution-low')).toHaveAttribute('title', `Bin domain low: ${low}`);
+    await expect(ruler.locator('.distribution-high')).toHaveAttribute('title', `Bin domain high: ${high}`);
+    const zero = low < 0 && high > 0 ? -low / (high - low) : null;
+    await expectAlignedRulers(page, true, zero);
+    expect(await scientificGeometry()).toEqual(before);
+    expect(await page.locator('.row-distributions canvas').evaluate(canvas => canvas.getBoundingClientRect().width)).toBe(50);
+    expect(await page.locator('.column-distributions canvas').evaluate(canvas => canvas.getBoundingClientRect().height)).toBe(50);
+  });
 });
 
 test.describe('fractional physical-pixel layout', () => {

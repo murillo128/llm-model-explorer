@@ -25,13 +25,19 @@ SwiftShader and native scrollbars; Node was 24.14.0, Python 3.12.14 and PyTorch
 - The horizontal row ruler and histogram both span X=1311…1411 (100 pixels).
   The low label starts at X=1311, the high label ends at X=1411, and zero is
   centered at X=1361, matching the authoritative `[-1,1]` domain.
+- Endpoint captions occupy separate text rows so decimal bounds remain readable
+  when the 100-device-pixel histogram is 50 CSS pixels wide at DPR 2. Zero uses
+  the existing gap below the axis. In this capture, low occupies Y=117…128,
+  high Y=129…140, and zero Y=140…150, all above the histogram at Y=151.
+  The caption rectangles do not overlap; header, ruler and data geometry remain
+  unchanged.
 - The matrix and row histogram have the same Y extent (151…722). The document
   remains 1440×900 with no document overflow. The capture had no page errors and
   loaded JavaScript exclusively from production `/assets/` URLs.
 
 The capture script asserted the header count, absent permanent description,
-information-dialog content, and ruler/label alignment against the actual row
-canvas rectangle. The screenshot supplements the repeatable geometry checks in
+information-dialog content, and ruler/label alignment and non-overlap against the
+actual row canvas rectangle. The screenshot supplements the repeatable geometry checks in
 [`tensor-header.spec.ts`](../tests/tensor-header.spec.ts) and
 [`distribution-scale.spec.ts`](../tests/distribution-scale.spec.ts).
 
