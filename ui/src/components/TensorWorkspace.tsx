@@ -16,7 +16,7 @@ function initialPreference() {
 
 /** Inventory changes leave the scientific subtree and its consumers mounted. */
 export function TensorWorkspace({ enabled, inventory, children }: {
-  enabled: boolean; inventory: ReactNode; children: (restore: ReactNode) => ReactNode;
+  enabled: boolean; inventory: ReactNode; children: ReactNode;
 }) {
   const [preference, setPreference] = useState(initialPreference);
   const [available, setAvailable] = useState(0);
@@ -54,9 +54,11 @@ export function TensorWorkspace({ enabled, inventory, children }: {
     {enabled && <>
       <aside id="tensor-inventory" aria-label="Tensor inventory" hidden={hidden}>
         <div className="inventory-header">
-          <h2>Tensors</h2>
+          <h2>Inventory</h2>
           <button type="button" className="inventory-toggle" ref={hide} aria-expanded="true"
-            aria-controls="tensor-inventory" onClick={() => show(false)}>Hide inventory</button>
+            aria-controls="tensor-inventory" aria-label="Collapse inventory" title="Collapse inventory" onClick={() => show(false)}>
+            <svg aria-hidden="true" viewBox="0 0 16 16"><path d="m10 3-5 5 5 5" /></svg>
+          </button>
         </div>
         {inventory}
       </aside>
@@ -85,7 +87,14 @@ export function TensorWorkspace({ enabled, inventory, children }: {
         }}
         onLostPointerCapture={() => { drag.current = null; }} />
     </>}
-    {children(enabled && hidden ? <button type="button" className="inventory-toggle inventory-restore" ref={restore}
-      aria-expanded="false" aria-controls="tensor-inventory" onClick={() => show(true)}>Show inventory</button> : null)}
+    {enabled && hidden && <nav className="inventory-rail" aria-label="Inventory navigation">
+      <button type="button" className="inventory-toggle inventory-restore" ref={restore}
+        aria-label="Expand inventory" aria-describedby="inventory-restore-tooltip"
+        aria-expanded="false" aria-controls="tensor-inventory" onClick={() => show(true)}>
+        <svg aria-hidden="true" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="1" /><path d="M6 2v12M9 5h3M9 8h3M9 11h3" /></svg>
+      </button>
+      <span role="tooltip" id="inventory-restore-tooltip">Expand inventory</span>
+    </nav>}
+    {children}
   </main>;
 }

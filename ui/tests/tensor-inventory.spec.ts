@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { models, sessionA, tensors } from '../src/test/shell-fixtures';
 import { revealTensor } from './tensor-tree-helpers';
+import { nativeCamera } from './native-camera';
 
 const path = ['model', 'layers', '0', 'mlp', 'down_proj', 'weight'];
 async function openInventory(page: Page) {
@@ -64,16 +65,20 @@ test('quiet branches persist explicit keyboard and pointer choices across explor
   await noDocumentOverflow(page);
 });
 
-test('hide and restore reclaim the full track, retain selection, transfer focus and survive reload', async ({ page }) => {
+test('drawer and icon-only rail resize the workspace, retain selection, transfer focus and survive reload', async ({ page }) => {
   await openInventory(page);
   const leaf = page.getByRole('button', { includeHidden: true, name: /^model.layers.0.mlp.down_proj.weight/ });
   await (await revealTensor(leaf)).click();
   const pane = page.getByRole('region', { name: 'Tensor Explorer workspace', exact: true });
   const inventory = page.getByRole('complementary', { name: 'Tensor inventory' });
+  await expect(inventory.getByRole('heading', { name: 'Inventory' })).toBeVisible();
+  await expect(inventory.locator('.tensor-folder-icon').first()).toBeVisible();
+  await expect(leaf.locator('.tensor-leaf-icon')).toBeVisible();
   const initial = (await pane.boundingBox())!;
   const inventoryBox = (await inventory.boundingBox())!;
-  const hide = page.getByRole('button', { name: 'Hide inventory', exact: true });
-  const show = page.getByRole('button', { name: 'Show inventory', exact: true });
+  if (process.env.CAPTURE_INVENTORY_EVIDENCE) await page.screenshot({ path: `evidence/inventory-expanded-${page.viewportSize()!.width}.png` });
+  const hide = page.getByRole('button', { name: 'Collapse inventory', exact: true });
+  const show = page.getByRole('button', { name: 'Expand inventory', exact: true });
   await hide.focus(); await page.keyboard.press('Enter');
   await expect(show).toBeFocused();
   await expect(show).toHaveAttribute('aria-expanded', 'false');
@@ -81,8 +86,28 @@ test('hide and restore reclaim the full track, retain selection, transfer focus 
   await expect(page.getByRole('separator')).toHaveCount(0);
   const hidden = (await pane.boundingBox())!;
   const workspace = (await page.locator('#workspace').boundingBox())!;
-  expect(hidden).toEqual(workspace);
-  if (page.viewportSize()!.width > 760) expect(hidden.width - initial.width).toBe(inventoryBox.width + 16);
+  expect(hidden.x).toBe(workspace.x + 40);
+  expect(hidden.width).toBe(workspace.width - 40);
+  expect(hidden.height).toBe(workspace.height);
+  const rail = page.getByRole('navigation', { name: 'Inventory navigation' });
+  expect((await rail.boundingBox())!.width).toBe(40);
+  await expect(rail.locator('button')).toHaveCount(1);
+  await expect(show).toHaveText('');
+  await expect(show.locator('svg')).toHaveCount(1);
+  await expect(pane.getByRole('button', { name: 'Expand inventory' })).toHaveCount(0);
+  const tooltip = rail.getByRole('tooltip');
+  await expect(tooltip).toBeVisible();
+  await expect(show).toHaveAccessibleDescription('Expand inventory');
+  await show.blur(); await page.mouse.move(0, 0);
+  await expect(tooltip).not.toBeVisible();
+  expect(await rail.innerText()).toBe('');
+  expect(await show.evaluate((node) => [getComputedStyle(node, '::before').content, getComputedStyle(node, '::after').content]))
+    .toEqual(['none', 'none']);
+  expect(await show.locator('svg path').getAttribute('d')).toBe('M6 2v12M9 5h3M9 8h3M9 11h3');
+  await show.hover(); await expect(tooltip).toBeVisible();
+  await page.mouse.move(0, 0); await expect(tooltip).not.toBeVisible();
+  if (process.env.CAPTURE_INVENTORY_EVIDENCE) await page.screenshot({ path: `evidence/inventory-collapsed-${page.viewportSize()!.width}.png` });
+  if (page.viewportSize()!.width > 760) expect(hidden.width - initial.width).toBe(inventoryBox.width + 16 - 40);
   else expect(hidden.height - initial.height).toBeCloseTo(inventoryBox.height + 8, 1);
   await expect(pane.locator('h2')).toHaveText(path.join(' › '));
   await noDocumentOverflow(page);
@@ -147,10 +172,39 @@ test('pointer and keyboard resizing clamp, persist width and preserve scientific
   await page.setViewportSize({ width: 280, height: 400 });
   await expect(divider).not.toBeVisible();
   await noDocumentOverflow(page);
+  await page.getByRole('button', { name: 'Collapse inventory' }).click();
+  await expect(page.getByRole('button', { name: 'Expand inventory' })).toBeFocused();
+  await noDocumentOverflow(page);
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Collapse inventory' })).toBeFocused();
+  await noDocumentOverflow(page);
   await page.setViewportSize({ width: 1200, height: 800 });
   await expect(divider).toHaveAttribute('aria-valuenow', '480');
-  await page.getByRole('button', { name: 'Hide inventory' }).click();
-  await page.getByRole('button', { name: 'Show inventory' }).click();
+  await page.evaluate(() => {
+    const f = window.explorerFixture;
+    f.emit(0, 1, f.metadata(0)); f.data(0, [-2, 0, 2]);
+  });
+  await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', 'streaming');
+  await nativeCamera(page);
+  const scroller = page.locator('.matrix-scroll');
+  await scroller.evaluate((host) => {
+    host.dispatchEvent(new WheelEvent('wheel', { deltaY: -300, cancelable: true,
+      clientX: host.getBoundingClientRect().left, clientY: host.getBoundingClientRect().top }));
+    host.scrollLeft = 32; host.scrollTop = 24;
+  });
+  const camera = () => scroller.evaluate((host) => ({
+    extent: (host.firstElementChild as HTMLElement).style.width, x: host.scrollLeft, y: host.scrollTop,
+  }));
+  const previousCamera = await camera();
+  const allocations = await page.evaluate(() => window.explorerFixture.metrics.scalarAllocations);
+  await page.getByRole('button', { name: 'Collapse inventory' }).click();
+  expect(await camera()).toEqual(previousCamera);
+  await page.evaluate(() => window.explorerFixture.data(0, [1, -1, 0]));
+  await expect.poll(() => page.evaluate(() => window.explorerFixture.renderers[0]!.populatedPrefix)).toBe(6);
+  await page.getByRole('button', { name: 'Expand inventory' }).click();
+  expect(await camera()).toEqual(previousCamera);
+  expect((await inventory.boundingBox())!.width).toBe(480);
+  expect(await page.evaluate(() => window.explorerFixture.metrics.scalarAllocations)).toBe(allocations);
   expect(await canvas!.evaluate((node) => node === document.querySelector('.matrix-scroll canvas'))).toBe(true);
   expect(await page.evaluate(() => ({ requests: window.explorerFixture.requests.length, cancelled: window.explorerFixture.cancelled })))
     .toEqual({ requests: 3, cancelled: [] });
