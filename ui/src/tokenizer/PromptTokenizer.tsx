@@ -3,6 +3,7 @@ import type { ApiClient } from '../api/client';
 import { ApiFailure } from '../api/errors';
 import type { ReactNode } from 'react';
 import { InlineEditor } from './InlineEditor';
+import { ViewerPanel } from '../matrix-explorer';
 import type { Tokenization } from './annotations';
 import './tokenizer.css';
 
@@ -100,6 +101,6 @@ export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, to
         onClick={() => edit(editor.text, false, true)}>Retry tokenization</button>
     </div>
   </section>;
-  return <>{header ? <section id={panelId} className="prompt-panel" aria-label="Prompt / Tokens">{header}{prompt}</section> : prompt}
+  return <>{header ? <section id={panelId} className="prompt-panel" aria-label="Prompt / Tokens"><ViewerPanel header={header}>{prompt}</ViewerPanel></section> : prompt}
     {downstream?.(tokenization)}</>;
 }

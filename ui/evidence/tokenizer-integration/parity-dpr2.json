@@ -1,0 +1,123 @@
+{
+  "ids": [
+    1,
+    35,
+    175,
+    256,
+    249,
+    225,
+    35
+  ],
+  "rows": 7,
+  "columns": 576,
+  "domain": [
+    -1,
+    1
+  ],
+  "rowCountSum": 4032,
+  "columnCountSum": 4032,
+  "transfer": {
+    "mode": [
+      1
+    ],
+    "slope": [
+      12
+    ],
+    "anchors": [
+      -0.984375,
+      0.984375
+    ],
+    "scale": [
+      0.984375
+    ],
+    "span": [
+      2
+    ],
+    "correction": [
+      0
+    ]
+  },
+  "nativeDimensions": [
+    {
+      "width": 576,
+      "height": 7,
+      "origin": "0,0"
+    },
+    {
+      "width": 100,
+      "height": 7,
+      "origin": "0,0"
+    },
+    {
+      "width": 576,
+      "height": 100,
+      "origin": "0,0"
+    }
+  ],
+  "prompt": {
+    "workspace": {
+      "x": 16,
+      "y": 64,
+      "width": 1408,
+      "height": 896,
+      "top": 64,
+      "right": 1424,
+      "bottom": 960,
+      "left": 16
+    },
+    "prompt": {
+      "x": 16,
+      "y": 64,
+      "width": 1408,
+      "height": 195,
+      "top": 64,
+      "right": 1424,
+      "bottom": 259,
+      "left": 16
+    },
+    "embeddings": {
+      "x": 16,
+      "y": 271,
+      "width": 1408,
+      "height": 689,
+      "top": 271,
+      "right": 1424,
+      "bottom": 960,
+      "left": 16
+    },
+    "divider": {
+      "x": 16,
+      "y": 259,
+      "width": 1408,
+      "height": 12,
+      "top": 259,
+      "right": 1424,
+      "bottom": 271,
+      "left": 16
+    },
+    "scrollHeight": 100,
+    "clientHeight": 100,
+    "min": 160,
+    "max": 704
+  },
+  "resources": {
+    "readers": 0,
+    "peakReaders": 3,
+    "createdTextures": 9,
+    "peakTextures": 6,
+    "errors": [],
+    "contextLosses": 0,
+    "peakGpuBytes": 482432,
+    "uploads": 42,
+    "firstUpload": 785.2000000178814,
+    "firstRender": 788.8000000119209,
+    "maxUploadBytes": 65536,
+    "textures": 3,
+    "gpuBytes": 249328,
+    "arrays": [
+      2800,
+      230400,
+      16128
+    ]
+  }
+}

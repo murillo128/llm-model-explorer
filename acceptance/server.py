@@ -42,8 +42,15 @@ def application(root: Path, origin: str, device: str = "cpu"):
     source_reads = {"row_elements": 0, "max_row_block": 0, "full_tensors": []}
 
     async def observed_read(consumer, *args, **kwargs):
-        if json.loads(consumer._flight.spec.canonical)["operation"] == "input_embeddings":
-            if consumer in started and control["kind"] == "input_embeddings":
+        kind = json.loads(consumer._flight.spec.canonical)["operation"]
+        if kind in {
+            "input_embeddings",
+            "input_embeddings_statistics",
+            "input_embeddings_distributions",
+        }:
+            if control["kind"] == kind and control["mode"] == "pre-meta-error":
+                raise RuntimeError("Injected embedding analysis failure")
+            if consumer in started and control["kind"] == kind:
                 await barrier(consumer)
             started.add(consumer)
         return await read(consumer, *args, **kwargs)

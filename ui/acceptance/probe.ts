@@ -6,6 +6,9 @@ export function installProbe() {
   const snapshots = new WeakMap<HTMLCanvasElement, { width: number; height: number; bytes: Uint8Array }>();
   const arrays: WeakRef<Float32Array | Uint32Array>[] = [];
   const scalarValues: number[] = [];
+  const countValues: { rows: number[]; columns: number[] } = { rows: [], columns: [] };
+  const uniformNames = new WeakMap<WebGLUniformLocation, string>();
+  const transfers = new WeakMap<HTMLCanvasElement, Record<string, number[]>>();
   const metrics = { readers: 0, peakReaders: 0, createdTextures: 0, peakTextures: 0,
     errors: [] as { code: number; stack: string | undefined }[], contextLosses: 0, peakGpuBytes: 0, uploads: 0, firstUpload: 0, firstRender: 0, maxUploadBytes: 0 };
   const wrap = (name: string, observe: (gl: WebGL2RenderingContext, args: any[], result: any) => void) => {
@@ -30,12 +33,26 @@ export function installProbe() {
     textures.set(bound.get(gl)!, width * height * 4);
     metrics.peakGpuBytes = Math.max(metrics.peakGpuBytes, [...textures.values()].reduce((a, b) => a + b, 0));
   });
+  wrap('getUniformLocation', (_gl, [, name], location) => { if (location) uniformNames.set(location, name); });
+  for (const method of ['uniform1i', 'uniform1f', 'uniform2f']) wrap(method, (gl, [location, ...values]) => {
+    const name = uniformNames.get(location);
+    if (!name || !['mode', 'slope', 'anchors', 'scale', 'span', 'correction'].includes(name)) return;
+    const canvas = gl.canvas as HTMLCanvasElement;
+    const transfer = transfers.get(canvas) ?? {};
+    transfer[name] = values;
+    transfers.set(canvas, transfer);
+  });
   wrap('texSubImage2D', (gl, args) => {
     metrics.uploads++;
     metrics.firstUpload ||= performance.now();
     const data = args[8];
     if ((window as any).__acceptance.captureScalars && args[7] === gl.FLOAT) {
       scalarValues.push(...data.subarray(args[9] ?? 0, (args[9] ?? 0) + args[4] * args[5]));
+    }
+    if ((window as any).__acceptance.captureCounts && args[6] === gl.RED_INTEGER && args[7] === gl.UNSIGNED_INT) {
+      const canvas = gl.canvas as HTMLCanvasElement;
+      const axis = canvas.closest('.row-distributions') ? 'rows' : canvas.closest('.column-distributions') ? 'columns' : undefined;
+      if (axis) countValues[axis].push(...data.subarray(args[9] ?? 0, (args[9] ?? 0) + args[4] * args[5]));
     }
     metrics.maxUploadBytes = Math.max(metrics.maxUploadBytes, data?.byteLength ?? 0);
   });
@@ -74,7 +91,8 @@ export function installProbe() {
   (window as any).__acceptance = {
     capture: true,
     captureScalars: false,
-    scalarValues,
+    scalarValues, countValues, captureCounts: false,
+    transfer: (selector = '.matrix-scroll canvas') => transfers.get(document.querySelector(selector) as HTMLCanvasElement),
     metrics: () => ({ ...metrics, textures: textures.size,
       gpuBytes: [...textures.values()].reduce((a, b) => a + b, 0),
       arrays: arrays.flatMap((ref) => { const a = ref.deref(); return a ? [a.byteLength] : []; }),

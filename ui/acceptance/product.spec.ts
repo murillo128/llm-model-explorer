@@ -238,12 +238,12 @@ test('production UI renders before producer completes; native geometry, inspecti
     await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
     // The real empty prompt includes BOS, so the embedding view owns one row.
     await expect(page.getByText('[1 × 576] · float32')).toBeVisible();
-    await expect.poll(async () => (await metrics(page)).textures).toBe(1);
+    await expect.poll(async () => (await metrics(page)).textures).toBe(3);
     await expect.poll(async () => (await metrics(page)).readers).toBe(0);
     const cdp = await context.newCDPSession(page);
     await cdp.send('HeapProfiler.collectGarbage');
     await cdp.detach();
-    expect((await metrics(page)).arrays).toEqual([576 * 4]);
+    expect((await metrics(page)).arrays.sort((a: number, b: number) => a - b)).toEqual([576 * 4, 100 * 576 * 4]);
     await idle();
     await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
   }
@@ -436,10 +436,10 @@ test('real ordered embeddings render progressively with exact duplicate rows and
   const uploaded = await page.evaluate(() => [...(window as any).__acceptance.scalarValues]);
   expect(uploaded).toEqual(ids.flatMap(id => Array.from({ length: 576 }, (_, col) => value(id * 576 + col))));
   const reads = (await control()).source_reads;
-  expect(reads.row_elements - readsBefore).toBe(ids.length * 576);
+  expect(reads.row_elements - readsBefore).toBe(3 * ids.length * 576);
   expect(reads.full_tensors).toEqual([]);
-  expect((await metrics(page)).gpuBytes).toBe(ids.length * 576 * 4);
-  await expect(page.locator('.row-distributions, .column-distributions')).toHaveCount(0);
+  expect((await metrics(page)).gpuBytes).toBe((ids.length * 576 + (ids.length + 576) * 100) * 4);
+  await expect(page.locator('.row-distributions, .column-distributions')).toHaveCount(2);
   const before = await metrics(page);
   for (let row = 0; row < ids.length; row++) {
     if (row) await scroller.press('ArrowDown');
@@ -565,7 +565,7 @@ test.describe('production native pane geometry', () => {
       await page.getByRole('button', { name: 'Refresh models', exact: true }).click(); await refreshed;
       await expect(page.locator('.tensor-identity')).toHaveCount(1);
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(0);
-      await expect(page.locator('.tensor-leaf-name')).toHaveText(Array(94).fill('weight'));
+      await expect(page.locator('.tensor-leaf-name')).toHaveText(Array(95).fill('weight'));
       await expect(page.locator('.tensor-choice summary, .tensor-choice details')).toHaveCount(0);
       const info = page.getByRole('button', { name: 'Tensor information' });
       await info.focus(); await info.press('Enter');
@@ -964,7 +964,10 @@ test('production stale results remain visible and generation-fenced while embedd
   await zoom(page, 4, 576, 6);
   let c = await camera(page, 4, 576);
   await drag(page, { x: c.rect.left + 12, y: c.rect.top + 6 }, { x: c.rect.left + 72, y: c.rect.top + 18 });
-  await expect(page.locator('.matrix-zoom-preview')).toHaveAttribute('data-bounds', JSON.stringify({ columns: [2, 12], rows: [1, 3] }));
+  await expect(page.locator('.matrix-zoom-preview')).toHaveCount(3);
+  await expect(page.locator('.matrix-zoom-preview[data-surface=matrix]')).toHaveAttribute('data-bounds', JSON.stringify({ columns: [2, 12], rows: [1, 3] }));
+  await expect(page.locator('.matrix-zoom-preview[data-surface=rows]')).toHaveAttribute('data-bounds', JSON.stringify({ rows: [1, 3] }));
+  await expect(page.locator('.matrix-zoom-preview[data-surface=columns]')).toHaveAttribute('data-bounds', JSON.stringify({ columns: [2, 12] }));
   await page.mouse.up();
   await page.locator('.matrix-scroll').evaluate(n => { n.scrollLeft = 100; });
   expect(await promptViewport(page)).toEqual(prompt);
@@ -1099,15 +1102,18 @@ for (const width of [1178, 1440]) {
   });
 
   test(`polish real tokenizer auto sizing and accessible manual split at ${width}px`, async ({ page }, info) => {
+    test.setTimeout(info.project.name === 'dpr2' ? 180_000 : 120_000);
     await page.setViewportSize({ width, height: 900 });
     const editor = await tokenizer(page);
     const fill = async (text: string) => {
       const response = page.waitForResponse(r => r.url().endsWith('/tokenize') && r.request().postDataJSON().text === text);
       await editor.press('ControlOrMeta+A'); await page.keyboard.insertText(text);
       const tokens = (await (await response).json()).tokens;
-      // Hundreds of progressive row uploads can exceed the ordinary 15 s wait
-      // under DPR 2 SwiftShader. This is a completion/geometry gate, not latency.
-      await embeddingDone(page, tokens.length, 45_000); await settledPrompt(page);
+      // Hundreds of progressive rows redraw all three native surfaces. Shared
+      // SwiftShader runs exceeded 45 s at DPR 1 and 75 s at DPR 2 despite ~4 s
+      // network delivery. Scope the rendering budget to this layout gate;
+      // retain every complete-value/analysis and geometry assertion.
+      await embeddingDone(page, tokens.length, info.project.name === 'dpr2' ? 120_000 : 75_000); await settledPrompt(page);
       return tokens.length as number;
     };
     const bounded = async () => {
@@ -1261,4 +1267,157 @@ test('expanded model coverage links native embeddings in GPTQ and NVFP4 checkpoi
   await expect(page.getByText('Tokenizer unavailable for this model. You can still edit the prompt.')).toBeVisible();
   await expect(page.locator('.matrix-scroll')).toHaveCount(0);
   await documentFits(page); await closeSession(page);
+});
+
+function embeddingOracle(ids: number[], columns = 576) {
+  const values = ids.flatMap(id => Array.from({ length: columns }, (_, column) => value(id * columns + column)));
+  const sorted = [...values].sort((a, b) => a - b), minimum = sorted[0]!, maximum = sorted.at(-1)!;
+  const rows = Array<number>(ids.length * 100).fill(0), columnCounts = Array<number>(100 * columns).fill(0);
+  for (let index = 0; index < values.length; index++) {
+    const bin = Math.min(99, Math.floor((values[index]! - minimum) / (maximum - minimum) * 100));
+    rows[Math.floor(index / columns) * 100 + bin]!++;
+    columnCounts[bin * columns + index % columns]!++;
+  }
+  return { values, rows, columns: columnCounts, minimum, maximum };
+}
+
+async function science(page: Page) {
+  return page.evaluate(() => {
+    const probe = (window as any).__acceptance;
+    return { values: [...probe.scalarValues], counts: structuredClone(probe.countValues), transfer: probe.transfer(),
+      domains: [...document.querySelectorAll('.distribution-scale')].map(node => [node.getAttribute('data-minimum'), node.getAttribute('data-maximum')]),
+      dimensions: [...document.querySelectorAll('.matrix-surfaces canvas')].map(node => {
+        const canvas = node as HTMLCanvasElement;
+        return { width: canvas.width, height: canvas.height, origin: canvas.dataset.origin };
+      }) };
+  });
+}
+async function captureScience(page: Page) {
+  await page.evaluate(() => {
+    const probe = (window as any).__acceptance;
+    probe.captureScalars = true; probe.captureCounts = true;
+    probe.scalarValues.length = 0; probe.countValues.rows.length = 0; probe.countValues.columns.length = 0;
+  });
+}
+
+test('integrated two-card embeddings have real scientific parity with the same checkpoint matrix', async ({ page }, info) => {
+  await captureScience(page);
+  await open(page, 'embedding.parity.weight');
+  await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await idle(); await nativeCamera(page);
+  const tensor = await science(page);
+  expect(tensor.transfer.mode).toEqual([1]);
+  await page.getByRole('button', { name: 'Collapse inventory', exact: true }).click();
+  for (const width of [1178, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.getByRole('button', { name: 'Expand inventory', exact: true }).hover();
+    await expect(page.getByRole('tooltip', { name: 'Expand inventory', exact: true })).toBeVisible();
+    await page.screenshot({ path: info.outputPath(`integrated-tensor-${width}.png`) });
+  }
+  // Hold a real tokenization response to capture the empty prompt / waiting card.
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/tokenize', async route => {
+    const response = await route.fetch(); await gate; await route.fulfill({ response });
+  });
+  await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
+  await expect(page.getByText('Waiting for current tokenization.')).toBeVisible();
+  for (const width of [1178, 1440]) {
+    await page.setViewportSize({ width, height: 1000 }); await settledPrompt(page);
+    await page.screenshot({ path: info.outputPath(`two-cards-empty-${width}.png`) });
+  }
+  release(); await embeddingDone(page, 1);
+  await page.unroute('**/tokenize');
+  await captureScience(page);
+  const response = page.waitForResponse(r => r.url().endsWith('/tokenize') && r.request().postDataJSON().text === 'A😀A');
+  const orderedRequests: any[] = [];
+  page.on('request', request => {
+    if (/\/embeddings(?:\/(?:statistics|distributions))?$/.test(new URL(request.url()).pathname)) orderedRequests.push(request.postDataJSON());
+  });
+  await page.getByRole('textbox', { name: 'Prompt', exact: true }).fill('A😀A');
+  const ids: number[] = (await (await response).json()).tokens.map((token: any) => token.id);
+  await embeddingDone(page, ids.length); await idle(); await nativeCamera(page);
+  expect(orderedRequests).toEqual(Array.from({ length: 3 }, () => ({ token_ids: ids })));
+  const expected = embeddingOracle(ids), embeddings = await science(page);
+  expect(embeddings.values).toEqual(expected.values);
+  expect(embeddings.counts).toEqual({ rows: expected.rows, columns: expected.columns });
+  expect(embeddings.domains).toEqual(Array.from({ length: 2 }, () => [String(expected.minimum), String(expected.maximum)]));
+  expect(embeddings).toEqual(tensor);
+  const prompt = await tokenizerGeometry(page);
+  const resources = await metrics(page);
+  await page.getByRole('button', { name: 'Input embeddings information', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Input embeddings information' });
+  await expect(dialog).toContainText('Full-range bins');
+  await expect(dialog).toContainText('Luminosity anchors');
+  await expect(dialog).not.toContainText('Storage dtype');
+  await page.keyboard.press('Escape');
+  for (const width of [1178, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.getByRole('button', { name: 'Fit width', exact: true }).click();
+    await settledPrompt(page); await documentFits(page);
+    const cards = await page.locator('.tokenizer-workspace').evaluate(workspace => {
+      const rect = (node: Element) => node.getBoundingClientRect().toJSON();
+      return [...workspace.querySelectorAll('.prompt-panel .viewer-panel, .embedding-layer:not([data-staging]) .viewer-panel')].map(panel => ({
+        panel: rect(panel), title: rect(panel.querySelector('.matrix-panel-header')!), body: rect(panel.querySelector('.viewer-panel-body')!),
+      }));
+    });
+    expect(cards).toHaveLength(2);
+    for (const card of cards) {
+      expect(card.title.width).toBe(card.panel.width);
+      expect(card.body.y).toBe(card.title.bottom);
+      expect(card.body.width).toBe(card.panel.width);
+    }
+    await page.screenshot({ path: info.outputPath(`two-cards-populated-${width}.png`) });
+  }
+  await page.getByRole('separator', { name: 'Resize prompt and embeddings' }).press('ArrowDown');
+  await page.screenshot({ path: info.outputPath('two-cards-resize-focus.png') });
+  const split = await tokenizerGeometry(page);
+  await zoom(page, ids.length, 576, 128);
+  await page.locator('.matrix-scroll').evaluate(node => { node.scrollLeft = 300; node.scrollTop = 80; });
+  await expect.poll(() => page.locator('.matrix-scroll').evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  await page.locator('.matrix-scroll').focus();
+  await page.screenshot({ path: info.outputPath('two-cards-zoom-scroll.png') });
+  const after = await tokenizerGeometry(page);
+  expect(after.prompt).toEqual(split.prompt);
+  expect(after.embeddings).toEqual(split.embeddings);
+  expect((await metrics(page)).uploads).toBe(resources.uploads);
+  expect((await metrics(page)).createdTextures).toBe(resources.createdTextures);
+  expect(orderedRequests).toHaveLength(3);
+  await info.attach('integrated-scientific-parity', { contentType: 'application/json', body: JSON.stringify({
+    ids, rows: ids.length, columns: 576, domain: [expected.minimum, expected.maximum],
+    rowCountSum: expected.rows.reduce((a, b) => a + b), columnCountSum: expected.columns.reduce((a, b) => a + b),
+    transfer: embeddings.transfer, nativeDimensions: embeddings.dimensions, prompt, resources: await metrics(page),
+  }) });
+  await closeSession(page);
+});
+
+test('real embedding distribution cancellation preserves completed values and independent statistics', async ({ page }) => {
+  await control('arm', { kind: 'input_embeddings_distributions' });
+  await tokenizer(page, false);
+  await expect.poll(async () => (await control()).control.entered).toBe(true);
+  await expect(page.getByText('[1 × 576] · float32')).toBeVisible();
+  await expect(page.locator('.input-embeddings [data-result=statistics]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Cancel embedding distributions' }).click();
+  await expect(page.locator('.input-embeddings [data-result=distributions]')).toHaveAttribute('data-state', 'cancelled');
+  await page.locator('.matrix-scroll').focus();
+  await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 0${value(576)}`);
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+  await expect(page.locator('[data-token-index="0"]')).toHaveAttribute('data-active-token', '');
+  await control('release', {});
+  await closeSession(page);
+});
+
+test('real embedding statistics failure keeps values, histograms and successful tokenization authoritative', async ({ page }) => {
+  await control('arm', { kind: 'input_embeddings_statistics', mode: 'pre-meta-error' });
+  await tokenizer(page, false);
+  await expect(page.locator('.input-embeddings [data-result=statistics]')).toHaveAttribute('data-state', 'failed');
+  await expect(page.locator('.input-embeddings [data-result=distributions]')).toHaveCount(0);
+  await expect(page.locator('.distribution-scale-rows')).toHaveAttribute('data-minimum', '-1');
+  await expect(page.locator('.tokenizer-status')).toContainText('current prompt');
+  await page.locator('.matrix-scroll').focus();
+  await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 0${value(576)}`);
+  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+  await expect(page.getByText(/unavailable for this model/)).toHaveCount(0);
+  await closeSession(page);
 });
