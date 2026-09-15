@@ -125,6 +125,12 @@ for (const dpr of [1, 2]) test.describe(`overlay scrolling DPR ${dpr}`, () => {
     await page.mouse.move(rect.x + rect.width / 2, rect.y + 2);
     await expect(bar).toHaveAttribute('data-near', '');
     await expect(layer).toHaveAttribute('data-active', '');
+    // Revealed targets leave the unpainted outer rim available for exact cells.
+    expect(await page.locator('.matrix-scroll').evaluate(viewport => {
+      const r = viewport.getBoundingClientRect();
+      return [[r.right - 1, r.top + 1], [r.left + 1, r.bottom - 1]]
+        .every(([x, y]) => document.elementFromPoint(x!, y!)?.tagName === 'CANVAS');
+    })).toBe(true);
     expect((await state(page)).client).toEqual(before.client);
     await expect(layer).not.toHaveAttribute('data-active');
     await expect(bar).not.toHaveAttribute('data-near');
