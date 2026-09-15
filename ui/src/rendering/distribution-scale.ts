@@ -37,6 +37,7 @@ export class DistributionScale {
     this.ruler.replaceChildren();
     delete this.ruler.dataset.minimum;
     delete this.ruler.dataset.maximum;
+    this.ruler.classList.remove('distribution-scale-constant');
     this.guide.hidden = true;
     const label = this.orientation === 'rows' ? 'Row' : 'Column';
     if (!domain || domain.minimum === null || domain.maximum === null) {
@@ -64,7 +65,15 @@ export class DistributionScale {
     this.guide.hidden = false;
     const tick = document.createElement('span');
     tick.className = 'distribution-zero-tick';
-    tick.textContent = '0';
+    // Endpoint labels already identify boundary zero. Keep its exact anchor
+    // without repeating that label or shifting it into the finite domain.
+    tick.textContent = this.orientation === 'rows' && (zero === 0 || zero === 1) ? '' : '0';
     this.ruler.append(tick);
+  }
+
+  /** Follow the renderer's existing physical-pixel alignment without moving data. */
+  alignBinAxis(offset: string) {
+    this.ruler.style.setProperty('--distribution-offset', offset);
+    this.guide.style.setProperty('--distribution-offset', offset);
   }
 }

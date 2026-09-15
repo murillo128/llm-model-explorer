@@ -77,8 +77,10 @@ local cell.
 Every rank-2 instance owns a fit-width camera with wheel/pinch zoom and native
 scroll navigation. `Fit width` resets its scale/origins; replacing `source` starts
 a fresh camera. A plain `header` is placed in PanelHeader beside this action.
-For an existing contextual header, pass `header={(cameraControls) => ...}` and
-compose `cameraControls` into its action slot. Header changes do not resubscribe.
+For an existing contextual header, pass `header={(cameraControls, domain) => ...}` and
+compose `cameraControls` into its action slot. `domain` supplies the current
+delivery's authoritative distribution endpoints (undefined until available) for
+on-demand metadata, such as Tensor information. Header changes do not resubscribe.
 Distribution thickness and value-bin rulers remain independent of camera scale;
 their data axes share the matrix transform exactly. Rank-1 remains a native strip.
 

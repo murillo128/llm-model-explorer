@@ -652,6 +652,10 @@ test('integrated inventory preferences and metadata preserve streaming panel geo
   await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
   const initial = await panelGeometry(page);
   expect(initial['.matrix-panel-header']![3]).toBe(40);
+  expect(initial['.matrix-surfaces']![1]).toBe(initial['.matrix-panel-header']![1]! + initial['.matrix-panel-header']![3]!);
+  await expect(page.locator('.matrix-panel-header')).toHaveCount(1);
+  await expect(page.locator('.distribution-range')).toHaveCount(0);
+  await expect(page.getByText('Full-range bins', { exact: true })).toHaveCount(0);
   const info = page.getByRole('button', { name: 'Tensor information', exact: true });
   const dialog = page.getByRole('dialog', { name: 'Tensor information' });
   const close = page.getByRole('button', { name: 'Close tensor information' });
@@ -660,7 +664,8 @@ test('integrated inventory preferences and metadata preserve streaming panel geo
   expect((await dialog.boundingBox())!.y).toBe(icon.y + icon.height);
   await info.click(); await expect(close).toBeFocused();
   await page.mouse.move(0, 0); await expect(dialog).toBeVisible();
-  await expect(dialog.locator('dt')).toHaveText(['Logical path', 'Rank', 'Elements', 'Storage dtype', 'Storage format', 'Logical dtype']);
+  await expect(dialog.locator('dt')).toHaveText(['Logical path', 'Rank', 'Elements', 'Storage dtype', 'Storage format', 'Logical dtype',
+    'Distribution domain', 'True finite minimum', 'True finite maximum']);
   expect(await panelGeometry(page)).toEqual(initial);
   await page.keyboard.press('Escape'); await expect(info).toBeFocused();
   await control('release', {}); await complete(page);
@@ -799,16 +804,25 @@ for (const [name, low, high] of [
         .toBeCloseTo(-low / (high! - low) * 100);
     }
   }
-  const range = page.getByRole('region', { name: 'Distribution range' });
-  if (low === null) await expect(range).toContainText('No finite');
-  else {
-    await expect(range).toContainText('min'); await expect(range).toContainText('max');
-    await expect(range.locator('[title]').first()).toHaveAttribute('title', `True finite minimum: ${low}`);
-    await expect(range.locator('[title]').last()).toHaveAttribute('title', `True finite maximum: ${high}`);
+  await expect(page.locator('.distribution-range')).toHaveCount(0);
+  await expect(page.getByText('Full-range bins', { exact: true })).toHaveCount(0);
+  const info = page.getByRole('button', { name: 'Tensor information', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Tensor information' });
+  await info.click();
+  if (low === null) {
+    await expect(dialog).toContainText('No finite values');
+    await expect(dialog.locator('dt').filter({ hasText: /^True finite minimum$/ }).locator('+ dd')).toHaveText('Unavailable');
+    await expect(dialog.locator('dt').filter({ hasText: /^True finite maximum$/ }).locator('+ dd')).toHaveText('Unavailable');
   }
-  const stable = await range.textContent();
+  else {
+    await expect(dialog).toContainText('Full-range bins');
+    await expect(dialog.locator('dt').filter({ hasText: /^True finite minimum$/ }).locator('+ dd')).toHaveAttribute('title', `True finite minimum: ${low}`);
+    await expect(dialog.locator('dt').filter({ hasText: /^True finite maximum$/ }).locator('+ dd')).toHaveAttribute('title', `True finite maximum: ${high}`);
+  }
+  const stable = await dialog.textContent();
   await page.locator('.matrix-scroll').dispatchEvent('wheel', { deltaY: -100, ctrlKey: true });
-  expect(await range.textContent()).toBe(stable);
+  expect(await dialog.textContent()).toBe(stable);
+  await page.keyboard.press('Escape');
   await closeSession(page);
 });
 
