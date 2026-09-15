@@ -63,8 +63,7 @@ function BackendApp({ config, slots }: Required<AppProps>) {
             {state.inventory === 'complete' && !state.tensors.length && <p>No tensors available.</p>}
             <TensorTree tensors={state.tensors} selectedId={tensor?.id} onSelect={controller.selectTensor} />
           </>}>
-          {(restoreInventory) => <WorkingSurface title={`${state.explorer} workspace`} showTitle={false}>
-            {restoreInventory}
+          <WorkingSurface title={`${state.explorer} workspace`} showTitle={false}>
             {state.explorer === 'Tensor Explorer' && tensor && <>
               {(!supported || slots.tensor) && <TensorHeader key={tensor.id} tensor={tensor} />}
               {!supported && <p>Direct viewing supports complete rank-1 and rank-2 tensors. This rank-{tensor.rank} tensor is available for metadata inspection only.</p>}
@@ -76,7 +75,7 @@ function BackendApp({ config, slots }: Required<AppProps>) {
               {state.viewStatus !== 'idle' && <p role="status" data-state={state.viewStatus}>{state.viewStatus === 'failed' ? 'Operation failed.' : `Operation ${state.viewStatus}.`}</p>}
             </ExplorerContext.Provider> : !tensor || state.explorer !== 'Tensor Explorer' ?
               <p>{state.session ? 'Select a tensor to inspect.' : 'Open a model session to use this explorer.'}</p> : null}
-          </WorkingSurface>}
+          </WorkingSurface>
         </TensorWorkspace>
       </div>
       <AppStatusBar state={state} model={model} />

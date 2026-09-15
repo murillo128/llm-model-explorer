@@ -76,24 +76,28 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .model-metadata, .tensor-metadata { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; }
 .tensor-layout { display: grid; grid-template-columns: var(--inventory-width, 280px) 16px minmax(360px, 1fr); }
 .tensor-layout > aside { min-width: 0; min-height: 0; overflow: auto; scrollbar-gutter: stable; overscroll-behavior: contain; scroll-padding-top: 42px; padding: 6px; }
-.inventory-header { position: sticky; top: -6px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 4px; background: var(--ui-bg); padding-block: 4px; }
+.inventory-header { position: sticky; top: -6px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 4px; background: var(--ui-bg); min-height: 36px; padding-block: 4px; }
 .inventory-header h2 { font-size: 14px; }
-.inventory-toggle { flex-shrink: 0; font-size: 12px; line-height: 20px; padding: 3px 6px; border: 1px solid var(--ui-border); border-radius: 4px; background: var(--ui-surface); color: var(--ui-text); cursor: pointer; }
+.inventory-toggle { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; padding: 6px; border: 1px solid var(--ui-border); border-radius: 4px; background: var(--ui-surface); color: var(--ui-text); cursor: pointer; }
 .inventory-toggle:hover { background: var(--ui-accent-soft); }
-.inventory-restore { align-self: flex-start; }
+.inventory-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.3; }
+.inventory-rail { position: relative; align-self: start; display: flex; justify-content: flex-start; padding-top: 6px; }
+.inventory-rail [role="tooltip"] { visibility: hidden; position: absolute; top: 6px; left: 36px; z-index: 10; white-space: nowrap; padding: 6px 8px; font-size: 12px; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 4px; box-shadow: var(--ui-shadow-float); }
+.inventory-rail:hover [role="tooltip"], .inventory-rail:focus-within [role="tooltip"] { visibility: visible; }
 .inventory-resizer { cursor: col-resize; touch-action: none; position: relative; }
 .inventory-resizer::before { content: ''; position: absolute; inset: 0 7px; background: var(--ui-border); }
 .inventory-resizer:hover::before, .inventory-resizer:focus-visible::before { background: var(--ui-accent); }
 .inventory-resizer:focus-visible { outline-offset: -3px; }
-.tensor-layout.inventory-hidden { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0; }
+.tensor-layout.inventory-hidden { grid-template-columns: 40px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0; }
 .tensor-navigator { container-type: inline-size; }
 .tensor-tree { list-style: none; padding: 0; margin: 0; }
 .tensor-tree summary { cursor: pointer; padding: 2px 4px; height: 28px; white-space: nowrap; font-size: 13px; line-height: 24px; }
-.tensor-tree summary > span { display: inline-block; max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
+.tensor-tree summary > span { display: inline-block; max-width: calc(100% - 40px); overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
 .tensor-choice { display: flex; align-items: center; gap: 6px; text-align: left; width: 100%; height: 28px; padding: 2px 4px; border: 0; border-radius: 3px; background: transparent; color: var(--ui-text); cursor: pointer; font-size: 13px; line-height: 24px; }
 .tensor-choice:hover, .tensor-tree summary:hover { background: var(--ui-surface); }
 .tensor-choice[aria-pressed="true"] { background: var(--ui-accent-soft); box-shadow: inset 2px 0 var(--ui-accent); }
 .tensor-tree :focus-visible { outline-offset: -2px; }
+.tensor-folder-icon { width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; fill: none; stroke: currentColor; stroke-width: 1; }
 .tensor-leaf-icon { width: 14px; height: 14px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1; }
 .tensor-leaf-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .tensor-leaf-metadata { flex-shrink: 0; font-size: 11px; white-space: nowrap; }

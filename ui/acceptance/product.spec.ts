@@ -676,24 +676,30 @@ test('integrated inventory preferences and metadata preserve streaming panel geo
   const pane = page.getByRole('region', { name: 'Tensor Explorer workspace', exact: true });
   const inventory = page.getByRole('complementary', { name: 'Tensor inventory' });
   const before = (await pane.boundingBox())!, width = (await inventory.boundingBox())!.width;
-  await page.getByRole('button', { name: 'Hide inventory' }).click();
-  await expect(page.getByRole('button', { name: 'Show inventory' })).toBeFocused();
-  expect((await pane.boundingBox())!.width - before.width).toBe(width + 16);
-  expect(await pane.boundingBox()).toEqual(await page.locator('#workspace').boundingBox());
-  await page.getByRole('button', { name: 'Show inventory' }).click();
+  if (process.env.CAPTURE_INVENTORY_EVIDENCE) await page.screenshot({ path: `evidence/inventory-matrix-expanded-${testInfo.project.name}.png` });
+  await page.getByRole('button', { name: 'Collapse inventory' }).click();
+  await expect(page.getByRole('button', { name: 'Expand inventory' })).toBeFocused();
+  expect((await pane.boundingBox())!.width - before.width).toBe(width + 16 - 40);
+  const workspace = (await page.locator('#workspace').boundingBox())!;
+  expect(await pane.boundingBox()).toEqual({ ...workspace, x: workspace.x + 40, width: workspace.width - 40 });
+  if (process.env.CAPTURE_INVENTORY_EVIDENCE) {
+    await page.getByRole('button', { name: 'Expand inventory' }).blur(); await page.mouse.move(0, 0);
+    await page.screenshot({ path: `evidence/inventory-matrix-collapsed-${testInfo.project.name}.png` });
+  }
+  await page.getByRole('button', { name: 'Expand inventory' }).click();
   const divider = page.getByRole('separator', { name: 'Resize tensor inventory' });
   await divider.focus(); await divider.press('End');
   await expect(divider).toHaveAttribute('aria-valuenow', '480');
   expect(await canvas!.evaluate(node => node === document.querySelector('.matrix-scroll canvas'))).toBe(true);
   expect(await metrics(page)).toMatchObject({ uploads: resources.uploads, createdTextures: resources.createdTextures });
-  await page.getByRole('button', { name: 'Hide inventory' }).click();
+  await page.getByRole('button', { name: 'Collapse inventory' }).click();
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Show inventory' })).toBeVisible();
-  await page.getByRole('button', { name: 'Show inventory' }).click();
+  await expect(page.getByRole('button', { name: 'Expand inventory' })).toBeVisible();
+  await page.getByRole('button', { name: 'Expand inventory' }).click();
   await expect(divider).toHaveAttribute('aria-valuenow', '480');
   await expect(page.getByRole('button', { name: new RegExp(`^${name}`) })).toBeVisible();
   await documentFits(page);
-  await testInfo.attach('measurements', { body: JSON.stringify({ initial, reclaimedWidth: width + 16, restoredWidth: 480 }), contentType: 'application/json' });
+  await testInfo.attach('measurements', { body: JSON.stringify({ initial, reclaimedWidth: width + 16 - 40, restoredWidth: 480 }), contentType: 'application/json' });
   await closeSession(page);
 });
 

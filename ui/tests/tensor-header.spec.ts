@@ -128,7 +128,7 @@ test('metadata previews, pins, anchors below the icon, and leaves scientific wid
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await trigger.click();
-  await page.getByRole('heading', { name: 'Tensors', exact: true }).click();
+  await page.getByRole('heading', { name: 'Inventory', exact: true }).click();
   await expect(dialog).toHaveCount(0);
 });
 
@@ -144,7 +144,7 @@ test('touch pins metadata and supports close and outside tap without hover', asy
   await expect(dialog).toHaveCount(0);
   await trigger.tap();
   await expect(dialog).toBeVisible();
-  await page.getByRole('heading', { name: 'Tensors', exact: true }).tap();
+  await page.getByRole('heading', { name: 'Inventory', exact: true }).tap();
   await expect(dialog).toHaveCount(0);
   await context.close();
 });

@@ -30,13 +30,19 @@ Rank-1 tensors remain in scope, but the dedicated design work so far has not fix
 
 ## Tensor navigation and header
 
-The inventory follows the public descriptor's logical path segments, never filesystem structure. Branches alone use chevron disclosure controls. Each leaf is one compact row with a tensor icon, its relative final path segment, and inline shape/storage dtype when width permits. Selection highlights the row rather than opening a card. Use shallow, capped indentation, truncate long labels, and retain full public identity in accessible names/tooltips so duplicate leaf names remain distinguishable. Native disclosure and selection work with Enter/Space and Tab; arrow keys navigate visible rows, open/close branches, or return to a parent, with Home/End reaching the first/last visible row.
+The inventory follows the public descriptor's logical path segments, never filesystem structure. Branches use folder icons and alone use chevron disclosure controls. Each leaf is one compact row with a tensor icon, its relative final path segment, and inline shape/storage dtype when width permits. Selection highlights the row rather than opening a card. Use shallow, capped indentation, truncate long labels, and retain full public identity in accessible names/tooltips so duplicate leaf names remain distinguishable. Native disclosure and selection work with Enter/Space and Tab; arrow keys navigate visible rows, open/close branches, or return to a parent, with Home/End reaching the first/last visible row.
 
-The inventory is secondary navigation. Its visible Hide inventory control removes
-the entire pane and divider track; a visible, keyboard-accessible Show inventory
-control in the scientific workspace restores it. Focus moves to the corresponding
-control after hiding/restoring. Neither action changes the selected tensor or
-restarts scientific operations. There is no automatic hiding on selection.
+The inventory is secondary navigation in a dedicated left track outside the
+Matrix Explorer panel. The expanded drawer has a compact `Inventory` header and
+an accessible collapse control. Collapsing replaces the pane and divider with a
+40 CSS-pixel icon-only rail: only the Inventory restore icon is persistent, with
+no text, disclosure chevron, or empty pane. The restore button has an accessible
+name and a hover/focus tooltip. Focus moves to the corresponding control after
+collapse/restore. Restoring recovers the prior expanded width and tree state.
+The drawer never overlays the matrix; its collapse/restore resizes the scientific
+workspace while keeping selection, camera, operations, and streaming consumers
+mounted. There is no automatic hiding on selection or inventory search/filter.
+Global explorer navigation remains the existing top tabs.
 
 On a fresh browser preference state, open only first-level branches. Deeper
 branches, including layer lists and their internals, start collapsed. Remember
@@ -223,8 +229,9 @@ not overwrite the user's preferred width.
 At or below 760 CSS pixels the visible panes stack: the inventory receives 24%
 of workspace height (at least 64 CSS pixels), and the scientific pane receives
 the remainder with an 8 px gap. The desktop width divider is unavailable in this
-layout; the saved desktop width is retained. Hiding the inventory removes its
-entire row and gap as well. The inventory's compact controls remain reachable
+layout; the saved desktop width is retained. Collapsing removes the inventory
+row and gap, leaving the same 40 CSS-pixel left rail beside a full-height
+scientific pane. The inventory's compact controls remain reachable
 while its tree scrolls. Native data geometry never shrinks to fit.
 
 The matrix viewport receives the scientific pane's remaining height after context,
