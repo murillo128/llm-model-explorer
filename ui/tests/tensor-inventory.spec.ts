@@ -172,6 +172,12 @@ test('pointer and keyboard resizing clamp, persist width and preserve scientific
   await page.setViewportSize({ width: 280, height: 400 });
   await expect(divider).not.toBeVisible();
   await noDocumentOverflow(page);
+  await page.getByRole('button', { name: 'Collapse inventory' }).click();
+  await expect(page.getByRole('button', { name: 'Expand inventory' })).toBeFocused();
+  await noDocumentOverflow(page);
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Collapse inventory' })).toBeFocused();
+  await noDocumentOverflow(page);
   await page.setViewportSize({ width: 1200, height: 800 });
   await expect(divider).toHaveAttribute('aria-valuenow', '480');
   await page.evaluate(() => {
