@@ -1,10 +1,11 @@
-import { memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import type { Node, NodeProps } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './architecture.css';
 import type { Graph, GraphNode, GraphView, Layout, PortPosition } from './graph';
 import { requestLayout } from './layout';
+import { useCanvasCallback } from './useCanvasCallback';
 import type { ProjectedNode, ProjectionOptions } from './projection';
 import { connectionSet, endpointKey } from './projection';
 import { deriveMlpGroups } from './derived-groups';
@@ -106,15 +107,17 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
   const stack = graph.repetitions.find((r) => r.id === activeStack);
   const scope = useMemo(() => options.scope ? componentScope(graph, options.scope) : undefined, [graph, options.scope]);
   const windowSize = Math.max(2, Math.min(8, Math.floor((panelWidth - 140) / 240)));
-  const select = useCallback((id: string) => { view.update({ selected: id, edge: null }); setSelected(id); setPinned(null); setInspection(null); }, [view]);
-  const focusContext = useCallback((id: string | null, stackId?: string) => {
+  // Event proxies share only the committed render. Independently memoized
+  // closures can chain older render contexts together and retain their layouts.
+  const select = useCanvasCallback((id: string) => { view.update({ selected: id, edge: null }); setSelected(id); setPinned(null); setInspection(null); });
+  const focusContext = useCanvasCallback((id: string | null, stackId?: string) => {
     // A stack overview focuses its parent; all other navigation derives the
     // repetition from the source instance, including a derived MLP's owner.
     const repetitionId = stackId ?? instanceOf(graph, mlps.find((g) => g.id === id)?.parentId ?? id)?.repetition.id ?? null;
     view.update({ focus: id, activeStack: repetitionId });
     setFocusId(id); setActiveStack(repetitionId);
-  }, [graph, mlps, view]);
-  const change = useCallback((patch: Partial<ProjectionOptions>) => {
+  });
+  const change = useCanvasCallback((patch: Partial<ProjectionOptions>) => {
     setOptions((previous) => {
       const next = { ...previous, ...patch };
       view.update({ expanded: next.expanded, repetitions: next.repetitions ?? {}, exhaustive: next.exhaustive ?? false,
@@ -122,35 +125,35 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
         stateScope: next.stateScope, scope: next.scope });
       return next;
     });
-  }, [view]);
-  const syncView = useCallback((initial = false) => {
+  });
+  const syncView = useCanvasCallback((initial: boolean = false) => {
     setOptions(projectionOptions(view)); setSelected(view.selected); setPinned(view.edge);
     setDimensions(view.dimensions); setFocusId(view.focus); setActiveStack(view.activeStack);
     setInspection(null); setTemporary(null); setFocused(null);
     cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current);
     anchor.current = null; centerPending.current = null; fitPending.current = false;
     restorePending.current = initial ? undefined : view.viewport; scopeCameraPending.current = initial;
-  }, [view]);
-  const leaveIsolation = useCallback(() => {
+  });
+  const leaveIsolation = () => {
     returnToModel(view); syncView(); return projectionOptions(view);
-  }, [syncView, view]);
-  const isolate = useCallback((id: string) => {
+  };
+  const isolate = useCanvasCallback((id: string) => {
     enterComponent(view, graph, id, flow.getViewport()); syncView(true);
     picker.current?.focus();
-  }, [flow, graph, syncView, view]);
-  const back = useCallback(() => { backFromComponent(view); syncView(); picker.current?.focus(); }, [syncView, view]);
-  const rememberAnchor = useCallback((id: string) => {
+  });
+  const back = useCanvasCallback(() => { backFromComponent(view); syncView(); picker.current?.focus(); });
+  const rememberAnchor = useCanvasCallback((id: string) => {
     const box = boxes.get(id);
     if (!box) return;
     const camera = flow.getViewport();
     anchor.current = { id, sourceId: projected.get(id)?.sourceIds[0], x: box.absoluteX * camera.zoom + camera.x, y: box.absoluteY * camera.zoom + camera.y };
-  }, [boxes, flow, projected]);
-  const withAncestors = useCallback((id: string, expanded: Set<string>) => {
+  });
+  const withAncestors = (id: string, expanded: Set<string>) => {
     let node = records.get(id);
     while (node?.parent_id) { expanded.add(node.parent_id); node = records.get(node.parent_id); }
     return expanded;
-  }, [records]);
-  const chooseInstance = useCallback((id: string, open = true) => {
+  };
+  const chooseInstance = useCanvasCallback((id: string, open: boolean = true) => {
     const info = instanceOf(graph, id);
     if (!info) return;
     const previous = instanceOf(graph, selected);
@@ -169,8 +172,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     select(id); focusContext(info.instance.node_id);
     if (anchor.current) { anchor.current.id = info.instance.node_id; anchor.current.sourceId = info.instance.node_id; }
     change({ ...base, expanded: [...expanded], repetitions: { ...base.repetitions, [info.repetition.id]: { start, count: 1 } }, stateScope: undefined, scope: undefined });
-  }, [change, focusContext, graph, leaveIsolation, options, projected, rememberAnchor, select, selected, withAncestors]);
-  const exploreStack = useCallback((id: string, start?: number) => {
+  });
+  const exploreStack = useCanvasCallback((id: string, start?: number) => {
     const repetition = graph.repetitions.find((r) => r.id === id)!;
     const base = options.scope ? leaveIsolation() : options;
     const current = base.repetitions?.[id];
@@ -181,16 +184,16 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     focusContext(repetition.parent_id, id);
     change({ ...base, expanded: [...expanded], exhaustive: false, stateScope: undefined, scope: undefined,
       repetitions: { ...base.repetitions, [id]: { start: Math.max(0, Math.min(repetition.instances.length - 1, start ?? current?.start ?? 0)), count: windowSize } } });
-  }, [change, focusContext, graph.repetitions, leaveIsolation, options, projected, rememberAnchor, windowSize, withAncestors]);
-  const toggle = useCallback((id: string) => {
+  });
+  const toggle = useCanvasCallback((id: string) => {
     const node = projected.get(id);
     if (node?.repetitionId) { exploreStack(node.repetitionId, node.instances ? graph.repetitions.find((r) => r.id === node.repetitionId)!.instances.findIndex((i) => i.node_id === node.instances![0]!.node_id) : 0); return; }
     rememberAnchor(id);
     const expanded = new Set(options.expanded);
     if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
     change({ expanded: [...expanded], exhaustive: false });
-  }, [change, exploreStack, graph.repetitions, options.expanded, projected, rememberAnchor]);
-  const reveal = useCallback((id: string) => {
+  });
+  const reveal = useCanvasCallback((id: string) => {
     const base = scope && !scope.members.has(id) && scope.id !== id ? leaveIsolation() : options;
     select(id);
     const derived = mlps.find((group) => group.id === id && !records.has(id));
@@ -206,8 +209,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     restorePending.current = undefined;
     change({ ...base, scope: base.scope, expanded: [...expanded], repetitions, stateScope: undefined,
       ...(derived ? { deriveMlp: true, exhaustive: false } : {}) });
-  }, [change, focusContext, graph, leaveIsolation, mlps, options, records, scope, select, withAncestors]);
-  const viewInModel = useCallback(() => {
+  });
+  const viewInModel = useCanvasCallback(() => {
     const id = selected && (records.has(selected) || mlps.some((group) => group.id === selected)) ? selected : options.scope;
     // reveal performs the same exact-instance action after restoring global state.
     if (!id) return;
@@ -224,45 +227,45 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     centerPending.current = id; restorePending.current = undefined;
     change({ ...base, expanded: [...expanded], repetitions, scope: undefined, stateScope: undefined,
       ...(derived ? { deriveMlp: true, exhaustive: false } : {}) });
-  }, [change, focusContext, graph, leaveIsolation, mlps, options.scope, records, select, selected, withAncestors]);
-  const nativeInspect = useCallback((record: GraphNode, trigger: HTMLElement) => {
+  });
+  const nativeInspect = useCanvasCallback((record: GraphNode, trigger: HTMLElement) => {
     select(record.id); setInspection(null);
     const filteredInputs = options.exhaustive || options.showUnused ? [] : result.layout?.projection.unusedInputs.filter((p) => p.node_id === record.id).map((p) => p.port_id) ?? [];
     onInspect?.({ modelId, sessionId, graphId: graph.graph_id, node: record, trigger, filteredInputs });
-  }, [graph.graph_id, modelId, onInspect, options.exhaustive, options.showUnused, result.layout, select, sessionId]);
-  const inspect = useCallback((node: ProjectedNode, trigger: HTMLElement) => {
+  });
+  const inspect = useCanvasCallback((node: ProjectedNode, trigger: HTMLElement) => {
     if (node.record) nativeInspect(records.get(node.record.id)!, trigger);
     else setInspection({ nodeId: node.id, trigger });
-  }, [nativeInspect, records]);
-  const activate = useCallback((node: ProjectedNode, trigger: HTMLElement) => {
+  });
+  const activate = useCanvasCallback((node: ProjectedNode, trigger: HTMLElement) => {
     if (node.repetitionId) exploreStack(node.repetitionId);
     else if (node.presentation === 'mlp') { focusContext(node.id); toggle(node.id); }
     else inspect(node, trigger);
-  }, [exploreStack, focusContext, inspect, toggle]);
-  const overview = useCallback(() => {
+  });
+  const overview = useCanvasCallback(() => {
     if (options.scope) leaveIsolation();
     focusContext(null); fitPending.current = true;
     restorePending.current = undefined;
     change({ expanded: graph.nodes.filter((n) => n.kind === 'group' && !n.parent_id).map((n) => n.id), repetitions: {}, exhaustive: false, stateScope: undefined, scope: undefined });
-  }, [change, focusContext, graph.nodes, leaveIsolation, options.scope]);
-  const focusLayer = useCallback(() => {
+  });
+  const focusLayer = useCanvasCallback(() => {
     if (!instance) return;
     chooseInstance(instance.instance.node_id);
     centerPending.current = instance.instance.node_id;
-  }, [chooseInstance, instance]);
-  const stateFocus = useCallback(() => {
+  });
+  const stateFocus = useCanvasCallback(() => {
     if (!instance) return;
     const id = instance.instance.node_id;
     const expanded = withAncestors(id, new Set(options.expanded)); expanded.add(id);
     for (const n of graph.nodes) if (n.kind === 'group' && instanceOf(graph, n.id)?.instance.node_id === id) expanded.add(n.id);
     focusContext(id); fitPending.current = true;
     change({ expanded: [...expanded], exhaustive: false, stateScope: id });
-  }, [change, focusContext, graph, instance, options.expanded, withAncestors]);
-  const fit = useCallback(() => {
+  });
+  const fit = useCanvasCallback(() => {
     let focusNodes: CanvasNode[] | undefined;
     if (!options.scope && focusId && boxes.has(focusId)) focusNodes = flow.getNodes().filter((n) => n.id === focusId);
     void flow.fitView({ ...(focusNodes?.length ? { nodes: focusNodes } : {}), padding: 0.1, minZoom: 0.00001, maxZoom: 1 });
-  }, [boxes, flow, focusId, options.scope]);
+  });
   useEffect(() => {
     const element = panel.current!;
     const observer = new ResizeObserver(([entry]) => { if (entry) setPanelWidth(entry.contentRect.width); });
@@ -303,7 +306,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     return () => cancelAnimationFrame(frame);
   }, [result.layout, boxes, flow, projected, view, fit]);
   useEffect(() => () => { cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current); }, []);
-  const hover = useCallback((target: EmphasisTarget | null) => {
+  const hover = useCanvasCallback((target: EmphasisTarget | null) => {
     cancelAnimationFrame(hoverFrame.current);
     if (target) setTemporary((previous) => {
       // Pointer movement along the same represented segment changes no state.
@@ -311,12 +314,12 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
         target.edgeIds.every((id, index) => id === previous.edgeIds[index])) return previous;
       return target;
     }); else hoverFrame.current = requestAnimationFrame(() => setTemporary(null));
-  }, []);
-  const keyboardFocus = useCallback((target: EmphasisTarget | null) => {
+  });
+  const keyboardFocus = useCanvasCallback((target: EmphasisTarget | null) => {
     cancelAnimationFrame(focusFrame.current);
     if (target) setFocused(target); else focusFrame.current = requestAnimationFrame(() => setFocused(null));
-  }, []);
-  const pin = useCallback((id: string, trigger: HTMLElement) => { view.update({ edge: id }); setPinned(id); setInspection({ edgeId: id, trigger }); }, [view]);
+  });
+  const pin = useCanvasCallback((id: string, trigger: HTMLElement) => { view.update({ edge: id }); setPinned(id); setInspection({ edgeId: id, trigger }); });
   const lineHit = useMemo(() => connectionHitResolver(result.layout?.projection.edges ?? [], result.layout?.routes ?? []), [result.layout]);
   const emphasis = useMemo(() => {
     const projection = result.layout?.projection;

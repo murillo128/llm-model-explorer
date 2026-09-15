@@ -12,6 +12,7 @@ import type { Graph } from '../src/architecture-explorer/graph';
 import { projectGraph } from '../src/architecture-explorer/projection';
 import { assertTraceability } from '../tests/architecture-invariants';
 import { installProbe } from './probe';
+import { installArchitectureProbe } from './architecture-probe';
 import { nativeCamera } from '../tests/native-camera';
 import { fanoutPoint } from '../tests/architecture-pointer';
 
@@ -40,6 +41,13 @@ function packedValue(family: string, row: number, column: number, inputs: number
 }
 
 async function metrics(page: Page) { return page.evaluate(() => (window as any).__acceptance.metrics()); }
+async function graphObservation(page: Page, collect = false) {
+  const client = await page.context().newCDPSession(page);
+  if (collect) await client.send('HeapProfiler.collectGarbage');
+  const heap = await client.send('Runtime.getHeapUsage');
+  await client.detach();
+  return { heap, collected: collect, ...await page.evaluate(() => window.__architectureProbe()) };
+}
 async function control(path: string, body?: object) {
   const response = await fetch(`${backend}/__test/${path}`, body ? {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -237,6 +245,7 @@ test.beforeEach(async ({ page }, info) => {
   }, { timeout: reference ? 300_000 : 30_000 }).toBe(200);
   page.on('request', (r) => { if (r.url().startsWith(backend)) observed.push(new URL(r.url()).pathname); });
   await page.addInitScript(installProbe);
+  await page.addInitScript(installArchitectureProbe);
   await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
   await page.goto('/');
 });
@@ -353,10 +362,11 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     }
     await page.keyboard.press('Escape'); await released(page);
     if (!reference && ['qwen3', 'qwen35'].includes(family)) {
-      const packed = graph.parameters.filter((p) => p.binding === 'quantized' && p.inspection.status === 'available')
+      const packed = graph.parameters.filter((p) => p.binding === 'quantized' && p.inspection.status === 'available' && p.name.includes('.1.'))
         .sort((a, b) => size(a) - size(b))[0]!;
       expect(packed).toBeTruthy();
-      await openParameter(page, graph, packed);
+      const packedRequests = observed.length;
+      await openParameter(page, graph, packed, true);
       await expect(matrixCanvas).toBeVisible();
       await nativeCamera(page);
       await page.mouse.move(0, 0);
@@ -371,8 +381,13 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
         await expect.poll(async () => Number(await scalar.textContent())).toBe(
           packedValue(family, packedRow, selectedColumn, packedColumns));
       }
-      expect(observed.some((path) => path.includes(`/tensors/${packed.inspection.status === 'available' ? packed.inspection.tensor_id : ''}/data`))).toBe(true);
+      const tensor = packed.inspection.status === 'available' ? packed.inspection.tensor_id : '';
+      expect(observed.slice(packedRequests).filter((path) => path.endsWith('/data'))).toEqual([
+        expect.stringMatching(new RegExp(`/tensors/${tensor}/data$`)),
+      ]);
       await page.keyboard.press('Escape'); await released(page);
+      await page.getByRole('button', { name: 'Back', exact: true }).click();
+      await expect(canvas).toHaveAttribute('aria-busy', 'false');
     }
     const unavailable = graph.parameters.find((p) => p.inspection.status === 'unavailable');
     if (unavailable) {
@@ -417,4 +432,155 @@ test('deterministic production [smollm2] close during progressive data cancels a
     await control('release', {});
     await expect(page.getByRole('dialog')).toHaveCount(0);
   }
+});
+
+// Lifetime and delayed-session regressions preserved from issue #123 at 78a7d3a6d427f28dd42420da6ef2b41fb5d5a2f2.
+test('deterministic production [smollm2] repeated nested return releases obsolete layouts', async ({ page }, info) => {
+  const graph = await selectGraph(page);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
+  const layer = graph.repetitions[0]!.instances.at(-1)!.node_id;
+  const attention = graph.nodes.find((node) => node.parent_id === layer && node.attributes.some(
+    (attribute) => attribute.name === 'semantic_role' && attribute.value === 'attention'))!;
+  await findComponent(page, layer); await ready();
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const records = await canvas.getAttribute('data-source-node-ids');
+  await page.evaluate(() => { (window as any).__returnCanvas = new WeakRef(document.querySelector('.react-flow')!); });
+  const requests = observed.length;
+  const samples = [];
+  for (let cycle = 0; cycle < 8; cycle++) {
+    await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+    await expect(canvas).toHaveAttribute('data-scope-id', layer);
+    await findComponent(page, attention.id); await ready();
+    const layerCamera = await page.locator('.react-flow__viewport').getAttribute('style');
+    await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+    await expect(canvas).toHaveAttribute('data-scope-id', attention.id);
+    await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(layerCamera);
+    await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+    await expect(canvas).toHaveAttribute('data-scope-id', '');
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+    expect(await canvas.getAttribute('data-source-node-ids')).toBe(records);
+    await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', layer);
+    expect(await page.evaluate(() => (window as any).__returnCanvas.deref() === document.querySelector('.react-flow'))).toBe(true);
+    await expect.poll(() => page.evaluate(() => window.__architectureProbe().active)).toBe(0);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const observation = await graphObservation(page, true);
+    expect(observation.observedGraphs).toBe(1);
+    expect(observation.retainedGraphs).toBe(1);
+    expect(observation.peak).toBeLessThanOrEqual(2);
+    samples.push({ cycle, ...observation });
+    await released(page);
+  }
+  expect(observed.slice(requests)).toEqual([]);
+  await info.attach('repeated-return-resources', { body: JSON.stringify({ sourceNodes: graph.nodes.length,
+    sourceEdges: graph.edges.length, samples, memory: 'Main-thread CDP JS heap after explicit GC; not browser RSS or GPU memory.' }), contentType: 'application/json' });
+  const path = info.outputPath('nested-return.png');
+  await page.screenshot({ path }); await info.attach('nested-return', { path, contentType: 'image/png' });
+
+  // Compare identical returned views after two complete warm-up cycles. This
+  // checks retained object growth, not a machine-dependent heap-byte limit.
+  expect(samples.at(-1)!.retainedLayouts).toBeLessThanOrEqual(samples[1]!.retainedLayouts);
+});
+
+test('deterministic production [smollm2] isolated session replacement rejects a late actual response', async ({ page }) => {
+  let release!: () => void, arrived!: () => void;
+  const waiting = new Promise<void>((resolve) => { arrived = resolve; });
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  let holdNext = false;
+  // Register interception before layout workers start; enabling CDP network
+  // interception after terminated workers can stall this Chromium harness.
+  await page.route('**/architecture', async (route) => {
+    if (!holdNext || route.request().method() !== 'GET') { await route.continue(); return; }
+    holdNext = false;
+    const response = await route.fetch();
+    arrived(); await held;
+    await route.fulfill({ response });
+  });
+  const graph = await selectGraph(page);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await findComponent(page, graph.repetitions[0]!.instances.at(-1)!.node_id); await ready();
+  await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+  holdNext = true;
+  try {
+    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('qwen3');
+    await waiting;
+    await expect(canvas).toHaveCount(0);
+    const replacement = page.waitForResponse((response) => response.request().method() === 'GET' &&
+      response.url().endsWith('/architecture') && response.status() === 200);
+    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('vjepa2');
+    const current = await (await fetch((await replacement).url())).json();
+    await expect(canvas).toHaveAttribute('data-graph-id', current.graph.graph_id); await ready();
+    release();
+    await page.unrouteAll({ behavior: 'wait' });
+    await expect(canvas).toHaveAttribute('data-graph-id', current.graph.graph_id);
+    await expect(canvas).toHaveAttribute('data-scope-id', '');
+    await expect(page.getByLabel('Graph selection', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!).every(
+      (id: string) => current.graph.nodes.some((node: { id: string }) => node.id === id))).toBe(true);
+    expect(observed.some((request) => request.endsWith('/tokenize'))).toBe(false);
+  } finally { release(); }
+});
+
+test.describe('Extended mounted lifetime without persistent element handles', () => {
+  test('deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts', async ({ page }, info) => {
+    const graph = await selectGraph(page);
+    const canvas = page.getByLabel('Architecture graph', { exact: true });
+    const ready = async () => {
+      await expect(canvas).toHaveAttribute('aria-busy', 'false');
+      // Layout arrival precedes the camera's animation-frame commit. Match the
+      // component harness before capturing the context that Back must restore.
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    };
+    const layer = graph.repetitions[0]!.instances.at(-1)!.node_id;
+    const attention = graph.nodes.find((node) => node.parent_id === layer && node.attributes.some(
+      (attribute) => attribute.name === 'semantic_role' && attribute.value === 'attention'))!;
+    await findComponent(page, layer); await ready();
+    const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+    const records = await canvas.getAttribute('data-source-node-ids');
+    await page.evaluate(() => { (window as any).__returnCanvas = new WeakRef(document.querySelector('.react-flow')!); });
+    const requests = observed.length;
+    const samples = [];
+    for (let cycle = 0; cycle < 16; cycle++) {
+      await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+      await expect(canvas).toHaveAttribute('data-scope-id', layer);
+      await findComponent(page, attention.id); await ready();
+      const layerCamera = await page.locator('.react-flow__viewport').getAttribute('style');
+      await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+      await expect(canvas).toHaveAttribute('data-scope-id', attention.id);
+      await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+      expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(layerCamera);
+      await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+      await expect(canvas).toHaveAttribute('data-scope-id', '');
+      expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+      expect(await canvas.getAttribute('data-source-node-ids')).toBe(records);
+      await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', layer);
+      expect(await page.evaluate(() => (window as any).__returnCanvas.deref() === document.querySelector('.react-flow'))).toBe(true);
+      await expect.poll(() => page.evaluate(() => window.__architectureProbe().active)).toBe(0);
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const observation = await graphObservation(page, true);
+      expect(observation.observedGraphs).toBe(1);
+      expect(observation.retainedGraphs).toBe(1);
+      expect(observation.peak).toBeLessThanOrEqual(2);
+      samples.push({ cycle, ...observation });
+      await released(page);
+    }
+    expect(observed.slice(requests)).toEqual([]);
+    await info.attach('repeated-return-resources', { body: JSON.stringify({ sourceNodes: graph.nodes.length,
+      sourceEdges: graph.edges.length, samples, memory: 'Main-thread CDP JS heap after explicit GC; not browser RSS or GPU memory.' }), contentType: 'application/json' });
+    // A second warmed window must not merely defer the original linear growth.
+    await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
+    await expect(canvas).toHaveCount(0);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const teardown = await graphObservation(page, true);
+    await info.attach('explorer-teardown', { body: JSON.stringify(teardown), contentType: 'application/json' });
+    expect(teardown.active).toBe(0);
+    expect(teardown.retainedLayouts).toBe(0);
+    expect(teardown.retainedGraphs).toBe(0);
+    expect(await page.evaluate(() => (window as any).__returnCanvas.deref())).toBeUndefined();
+    expect(samples[7]!.retainedLayouts).toBeLessThanOrEqual(samples[1]!.retainedLayouts);
+    expect(samples.at(-1)!.retainedLayouts).toBeLessThanOrEqual(samples[7]!.retainedLayouts);
+  });
 });
