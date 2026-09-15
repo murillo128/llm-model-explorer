@@ -78,6 +78,8 @@
 .architecture-selection { display: flex; gap: 4px; align-items: center; flex-shrink: 0; border-left: 1px solid var(--ui-border); padding-left: 10px; }
 .architecture-selection > span { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .architecture-partial { color: var(--ui-text-muted); font-size: 11px; white-space: nowrap; }
+.architecture-isolated-state { color: var(--ui-text); background: var(--ui-accent-soft); border: 1px solid var(--ui-accent); border-radius: 4px; padding: 3px 6px; font-size: 11px; white-space: nowrap; }
+.architecture-node[data-presentation="external"] { border-style: dashed; }
 .architecture-control-popover { position: absolute; z-index: 1300; top: 43px; right: 8px; width: min(430px, calc(100% - 16px)); max-height: calc(100% - 54px); overflow: auto; padding: 10px; box-sizing: border-box; border: 1px solid var(--ui-border-strong); border-radius: 6px; background: var(--ui-surface); color: var(--ui-text); box-shadow: var(--ui-shadow-float); }
 .architecture-search { display: flex; flex-direction: column; gap: 8px; }
 .architecture-search input { flex-shrink: 0; width: 100%; box-sizing: border-box; padding: 7px 8px; font: inherit; color: var(--ui-text); background: var(--ui-surface); border: 1px solid var(--ui-border-strong); border-radius: 4px; }

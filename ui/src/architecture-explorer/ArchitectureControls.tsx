@@ -9,12 +9,14 @@ export interface NavigationItem { id: string; label: string; kind: 'node' | 'sta
 export interface ControlSelection {
   label: string; detail: string; edge: boolean; nodeId?: string;
   inspect?: ((trigger: HTMLElement) => void) | undefined;
+  explore?: (() => void) | undefined;
   center: () => void; clear: () => void;
 }
 interface Props {
   graph: Graph; focus: string | null; stack: Repetition | undefined;
   instanceId: string | undefined; visibleInstances: string[]; options: ProjectionOptions;
   breadcrumbs: NavigationItem[]; selection: ControlSelection | undefined;
+  isolation: { back: () => void; viewInModel: () => void; expand: () => void; nodeIds: Set<string>; excludedEdges: string[] } | undefined;
   picker: RefObject<HTMLButtonElement | null>;
   reveal: (id: string) => void; navigate: (item: NavigationItem) => void;
   overview: () => void; fit: () => void; expandAll: () => void; collapseAll: () => void;
@@ -34,6 +36,7 @@ export function ArchitectureControls(props: Props) {
   const { graph, stack, selection, options, picker } = props;
   const [popover, setPopover] = useState<'search' | 'options' | null>(null);
   const [query, setQuery] = useState(''), [active, setActive] = useState(0);
+  const [outsideOpen, setOutsideOpen] = useState(false);
   const controls = useRef<HTMLDivElement>(null), search = useRef<HTMLInputElement>(null);
   const optionsTrigger = useRef<HTMLButtonElement>(null), popup = useRef<HTMLDivElement>(null);
   const listId = useId(), optionsId = useId();
@@ -95,8 +98,9 @@ export function ArchitectureControls(props: Props) {
     if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setPopover(null);
   }}>
     <div className="architecture-toolbar" aria-label="Graph navigation">
+      {props.isolation && <span className="architecture-isolated-state">Isolated component</span>}
       <nav className="architecture-breadcrumbs" aria-label="Architecture focus">
-        <button onClick={props.overview} aria-label="Model overview" aria-current={!props.focus && !stack ? 'location' : undefined}>Model</button>
+        <button onClick={props.overview} aria-label="Model overview" aria-current={!props.focus && !stack && !props.isolation ? 'location' : undefined}>Model</button>
         {props.breadcrumbs.map((item, i) => <span key={`${item.kind}:${item.id}`}>
           <span aria-hidden="true">/</span><button title={item.label} aria-current={i === props.breadcrumbs.length - 1 ? 'location' : undefined}
             onClick={() => props.navigate(item)}>{item.label}</button>
@@ -109,9 +113,13 @@ export function ArchitectureControls(props: Props) {
       <button ref={optionsTrigger} aria-expanded={popover === 'options'} aria-controls={optionsId} aria-haspopup="dialog"
         onClick={() => setPopover(popover === 'options' ? null : 'options')}>View options</button>
     </div>
-    {(stack || entryNodes.length > 0 || graph.repetitions.length > 0 || selection) && <div className="architecture-context-row">
-      <div className="architecture-context-navigation" aria-label={stack ? 'Stack navigation' : 'Model components'}>
-        {stack ? <>
+    {(props.isolation || stack || entryNodes.length > 0 || graph.repetitions.length > 0 || selection) && <div className="architecture-context-row">
+      <div className="architecture-context-navigation" aria-label={props.isolation ? 'Component navigation' : stack ? 'Stack navigation' : 'Model components'}>
+        {props.isolation ? <>
+          <button onClick={props.isolation.back}>Back</button>
+          <button onClick={props.isolation.viewInModel}>View in model</button>
+          <button onClick={props.isolation.expand}>Expand component</button>
+        </> : stack ? <>
           <span className="architecture-stack-name" title={patternSummary(stack.instances)}>{stack.label} <span>({stack.instances.length})</span></span>
           <button aria-label={`Previous instance of ${stack.label}`} disabled={current <= 0} onClick={() => props.chooseInstance(stack.instances[current - 1]!.node_id)}>←</button>
           <label className="architecture-instance-picker"><span className="visually-hidden">Instance</span>
@@ -136,6 +144,7 @@ export function ArchitectureControls(props: Props) {
       {selection && <div className="architecture-selection" aria-label="Graph selection" data-node-id={selection.nodeId}>
         <span title={selection.detail}>{selection.label}</span>
         {selection.inspect && <button aria-label={selection.edge ? 'Inspect connection' : 'Inspect selected'} onClick={(event) => selection.inspect?.(event.currentTarget)}>Inspect</button>}
+        {selection.explore && <button onClick={selection.explore}>Explore component</button>}
         <button aria-label={selection.edge ? 'Center connection' : 'Center selected'} onClick={selection.center}>Center</button>
         <button aria-label={selection.edge ? 'Clear connection selection' : 'Clear node selection'} onClick={() => { picker.current?.focus(); selection.clear(); }}>×</button>
       </div>}
@@ -155,20 +164,20 @@ export function ArchitectureControls(props: Props) {
       <div className="architecture-search-results" role="listbox" aria-label="Components" id={`${listId}-results`}>
         {matches.map((item, i) => <div role="option" key={item.id} id={`${listId}-${i}`} aria-selected={active === i} data-node-id={item.id}
           title={item.fullLabel} onPointerDown={(event) => event.preventDefault()} onClick={() => choose(item.id)}>
-          <strong>{item.label}</strong><span>{item.context || 'Model component'}</span>
+          <strong>{item.label}</strong><span>{item.context || 'Model component'}{props.isolation && !props.isolation.nodeIds.has(item.id) ? ' · Outside component; reveal in model' : ''}</span>
         </div>)}
       </div>
       <span className="architecture-search-count" role="status">{matches.length ? `${matches.length} components · ↑ ↓ to choose · Enter to reveal` : 'No matching components'}</span>
     </div>}
     {popover === 'options' && <div ref={popup} className="architecture-control-popover architecture-options" role="dialog" aria-label="View options" id={optionsId}>
       <div className="architecture-option-actions">
-        <button onClick={() => run(props.expandAll)}>Show all operations</button>
-        <button onClick={() => run(props.collapseAll)}>Collapse all</button>
+        <button onClick={() => run(props.expandAll)}>{props.isolation ? 'Show all operations in model' : 'Show all operations'}</button>
+        <button onClick={() => run(props.collapseAll)}>{props.isolation ? 'Collapse model' : 'Collapse all'}</button>
         <button disabled={!selection} onClick={() => selection && run(selection.center)}>Center selection</button>
         <button aria-label="Zoom graph in" onClick={props.zoomIn}>Zoom in</button>
         <button aria-label="Zoom graph out" onClick={props.zoomOut}>Zoom out</button>
         {props.toggleSelected && <button onClick={() => run(props.toggleSelected!)}>Toggle selected group</button>}
-        {stack && <button onClick={() => run(() => props.exploreStack(stack.id))}>Explore stack</button>}
+        {stack && !props.isolation && <button onClick={() => run(() => props.exploreStack(stack.id))}>Explore stack</button>}
         {props.focusLayer && <button onClick={() => run(props.focusLayer!)}>{options.stateScope ? 'Back to layer' : 'Focus layer'}</button>}
         {props.focusMlp && <button onClick={() => run(props.focusMlp!)}>Focus MLP</button>}
         {props.stateFocus && <button onClick={() => run(props.stateFocus!)}>State dependencies</button>}
@@ -184,6 +193,12 @@ export function ArchitectureControls(props: Props) {
         {props.filtered && <p>Unconsumed interface branches filtered</p>}
         {options.stateScope && <p>State dependencies only; other flows are filtered</p>}
         {selection && <p>{selection.detail}</p>}
+        {props.isolation && <details onToggle={(event) => setOutsideOpen(event.currentTarget.open)}>
+          <summary>Outside component: {graph.nodes.length - props.isolation.nodeIds.size} source records · {props.isolation.excludedEdges.length} connections</summary>
+          <p>All source interfaces and connections remain in the model. Choose a record to reveal it in model context, then Inspect for its complete interface.</p>
+          {outsideOpen && graph.nodes.filter((node) => !props.isolation!.nodeIds.has(node.id)).map((node) =>
+            <p key={node.id}><button onClick={() => choose(node.id)}>{nodeLabel(node, graph)}</button> <code>{node.id}</code></p>)}
+        </details>}
         <p>Graph: {graph.graph_id}</p>
         {graph.diagnostics.map((d, i) => <p key={i}>{d.message}</p>)}
       </details>

@@ -14,6 +14,9 @@ Architecture-specific navigation, layout, routing, legends, repetition controls,
 
 Use a single pannable, zoomable canvas with fit-to-window and centering on a selected component. Hierarchy organizes nested groups on the same canvas; it must not require separate level pages, drill-down routes, or stacked dialogs to understand structure.
 
+An optional isolated component may be the visible root of this same canvas, as
+defined below. The complete model remains the global fallback.
+
 Start compact, using declared repetition records to represent repeated layers as a stack with multiplicity and truthful variant information instead of immediately materializing every instance. Allow expansion of a representative interior, selection of a concrete instance without expanding its siblings, focused exploration of a bounded contiguous set of instances when useful, expansion of chosen instances, and an Expand all action that reveals every instance and required mathematical operation. Compressed before/after ranges must remain explicit when only part of a stack is shown. A representative display must clearly identify its selected instance; inspecting a weight must never silently use layer zero for every repetition.
 
 Keep actual layer order and variant differences visible when grouped. Repetition means repeated structure, not shared weights, states, parameters, or guaranteed equivalence between variants. Preserve external dependencies across collapsed boundaries through meaningful ports/connections, including bypasses that cross hidden ranges. Collapsing must not erase a skip connection, create a false serial path, or treat distinct hybrid blocks as identical. Expanded topology must be recoverable from the same graph without new analysis.
@@ -93,6 +96,52 @@ Search includes description source keys so concise labels retain access by the
 original operation path.
 
 Declared interfaces remain inspectable when unconsumed branches are filtered. Determine consumption from source connectivity, with an explicit reversible filter. State focus shows existing prior/next dependencies owned by the selected instance, keeps K/V distinct and identifies excluded flows. Exhaustive expansion restores original operations and interfaces without a representative or layer-count limit.
+
+## Optional isolated component exploration
+
+**Explore component** is an explicit action on a selected source group,
+operation, or supported derived MLP. Selection, inspection and expansion in
+place retain their existing actions. Isolation shows only that component and
+its chosen internal detail; hidden ancestors, siblings and unrelated connections
+contribute no layout boxes or bounds. It is a view over the same immutable
+received graph, not a new analysis, route, page or modal stack.
+
+Every real scope-crossing connection retains compact input/output context with
+exact original node, port and edge provenance. These are presentation aliases,
+not additional operations or backend ports. Genuine fan-out shares only its real
+source signal; equal labels or shapes cannot merge externally distinct signals.
+Mask, position, residual and state roles remain exact. A wholly external bypass
+is excluded. A dependency that exits and re-enters remains visibly external;
+never splice it into a fabricated internal path. Existing boundary forwarding
+and port/branch/shared-trunk hit semantics remain in use and stop at operations.
+Hover, focus and pinning do not expand hidden nodes or invoke layout.
+
+Identify isolation visibly and show breadcrumbs for the concrete component's
+real model/stack/instance location. Nested isolation is bounded navigation history
+on one canvas. **Back** restores the preceding scope's camera, expansion,
+repetition window, filters and valid node/connection selection. **View in model**
+returns to the global graph and intentionally reveals and centers the selected
+concrete component. Search still covers all received records; choosing a result
+outside the current scope explicitly returns to model context to reveal it.
+Breadcrumb navigation outside a scope likewise restores global context. Keep
+view snapshots local, bounded and keyed by backend/model/graph identity without
+copying the semantic graph per entry. Reject obsolete layout/retrieval results
+on session/model/graph replacement.
+
+Entering a new scope may compute layout and establish a readable initial camera;
+subsequent selection, menus and emphasis may not. **Fit view** in isolation
+measures the visible component and its context only. **Expand component** expands
+only the current scope. The exhaustive command is explicitly labelled
+**Show all operations in model** and exits isolation before revealing every
+source instance/operation. Existing unused-interface and context filters remain
+explicit and reversible; complete interfaces and excluded source context remain
+inspectable. On preparation/layout failure keep the source and a recoverable
+previous/global view, with retry. Invalid graphs retain normal validation errors.
+
+With isolation inactive, unchanged graph/view inputs retain the prior projection,
+layout inputs, route identities and interaction results. Keep scope membership and
+reversible navigation at small testable seams; use the existing cancellable
+layout worker and connection algorithms.
 
 ## Automatic layout and directional routing
 
