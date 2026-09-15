@@ -115,6 +115,7 @@ def measure(family, selection, output):
             session = service.client.post("/sessions", json={"model_id": model_id}).json()
             prefix = f"/sessions/{session['id']}"
             tensors = service.client.get(prefix + "/tensors").json()
+            assert tensors["coverage"] == "complete", tensors["diagnostics"]
             response = service.client.get(prefix + "/architecture")
             response.raise_for_status()
             body = response.json()
@@ -183,6 +184,8 @@ def native_samples(directory, name, *, row=None, column=None):
     )
     tensor = next(t for t in entry.tensors() if t.name == name)
     assert tensor.rank in (1, 2)
+    assert tensor.storage_format == "safetensors"
+    assert tensor.storage_dtype in {"F32", "F16", "BF16"}, "Native sample needs native storage"
     for shard in entry._snapshot.shards:
         with safe_open(directory / shard, framework="pt", device="cpu") as weights:
             if name not in weights.keys():

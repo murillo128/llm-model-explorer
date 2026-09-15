@@ -145,7 +145,7 @@ class DenseGraph:
                 )
             ):
                 binding, reason = "quantized", "unsupported_representation"
-                message = "GPTQ Int4 decoding is not available; storage is metadata only."
+                message = "No admitted complete GPTQ Int4 numeric tensor exists."
                 storage = [
                     r.ArchitectureStorage(name=f"{prefix}.{s}", dtype=dt, shape=sh, role=role)
                     for s, (dt, sh, role) in expected.items()
@@ -161,7 +161,7 @@ class DenseGraph:
             status="unavailable", reason=reason, message=message
         )
         numeric = self.numeric.get(name)
-        if binding == "native" and numeric is not None:
+        if binding in ("native", "quantized") and numeric is not None:
             require(
                 numeric.shape == dims and numeric.dtype == storage[0].dtype,
                 "Numeric inventory disagrees with dense parameter geometry.",

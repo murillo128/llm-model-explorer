@@ -124,11 +124,19 @@ def test_physical_inventory_native_ids_and_exact_bytes(
         record = json.loads(raw[8 : 8 + header_length])[storage.name]
         assert storage.offset == 8 + header_length + record["data_offsets"][0]
     names = {t.name for t in source.tensors()}
-    assert names == {"model.norm.weight", "model.embed_tokens.weight", "model.conv.weight"}
+    logical_name = packed_group(kind)[0][0].rsplit(".", 1)[0] + ".weight"
+    assert names == {
+        "model.norm.weight",
+        "model.embed_tokens.weight",
+        "model.conv.weight",
+        logical_name,
+    }
     expected = {
         "model.norm.weight": struct.pack("<2f", 1.5, -2.25),
         "model.embed_tokens.weight": struct.pack("<4f", 1, -0.0, 0.5, -1.5),
         "model.conv.weight": struct.pack("<2f", 0, -0.0),
+        logical_name: struct.pack("<f", -0.0 if kind == "JunHowie" else 0.0)
+        * (1024 if kind == "JunHowie" else 32),
     }
     with TestClient(create_app(settings)) as client:
         session = client.post("/sessions", json={"model_id": "quantized"})
@@ -138,7 +146,7 @@ def test_physical_inventory_native_ids_and_exact_bytes(
         assert response.headers["cache-control"] == "no-store"
         inventory = response.json()
         assert inventory == source.inventory()
-        assert inventory["coverage"] == "partial" and inventory["diagnostics"]
+        assert inventory["coverage"] == "complete" and inventory["diagnostics"] == []
         assert str(directory) not in response.text
         for tensor in inventory["tensors"]:
             assert tensor["id"] == hashlib.sha256(tensor["name"].encode()).hexdigest()
@@ -167,16 +175,20 @@ def test_physical_inventory_native_ids_and_exact_bytes(
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_explicit_empty_partial_and_unknown_native_metadata(model_root: Path, kind: str) -> None:
+def test_explicit_partial_for_unknown_native_metadata(model_root: Path, kind: str) -> None:
     directory = quantized_model(model_root, kind, native=False)
     # No claimed mathematical role for this native storage record.
     write_weights(directory / "unresolved.safetensors", [("unknown.region", "F32", [2], [1, 2])])
     source = ModelCatalogue(model_root).pin("quantized")
-    assert source.tensors() == ()
+    assert [tensor.name for tensor in source.tensors()] == [
+        packed_group(kind)[0][0].rsplit(".", 1)[0] + ".weight"
+    ]
     assert len(source.physical_tensors()) == 5
     inventory = source.inventory()
-    assert inventory["tensors"] == [] and inventory["coverage"] == "partial"
+    assert isinstance(inventory["tensors"], list)
+    assert len(inventory["tensors"]) == 1 and inventory["coverage"] == "partial"
     assert inventory["diagnostics"]
+    assert "unknown.region" in str(inventory["diagnostics"])
     with pytest.raises(ModelError, match="embedding source"):
         resolve_input_table(source)
 
@@ -380,7 +392,11 @@ def test_orphan_native_scales_are_not_numeric_weights(model_root: Path, kind: st
     directory = quantized_model(model_root, kind)
     suffix = "scales" if kind == "JunHowie" else "weight_scale_2"
     write_weights(directory / "orphan.safetensors", [(f"orphan.{suffix}", "F32", [], [1])])
-    assert ModelCatalogue(model_root).discover() == ()
+    source = ModelCatalogue(model_root).pin("quantized")
+    inventory = source.inventory()
+    assert inventory["coverage"] == "partial"
+    assert f"orphan.{suffix}" in str(inventory["diagnostics"])
+    assert all(tensor.name != f"orphan.{suffix}" for tensor in source.tensors())
 
 
 @pytest.mark.parametrize("kind", KINDS)

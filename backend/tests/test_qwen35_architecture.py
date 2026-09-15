@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import socket
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -50,6 +51,31 @@ def registry() -> DescriptionRegistry:
     result = DescriptionRegistry()
     register_qwen35(result)
     return result
+
+
+def test_nvfp4_inspection_uses_existing_complete_logical_identity() -> None:
+    data = metadata()
+    name = PREFIX + ".layers.0.linear_attn.in_proj_a.weight"
+    storage = TINY["storage"][name]
+    dims = (storage["shape"][0], storage["shape"][1] * 2)
+    numeric = NumericTensor("logical_nvfp4", name, dims, "U8", "nvfp4")
+    data = replace(
+        data,
+        bindings=replace(data.bindings, numeric={**data.bindings.numeric, numeric.id: numeric}),
+    )
+    result = graph(data)
+    parameters = {parameter.name: parameter for parameter in result.parameters}
+    parameter = parameters[name]
+    assert parameter.binding == "quantized"
+    assert parameter.inspection.status == "available"
+    assert parameter.inspection.tensor_id == numeric.id
+    assert constants(parameter.logical_shape) == dims
+    assert [entry.name for entry in parameter.storage] == [
+        name.removesuffix(".weight") + "." + suffix
+        for suffix in ("weight", "weight_scale", "weight_scale_2", "input_scale")
+    ]
+    other = parameters[PREFIX + ".layers.0.linear_attn.in_proj_b.weight"]
+    assert other.inspection.status == "unavailable"
 
 
 def graph(inputs: AnalysisInput | None = None) -> r.ArchitectureGraph:

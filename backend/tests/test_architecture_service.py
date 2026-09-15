@@ -78,7 +78,17 @@ def test_registered_descriptions_and_no_tokenizer_session(settings: Settings, fa
         assert str(settings.model_root) not in response.text
         assert len(response.content) <= 33_554_432
         inventory = client.get(f"/sessions/{sid}/tensors").json()
-        assert inventory["coverage"] == ("partial" if family in {"qwen3", "qwen35"} else "complete")
+        assert inventory["coverage"] == "complete"
+        assert inventory["diagnostics"] == []
+        if family in {"qwen3", "qwen35"}:
+            numeric = {tensor["id"]: tensor for tensor in inventory["tensors"]}
+            packed = [p for p in body["graph"]["parameters"] if p["binding"] == "quantized"]
+            assert packed
+            for parameter in packed:
+                assert parameter["inspection"]["status"] == "available"
+                tensor = numeric[parameter["inspection"]["tensor_id"]]
+                assert tensor["name"] == parameter["name"]
+                assert tensor["shape"] == [d["value"] for d in parameter["logical_shape"]]
         sid2 = session(client, model_id)
         assert client.delete(f"/sessions/{sid}").status_code == 204
         assert architecture(client, sid2).content == response.content

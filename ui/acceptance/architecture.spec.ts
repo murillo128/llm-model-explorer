@@ -20,6 +20,21 @@ let modelId: string;
 let log: string;
 let observed: string[];
 
+// Scalar oracle for the physical synthetic words in architecture_fixtures.py.
+// It does not use application decoding, renderer readout, or uploaded GPU values.
+function packedValue(family: string, row: number, column: number, inputs: number) {
+  if (family === 'qwen3') {
+    const group = (Math.floor(column / 3) + Math.floor(column / 128)) % (inputs / 128);
+    return ((3 * column + 5 * row) % 16 - ((group + row) % 14 + 1)) * ((group + row % 7 + 1) / 8);
+  }
+  expect(family).toBe('qwen35');
+  const code = (column + row * 3) % 16;
+  const exponent = (code >> 1) & 3, mantissa = code & 1;
+  const magnitude = exponent === 0 ? mantissa / 2 : (1 + mantissa / 2) * 2 ** (exponent - 1);
+  const scalar = code & 8 ? -magnitude : magnitude;
+  return scalar * [0.5, 1, 2, 3][(row + Math.floor(column / 16)) % 4]! * 0.5;
+}
+
 async function metrics(page: Page) { return page.evaluate(() => (window as any).__acceptance.metrics()); }
 async function control(path: string, body?: object) {
   const response = await fetch(`${backend}/__test/${path}`, body ? {
@@ -101,7 +116,7 @@ test.afterEach(async ({ page }, info) => {
 });
 
 for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3', 'qwen35', 'vjepa2']) {
-  test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and native modal`, async ({ page }, info) => {
+  test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and logical weight modal`, async ({ page }, info) => {
     test.setTimeout(reference ? 600_000 : 90_000);
     const graph = await selectGraph(page);
     expect(graph.coverage).toBe('complete');
@@ -128,7 +143,7 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
       nodes: graph.nodes.length, edges: graph.edges.length, layoutMs: Number(await canvas.getAttribute('data-layout-ms')),
       heapSnapshot: await client.send('Runtime.getHeapUsage'), viewport: page.viewportSize(), browser: page.context().browser()!.version() }), contentType: 'application/json' });
     // Later-layer vector proves the modal uses concrete bindings, never layer-zero fallback.
-    const parameter = graph.parameters.find((p) => p.inspection.status === 'available' && p.logical_shape?.length === 1 && p.name.includes('.1.'))!;
+    const parameter = graph.parameters.find((p) => p.binding === 'native' && p.inspection.status === 'available' && p.logical_shape?.length === 1 && p.name.includes('.1.'))!;
     expect(parameter).toBeTruthy();
     await page.evaluate(() => { (window as any).__acceptance.captureScalars = true; });
     await openParameter(page, graph, parameter);
@@ -148,7 +163,7 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
     // Inspect a native matrix too. Observe progressive first-cell values without
     // retaining a second copy of a potentially large reference embedding table.
-    const matrices = graph.parameters.filter((p) => p.inspection.status === 'available' && p.logical_shape?.length === 2);
+    const matrices = graph.parameters.filter((p) => p.binding === 'native' && p.inspection.status === 'available' && p.logical_shape?.length === 2);
     const size = (p: typeof parameter) => p.logical_shape!.reduce((total, d) => total * (d.kind === 'constant' ? d.value : 1), 1);
     const matrix = matrices.sort((a, b) => size(a) - size(b))[0]!;
     await page.evaluate(() => { (window as any).__acceptance.captureScalars = false; });
@@ -181,6 +196,28 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
       }).toBe(expectedValue);
     }
     await page.keyboard.press('Escape'); await released(page);
+    if (!reference && ['qwen3', 'qwen35'].includes(family)) {
+      const packed = graph.parameters.filter((p) => p.binding === 'quantized' && p.inspection.status === 'available')
+        .sort((a, b) => size(a) - size(b))[0]!;
+      expect(packed).toBeTruthy();
+      await openParameter(page, graph, packed);
+      await expect(matrixCanvas).toBeVisible();
+      await nativeCamera(page);
+      await page.mouse.move(0, 0);
+      await scroller.focus();
+      await expect(coordinate).toHaveText(/^row \d+ · column \d+$/);
+      const packedMatch = /^row (\d+) · column (\d+)$/.exec((await coordinate.textContent())!)!;
+      const packedRow = Number(packedMatch[1]), packedColumn = Number(packedMatch[2]);
+      const packedColumns = (packed.logical_shape![1] as { value: number }).value;
+      for (const selectedColumn of [packedColumn, Math.min(packedColumn + 1, packedColumns - 1)]) {
+        if (selectedColumn !== packedColumn) await scroller.press('ArrowRight');
+        await expect(coordinate).toHaveText(`row ${packedRow} · column ${selectedColumn}`);
+        await expect.poll(async () => Number(await scalar.textContent())).toBe(
+          packedValue(family, packedRow, selectedColumn, packedColumns));
+      }
+      expect(observed.some((path) => path.includes(`/tensors/${packed.inspection.status === 'available' ? packed.inspection.tensor_id : ''}/data`))).toBe(true);
+      await page.keyboard.press('Escape'); await released(page);
+    }
     const unavailable = graph.parameters.find((p) => p.inspection.status === 'unavailable');
     if (unavailable) {
       const requests = observed.length;
@@ -206,7 +243,7 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
 
 test('deterministic production [smollm2] close during progressive data cancels and releases modal resources', async ({ page }) => {
   const graph = await selectGraph(page);
-  const parameter = graph.parameters.find((p) => p.inspection.status === 'available' && p.logical_shape?.length === 2)!;
+  const parameter = graph.parameters.find((p) => p.binding === 'native' && p.inspection.status === 'available' && p.logical_shape?.length === 2)!;
   for (let cycle = 0; cycle < 3; cycle++) {
     await page.evaluate(() => { const p = (window as any).__acceptance; p.captureScalars = true; p.scalarValues.length = 0; });
     await control('arm', { kind: 'logical_tensor' });

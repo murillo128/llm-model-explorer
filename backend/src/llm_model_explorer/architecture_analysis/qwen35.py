@@ -269,6 +269,7 @@ class Graph:
         self.b, self.c = b, c
         self.children: dict[str, list[str]] = {}
         self.parameters: dict[str, str] = {}
+        numeric_by_name = {tensor.name: tensor for tensor in b.inputs.bindings.numeric.values()}
         packed = nvfp4_storage_names(b.inputs.bindings.physical, dict(b.inputs.configuration))
         for name, dims in parameter_shapes(c).items():
             provenance = PRODUCER.provenance() + [
@@ -284,6 +285,7 @@ class Graph:
                 pid = b.native_parameter(name, name, shape(*dims), provenance)
             else:
                 prefix = name.removesuffix(".weight")
+                numeric = numeric_by_name.get(name)
                 storage = [
                     b.inputs.bindings.physical[prefix + suffix].model_copy(update={"role": role})
                     for suffix, role in [
@@ -299,10 +301,14 @@ class Graph:
                     logical_shape=shape(*dims),
                     binding="quantized",
                     storage=storage,
-                    inspection=r.ArchitectureUnavailableInspection(
+                    inspection=r.ArchitectureAvailableInspection(
+                        status="available", tensor_id=numeric.id
+                    )
+                    if numeric is not None
+                    else r.ArchitectureUnavailableInspection(
                         status="unavailable",
                         reason="unsupported_representation",
-                        message="NVFP4 logical decoding is unavailable.",
+                        message="No admitted complete NVFP4 numeric tensor exists.",
                     ),
                     provenance=provenance
                     + [r.ArchitectureProvenance(kind="storage", source=s.name) for s in storage],

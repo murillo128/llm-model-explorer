@@ -60,14 +60,32 @@ def context(value: dict[str, Any] | None = None) -> BindingContext:
         for p in ORACLE["response"]["graph"]["parameters"]
         for s in p["storage"]
     }
+    # Fixed independent NVFP4 storage for the API's alternate packed cases.
+    # Invalid graph mutations must not redefine the observed physical inventory.
+    for name, dtype, shape in [
+        ("fp4.weight", "U8", [2, 16]),
+        ("fp4.weight_scale", "F8_E4M3", [2, 2]),
+        ("fp4.weight_scale_2", "F32", []),
+        ("fp4.input_scale", "F32", []),
+    ]:
+        physical[name] = r.ArchitectureStorage(name=name, dtype=dtype, shape=shape)
     # The API's rank1 variant changes its input inventory and expected native geometry.
     for tensor in c["inventory"]["tensors"]:
-        if tensor["name"] in physical:
+        if (
+            tensor["name"] in physical
+            and tensor.get("storage_format", "safetensors") == "safetensors"
+        ):
             physical[tensor["name"]] = r.ArchitectureStorage(
                 name=tensor["name"], dtype=tensor["storage_dtype"], shape=tensor["shape"]
             )
     numeric = {
-        t["id"]: NumericTensor(t["id"], t["name"], tuple(t["shape"]), t["storage_dtype"])
+        t["id"]: NumericTensor(
+            t["id"],
+            t["name"],
+            tuple(t["shape"]),
+            t["storage_dtype"],
+            t.get("storage_format", "safetensors"),
+        )
         for t in c["inventory"]["tensors"]
     }
     return BindingContext(physical, numeric, c["tokenizer_available"])
@@ -350,7 +368,11 @@ def test_guarded_quantized_metadata_separates_storage_from_inspection(
     source = ModelCatalogue(root).discover()[0].pin()
     data = AnalysisInput.from_source(source, tokenizer_available=False)
     assert len(data.bindings.physical) > len(data.bindings.numeric)
-    assert all(t.dtype in ("F32", "F16", "BF16") for t in data.bindings.numeric.values())
+    packed = [t for t in data.bindings.numeric.values() if t.storage_format != "safetensors"]
+    assert len(packed) == 1
+    assert packed[0].storage_format == ("gptq-int4" if kind == "JunHowie" else "nvfp4")
+    assert packed[0].dtype == ("I32" if kind == "JunHowie" else "U8")
+    assert packed[0].name.endswith(".weight")
     assert not any(
         hasattr(t, "file") or hasattr(t, "offset") for t in data.bindings.physical.values()
     )

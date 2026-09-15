@@ -225,6 +225,28 @@ def test_checked_native_and_quantized_bindings(qwen: bool) -> None:
             assert not tensor.name.endswith((".qweight", ".scales", ".g_idx", ".qzeros"))
 
 
+def test_gptq_inspection_uses_existing_complete_logical_identity() -> None:
+    data = metadata(small_config(True), small_storage(True))
+    name = "model.layers.1.self_attn.q_proj.weight"
+    numeric = NumericTensor("logical_gptq", name, (256, 128), "I32", "gptq-int4")
+    data = replace(
+        data,
+        bindings=replace(data.bindings, numeric={**data.bindings.numeric, numeric.id: numeric}),
+    )
+    result = graph_for(data)
+    parameters = {parameter.name: parameter for parameter in result.parameters}
+    parameter = parameters[name]
+    assert parameter.binding == "quantized"
+    assert parameter.inspection.status == "available"
+    assert parameter.inspection.tensor_id == numeric.id
+    assert dimensions(parameter.logical_shape) == [256, 128]
+    assert [entry.name for entry in parameter.storage] == [
+        name.removesuffix(".weight") + "." + suffix
+        for suffix in ("qweight", "qzeros", "scales", "g_idx")
+    ]
+    assert parameters["model.layers.0.self_attn.q_proj.weight"].inspection.status == "unavailable"
+
+
 @pytest.mark.parametrize(
     "changes",
     [
@@ -340,7 +362,7 @@ def test_local_native_links_are_exact_asymmetric_values(tmp_path: Path, qwen: bo
     data = AnalysisInput.from_source(source, tokenizer_available=False)
     graph = graph_for(data)
     for parameter in graph.parameters:
-        if parameter.inspection.status != "available":
+        if parameter.binding != "native" or parameter.inspection.status != "available":
             continue
         chunks = list(source.iter_tensor(parameter.inspection.tensor_id))
         actual = torch.cat(chunks).tolist()

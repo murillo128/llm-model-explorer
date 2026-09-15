@@ -13,6 +13,38 @@ function unique<T>(values: T[], key: (value: T) => string) {
   require(map.size === values.length, 'Duplicate architecture identity');
   return map;
 }
+function validatePackedStorage(parameter: S['ArchitectureParameter'], tensor: S['TensorDescriptor'], geometry: number[]) {
+  require(geometry.length === 2 && geometry.every((dimension) => dimension > 0) && parameter.name.endsWith('.weight'),
+    'Packed logical geometry/name');
+  const output = geometry[0]!, input = geometry[1]!;
+  const prefix = parameter.name.slice(0, -'.weight'.length);
+  let expected: [string, string, number[]][];
+  if (tensor.storage_format === 'gptq-int4') {
+    require(tensor.storage_dtype === 'I32' && input % 128 === 0 && output % 8 === 0, 'GPTQ storage identity/geometry');
+    expected = [
+      ['qweight', 'I32', [input / 8, output]],
+      ['qzeros', 'I32', [input / 128, output / 8]],
+      ['scales', 'F16', [input / 128, output]],
+      ['g_idx', 'I32', [input]],
+    ];
+  } else {
+    require(tensor.storage_format === 'nvfp4' && tensor.storage_dtype === 'U8' && input % 16 === 0,
+      'NVFP4 storage identity/geometry');
+    expected = [
+      ['weight', 'U8', [output, input / 2]],
+      ['weight_scale', 'F8_E4M3', [output, input / 16]],
+      ['weight_scale_2', 'F32', []],
+      ['input_scale', 'F32', []],
+    ];
+  }
+  const storage = unique(parameter.storage, (record) => record.name);
+  require(storage.size === expected.length, 'Packed storage group');
+  for (const [suffix, dtype, shape] of expected) {
+    const record = storage.get(`${prefix}.${suffix}`);
+    require(record && record.dtype === dtype && JSON.stringify(record.shape) === JSON.stringify(shape),
+      'Packed storage companion identity/geometry');
+  }
+}
 /** Contextual checks supplement the generated closed schemas; no model-family inference. */
 export function validateArchitecture(value: unknown, context: ArchitectureContext): S['ArchitectureResponse'] {
   const response = validateSchema('ArchitectureResponse', value);
@@ -100,31 +132,35 @@ export function validateArchitecture(value: unknown, context: ArchitectureContex
     require(!mismatch || diagnostics.some((d) => d.node_id === sn.id || d.node_id === tn.id), 'Undiagnosed dimension mismatch');
   }
   const inventory = unique(context.inventory.tensors, (t) => t.id);
-  const nativeBindings = new Map<string, S['ArchitectureParameter']>();
+  const terminalBindings = new Map<string, S['ArchitectureParameter']>();
   for (const p of parameters.values()) {
     shape(p.logical_shape);
     p.storage.forEach((s) => product(s.shape));
     if (p.binding === 'fused_region') require(p.storage.some((s) => s.name === p.region.storage_name), 'Region storage closure');
     if (p.inspection.status !== 'available') continue;
-    require(p.binding === 'native' || p.binding === 'alias', 'Non-native inspection');
+    require(p.binding === 'native' || p.binding === 'quantized' || p.binding === 'alias', 'Unsupported inspection binding');
     const dims = p.logical_shape;
     require(dims && [1, 2].includes(dims.length) && dims.every((d) => d.kind === 'constant'), 'Inspection geometry');
     const geometry = dims.map((d) => { require(d.kind === 'constant', 'Inspection dimension'); return d.value; });
-    let native: S['ArchitectureParameter'] = p;
+    let terminal: S['ArchitectureParameter'] = p;
     const path: string[] = [];
-    while (native.binding === 'alias') {
-      path.push(native.id);
-      native = nativeBindings.get(native.id) ?? parameters.get(native.alias_of)!;
+    while (terminal.binding === 'alias') {
+      path.push(terminal.id);
+      terminal = terminalBindings.get(terminal.id) ?? parameters.get(terminal.alias_of)!;
     }
-    path.forEach((id) => nativeBindings.set(id, native));
-    require(native.binding === 'native' && JSON.stringify(native.logical_shape) === JSON.stringify(dims) &&
-      native.inspection.status === 'available' && native.inspection.tensor_id === p.inspection.tensor_id, 'Alias identity/geometry');
-    require(native.storage.some((s) => s.name === native.name && JSON.stringify(s.shape) === JSON.stringify(geometry) &&
-      ['F32', 'F16', 'BF16', 'float32', 'float16', 'bfloat16'].includes(s.dtype) && !['scales', 'packed', 'packed_data'].includes(s.role ?? '')), 'Native storage geometry');
+    path.forEach((id) => terminalBindings.set(id, terminal));
+    require((terminal.binding === 'native' || terminal.binding === 'quantized') && JSON.stringify(terminal.logical_shape) === JSON.stringify(dims) &&
+      terminal.inspection.status === 'available' && terminal.inspection.tensor_id === p.inspection.tensor_id, 'Alias identity/geometry');
     const tensor = inventory.get(p.inspection.tensor_id);
-    require(tensor && JSON.stringify(tensor.shape) === JSON.stringify(geometry) && tensor.name === native.name &&
+    require(tensor && JSON.stringify(tensor.shape) === JSON.stringify(geometry) && tensor.name === terminal.name &&
       tensor.rank === geometry.length && tensor.numel === product(geometry), 'Inventory membership/geometry');
-    require(native.storage.some((s) => s.name === tensor.name && s.dtype === tensor.storage_dtype), 'Inventory storage identity');
+    if (terminal.binding === 'native') {
+      require(terminal.storage.some((s) => s.name === terminal.name && JSON.stringify(s.shape) === JSON.stringify(geometry) &&
+        ['F32', 'F16', 'BF16', 'float32', 'float16', 'bfloat16'].includes(s.dtype) && !['scales', 'packed', 'packed_data'].includes(s.role ?? '')), 'Native storage geometry');
+      require(terminal.storage.some((s) => s.name === tensor.name && s.dtype === tensor.storage_dtype), 'Inventory storage identity');
+    } else {
+      validatePackedStorage(terminal, tensor, geometry);
+    }
   }
   return response;
 }
