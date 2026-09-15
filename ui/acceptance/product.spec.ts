@@ -601,7 +601,9 @@ test('production prompt pixels, selection, history and composition survive embed
   await embeddingDone(page, 12);
   expect(await prompt.screenshot({ animations: 'disabled' })).toEqual(before);
   expect(await page.locator('.tokenizer-editor').boundingBox()).toEqual(box);
-  expect(box!.height).toBe(260);
+  // A short prompt now uses compact automatic allocation; embedding completion
+  // still must not alter any prompt pixels, selection, or geometry.
+  expect(box!.height).toBeLessThan(260);
   // Select source while a real tokenizer response is held; decorating the
   // eventual response must preserve which characters the next key replaces.
   let release!: () => void;

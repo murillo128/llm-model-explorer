@@ -39,7 +39,7 @@ about any particular model. See `ui/evidence/tokenizer.md` for validation.
 
 ## Downstream input embeddings
 
-`TokenizerWorkspace` composes the unchanged prompt subtree and a matrix region
+`TokenizerWorkspace` composes the mounted prompt subtree and a matrix region
 below it. `PromptTokenizer.downstream` receives only its current successful result
 and the request-generation abort signal. A pending/error/IME/session/options
 change removes that authoritative result immediately while its mapped annotations
@@ -58,11 +58,20 @@ streams into a hidden, inert sibling renderer and is promoted only on COMPLETE.
 Failed/superseded staging renderers are disposed without replacing the prior
 matrix. At most two renderer allocations are retained, with no extra scalar cache.
 
-`TokenizerWorkspace` frames the unchanged PromptTokenizer surface with a compact
+`TokenizerWorkspace` frames the PromptTokenizer surface with a compact
 `PanelHeader` and gives Input Embeddings the same header through
 `MatrixExplorer.header`. Matrix shape and logical dtype appear once beside its
 identity; loading/error status uses the reserved header slot. Camera controls,
 inspection and magnifier remain entirely in the shared matrix implementation.
+
+`use-panel-layout.ts` allocates the bounded workspace from CodeMirror's measured
+content height and a workspace ResizeObserver. The prompt wraps and grows up to
+the automatic workspace-relative cap, then scrolls internally. The horizontal
+divider supports captured pointer dragging, Up/Down, Home/End, and double
+activation to restore automatic sizing. Manual height lives only in the mounted
+workspace and is clamped when the browser shrinks. The source/history and matrix
+subtrees remain mounted throughout resizing. Panel bounds and interaction rules
+are owned by `docs/spec/ui/tokenizer-explorer.md`.
 
 Existing ID text gets per-sequence focus/interaction wiring; overlapping IDs
 remain separately addressable without repeating source text. Linked rows use
