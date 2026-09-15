@@ -26,6 +26,27 @@ Edges mean verified data dependencies. Constants are checked against configurati
 
 Groups describe model hierarchy and actual instances. Every repeated layer retains identity, sequence index, parameters, and any structural exceptions. The backend emits the full semantic instance graph; repetition metadata enables compact presentation without asking the browser to reconstruct unknown computation. A description of a representative layer never substitutes for bindings of all instances.
 
+Reviewed dense Qwen3/Llama, hybrid Qwen3.5 and V-JEPA encoder/predictor layers
+emit explicit Attention and MLP groups. Membership is authored in the packaged
+mathematical description: head preparation, Q/K normalization, rotary treatment,
+gating, state updates, activations and projections stay in their actual component.
+Layer norms and residual additions outside that component remain in the layer.
+Reuse an existing component group rather than wrapping it again. Every crossing
+uses an exact group port; preserve auxiliary/unused interfaces, fan-out and each
+symbolic state independently. No operation or tensor binding changes merely to
+introduce a boundary.
+
+Use the API's optional `semantic_role` annotation for component/operation roles
+and concise source-backed labels. Retain semantic source keys in description
+provenance (`rule: Semantic source key in the reviewed packaged description`)
+so inspection and cross-revision comparisons do not depend on display labels.
+The bounded role mapping in a packaged description names its authored operations;
+it does not infer membership from checkpoint tensor prefixes. A composite that
+does not correspond to a framework module must have description-derived
+provenance and no invented module reference. Semantic document changes bump the
+affected description revision and use ordinary startup/cache validation; all
+graph-local hashes may change while logical tensor identities remain unchanged.
+
 ## Dense language reference coverage
 
 Qwen3 must preserve its actual embedding/output relationships, decoder order, Q/K normalization, grouped-query attention, positional encoding, attention projection, gated MLP branches, and residual paths. SmolLM2 Base provides the corresponding small Llama-family regression path; do not apply Qwen-specific normalization or gate assumptions to it. Tied parameters must be represented as aliases where supported by configuration and inventory, not reported missing or duplicated as independent weights.

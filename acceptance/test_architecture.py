@@ -5,6 +5,8 @@ import json
 import os
 import shutil
 import struct
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -12,6 +14,30 @@ import pytest
 from acceptance.architecture_fixtures import generate, packed_value, value
 from acceptance.test_network import Frames, Service
 from api.architecture_conformance import validate_architecture
+
+
+def test_grouping_preserves_the_accepted_operation_level_contract(tmp_path):
+    """Run #119's independent Node oracle on actual packaged producer exports."""
+    repo = Path(__file__).resolve().parents[1]
+    environment = os.environ | {
+        "PYTHONPATH": os.pathsep.join([str(repo / "backend/src"), str(repo / "backend/tests")])
+    }
+    subprocess.run(
+        [sys.executable, str(repo / "backend/tests/architecture_grouping_cases.py"), str(tmp_path)],
+        cwd=repo,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    checked = subprocess.run(
+        ["node", str(repo / "ui/scripts/check-architecture-semantics.mjs"), str(tmp_path)],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "PASS: 7 reviewed cases" in checked.stdout
 
 
 def inspect_graph(service, model_id):

@@ -49,6 +49,27 @@ The first implementation sends the full instance graph. Repetition records group
 
 `attributes` is an array of records with `name`, a scalar or scalar-array `value` (string, finite number, boolean, or null), and `provenance`. It contains architectural facts, not arbitrary nested library objects or numeric tensor payloads. Explanatory text fields are limited to 16,384 characters, and labels/names to 1,024 characters; never interpret checkpoint strings as HTML or script.
 
+### Semantic roles within attributes
+
+Packaged descriptions may add one string-valued `semantic_role` attribute.
+Groups use `attention` or `mlp` for their reviewed component boundaries.
+Operations may use their existing mathematical operation identifier or a more
+specific role such as `query_projection`, `query_gate_projection`,
+`key_projection`, `value_projection`, `output_projection`, `gate_projection`,
+`up_projection`, `down_projection`, `query_normalization`, `key_normalization`,
+`key_transpose`, `input_normalization`, `post_attention_normalization`,
+`attention_residual` or `mlp_residual`. Each annotation has description provenance.
+These are reusable architectural roles, never instance IDs, renderer hints or
+coordinates. The operation, exact ports, parameter references and provenance
+remain authoritative; a role neither introduces computation nor implies that
+two instances share weights. Missing or unfamiliar roles do not invalidate an
+otherwise understood graph. Clients retain raw detail and may use the existing
+bounded derived-MLP fallback when no explicit MLP component owns those operations.
+
+Labels are concise display text. Original module references and semantic source
+keys in description provenance retain full identity for inspection. Conceptual
+description-derived groups must not claim an original module that does not exist.
+
 ## Parameters and explorer resource references
 
 `ArchitectureParameter` requires `id`, `name`, `logical_shape`, `binding`, `storage`, `inspection`, and `provenance`. `logical_shape` uses the dimension representation above. `binding` is `native`, `alias`, `fused_region`, `quantized`, or `unresolved`. An alias supplies `alias_of`; a fused region supplies a declarative `region` object with `storage_name` and plain-text `description` of its axes/ranges when known, never an executable slice expression. Storage records give physical tensor `name`, `dtype`, and integer `shape`; optional `role` distinguishes packed data, scales, or other verified encoding data. Storage names are checkpoint tensor names, not shard paths.

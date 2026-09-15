@@ -12,9 +12,10 @@ from typing import Any, Literal
 
 from . import records as r
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
+from .semantic import operation_role, role_attribute, source_key
 
 PRODUCER = Producer(
-    "transformers-vjepa2", "1", "transformers/753d61104116eefc8ffc977327b441ee0c8d599f"
+    "transformers-vjepa2", "2", "transformers/753d61104116eefc8ffc977327b441ee0c8d599f"
 )
 
 # Only defaults read from VJEPA2Config at the reviewed revision are normalized.
@@ -264,7 +265,7 @@ class _Graph:
             r.ArchitectureLeafNode(
                 id=self.nid(key),
                 kind=kind,
-                label=operation.replace("_", " "),
+                label=operation_role(key, operation).replace("_", " "),
                 operation=operation,
                 ports=[
                     r.ArchitecturePort(id=k, direction="input", label=k, shape=v.shape)
@@ -281,8 +282,9 @@ class _Graph:
                 attributes=[
                     r.ArchitectureAttribute(name=k, value=v, provenance=PRODUCER.provenance())
                     for k, v in (attributes or {}).items()
-                ],
-                provenance=PRODUCER.provenance(),
+                ]
+                + [role_attribute(PRODUCER, operation_role(key, operation))],
+                provenance=PRODUCER.provenance() + [source_key(PRODUCER, key)],
                 **args,
             )
         )
@@ -307,7 +309,13 @@ class _Graph:
         return {port: _Value(key, port, value.shape) for port, value in inputs.items()}
 
     def end_group(
-        self, key: str, inputs: dict[str, _Value], output: _Value, parent: str | None = None
+        self,
+        key: str,
+        inputs: dict[str, _Value],
+        output: _Value,
+        parent: str | None = None,
+        *,
+        role: str | None = None,
     ) -> _Value:
         self.link(output, key, "out")
         args: dict[str, Any] = {}
@@ -318,7 +326,7 @@ class _Graph:
             r.ArchitectureGroupNode(
                 id=self.nid(key),
                 kind="group",
-                label=key,
+                label=role.upper() if role == "mlp" else role.title() if role else key,
                 children=self.children[key],
                 ports=[
                     r.ArchitecturePort(id=k, direction="input", label=k, shape=v.shape)
@@ -331,32 +339,36 @@ class _Graph:
                 ],
                 parameter_ids=[],
                 references=[r.ArchitectureModuleReference(kind="module", name=key)],
-                attributes=[
-                    r.ArchitectureAttribute(
-                        name=name,
-                        value=self.c[name],
-                        provenance=[
-                            r.ArchitectureProvenance(
-                                kind="configuration",
-                                source="/" + name,
-                                rule="Explicit declaration or reviewed VJEPA2Config default",
-                            )
-                        ],
-                    )
-                    for name in DEFAULTS
-                    if name not in {"num_pooler_layers", "attention_dropout", "initializer_range"}
-                ]
-                + [
-                    r.ArchitectureAttribute(
-                        name="described_path",
-                        value="Evaluation; one context/target mask pair per item; no optional "
-                        "attention head mask; predictor included",
-                        provenance=PRODUCER.provenance(),
-                    )
-                ]
-                if parent is None
-                else [],
-                provenance=PRODUCER.provenance(),
+                attributes=(
+                    [
+                        r.ArchitectureAttribute(
+                            name=name,
+                            value=self.c[name],
+                            provenance=[
+                                r.ArchitectureProvenance(
+                                    kind="configuration",
+                                    source="/" + name,
+                                    rule="Explicit declaration or reviewed VJEPA2Config default",
+                                )
+                            ],
+                        )
+                        for name in DEFAULTS
+                        if name
+                        not in {"num_pooler_layers", "attention_dropout", "initializer_range"}
+                    ]
+                    + [
+                        r.ArchitectureAttribute(
+                            name="described_path",
+                            value="Evaluation; one context/target mask pair per item; no optional "
+                            "attention head mask; predictor included",
+                            provenance=PRODUCER.provenance(),
+                        )
+                    ]
+                    if parent is None
+                    else []
+                )
+                + ([] if role is None else [role_attribute(PRODUCER, role)]),
+                provenance=PRODUCER.provenance() + [source_key(PRODUCER, key)],
                 **args,
             )
         )
@@ -397,23 +409,26 @@ class _Graph:
             ins = self.group(key, {"x": x, "positions": positions})
             residual = ins["x"]
             norm = self.affine(key + ".norm1", residual, hidden, key, norm=True)
+            attention = key + ".attention"
+            attention_inputs = {"x": norm, "positions": ins["positions"]}
+            av = self.group(attention, attention_inputs)
             qkv = {}
             for role in ("query", "key", "value"):
-                projected = self.affine(key + ".attention." + role, norm, hidden, key)
+                projected = self.affine(key + ".attention." + role, av["x"], hidden, attention)
                 projected = self.op(
                     key + "." + role + ".heads",
                     "split_heads_transpose",
                     {"x": projected},
                     head_shape,
-                    parent=key,
+                    parent=attention,
                 )
                 if role != "value":
                     projected = self.op(
                         key + "." + role + ".rope",
                         "rotary_3d",
-                        {"x": projected, "positions": ins["positions"]},
+                        {"x": projected, "positions": av["positions"]},
                         head_shape,
-                        parent=key,
+                        parent=attention,
                         attributes={
                             "axis_width": 2 * ((head // 3) // 2),
                             "unrotated_width": head - 6 * ((head // 3) // 2),
@@ -429,7 +444,7 @@ class _Graph:
                 "scaled_query_key_product",
                 {"query": qkv["query"], "key": qkv["key"]},
                 scores_shape,
-                parent=key,
+                parent=attention,
                 formula="Q K^T / sqrt(head_dim)",
                 attributes={"causal": False},
             )
@@ -438,7 +453,7 @@ class _Graph:
                 "softmax",
                 {"scores": scores},
                 scores_shape,
-                parent=key,
+                parent=attention,
                 attributes={"axis": -1},
             )
             values = self.op(
@@ -446,13 +461,18 @@ class _Graph:
                 "attention_value_product",
                 {"probabilities": probs, "value": qkv["value"]},
                 head_shape,
-                parent=key,
+                parent=attention,
                 formula="softmax(scores) V",
             )
             merged = self.op(
-                key + ".merge_heads", "transpose_merge_heads", {"x": values}, hidden, parent=key
+                key + ".merge_heads",
+                "transpose_merge_heads",
+                {"x": values},
+                hidden,
+                parent=attention,
             )
-            attn = self.affine(key + ".attention.proj", merged, hidden, key)
+            attn = self.affine(key + ".attention.proj", merged, hidden, attention)
+            attn = self.end_group(attention, attention_inputs, attn, key, role="attention")
             residual = self.op(
                 key + ".attention_residual",
                 "residual_add",
@@ -461,9 +481,13 @@ class _Graph:
                 parent=key,
             )
             norm = self.affine(key + ".norm2", residual, hidden, key, norm=True)
-            up = self.affine(key + ".mlp.fc1", norm, [batch, sequence, *shape(mlp)], key)
-            active = self.op(key + ".gelu", "gelu", {"x": up}, up.shape, parent=key)
-            down = self.affine(key + ".mlp.fc2", active, hidden, key)
+            mlp_group = key + ".mlp"
+            mlp_inputs = {"x": norm}
+            mv = self.group(mlp_group, mlp_inputs)
+            up = self.affine(key + ".mlp.fc1", mv["x"], [batch, sequence, *shape(mlp)], mlp_group)
+            active = self.op(key + ".gelu", "gelu", {"x": up}, up.shape, parent=mlp_group)
+            down = self.affine(key + ".mlp.fc2", active, hidden, mlp_group)
+            down = self.end_group(mlp_group, mlp_inputs, down, key, role="mlp")
             output = self.op(
                 key + ".mlp_residual",
                 "residual_add",

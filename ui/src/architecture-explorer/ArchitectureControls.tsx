@@ -53,8 +53,12 @@ export function ArchitectureControls(props: Props) {
       const instance = instances.get(node.id);
       if (instance) parents.push(instance.r.label, instance.i.variant.replaceAll('_', ' '));
       const context = parents.join(' / ');
+      // Only identity provenance is a component-path alias. General description
+      // names (for example a fixture or producer name) are not node identities.
+      const sources = node.provenance.filter((p) => p.kind === 'description' &&
+        p.rule === 'Semantic source key in the reviewed packaged description').map((p) => p.source).join(' ');
       return { id: node.id, label: labels.get(node.id)!, context, fullLabel: node.label,
-        search: `${labels.get(node.id)} ${context} ${node.label} ${node.id} ${node.references.filter((r) => r.kind === 'module').map((r) => r.name).join(' ')}`.toLocaleLowerCase() };
+        search: `${labels.get(node.id)} ${context} ${node.label} ${node.id} ${sources} ${node.references.filter((r) => r.kind === 'module').map((r) => r.name).join(' ')}`.toLocaleLowerCase() };
     });
   }, [graph]);
   const matches = useMemo(() => {

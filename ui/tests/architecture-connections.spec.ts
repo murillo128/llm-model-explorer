@@ -222,6 +222,24 @@ test('shared fan-out trunk identifies every branch through native trunk, branch 
   await unchanged(page, zoomed);
 });
 
+test('authored MLP boundary forwarding preserves shared trunks and exact port hover', async ({ page }) => {
+  await open(page, 'components');
+  await layer(page, 3);
+  await findComponent(page, 'layer-3.mlp');
+  await graphAction(page, 'Toggle selected group');
+  await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const fanout = ['gate', 'up'].map((name) => connection(page, 'layer-3.post-norm', 'out', `layer-3.${name}`, 'x'));
+  const before = await stableState(page);
+  await hoverDot(port(page, 'layer-3.post-norm', 'out')); await emphasized(page, fanout);
+  const trunk = await fanoutPoint(page, fanout, fanout);
+  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, fanout);
+  const branch = await fanoutPoint(page, fanout, [fanout[1]!]);
+  await page.mouse.move(branch.x, branch.y); await emphasized(page, [fanout[1]!]);
+  await hoverDot(port(page, 'layer-3.gate', 'x')); await emphasized(page, [fanout[0]!]);
+  await unchanged(page, before);
+});
+
 test('same-shaped inputs and separate K/V state routes keep exact identity under mouse and keyboard emphasis', async ({ page }) => {
   await fullAttention(page);
   const source = makeProjectionFixture({ count: 4 });

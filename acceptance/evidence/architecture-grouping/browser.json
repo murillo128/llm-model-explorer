@@ -1,0 +1,1234 @@
+{
+  "kind": "built UI with production backend and CPU/SwiftShader; approved local checkpoints are separate from fixtures",
+  "unaffected_components": {
+    "implementation": "18c391d05bf18321b1fbe4cb8aa0e0fd2577b7be",
+    "note": "48 unaffected cases from the initial run; affected component/control cases are recorded separately after correction.",
+    "tests": [
+      {
+        "title": "exact source and destination dots, fan-out branches and line middles highlight complete forwarded connections",
+        "file": "architecture-connections.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "shared fan-out trunk identifies every branch through native trunk, branch and port transitions",
+        "file": "architecture-connections.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "authored MLP boundary forwarding preserves shared trunks and exact port hover",
+        "file": "architecture-connections.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "same-shaped inputs and separate K/V state routes keep exact identity under mouse and keyboard emphasis",
+        "file": "architecture-connections.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "residual and MLP inputs stop at operations; pin survives temporary hover, zoom and inspection close",
+        "file": "architecture-connections.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "24-instance compact navigation, first/last identity, MLP/state focus and exhaustive round trip",
+        "file": "architecture-connections.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "obsolete model layout replies cannot replace the latest graph; a failed worker retries locally",
+        "file": "architecture-connections.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "exact source and destination dots, fan-out branches and line middles highlight complete forwarded connections",
+        "file": "architecture-connections.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "shared fan-out trunk identifies every branch through native trunk, branch and port transitions",
+        "file": "architecture-connections.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "authored MLP boundary forwarding preserves shared trunks and exact port hover",
+        "file": "architecture-connections.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "same-shaped inputs and separate K/V state routes keep exact identity under mouse and keyboard emphasis",
+        "file": "architecture-connections.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "residual and MLP inputs stop at operations; pin survives temporary hover, zoom and inspection close",
+        "file": "architecture-connections.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "24-instance compact navigation, first/last identity, MLP/state focus and exhaustive round trip",
+        "file": "architecture-connections.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "obsolete model layout replies cannot replace the latest graph; a failed worker retries locally",
+        "file": "architecture-connections.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "concrete repeated weight preserves exact progressive values, independent profiles/statistics and native camera",
+        "file": "architecture-inspection.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "close, replace, and reopen fence callbacks and release all numeric resources",
+        "file": "architecture-inspection.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "every unavailable binding and V-JEPA patch shape remain metadata without packed-value requests",
+        "file": "architecture-inspection.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "renderer allocation failure remains local and retrying a fresh modal works",
+        "file": "architecture-inspection.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "context loss during streaming leaves a closable graph-local error and releases resources",
+        "file": "architecture-inspection.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "model replacement during loading removes the modal and cancels its old session handles",
+        "file": "architecture-inspection.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "development StrictMode streams after replay, replaces weights, and releases every generation",
+        "file": "architecture-inspection.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "concrete repeated weight preserves exact progressive values, independent profiles/statistics and native camera",
+        "file": "architecture-inspection.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "close, replace, and reopen fence callbacks and release all numeric resources",
+        "file": "architecture-inspection.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "every unavailable binding and V-JEPA patch shape remain metadata without packed-value requests",
+        "file": "architecture-inspection.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "renderer allocation failure remains local and retrying a fresh modal works",
+        "file": "architecture-inspection.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "context loss during streaming leaves a closable graph-local error and releases resources",
+        "file": "architecture-inspection.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "model replacement during loading removes the modal and cancels its old session handles",
+        "file": "architecture-inspection.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "development StrictMode streams after replay, replaces weights, and releases every generation",
+        "file": "architecture-inspection.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "built shell retrieves on demand, supports V-JEPA without tokenization and restores view state",
+        "file": "architecture-shell.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "malformed graphs stay local and partial inventories remain explicit",
+        "file": "architecture-shell.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "a delayed architecture response cannot replace a newer model/session",
+        "file": "architecture-shell.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "third navigation item leaves model and session controls usable at 280 pixels",
+        "file": "architecture-shell.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "built shell retrieves on demand, supports V-JEPA without tokenization and restores view state",
+        "file": "architecture-shell.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "malformed graphs stay local and partial inventories remain explicit",
+        "file": "architecture-shell.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "a delayed architecture response cannot replace a newer model/session",
+        "file": "architecture-shell.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "third navigation item leaves model and session controls usable at 280 pixels",
+        "file": "architecture-shell.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "nested expansion, instance identity, ports, dimensions, keyboard and camera restoration",
+        "file": "architecture.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "safe labels and expressions remain inert; repeated unmount terminates workers",
+        "file": "architecture.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "full-size qwen3: all instances, bounded document, layout and memory evidence",
+        "file": "architecture.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "full-size qwen35: all instances, bounded document, layout and memory evidence",
+        "file": "architecture.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "full-size vjepa2: all instances, bounded document, layout and memory evidence",
+        "file": "architecture.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "full-size smollm2: all instances, bounded document, layout and memory evidence",
+        "file": "architecture.spec.ts",
+        "project": "desktop",
+        "status": "passed"
+      },
+      {
+        "title": "nested expansion, instance identity, ports, dimensions, keyboard and camera restoration",
+        "file": "architecture.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "safe labels and expressions remain inert; repeated unmount terminates workers",
+        "file": "architecture.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "full-size qwen3: all instances, bounded document, layout and memory evidence",
+        "file": "architecture.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "full-size qwen35: all instances, bounded document, layout and memory evidence",
+        "file": "architecture.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "full-size vjepa2: all instances, bounded document, layout and memory evidence",
+        "file": "architecture.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      },
+      {
+        "title": "full-size smollm2: all instances, bounded document, layout and memory evidence",
+        "file": "architecture.spec.ts",
+        "project": "narrow",
+        "status": "passed"
+      }
+    ]
+  },
+  "component_controls": {
+    "implementation": "41211aa63a99aaa2bf060d33e60991318447759f",
+    "stats": {
+      "startTime": "2026-09-15T19:10:13.636Z",
+      "duration": 139415.44,
+      "expected": 18,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "tests": [
+      {
+        "title": "authored components retain labels, focus, raw inspection and reversible detail",
+        "project": "desktop",
+        "status": "passed",
+        "duration_ms": 9046
+      },
+      {
+        "title": "authored components retain labels, focus, raw inspection and reversible detail",
+        "project": "narrow",
+        "status": "passed",
+        "duration_ms": 8204
+      },
+      {
+        "title": "search and overflow preserve the canvas, projection, generated routes, camera and layout count",
+        "project": "desktop",
+        "status": "passed",
+        "duration_ms": 2077
+      },
+      {
+        "title": "keyboard search reveals collapsed repeated names with parent context and exact source bindings",
+        "project": "desktop",
+        "status": "passed",
+        "duration_ms": 4491
+      },
+      {
+        "title": "breadcrumbs, first/last and mixed variants preserve two independent stack windows and return context",
+        "project": "desktop",
+        "status": "passed",
+        "duration_ms": 14416
+      },
+      {
+        "title": "cross-stack canvas MLP pointer activation keeps focus and instance controls consistent",
+        "project": "desktop",
+        "status": "passed",
+        "duration_ms": 13815
+      },
+      {
+        "title": "cross-stack canvas MLP keyboard activation keeps focus and instance controls consistent",
+        "project": "desktop",
+        "status": "passed",
+        "duration_ms": 14103
+      },
+      {
+        "title": "edge pin, inspection and clear leave focus navigation and layout unchanged",
+        "project": "desktop",
+        "status": "passed",
+        "duration_ms": 4083
+      },
+      {
+        "title": "all operations and camera fit remain distinct; popovers stay in the panel at constrained widths",
+        "project": "desktop",
+        "status": "passed",
+        "duration_ms": 3944
+      },
+      {
+        "title": "partial graphs without repetition retain component navigation and on-demand diagnostics",
+        "project": "desktop",
+        "status": "passed",
+        "duration_ms": 3719
+      },
+      {
+        "title": "search and overflow preserve the canvas, projection, generated routes, camera and layout count",
+        "project": "narrow",
+        "status": "passed",
+        "duration_ms": 1748
+      },
+      {
+        "title": "keyboard search reveals collapsed repeated names with parent context and exact source bindings",
+        "project": "narrow",
+        "status": "passed",
+        "duration_ms": 4064
+      },
+      {
+        "title": "breadcrumbs, first/last and mixed variants preserve two independent stack windows and return context",
+        "project": "narrow",
+        "status": "passed",
+        "duration_ms": 15068
+      },
+      {
+        "title": "cross-stack canvas MLP pointer activation keeps focus and instance controls consistent",
+        "project": "narrow",
+        "status": "passed",
+        "duration_ms": 14201
+      },
+      {
+        "title": "cross-stack canvas MLP keyboard activation keeps focus and instance controls consistent",
+        "project": "narrow",
+        "status": "passed",
+        "duration_ms": 12479
+      },
+      {
+        "title": "edge pin, inspection and clear leave focus navigation and layout unchanged",
+        "project": "narrow",
+        "status": "passed",
+        "duration_ms": 3553
+      },
+      {
+        "title": "all operations and camera fit remain distinct; popovers stay in the panel at constrained widths",
+        "project": "narrow",
+        "status": "passed",
+        "duration_ms": 3727
+      },
+      {
+        "title": "partial graphs without repetition retain component navigation and on-demand diagnostics",
+        "project": "narrow",
+        "status": "passed",
+        "duration_ms": 3293
+      }
+    ]
+  },
+  "architecture": {
+    "implementation": "64e765361506c1c217f813c998eb3b87dcbddab3",
+    "stats": {
+      "startTime": "2026-09-15T19:16:52.226Z",
+      "duration": 989449.0769999999,
+      "expected": 9,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "tests": [
+      {
+        "title": "deterministic production [smollm2] full graph, concrete bindings and logical weight modal",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 14897,
+        "production-architecture-layout": {
+          "kind": "synthetic checkpoint",
+          "family": "smollm2",
+          "nodes": 78,
+          "edges": 112,
+          "layoutMs": 233.5,
+          "heapSnapshot": {
+            "usedSize": 25961720,
+            "totalSize": 48619520,
+            "embedderHeapUsedSize": 50541664,
+            "backingStorageSize": 852021
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      },
+      {
+        "title": "deterministic production [qwen3] full graph, concrete bindings and logical weight modal",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 14933,
+        "production-architecture-layout": {
+          "kind": "synthetic checkpoint",
+          "family": "qwen3",
+          "nodes": 82,
+          "edges": 116,
+          "layoutMs": 247.40000000596046,
+          "heapSnapshot": {
+            "usedSize": 23719352,
+            "totalSize": 50454528,
+            "embedderHeapUsedSize": 47092928,
+            "backingStorageSize": 858182
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      },
+      {
+        "title": "deterministic production [qwen35] full graph, concrete bindings and logical weight modal",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 21317,
+        "production-architecture-layout": {
+          "kind": "synthetic checkpoint",
+          "family": "qwen35",
+          "nodes": 91,
+          "edges": 125,
+          "layoutMs": 249.59999999403954,
+          "heapSnapshot": {
+            "usedSize": 17626116,
+            "totalSize": 58318848,
+            "embedderHeapUsedSize": 27425512,
+            "backingStorageSize": 825651
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      },
+      {
+        "title": "deterministic production [vjepa2] full graph, concrete bindings and logical weight modal",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 30305,
+        "production-architecture-layout": {
+          "kind": "synthetic checkpoint",
+          "family": "vjepa2",
+          "nodes": 95,
+          "edges": 137,
+          "layoutMs": 392.40000000596046,
+          "heapSnapshot": {
+            "usedSize": 15550840,
+            "totalSize": 76144640,
+            "embedderHeapUsedSize": 5098512,
+            "backingStorageSize": 790347
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      },
+      {
+        "title": "complete local reference [smollm2] full graph, concrete bindings and logical weight modal",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 72813,
+        "production-architecture-layout": {
+          "kind": "actual checkpoint",
+          "family": "smollm2",
+          "nodes": 1031,
+          "edges": 1596,
+          "layoutMs": 2166.699999988079,
+          "heapSnapshot": {
+            "usedSize": 98119056,
+            "totalSize": 136278016,
+            "embedderHeapUsedSize": 209940416,
+            "backingStorageSize": 1223845
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      },
+      {
+        "title": "complete local reference [qwen3] full graph, concrete bindings and logical weight modal",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 364596,
+        "production-architecture-layout": {
+          "kind": "actual checkpoint",
+          "family": "qwen3",
+          "nodes": 1019,
+          "edges": 1546,
+          "layoutMs": 2725.199999988079,
+          "heapSnapshot": {
+            "usedSize": 37472332,
+            "totalSize": 104194048,
+            "embedderHeapUsedSize": 68077984,
+            "backingStorageSize": 1159621
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      },
+      {
+        "title": "complete local reference [qwen35] full graph, concrete bindings and logical weight modal",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 378348,
+        "production-architecture-layout": {
+          "kind": "actual checkpoint",
+          "family": "qwen35",
+          "nodes": 972,
+          "edges": 1377,
+          "layoutMs": 1010.9000000059605,
+          "heapSnapshot": {
+            "usedSize": 44007644,
+            "totalSize": 91484160,
+            "embedderHeapUsedSize": 64766024,
+            "backingStorageSize": 1153027
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      },
+      {
+        "title": "complete local reference [vjepa2] full graph, concrete bindings and logical weight modal",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 78417,
+        "production-architecture-layout": {
+          "kind": "actual checkpoint",
+          "family": "vjepa2",
+          "nodes": 854,
+          "edges": 1259,
+          "layoutMs": 1254.5999999940395,
+          "heapSnapshot": {
+            "usedSize": 67300344,
+            "totalSize": 129974272,
+            "embedderHeapUsedSize": 242005456,
+            "backingStorageSize": 1145150
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      },
+      {
+        "title": "deterministic production [smollm2] close during progressive data cancels and releases modal resources",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 11876
+      }
+    ]
+  },
+  "hybrid_variants": {
+    "implementation": "508b17e9323bb48737de73d6a36787d3577a5d89",
+    "stats": {
+      "startTime": "2026-09-15T19:35:51.369Z",
+      "duration": 362017.133,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "tests": [
+      {
+        "title": "deterministic production [qwen35] full graph, concrete bindings and logical weight modal",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 22153,
+        "production-architecture-layout": {
+          "kind": "synthetic checkpoint",
+          "family": "qwen35",
+          "nodes": 91,
+          "edges": 125,
+          "layoutMs": 332.80000001192093,
+          "heapSnapshot": {
+            "usedSize": 37997700,
+            "totalSize": 69591040,
+            "embedderHeapUsedSize": 43202776,
+            "backingStorageSize": 877067
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      },
+      {
+        "title": "complete local reference [qwen35] full graph, concrete bindings and logical weight modal",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 338919,
+        "production-architecture-layout": {
+          "kind": "actual checkpoint",
+          "family": "qwen35",
+          "nodes": 972,
+          "edges": 1377,
+          "layoutMs": 1175.0999999940395,
+          "heapSnapshot": {
+            "usedSize": 41930040,
+            "totalSize": 91045888,
+            "embedderHeapUsedSize": 65428664,
+            "backingStorageSize": 1165378
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      }
+    ]
+  },
+  "shell": {
+    "implementation": "64e765361506c1c217f813c998eb3b87dcbddab3",
+    "stats": {
+      "startTime": "2026-09-15T19:34:30.204Z",
+      "duration": 69852.74,
+      "expected": 3,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "tests": [
+      {
+        "title": "architecture safety baseline preserves shell and other explorers at 390px",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 13340,
+        "safety-geometry-390": {
+          "viewport": {
+            "width": 390,
+            "height": 900
+          },
+          "browser": "153.0.8010.12",
+          "project": "dpr1",
+          "observations": {
+            "tensor": {
+              ".app-bar": {
+                "x": 0,
+                "y": 0,
+                "width": 390,
+                "height": 52,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".app-status-bar": {
+                "x": 0,
+                "y": 872,
+                "width": 390,
+                "height": 28,
+                "font": "12px / 18px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".workspace-frame": {
+                "x": 0,
+                "y": 52,
+                "width": 390,
+                "height": 820,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar nav": {
+                "x": 8,
+                "y": 0,
+                "width": 190.84375,
+                "height": 51,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar select": {
+                "x": 202.84375,
+                "y": 9.5,
+                "width": 107.15625,
+                "height": 32,
+                "font": "13px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(255, 255, 255)"
+              }
+            },
+            "tokenizer": {
+              ".app-bar": {
+                "x": 0,
+                "y": 0,
+                "width": 390,
+                "height": 52,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".app-status-bar": {
+                "x": 0,
+                "y": 872,
+                "width": 390,
+                "height": 28,
+                "font": "12px / 18px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".workspace-frame": {
+                "x": 0,
+                "y": 52,
+                "width": 390,
+                "height": 820,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar nav": {
+                "x": 8,
+                "y": 0,
+                "width": 192.75,
+                "height": 51,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar select": {
+                "x": 204.75,
+                "y": 9.5,
+                "width": 105.25,
+                "height": 32,
+                "font": "13px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(255, 255, 255)"
+              }
+            },
+            "architectureShell": {
+              ".app-bar": {
+                "x": 0,
+                "y": 0,
+                "width": 390,
+                "height": 52,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".app-status-bar": {
+                "x": 0,
+                "y": 872,
+                "width": 390,
+                "height": 28,
+                "font": "12px / 18px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".workspace-frame": {
+                "x": 0,
+                "y": 52,
+                "width": 390,
+                "height": 820,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar nav": {
+                "x": 8,
+                "y": 0,
+                "width": 195.203125,
+                "height": 51,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar select": {
+                "x": 207.203125,
+                "y": 9.5,
+                "width": 102.796875,
+                "height": 32,
+                "font": "13px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(255, 255, 255)"
+              }
+            },
+            "architecture": {
+              ".architecture-toolbar": {
+                "x": 13,
+                "y": 65,
+                "width": 364,
+                "height": 40
+              },
+              ".architecture-context-row": {
+                "x": 13,
+                "y": 105,
+                "width": 364,
+                "height": 50
+              },
+              ".architecture-flow": {
+                "x": 13,
+                "y": 155,
+                "width": 364,
+                "height": 704
+              }
+            }
+          }
+        }
+      },
+      {
+        "title": "architecture safety baseline preserves shell and other explorers at 1178px",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 21576,
+        "safety-geometry-1178": {
+          "viewport": {
+            "width": 1178,
+            "height": 900
+          },
+          "browser": "153.0.8010.12",
+          "project": "dpr1",
+          "observations": {
+            "tensor": {
+              ".app-bar": {
+                "x": 0,
+                "y": 0,
+                "width": 1178,
+                "height": 52,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".app-status-bar": {
+                "x": 0,
+                "y": 872,
+                "width": 1178,
+                "height": 28,
+                "font": "12px / 18px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".workspace-frame": {
+                "x": 0,
+                "y": 52,
+                "width": 1178,
+                "height": 820,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar nav": {
+                "x": 156.15625,
+                "y": 0,
+                "width": 403.09375,
+                "height": 51,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar select": {
+                "x": 635,
+                "y": 9.5,
+                "width": 420,
+                "height": 32,
+                "font": "13px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(255, 255, 255)"
+              }
+            },
+            "tokenizer": {
+              ".app-bar": {
+                "x": 0,
+                "y": 0,
+                "width": 1178,
+                "height": 52,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".app-status-bar": {
+                "x": 0,
+                "y": 872,
+                "width": 1178,
+                "height": 28,
+                "font": "12px / 18px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".workspace-frame": {
+                "x": 0,
+                "y": 52,
+                "width": 1178,
+                "height": 820,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar nav": {
+                "x": 156.15625,
+                "y": 0,
+                "width": 405.171875,
+                "height": 51,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar select": {
+                "x": 635,
+                "y": 9.5,
+                "width": 420,
+                "height": 32,
+                "font": "13px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(255, 255, 255)"
+              }
+            },
+            "architectureShell": {
+              ".app-bar": {
+                "x": 0,
+                "y": 0,
+                "width": 1178,
+                "height": 52,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".app-status-bar": {
+                "x": 0,
+                "y": 872,
+                "width": 1178,
+                "height": 28,
+                "font": "12px / 18px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".workspace-frame": {
+                "x": 0,
+                "y": 52,
+                "width": 1178,
+                "height": 820,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar nav": {
+                "x": 156.15625,
+                "y": 0,
+                "width": 407.828125,
+                "height": 51,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar select": {
+                "x": 635,
+                "y": 9.5,
+                "width": 420,
+                "height": 32,
+                "font": "13px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(255, 255, 255)"
+              }
+            },
+            "architecture": {
+              ".architecture-toolbar": {
+                "x": 21,
+                "y": 69,
+                "width": 1136,
+                "height": 40
+              },
+              ".architecture-context-row": {
+                "x": 21,
+                "y": 109,
+                "width": 1136,
+                "height": 36
+              },
+              ".architecture-flow": {
+                "x": 21,
+                "y": 145,
+                "width": 1136,
+                "height": 710
+              }
+            }
+          }
+        }
+      },
+      {
+        "title": "architecture safety baseline preserves shell and other explorers at 1440px",
+        "project": "dpr1",
+        "status": "passed",
+        "duration_ms": 33896,
+        "safety-geometry-1440": {
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "browser": "153.0.8010.12",
+          "project": "dpr1",
+          "observations": {
+            "tensor": {
+              ".app-bar": {
+                "x": 0,
+                "y": 0,
+                "width": 1440,
+                "height": 52,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".app-status-bar": {
+                "x": 0,
+                "y": 872,
+                "width": 1440,
+                "height": 28,
+                "font": "12px / 18px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".workspace-frame": {
+                "x": 0,
+                "y": 52,
+                "width": 1440,
+                "height": 820,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar nav": {
+                "x": 156.15625,
+                "y": 0,
+                "width": 403.09375,
+                "height": 51,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar select": {
+                "x": 897,
+                "y": 9.5,
+                "width": 420,
+                "height": 32,
+                "font": "13px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(255, 255, 255)"
+              }
+            },
+            "tokenizer": {
+              ".app-bar": {
+                "x": 0,
+                "y": 0,
+                "width": 1440,
+                "height": 52,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".app-status-bar": {
+                "x": 0,
+                "y": 872,
+                "width": 1440,
+                "height": 28,
+                "font": "12px / 18px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".workspace-frame": {
+                "x": 0,
+                "y": 52,
+                "width": 1440,
+                "height": 820,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar nav": {
+                "x": 156.15625,
+                "y": 0,
+                "width": 405.171875,
+                "height": 51,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar select": {
+                "x": 897,
+                "y": 9.5,
+                "width": 420,
+                "height": 32,
+                "font": "13px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(255, 255, 255)"
+              }
+            },
+            "architectureShell": {
+              ".app-bar": {
+                "x": 0,
+                "y": 0,
+                "width": 1440,
+                "height": 52,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".app-status-bar": {
+                "x": 0,
+                "y": 872,
+                "width": 1440,
+                "height": 28,
+                "font": "12px / 18px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(251, 250, 247)"
+              },
+              ".workspace-frame": {
+                "x": 0,
+                "y": 52,
+                "width": 1440,
+                "height": 820,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar nav": {
+                "x": 156.15625,
+                "y": 0,
+                "width": 407.828125,
+                "height": 51,
+                "font": "15px / 22.5px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgba(0, 0, 0, 0)"
+              },
+              ".app-bar select": {
+                "x": 897,
+                "y": 9.5,
+                "width": 420,
+                "height": 32,
+                "font": "13px Inter, system-ui, sans-serif",
+                "color": "rgb(32, 32, 29)",
+                "background": "rgb(255, 255, 255)"
+              }
+            },
+            "architecture": {
+              ".architecture-toolbar": {
+                "x": 21,
+                "y": 69,
+                "width": 1398,
+                "height": 40
+              },
+              ".architecture-context-row": {
+                "x": 21,
+                "y": 109,
+                "width": 1398,
+                "height": 36
+              },
+              ".architecture-flow": {
+                "x": 21,
+                "y": 145,
+                "width": 1398,
+                "height": 710
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}
