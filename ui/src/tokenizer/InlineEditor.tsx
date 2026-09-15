@@ -94,23 +94,32 @@ interface Props {
   onRowSelect?: ((row: number | null) => void) | undefined;
   onRowActivate?: ((row: number) => void) | undefined;
   onEdit: (text: string, composing: boolean, promptly?: boolean) => void;
+  onContentHeight?: ((height: number) => void) | undefined;
 }
 
 /** CodeMirror's immutable document/history remain separate from decoration-only
  * transactions. Widgets and brackets never enter source, selections or copy. */
-export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect, onRowActivate }: Props) {
+export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect, onRowActivate, onContentHeight }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const edit = useRef(onEdit);
+  const measure = useRef(onContentHeight);
+  useLayoutEffect(() => { measure.current = onContentHeight; }, [onContentHeight]);
   useLayoutEffect(() => { edit.current = onEdit; }, [onEdit]);
   useLayoutEffect(() => {
     let disposed = false;
+    const reportHeight = (editor: EditorView) => editor.requestMeasure({
+      key: measure,
+      read: view => view.contentHeight,
+      write: height => { if (!disposed) measure.current?.(height); },
+    });
     const instance = new EditorView({ parent: host.current!, state: EditorState.create({
       extensions: [history(), keymap.of([...defaultKeymap, ...historyKeymap]), annotationField,
-        EditorState.tabSize.of(4),
+        EditorState.tabSize.of(4), ...(measure.current ? [EditorView.lineWrapping] : []),
         EditorView.contentAttributes.of({ id, role: 'textbox', 'aria-label': 'Prompt', 'aria-multiline': 'true', 'aria-describedby': `${id}-help ${id}-status`, spellcheck: 'false' }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) edit.current(update.state.doc.toString(), update.view.composing);
+          if (update.geometryChanged || update.docChanged) reportHeight(update.view);
         }),
         EditorView.domEventHandlers({
           compositionstart: (_event, editor) => { edit.current(editor.state.doc.toString(), true); },
@@ -121,6 +130,7 @@ export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect
       ],
     }) });
     view.current = instance;
+    reportHeight(instance);
     return () => { disposed = true; view.current = null; instance.destroy(); };
   }, [id]);
   useLayoutEffect(() => {

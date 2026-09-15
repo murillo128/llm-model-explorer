@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Test-only browser observer and JSON evidence. */
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Page, TestInfo } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { installProbe } from './probe';
-import { camera, zoom, drag, panelGeometry, promptViewport } from './usability';
+import { camera, zoom, drag, panelGeometry, promptViewport, tokenizerGeometry, settledPrompt } from './usability';
 import { nativeCamera } from '../tests/native-camera';
 import { revealTensor } from '../tests/tensor-tree-helpers';
 
@@ -75,6 +75,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   test.skip(isReference && !process.env.LMEX_REFERENCE_MODEL_DIR,
     'LMEX_REFERENCE_MODEL_DIR not supplied; local SmolLM2-135M Base UI not tested');
   let command = ['-m', 'acceptance.server', '--port', String(ports.backend), '--origin', uiOrigin];
+  if (testInfo.title.startsWith('expanded model coverage')) command.push('--polish');
   if (isReference) {
     const directory = process.env.LMEX_REFERENCE_MODEL_DIR!;
     referenceSamples = JSON.parse(execFileSync(`${repo}backend/.venv/bin/python`,
@@ -97,7 +98,11 @@ test.beforeEach(async ({ page }, testInfo) => {
   page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') log += `\nBrowser: ${message.text()}`; });
   page.on('pageerror', (error) => { log += `\nPage: ${error.message}`; });
   await page.addInitScript(installProbe);
-  if (isReference) await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
+  // Layout/capture cases inspect DOM, numeric readouts and screenshots. Full
+  // framebuffer readback on every streamed draw is reserved for pixel oracles.
+  if (isReference || testInfo.title.startsWith('polish ') || testInfo.title.startsWith('expanded model coverage')) {
+    await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
+  }
   await page.goto('/');
   await expect(page.getByTestId('backend-url')).toHaveText(backend);
 });
@@ -379,8 +384,8 @@ async function closeSession(page: Page) {
   await expect.poll(async () => (await metrics(page)).textures).toBe(0);
   await expect.poll(async () => (await metrics(page)).readers).toBe(0);
 }
-async function embeddingDone(page: Page, rows: number) {
-  await expect(page.getByText(`[${rows} × 576] · float32`).filter({ visible: true })).toBeVisible();
+async function embeddingDone(page: Page, rows: number, timeout = 15_000) {
+  await expect(page.getByText(`[${rows} × 576] · float32`).filter({ visible: true })).toBeVisible({ timeout });
   await expect(page.locator('.input-embeddings [data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
   await expect(page.locator('.input-embeddings .embedding-layer:not([data-staging]) .matrix-panel-status')).toBeEmpty();
 }
@@ -456,6 +461,32 @@ test('real ordered embeddings render progressively with exact duplicate rows and
   await closeSession(page);
   const cdp = await context.newCDPSession(page); await cdp.send('HeapProfiler.collectGarbage'); await cdp.detach();
   expect((await metrics(page)).arrays).toEqual([]);
+});
+
+for (const family of ['qwen3', 'qwen3_5']) test(`real ${family} input embeddings preserve token linkage and recover after unsupported model`, async ({ page }) => {
+  const input = await tokenizer(page);
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(`acceptance/${family}`);
+  await embeddingDone(page, 1);
+  const tokenized = page.waitForResponse(r => r.url().endsWith('/tokenize') && r.request().postDataJSON().text === 'AA');
+  await input.fill('AA');
+  const result = await (await tokenized).json();
+  await embeddingDone(page, result.tokens.length);
+  expect(result.tokens[1].id).toBe(result.tokens[2].id);
+  const matrix = page.locator('.matrix-scroll');
+  await matrix.focus();
+  for (let row = 0; row < result.tokens.length; row++) {
+    if (row) await matrix.press('ArrowDown');
+    await expect(page.locator('.inspection-readout')).toHaveText(`row ${row} · column 0${value(result.tokens[row].id * 576)}`);
+    await expect(page.locator(`[data-token-index="${row}"]`)).toHaveAttribute('data-active-token', '');
+  }
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/unsupported');
+  await expect(page.getByText(/Input embeddings are unavailable/)).toBeVisible();
+  await input.fill('still usable');
+  await expect(page.locator('.tokenizer-status')).toContainText('current prompt');
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(`acceptance/${family}`);
+  await expect(page.locator('.embedding-shape')).toContainText('× 576] · float32');
+  await expect(page.getByText(/Input embeddings are unavailable/)).toHaveCount(0);
+  await closeSession(page);
 });
 
 test('real A→B→A response reordering and model/session changes show only the latest generation', async ({ page }) => {
@@ -601,7 +632,9 @@ test('production prompt pixels, selection, history and composition survive embed
   await embeddingDone(page, 12);
   expect(await prompt.screenshot({ animations: 'disabled' })).toEqual(before);
   expect(await page.locator('.tokenizer-editor').boundingBox()).toEqual(box);
-  expect(box!.height).toBe(260);
+  // A short prompt now uses compact automatic allocation; embedding completion
+  // still must not alter any prompt pixels, selection, or geometry.
+  expect(box!.height).toBeLessThan(260);
   // Select source while a real tokenizer response is held; decorating the
   // eventual response must preserve which characters the next key replaces.
   let release!: () => void;
@@ -650,6 +683,10 @@ test('integrated inventory preferences and metadata preserve streaming panel geo
   await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
   const initial = await panelGeometry(page);
   expect(initial['.matrix-panel-header']![3]).toBe(40);
+  expect(initial['.matrix-surfaces']![1]).toBe(initial['.matrix-panel-header']![1]! + initial['.matrix-panel-header']![3]!);
+  await expect(page.locator('.matrix-panel-header')).toHaveCount(1);
+  await expect(page.locator('.distribution-range')).toHaveCount(0);
+  await expect(page.getByText('Full-range bins', { exact: true })).toHaveCount(0);
   const info = page.getByRole('button', { name: 'Tensor information', exact: true });
   const dialog = page.getByRole('dialog', { name: 'Tensor information' });
   const close = page.getByRole('button', { name: 'Close tensor information' });
@@ -658,7 +695,8 @@ test('integrated inventory preferences and metadata preserve streaming panel geo
   expect((await dialog.boundingBox())!.y).toBe(icon.y + icon.height);
   await info.click(); await expect(close).toBeFocused();
   await page.mouse.move(0, 0); await expect(dialog).toBeVisible();
-  await expect(dialog.locator('dt')).toHaveText(['Logical path', 'Rank', 'Elements', 'Storage dtype', 'Storage format', 'Logical dtype']);
+  await expect(dialog.locator('dt')).toHaveText(['Logical path', 'Rank', 'Elements', 'Storage dtype', 'Storage format', 'Logical dtype',
+    'Distribution domain', 'True finite minimum', 'True finite maximum']);
   expect(await panelGeometry(page)).toEqual(initial);
   await page.keyboard.press('Escape'); await expect(info).toBeFocused();
   await control('release', {}); await complete(page);
@@ -669,24 +707,117 @@ test('integrated inventory preferences and metadata preserve streaming panel geo
   const pane = page.getByRole('region', { name: 'Tensor Explorer workspace', exact: true });
   const inventory = page.getByRole('complementary', { name: 'Tensor inventory' });
   const before = (await pane.boundingBox())!, width = (await inventory.boundingBox())!.width;
-  await page.getByRole('button', { name: 'Hide inventory' }).click();
-  await expect(page.getByRole('button', { name: 'Show inventory' })).toBeFocused();
-  expect((await pane.boundingBox())!.width - before.width).toBe(width + 16);
-  expect(await pane.boundingBox()).toEqual(await page.locator('#workspace').boundingBox());
-  await page.getByRole('button', { name: 'Show inventory' }).click();
+  if (process.env.CAPTURE_INVENTORY_EVIDENCE) await page.screenshot({ path: `evidence/inventory-matrix-expanded-${testInfo.project.name}.png` });
+  await page.getByRole('button', { name: 'Collapse inventory' }).click();
+  await expect(page.getByRole('button', { name: 'Expand inventory' })).toBeFocused();
+  expect((await pane.boundingBox())!.width - before.width).toBe(width + 16 - 40);
+  const workspace = (await page.locator('#workspace').boundingBox())!;
+  expect(await pane.boundingBox()).toEqual({ ...workspace, x: workspace.x + 40, width: workspace.width - 40 });
+  if (process.env.CAPTURE_INVENTORY_EVIDENCE) {
+    await page.getByRole('button', { name: 'Expand inventory' }).blur(); await page.mouse.move(0, 0);
+    await page.screenshot({ path: `evidence/inventory-matrix-collapsed-${testInfo.project.name}.png` });
+  }
+  await page.getByRole('button', { name: 'Expand inventory' }).click();
   const divider = page.getByRole('separator', { name: 'Resize tensor inventory' });
   await divider.focus(); await divider.press('End');
   await expect(divider).toHaveAttribute('aria-valuenow', '480');
   expect(await canvas!.evaluate(node => node === document.querySelector('.matrix-scroll canvas'))).toBe(true);
   expect(await metrics(page)).toMatchObject({ uploads: resources.uploads, createdTextures: resources.createdTextures });
-  await page.getByRole('button', { name: 'Hide inventory' }).click();
+  await page.getByRole('button', { name: 'Collapse inventory' }).click();
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Show inventory' })).toBeVisible();
-  await page.getByRole('button', { name: 'Show inventory' }).click();
+  await expect(page.getByRole('button', { name: 'Expand inventory' })).toBeVisible();
+  await page.getByRole('button', { name: 'Expand inventory' }).click();
   await expect(divider).toHaveAttribute('aria-valuenow', '480');
   await expect(page.getByRole('button', { name: new RegExp(`^${name}`) })).toBeVisible();
   await documentFits(page);
-  await testInfo.attach('measurements', { body: JSON.stringify({ initial, reclaimedWidth: width + 16, restoredWidth: 480 }), contentType: 'application/json' });
+  await testInfo.attach('measurements', { body: JSON.stringify({ initial, reclaimedWidth: width + 16 - 40, restoredWidth: 480 }), contentType: 'application/json' });
+  await closeSession(page);
+});
+
+test('production matrix navigation centers underfilled data and links zoom selection across attached profiles', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page, 'layout.fits.weight'); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await nativeCamera(page);
+  const before = await camera(page, 32, 32), resources = await metrics(page);
+  expect(before.scaleX).toBe(1); expect(before.scaleY).toBe(1);
+  const geometry = () => page.evaluate(() => {
+    const host = document.querySelector<HTMLElement>('.matrix-scroll')!;
+    const scientific = document.querySelector<HTMLElement>('.matrix-surfaces')!;
+    const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
+    const h = host.getBoundingClientRect(), style = getComputedStyle(scientific);
+    return { matrix: box('.matrix-scroll canvas'), rows: box('.row-distributions canvas'), columns: box('.column-distributions canvas'),
+      viewport: { left: h.left + host.clientLeft, top: h.top + host.clientTop, width: host.clientWidth, height: host.clientHeight },
+      scroll: { width: host.scrollWidth, height: host.scrollHeight }, gap: { x: parseFloat(style.columnGap), y: parseFloat(style.rowGap) } };
+  });
+  const underfilled = await geometry();
+  expect(underfilled.matrix.width * before.dpr).toBe(32);
+  expect(underfilled.matrix.height * before.dpr).toBe(32);
+  expect(underfilled.viewport.width).toBeGreaterThan(underfilled.matrix.width * 10);
+  expect(underfilled.viewport.height).toBeGreaterThan(underfilled.matrix.height * 10);
+  for (const [axis, size] of [['left', 'width'], ['top', 'height']] as const) {
+    const centered = underfilled.viewport[axis] + (underfilled.viewport[size] - underfilled.matrix[size]) / 2;
+    expect(Math.abs(underfilled.matrix[axis] - centered)).toBeLessThanOrEqual(1 / before.dpr);
+    expect(underfilled.scroll[size]).toBe(underfilled.viewport[size]);
+  }
+  expect(underfilled.rows.top).toBe(underfilled.matrix.top);
+  expect(underfilled.rows.height).toBe(underfilled.matrix.height);
+  expect(underfilled.columns.left).toBe(underfilled.matrix.left);
+  expect(underfilled.columns.width).toBe(underfilled.matrix.width);
+  expect(underfilled.rows.left - underfilled.matrix.right).toBeCloseTo(underfilled.gap.x, 1);
+  expect(underfilled.columns.top - underfilled.matrix.bottom).toBeCloseTo(underfilled.gap.y, 1);
+  expect(underfilled.rows.width * before.dpr).toBe(100);
+  expect(underfilled.columns.height * before.dpr).toBe(100);
+  await page.mouse.move(0, 0);
+  if (process.env.CAPTURE_MATRIX_NAVIGATION_EVIDENCE === '1' && testInfo.project.name === 'dpr1') {
+    await page.screenshot({ path: 'evidence/matrix-navigation-underfilled.png' });
+  }
+  const point = (c: typeof before, column: number, row: number) => ({
+    x: c.rect.left + (column - c.x) * c.scaleX / c.dpr,
+    y: c.rect.top + (row - c.y) * c.scaleY / c.dpr,
+  });
+  const bounds = { columns: [4, 24], rows: [8, 24] };
+  const previews = page.locator('.matrix-zoom-preview');
+  const expectPreview = async (selection: typeof bounds) => {
+    await expect(previews).toHaveCount(3);
+    await expect(page.locator('.matrix-zoom-preview[data-surface=matrix]')).toHaveAttribute('data-bounds', JSON.stringify(selection));
+    for (const axis of ['rows', 'columns'] as const) {
+      await expect(page.locator(`.matrix-zoom-preview[data-surface=${axis}]`)).toHaveAttribute('data-bounds', JSON.stringify({ [axis]: selection[axis] }));
+    }
+    const m = (await page.locator('.matrix-zoom-preview[data-surface=matrix]').boundingBox())!;
+    const r = (await page.locator('.matrix-zoom-preview[data-surface=rows]').boundingBox())!;
+    const c = (await page.locator('.matrix-zoom-preview[data-surface=columns]').boundingBox())!;
+    expect(r.y).toBeCloseTo(m.y, 1); expect(r.height).toBeCloseTo(m.height, 1);
+    expect(c.x).toBeCloseTo(m.x, 1); expect(c.width).toBeCloseTo(m.width, 1);
+  };
+  await drag(page, point(before, 4, 8), point(before, 24, 24));
+  await expectPreview(bounds);
+  await page.mouse.up(); await expect(previews).toHaveCount(0);
+  const selected = await camera(page, 32, 32), zoomed = await geometry();
+  expect(selected.scaleX).toBeCloseTo(Math.min(selected.width * before.dpr / 20, selected.height * before.dpr / 16));
+  expect(selected.scaleY).toBe(selected.scaleX);
+  await expect(page.locator('.row-distributions canvas')).toHaveAttribute('data-origin', `0,${selected.y}`);
+  await expect(page.locator('.column-distributions canvas')).toHaveAttribute('data-origin', `${selected.x},0`);
+  // A second preview proves synchronized bounds on the enlarged view. Escape
+  // cancels this transient range first; the next Escape restores the prior camera.
+  const inner = { columns: [8, 20], rows: [10, 22] };
+  await drag(page, point(selected, 8, 10), point(selected, 20, 22));
+  await expectPreview(inner);
+  if (process.env.CAPTURE_MATRIX_NAVIGATION_EVIDENCE === '1' && testInfo.project.name === 'dpr1') {
+    await page.screenshot({ path: 'evidence/matrix-navigation-zoomed.png' });
+  }
+  await page.keyboard.press('Escape'); await page.mouse.up();
+  await expect(previews).toHaveCount(0);
+  expect(await camera(page, 32, 32)).toEqual(selected);
+  await page.locator('.matrix-scroll').focus();
+  await page.keyboard.press('Escape');
+  expect(await camera(page, 32, 32)).toEqual(before);
+  await drag(page, point(before, 4, 8), point(before, 24, 24)); await page.mouse.up();
+  await page.locator('.matrix-scroll canvas').click({ button: 'right', position: { x: 10, y: 10 } });
+  expect(await camera(page, 32, 32)).toEqual(before);
+  expect(await metrics(page)).toMatchObject({ uploads: resources.uploads, createdTextures: resources.createdTextures, gpuBytes: resources.gpuBytes, errors: [] });
+  await testInfo.attach('matrix-navigation-geometry', { body: JSON.stringify({ underfilled, zoomed, bounds, selected, resources: await metrics(page) }, null, 2), contentType: 'application/json' });
+  await documentFits(page);
   await closeSession(page);
 });
 
@@ -727,8 +858,8 @@ test('integrated camera gestures, exact selection, aligned scales and adaptive i
     await drag(page, { x: box.x + 12, y: box.y + 12 },
       { x: box.x + (axis === 'rows' ? 12 : 72), y: box.y + (axis === 'columns' ? 12 : 42) });
     const bounds = axis === 'matrix' ? { columns: [2, 12], rows: [2, 7] } : { [axis]: [2, axis === 'rows' ? 7 : 12] };
-    await expect(page.locator('.matrix-zoom-preview')).toHaveAttribute('data-bounds', JSON.stringify(bounds));
-    expect(await page.locator('.matrix-zoom-preview').evaluate(n => getComputedStyle(n).borderTopColor)).toBe('rgb(245, 154, 56)');
+    await expect(page.locator('.matrix-zoom-preview[data-surface=matrix]')).toHaveAttribute('data-bounds', JSON.stringify(bounds));
+    expect(await page.locator('.matrix-zoom-preview[data-surface=matrix]').evaluate(n => getComputedStyle(n).borderTopColor)).toBe('rgb(245, 154, 56)');
     expect((await camera(page, 576, 1536)).scaleX).toBeCloseTo(c.scaleX);
     await page.mouse.up(); await expect(page.locator('.matrix-zoom-preview')).toHaveCount(0);
     const selected = await camera(page, 576, 1536);
@@ -797,16 +928,25 @@ for (const [name, low, high] of [
         .toBeCloseTo(-low / (high! - low) * 100);
     }
   }
-  const range = page.getByRole('region', { name: 'Distribution range' });
-  if (low === null) await expect(range).toContainText('No finite');
-  else {
-    await expect(range).toContainText('min'); await expect(range).toContainText('max');
-    await expect(range.locator('[title]').first()).toHaveAttribute('title', `True finite minimum: ${low}`);
-    await expect(range.locator('[title]').last()).toHaveAttribute('title', `True finite maximum: ${high}`);
+  await expect(page.locator('.distribution-range')).toHaveCount(0);
+  await expect(page.getByText('Full-range bins', { exact: true })).toHaveCount(0);
+  const info = page.getByRole('button', { name: 'Tensor information', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Tensor information' });
+  await info.click();
+  if (low === null) {
+    await expect(dialog).toContainText('No finite values');
+    await expect(dialog.locator('dt').filter({ hasText: /^True finite minimum$/ }).locator('+ dd')).toHaveText('Unavailable');
+    await expect(dialog.locator('dt').filter({ hasText: /^True finite maximum$/ }).locator('+ dd')).toHaveText('Unavailable');
   }
-  const stable = await range.textContent();
+  else {
+    await expect(dialog).toContainText('Full-range bins');
+    await expect(dialog.locator('dt').filter({ hasText: /^True finite minimum$/ }).locator('+ dd')).toHaveAttribute('title', `True finite minimum: ${low}`);
+    await expect(dialog.locator('dt').filter({ hasText: /^True finite maximum$/ }).locator('+ dd')).toHaveAttribute('title', `True finite maximum: ${high}`);
+  }
+  const stable = await dialog.textContent();
   await page.locator('.matrix-scroll').dispatchEvent('wheel', { deltaY: -100, ctrlKey: true });
-  expect(await range.textContent()).toBe(stable);
+  expect(await dialog.textContent()).toBe(stable);
+  await page.keyboard.press('Escape');
   await closeSession(page);
 });
 
@@ -908,4 +1048,216 @@ test('production inspection tolerates DPR change before viewport resize notifica
   await expect(page.locator('.inspection-readout')).toHaveText(`row 0 · column 1${value(1)}`);
   expect(await metrics(page)).toMatchObject({ uploads: before.uploads, createdTextures: before.createdTextures });
   await closeSession(page);
+});
+
+async function polishCapture(page: Page, info: TestInfo, name: string) {
+  await page.mouse.move(0, 0);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  const path = info.outputPath(`${name}.png`);
+  await page.screenshot({ path, animations: 'disabled' });
+  await info.attach(name, { path, contentType: 'image/png' });
+}
+
+for (const width of [1178, 1440]) {
+  test(`polish inventory captures retain selected scientific work at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await open(page); await complete(page);
+    await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+    const canvas = await page.locator('.matrix-scroll canvas').elementHandle();
+    const aligned = async () => {
+      await expect.poll(() => page.evaluate(() => {
+        const box = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+        const matrix = box('.matrix-scroll canvas'), rows = box('.row-distributions canvas'), columns = box('.column-distributions canvas');
+        const style = getComputedStyle(document.querySelector('.matrix-surfaces')!);
+        const host = document.querySelector<HTMLElement>('.matrix-scroll')!;
+        // Filled axes retain native scrollbar clearance; underfilled axes attach
+        // profiles to the data directly (the dedicated centering case covers it).
+        const gutterX = matrix.width >= host.clientWidth - 1 / devicePixelRatio ? host.offsetWidth - host.clientWidth : 0;
+        const gutterY = matrix.height >= host.clientHeight - 1 / devicePixelRatio ? host.offsetHeight - host.clientHeight : 0;
+        return Math.max(Math.abs(rows.left - matrix.right - parseFloat(style.columnGap) - gutterX),
+          Math.abs(columns.top - matrix.bottom - parseFloat(style.rowGap) - gutterY),
+          Math.abs(rows.top - matrix.top), Math.abs(columns.left - matrix.left));
+      })).toBeLessThanOrEqual(1);
+    };
+    const resources = await metrics(page);
+    const expanded = await page.locator('.tensor-tree details').evaluateAll(nodes => nodes.map(n => n.hasAttribute('open')));
+    await aligned(); await polishCapture(page, info, `tensor-expanded-${width}`);
+    await page.getByRole('button', { name: 'Collapse inventory' }).click();
+    const restore = page.getByRole('button', { name: 'Expand inventory' });
+    await expect(restore).toBeFocused();
+    expect(await restore.textContent()).toBe('');
+    const rail = page.locator('.inventory-rail');
+    expect((await rail.boundingBox())!.width).toBe(40);
+    expect(await canvas!.evaluate(n => n === document.querySelector('.matrix-scroll canvas'))).toBe(true);
+    await restore.blur();
+    await aligned(); await polishCapture(page, info, `tensor-collapsed-${width}`);
+    await restore.press('Enter');
+    expect(await page.locator('.tensor-tree details').evaluateAll(nodes => nodes.map(n => n.hasAttribute('open')))).toEqual(expanded);
+    expect(await metrics(page)).toMatchObject({ uploads: resources.uploads, createdTextures: resources.createdTextures });
+    await documentFits(page); await closeSession(page);
+  });
+
+  test(`polish real tokenizer auto sizing and accessible manual split at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    const editor = await tokenizer(page);
+    const fill = async (text: string) => {
+      const response = page.waitForResponse(r => r.url().endsWith('/tokenize') && r.request().postDataJSON().text === text);
+      await editor.press('ControlOrMeta+A'); await page.keyboard.insertText(text);
+      const tokens = (await (await response).json()).tokens;
+      // Hundreds of progressive row uploads can exceed the ordinary 15 s wait
+      // under DPR 2 SwiftShader. This is a completion/geometry gate, not latency.
+      await embeddingDone(page, tokens.length, 45_000); await settledPrompt(page);
+      return tokens.length as number;
+    };
+    const bounded = async () => {
+      const g = await tokenizerGeometry(page);
+      expect(g.prompt.height).toBeGreaterThanOrEqual(g.min - 1);
+      expect(g.prompt.height).toBeLessThanOrEqual(g.max + 1);
+      expect(g.divider.top).toBeCloseTo(g.prompt.bottom, 0);
+      expect(g.embeddings.top).toBeCloseTo(g.divider.bottom, 0);
+      expect(g.embeddings.bottom).toBeCloseTo(g.workspace.bottom, 0);
+      await documentFits(page);
+      return g;
+    };
+    const rows = await fill('one two');
+    const short = await bounded();
+    expect(short.prompt.height).toBeLessThan(short.workspace.height / 2);
+    expect(short.scrollHeight).toBeLessThanOrEqual(short.clientHeight + 1);
+    await editor.blur(); await polishCapture(page, info, `tokenizer-auto-${width}`);
+    const split = page.getByRole('separator', { name: 'Resize prompt and embeddings', exact: true });
+    await expect(split).toHaveAttribute('aria-orientation', 'horizontal');
+    await split.press('ArrowDown'); await expect(split).toBeFocused();
+    await expect(page.locator('.tokenizer-workspace')).toHaveAttribute('data-sizing', 'manual');
+    expect((await bounded()).prompt.height).toBeCloseTo(short.prompt.height + 16, 0);
+    await split.press('ArrowUp');
+    expect((await bounded()).prompt.height).toBeCloseTo(short.prompt.height, 0);
+    const start = (await split.boundingBox())!;
+    await drag(page, { x: start.x + start.width / 2, y: start.y + start.height / 2 },
+      { x: start.x + start.width / 2, y: start.y + start.height / 2 + 64 });
+    await page.mouse.up();
+    const manual = await bounded();
+    expect(manual.prompt.height).toBeCloseTo(short.prompt.height + 64, 0);
+    await split.blur(); await polishCapture(page, info, `tokenizer-manual-${width}`);
+    await zoom(page, rows, 576, 4);
+    expect((await bounded()).prompt).toEqual(manual.prompt);
+    await page.locator('.matrix-scroll:visible').focus();
+    await expect(page.locator('[data-token-index="0"]')).toHaveAttribute('data-active-token', '');
+    expect((await bounded()).prompt).toEqual(manual.prompt);
+    await split.press('Home');
+    expect((await bounded()).prompt.height).toBeCloseTo(short.min, 0);
+    await split.press('End');
+    expect((await bounded()).prompt.height).toBeCloseTo(short.max, 0);
+    await split.dblclick(); await settledPrompt(page);
+    await expect(page.locator('.tokenizer-workspace')).toHaveAttribute('data-sizing', 'auto');
+    expect((await bounded()).prompt.height).toBeCloseTo(short.prompt.height, 0);
+    await fill(Array.from({ length: 40 }, (_, i) => `Line ${i} one two`).join('\n'));
+    const long = await bounded();
+    expect(long.prompt.height).toBeGreaterThan(short.prompt.height + 30);
+    expect(long.prompt.height).toBeLessThanOrEqual((long.workspace.height - long.divider.height) * .46);
+    expect(long.scrollHeight).toBeGreaterThan(long.clientHeight * 2);
+    await page.locator('.tokenizer-editor').evaluate(n => { n.scrollTop = 100; });
+    await expect.poll(() => page.locator('.tokenizer-editor').evaluate(n => n.scrollTop)).toBeGreaterThan(0);
+    expect((await bounded()).embeddings).toEqual(long.embeddings);
+    await polishCapture(page, info, `tokenizer-long-${width}`);
+    await page.setViewportSize({ width, height: 740 }); await settledPrompt(page);
+    expect((await bounded()).prompt.height).toBeLessThan(long.prompt.height - 30);
+    await split.press('Home'); await split.press('ArrowDown');
+    const preferred = (await bounded()).prompt.height;
+    await fill('short again');
+    expect((await bounded()).prompt.height).toBeCloseTo(preferred, 0);
+    await page.setViewportSize({ width: 640, height: 740 }); await settledPrompt(page);
+    expect((await bounded()).prompt.height).toBeCloseTo(preferred, 0);
+    await info.attach('panel-allocation', { body: JSON.stringify({ short, manual, long }), contentType: 'application/json' });
+    await closeSession(page);
+  });
+}
+
+test('polish magnifier follows edges after scrolling resize DPR and source replacement', async ({ page }, info) => {
+  await open(page); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await zoom(page, 576, 1536, 2);
+  const resources = await metrics(page);
+  const captures: object[] = [];
+  const sweep = async () => {
+    const c = await camera(page, 576, 1536);
+    let first: object | undefined;
+    for (const [fx, fy] of [[.3, .3], [.35, .35], [0, 0], [1, 0], [1, 1], [0, 1], [.5, .5]]) {
+      const x = Math.min(c.rect.width - 2, Math.max(2, c.rect.width * fx!));
+      const y = Math.min(c.rect.height - 2, Math.max(2, c.rect.height * fy!));
+      await page.mouse.move(c.rect.left + x, c.rect.top + y);
+      await expect(page.locator('.inspection-readout')).toBeVisible();
+      const g = await page.evaluate(() => {
+        const rect = (s: string) => document.querySelector(s)!.getBoundingClientRect().toJSON() as DOMRect;
+        return { card: rect('.matrix-inspection'), pane: rect('.matrix-surfaces'),
+          profiles: [rect('.row-distributions canvas'), rect('.column-distributions canvas')] };
+      });
+      expect(g.card.left).toBeGreaterThanOrEqual(g.pane.left);
+      expect(g.card.top).toBeGreaterThanOrEqual(g.pane.top);
+      expect(g.card.right).toBeLessThanOrEqual(g.pane.right);
+      expect(g.card.bottom).toBeLessThanOrEqual(g.pane.bottom);
+      for (const p of g.profiles) expect(g.card.right <= p.left || g.card.left >= p.right || g.card.bottom <= p.top || g.card.top >= p.bottom).toBe(true);
+      if (fx === .3) first = g.card;
+      if (fx === .35) expect(g.card).not.toEqual(first);
+      captures.push(g);
+    }
+  };
+  await page.locator('.matrix-scroll').evaluate(n => { n.scrollLeft = 180; n.scrollTop = 140; });
+  await expect.poll(async () => (await camera(page, 576, 1536)).y).toBeGreaterThan(0);
+  await sweep();
+  const before = await camera(page, 576, 1536);
+  await page.setViewportSize({ width: 1178, height: 900 }); await sweep();
+  let current = await camera(page, 576, 1536);
+  expect(current.scaleX).toBeCloseTo(before.scaleX);
+  expect(current.x).toBeCloseTo(before.x); expect(current.y).toBeCloseTo(before.y);
+  const cdp = await page.context().newCDPSession(page);
+  const changedDpr = current.dpr === 1 ? 2 : 1;
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1178, height: 900, deviceScaleFactor: changedDpr, mobile: false });
+  await expect.poll(() => page.evaluate(() => devicePixelRatio)).toBe(changedDpr);
+  await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+  await sweep();
+  current = await camera(page, 576, 1536);
+  // A DPR increase can make the entire data axis fit. Preserve the previous
+  // logical origin only within the new native scrollbar bounds.
+  for (const [axis, length, viewport, scale] of [
+    ['x', 1536, current.width, current.scaleX], ['y', 576, current.height, current.scaleY],
+  ] as const) {
+    const expected = Math.min(before[axis], Math.max(0, length - viewport * current.dpr / scale));
+    expect(Math.abs(current[axis] - expected)).toBeLessThanOrEqual(current.dpr / scale);
+  }
+  expect(current.scaleX).toBe(current.scaleY);
+  expect(await metrics(page)).toMatchObject({ uploads: resources.uploads, createdTextures: resources.createdTextures, errors: [] });
+  await cdp.detach();
+  await open(page, 'layout.fits.weight'); await complete(page);
+  await expect(page.locator('.inspection-readout')).toHaveCount(0);
+  const replacement = await camera(page, 32, 32);
+  expect(replacement.scaleX).toBeCloseTo(Math.max(1, Math.floor(replacement.width * replacement.dpr) / 32));
+  await page.locator('.matrix-scroll').focus(); await page.keyboard.press('Escape');
+  expect(await camera(page, 32, 32)).toEqual(replacement);
+  await documentFits(page);
+  await info.attach('edge-placements', { body: JSON.stringify(captures), contentType: 'application/json' });
+  await closeSession(page);
+});
+
+test('expanded model coverage links native embeddings in GPTQ and NVFP4 checkpoints', async ({ page }) => {
+  await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
+  for (const [family, columns] of [['smollm2', 12], ['qwen3', 128], ['qwen35', 32]] as const) {
+    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(family);
+    const editor = page.getByRole('textbox', { name: 'Prompt', exact: true });
+    await editor.fill('one two one');
+    await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+    await expect(page.getByText(`[4 × ${columns}] · float32`)).toBeVisible();
+    await expect(page.locator('.token-ids')).toHaveText(['1', '2', '3', '2']);
+    await zoom(page, 4, columns, 8);
+    const c = await camera(page, 4, columns);
+    await page.mouse.move(c.rect.left + 4, c.rect.top + 3 * 8 + 4);
+    await expect(page.locator('[data-token-index="3"]')).toHaveAttribute('data-active-token', '');
+    await expect(page.locator('.inspection-readout')).toHaveText(`row 3 · column 0${((2 * columns) % 29 - 14) / 8}`);
+    await page.locator('[data-token-index="1"]').hover();
+    await expect(page.locator('[data-token-index="1"]')).toHaveAttribute('data-active-token', '');
+    await expect(page.locator('[data-token-index="3"]')).not.toHaveAttribute('data-active-token', '');
+  }
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('vjepa2');
+  await expect(page.getByText('Tokenizer unavailable for this model. You can still edit the prompt.')).toBeVisible();
+  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  await documentFits(page); await closeSession(page);
 });

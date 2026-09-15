@@ -11,6 +11,18 @@ export function InspectionCard({ inspection, host }: { inspection: Inspection; h
     setContainer(host.current?.closest('dialog') ?? document.body);
   }, [host]);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const readout = useRef<HTMLOutputElement>(null);
+  useLayoutEffect(() => {
+    const element = readout.current;
+    if (!element || !inspection.onReadoutResize) return;
+    const measure = () => inspection.onReadoutResize!(element.getBoundingClientRect().height +
+      parseFloat(getComputedStyle(element).marginTop));
+    // Resolve wrapped coordinates/values before paint, then follow font changes.
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [inspection, container]);
   useLayoutEffect(() => {
     if (canvas.current) inspection.draw(canvas.current);
   }, [inspection, container]);
@@ -21,7 +33,7 @@ export function InspectionCard({ inspection, host }: { inspection: Inspection; h
         <span className="magnifier-guide magnifier-guide-vertical" aria-hidden="true" />
         <span className="magnifier-center" aria-hidden="true" />
       </div>}
-      <output className="inspection-readout" role="status" aria-live="polite" aria-atomic="true">
+      <output ref={readout} className="inspection-readout" role="status" aria-live="polite" aria-atomic="true">
         <span>row {inspection.row} · column {inspection.column}</span>
         <span>{inspection.value}</span>
       </output>

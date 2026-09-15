@@ -118,7 +118,7 @@ for (const dpr of [1, 2]) test.describe(`workspace panes at DPR ${dpr}`, () => {
           matrix: m!.view!, row: r!.view!, column: c!.view!,
           alignment: [(mr.top - rr.top) * devicePixelRatio, (mr.left - cr.left) * devicePixelRatio],
           pixels: [mr.width * devicePixelRatio, mr.height * devicePixelRatio],
-          canvasInside: mr.top === Math.round((host.getBoundingClientRect().top + host.clientTop) * devicePixelRatio) / devicePixelRatio &&
+          canvasInside: mr.top >= Math.round((host.getBoundingClientRect().top + host.clientTop) * devicePixelRatio) / devicePixelRatio &&
             mr.bottom <= document.querySelector('.working-surface')!.getBoundingClientRect().bottom &&
             cr.bottom <= document.querySelector('.working-surface')!.getBoundingClientRect().bottom,
         };

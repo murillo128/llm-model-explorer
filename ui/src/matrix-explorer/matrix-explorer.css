@@ -1,8 +1,7 @@
-.matrix-explorer { display: flex; flex-direction: column; flex: 1; gap: 8px; min-width: 0; min-height: 0; }
+.matrix-explorer { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
 .matrix-explorer > :not(.matrix-surfaces) { flex-shrink: 0; }
 .matrix-explorer > .matrix-surfaces { flex: 1; min-height: 0; }
 .matrix-explorer-header { font-size: 13px; line-height: 20px; }
-.distribution-range { display: flex; flex-wrap: wrap; align-content: start; height: 32px; min-height: 32px; max-height: 32px; overflow: auto; scrollbar-width: thin; gap: 0 12px; color: #575953; font: 10px/16px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .matrix-scroll { background: var(--ui-surface-soft, #fbfaf7); }
 
 .matrix-inspectable {
@@ -21,8 +20,9 @@
 
 .matrix-inspection, .matrix-inspection * { box-sizing: border-box; }
 
-.matrix-panel-header { position: sticky; top: 0; z-index: 21; display: flex; align-items: center; gap: 8px; height: 40px; min-height: 40px; max-height: 40px; min-width: 0; border-bottom: 1px solid var(--ui-border, #d7d3ca); background: var(--ui-surface, #fff); font-size: 13px; line-height: 20px; }
+.matrix-panel-header { position: sticky; top: 0; z-index: 21; display: flex; align-items: center; gap: 8px; box-sizing: border-box; height: 40px; min-height: 40px; max-height: 40px; min-width: 0; padding: 0 6px; border-bottom: 1px solid var(--ui-border, #d7d3ca); background: var(--ui-surface-soft, #fbfaf7); font-size: 13px; line-height: 20px; }
 .matrix-panel-context { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
+.matrix-panel-context:has(.tensor-identity) { min-width: 64px; }
 .matrix-panel-status { flex: 0 1 auto; max-width: 40%; min-width: 0; overflow: auto; scrollbar-width: thin; }
 .matrix-panel-status:empty, .matrix-panel-actions:empty { display: none; }
 .matrix-panel-actions { display: flex; align-items: center; flex-shrink: 0; }

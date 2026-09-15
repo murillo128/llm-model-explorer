@@ -67,6 +67,11 @@ export function fitWidthScale(columns: number, cssWidth: number, dpr: number) {
   return columns > 0 ? Math.max(1, Math.floor(cssWidth * dpr) / columns) : 1;
 }
 
+/** Presentation only: center an underfilled axis on whole device pixels. */
+export function centeredOffset(availableCSS: number, dataPixels: number, dpr: number) {
+  return Math.max(0, Math.floor((Math.floor(availableCSS * dpr) - dataPixels) / 2)) / dpr;
+}
+
 /** Requested CSS scroll offset retaining a logical focal coordinate. Native bounds apply afterward. */
 export function focalScroll(origin: number, focalCSS: number, oldScale: number, newScale: number, dpr: number) {
   return (origin + focalCSS * dpr / oldScale) * newScale / dpr - focalCSS;

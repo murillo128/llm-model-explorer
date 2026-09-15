@@ -4,20 +4,29 @@ import { expect, it, vi } from 'vitest';
 import { TensorWorkspace } from './TensorWorkspace';
 
 function Workspace() {
-  return <TensorWorkspace enabled inventory={<p>Tree</p>}>{(restore) => <section>{restore}<p>Science</p></section>}</TensorWorkspace>;
+  return <TensorWorkspace enabled inventory={<p>Tree</p>}><section><p>Science</p></section></TensorWorkspace>;
 }
 
 it('restores visibility after remount and retains a mounted scientific subtree', async () => {
   const view = render(<Workspace />);
   const science = screen.getByText('Science');
-  await userEvent.click(screen.getByRole('button', { name: 'Hide inventory' }));
-  expect(screen.getByRole('button', { name: 'Show inventory' })).toHaveFocus();
+  const tree = screen.getByText('Tree');
+  expect(screen.getByRole('heading', { name: 'Inventory' })).toBeVisible();
+  await userEvent.click(screen.getByRole('button', { name: 'Collapse inventory' }));
+  expect(screen.getByRole('button', { name: 'Expand inventory' })).toHaveFocus();
   expect(screen.getByText('Science')).toBe(science);
+  expect(screen.getByText('Tree')).toBe(tree);
+  expect(tree).not.toBeVisible();
+  const restore = screen.getByRole('button', { name: 'Expand inventory' });
+  expect(restore).toHaveTextContent('');
+  expect(restore.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  expect(restore.closest('section')).toBeNull();
+  expect(restore).toHaveAccessibleDescription('Expand inventory');
   view.unmount();
   render(<Workspace />);
-  expect(screen.getByRole('button', { name: 'Show inventory' })).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: 'Show inventory' }));
-  expect(screen.getByRole('button', { name: 'Hide inventory' })).toHaveFocus();
+  expect(screen.getByRole('button', { name: 'Expand inventory' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Expand inventory' }));
+  expect(screen.getByRole('button', { name: 'Collapse inventory' })).toHaveFocus();
 });
 
 it.each(['malformed', 'unavailable'])('keeps hide/restore usable with %s browser preferences', async (mode) => {
@@ -27,7 +36,7 @@ it.each(['malformed', 'unavailable'])('keeps hide/restore usable with %s browser
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('disabled'); });
   }
   render(<Workspace />);
-  await userEvent.click(screen.getByRole('button', { name: 'Hide inventory' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Show inventory' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Collapse inventory' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Expand inventory' }));
   expect(screen.getByText('Tree')).toBeVisible();
 });

@@ -2,9 +2,9 @@ import { expect, test } from '@playwright/test';
 import { frame, meta, data } from './embedding-fixtures';
 import { models, sessionA } from '../src/test/shell-fixtures';
 
-// Recorded at pinned integration base 8166d94, before issue #44 source edits.
-// Tokenizer source at that base is identical to planning baseline a65025c.
-test('frozen prompt pixels and geometry', async ({ page }) => {
+// Issue #112 changes panel allocation; retain references for the actual inline
+// source/bracket/ID presentation inside the compact adaptive prompt.
+test('adaptive prompt pixels and inline annotation geometry', async ({ page }) => {
   await page.route('**/runtime-config.json', route => route.fulfill({ json: { backend_base_url: 'https://backend.example' } }));
   await page.route('https://backend.example/**', route => {
     const path = new URL(route.request().url()).pathname;
@@ -40,6 +40,6 @@ test('frozen prompt pixels and geometry', async ({ page }) => {
   await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).focus();
   await expect(page.getByText('[5 × 7] · float32')).toBeVisible();
   await expect(prompt).toHaveScreenshot('annotated-prompt.png');
-  expect((await page.locator('.tokenizer-editor').boundingBox())!.height).toBe(260);
+  expect((await page.locator('.tokenizer-editor').boundingBox())!.height).toBeLessThan(260);
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

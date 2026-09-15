@@ -63,9 +63,12 @@ The lockfiles pin application dependencies. Models are supplied locally; the
 application never downloads weights. Place each HF checkpoint in an immediate
 child directory of the model root, including its configuration, all selected weight shards,
 and assets required for advertised capabilities. Native numeric views support F32,
-F16 and BF16 safetensors. The selected GPTQ Int4 and NVFP4 checkpoints additionally
-expose static architecture/storage metadata and explicit partial numeric inventories;
-packed weights are not decoded. A tokenizer is optional for V-JEPA 2.
+F16 and BF16 safetensors. The admitted GPTQ Int4 and ModelOpt NVFP4 layouts expose
+decoded logical float32 weights through the same numeric views. Inventory coverage
+is complete only when all records are accounted for; unresolved storage remains
+explicitly partial. Input embeddings support the accepted Llama/SmolLM2, Qwen3 and
+Qwen3.5 text layouts when their tables are actionable. A tokenizer is optional for
+V-JEPA 2. See [integrated polish acceptance](acceptance/polish.md) for evidence and limits.
 Startup prepares architectures before accepting connections, including content hashing
 on warm starts; graph retrieval never generates a model or runs inference.
 

@@ -22,7 +22,7 @@ CHUNK_ELEMENTS = MAX_READ_BYTES // 4
 
 
 class _TensorReader:
-    """One bounded native source block, never a tensor-sized Python allocation."""
+    """One bounded logical source block, never a tensor-sized Python allocation."""
 
     def __init__(
         self,
@@ -116,11 +116,13 @@ class LogicalTensorService:
         descriptor = next((item for item in source.tensors() if item.id == tensor_id), None)
         if descriptor is None:
             raise ModelError("tensor_not_found", "Unknown tensor.", 404)
-        if (
-            descriptor.storage_format != "safetensors"
-            or descriptor.storage_dtype not in {"F32", "F16", "BF16"}
-            or descriptor.logical_dtype != "float32"
-        ):
+        if (descriptor.storage_format, descriptor.storage_dtype) not in {
+            ("safetensors", "F32"),
+            ("safetensors", "F16"),
+            ("safetensors", "BF16"),
+            ("gptq-int4", "I32"),
+            ("nvfp4", "U8"),
+        } or descriptor.logical_dtype != "float32":
             raise ModelError("unsupported_representation", "Unsupported tensor representation.")
         shape = tuple(safe_integer(dimension) for dimension in descriptor.shape)
         numel = safe_integer(math.prod(shape))
@@ -135,7 +137,9 @@ class LogicalTensorService:
             layout="c",
             shape=shape,
             expected_bytes=safe_integer(numel * 4),
-            producer="safetensors-native-float32-v1",
+            producer="safetensors-native-float32-v1"
+            if descriptor.storage_format == "safetensors"
+            else f"safetensors-{descriptor.storage_format}-float32-v1",
         )
         return LogicalTensor(source, descriptor, spec)
 

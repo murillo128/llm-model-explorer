@@ -34,6 +34,27 @@ it('uses empty scientific space before covering a short matrix', () => {
   expect(intersects(rect, short)).toBe(false);
 });
 
+it('follows nearby pointer movement even when a fixed boundary would cover less matrix', () => {
+  const largePane = { left: 0, top: 0, right: 1000, bottom: 800 };
+  const centered = { left: 100, top: 100, right: 850, bottom: 700 };
+  const first = inspectionPosition(220, 220, largePane, centered, [], 1)!;
+  const moved = inspectionPosition(260, 250, largePane, centered, [], 1)!;
+  expect(first.left).toBe(220 + 4.5 + INSPECTION.gap);
+  expect(first.top).toBe(220 + 4.5 + INSPECTION.gap);
+  expect(moved.left - first.left).toBe(40);
+  expect(moved.top - first.top).toBe(30);
+});
+
+it('only clamps after nearby placements cannot fit and can retain a narrow compact readout', () => {
+  const constrained = { left: 40, top: 80, right: 190, bottom: 180 };
+  expect(inspectionPosition(120, 130, constrained, constrained, [], 1)).toBeNull();
+  const rect = inspectionPosition(120, 130, constrained, constrained, [], 1, INSPECTION.readoutHeight)!;
+  expect(rect.width).toBe(150);
+  expect(rect.left).toBe(40);
+  expect(rect.top).toBeGreaterThanOrEqual(80);
+  expect(rect.bottom).toBeLessThanOrEqual(180);
+});
+
 it('reports insufficient magnifier space so a compact readout can be placed without panel collisions', () => {
   const small = { left: 0, top: 0, right: 360, bottom: 180 };
   const panel = { left: 260, top: 0, right: 360, bottom: 180 };

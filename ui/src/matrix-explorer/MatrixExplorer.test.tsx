@@ -3,6 +3,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import type { MatrixViewportOptions } from '../rendering/matrix-viewport';
 import type { Inspection } from '../rendering/matrix-inspection';
 import { MatrixExplorer } from './MatrixExplorer';
+import { TensorHeader } from '../components/TensorHeader';
+import { tensors } from '../test/shell-fixtures';
 import type { MatrixSource, MatrixUpdates } from './types';
 
 const fake = vi.hoisted(() => ({ fail: false, transferFails: false, views: [] as {
@@ -92,15 +94,23 @@ it('reports allocation failure without subscribing and recovers on source replac
 });
 it('resets domain labels across source reuse and ignores detached metadata', () => {
   const a = { ...source(), distributions: true }, b = { ...source(), distributions: true };
-  const view = render(<MatrixExplorer source={a} />);
+  const header: NonNullable<import('./types').MatrixExplorerProps['header']> = (controls, domain) =>
+    <TensorHeader tensor={tensors[0]!} domain={domain} actions={controls} />;
+  const view = render(<MatrixExplorer source={a} header={header} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Tensor information' }));
   act(() => a.updates[0]!.distributionDomain({ minimum: -2, maximum: 6 }));
   expect(screen.getByTitle('True finite minimum: -2')).toBeVisible();
-  view.rerender(<MatrixExplorer source={b} />);
-  view.rerender(<MatrixExplorer source={a} />);
+  expect(a.updates).toHaveLength(1);
+  expect(fake.views[0]!.upload).not.toHaveBeenCalled();
+  expect(fake.views[0]!.fitWidth).not.toHaveBeenCalled();
+  view.rerender(<MatrixExplorer source={b} header={header} />);
+  view.rerender(<MatrixExplorer source={a} header={header} />);
   act(() => a.updates[0]!.distributionDomain({ minimum: -99, maximum: 99 }));
-  expect(screen.getByLabelText('Distribution range')).toHaveTextContent('Bin domain unavailable');
+  expect(screen.getByRole('dialog')).toHaveTextContent('Bin domain unavailable');
+  expect(screen.queryByTitle('True finite minimum: -2')).not.toBeInTheDocument();
   act(() => a.updates[1]!.distributionDomain({ minimum: null, maximum: null }));
-  expect(screen.getByLabelText('Distribution range')).toHaveTextContent('No finite values');
+  expect(screen.getByRole('dialog')).toHaveTextContent('No finite values');
+  expect(screen.queryByRole('region', { name: 'Distribution range' })).not.toBeInTheDocument();
 });
 it('releases an allocated viewport if initial transfer setup fails', () => {
   fake.transferFails = true;

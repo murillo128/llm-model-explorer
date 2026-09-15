@@ -47,6 +47,34 @@ def unique(records, field='id'):
     return result
 
 
+def validate_packed_storage(parameter, geometry, tensor=None):
+    """Logical matrices require a complete admitted group, never raw auxiliary IDs."""
+    require(parameter['name'].endswith('.weight') and len(geometry) == 2 and min(geometry) > 0,
+            'packed logical geometry')
+    output, inputs = geometry
+    prefix = parameter['name'].removesuffix('.weight')
+    representation = tensor.get('storage_format') if tensor is not None else (
+        'gptq-int4' if any(s['name'] == prefix + '.qweight' for s in parameter['storage']) else 'nvfp4')
+    if representation == 'gptq-int4':
+        require(inputs % 128 == 0 and output % 8 == 0, 'GPTQ logical geometry')
+        dtype = 'I32'
+        expected = {'qweight': ('I32', [inputs // 8, output]),
+                    'qzeros': ('I32', [inputs // 128, output // 8]),
+                    'scales': ('F16', [inputs // 128, output]), 'g_idx': ('I32', [inputs])}
+    elif representation == 'nvfp4':
+        require(inputs % 16 == 0, 'NVFP4 logical geometry')
+        dtype = 'U8'
+        expected = {'weight': ('U8', [output, inputs // 2]),
+                    'weight_scale': ('F8_E4M3', [output, inputs // 16]),
+                    'weight_scale_2': ('F32', []), 'input_scale': ('F32', [])}
+    else:
+        raise ValueError('unsupported packed representation')
+    require(tensor is None or tensor['storage_dtype'] == dtype, 'packed inventory dtype')
+    require(len(parameter['storage']) == len(expected) and
+            {s['name']: (s['dtype'], s['shape']) for s in parameter['storage']} ==
+            {prefix + '.' + name: record for name, record in expected.items()}, 'packed storage group')
+
+
 def validate_architecture(value, context=None):
     """Run after generated JSON Schema validation. Context pins model/inventory/tokenizer."""
     serialized_size(value)
@@ -174,7 +202,7 @@ def validate_architecture(value, context=None):
                     'region storage closure')
         inspection = p['inspection']
         if inspection['status'] == 'available':
-            require(p['binding'] in ('native', 'alias'), 'non-native inspection')
+            require(p['binding'] in ('native', 'quantized', 'alias'), 'incomplete logical inspection')
             dims = p['logical_shape']
             require(dims is not None and len(dims) in (1, 2) and
                     all(d['kind'] == 'constant' for d in dims), 'inspection logical geometry')
@@ -182,21 +210,26 @@ def validate_architecture(value, context=None):
             native = p
             while native['binding'] == 'alias':
                 native = params[native['alias_of']]
-            require(native['binding'] == 'native' and native['logical_shape'] == dims and
+            require(native['binding'] in ('native', 'quantized') and native['logical_shape'] == dims and
                     native['inspection']['status'] == 'available' and
                     native['inspection']['tensor_id'] == inspection['tensor_id'],
-                    'alias native identity/geometry')
-            require(any(s['name'] == native['name'] and s['shape'] == geometry and
+                    'alias logical identity/geometry')
+            if native['binding'] == 'native':
+                require(any(s['name'] == native['name'] and s['shape'] == geometry and
                         s['dtype'] in ('F32', 'F16', 'BF16', 'float32', 'float16', 'bfloat16') and
                         s.get('role') not in ('scales', 'packed', 'packed_data')
                         for s in native['storage']), 'native storage geometry')
+            tensor = None
             if inventory is not None:
                 tensor = inventory.get(inspection['tensor_id'])
                 require(tensor is not None and tensor['shape'] == geometry and
                         tensor['name'] == native['name'] and tensor['rank'] == len(geometry) and
                         tensor['numel'] == product(geometry), 'session inventory membership/geometry')
-                require(any(s['name'] == tensor['name'] and s['dtype'] == tensor['storage_dtype']
-                            for s in native['storage']), 'inventory storage identity')
+                if native['binding'] == 'native':
+                    require(any(s['name'] == tensor['name'] and s['dtype'] == tensor['storage_dtype']
+                                for s in native['storage']), 'inventory storage identity')
+            if native['binding'] == 'quantized':
+                validate_packed_storage(native, geometry, tensor)
 
 
 def fixtures():
@@ -213,9 +246,11 @@ def fixtures():
                   storage=[storage], inspection=dict(status='available', tensor_id='tensor_native'), provenance=[])
     parameters = [native,
         {**deepcopy(native), 'id': 'alias', 'name': 'tied.weight', 'binding': 'alias', 'alias_of': 'weight'},
-        dict(id='quantized', name='packed.weight', logical_shape=[dim(8), dim(8)], binding='quantized',
-             storage=[dict(name='packed.qweight', dtype='I32', shape=[1, 8], role='packed_data'),
-                      dict(name='packed.scales', dtype='F16', shape=[1, 8], role='scales')],
+        dict(id='quantized', name='packed.weight', logical_shape=[dim(8), dim(128)], binding='quantized',
+             storage=[dict(name='packed.qweight', dtype='I32', shape=[16, 8], role='packed_data'),
+                      dict(name='packed.qzeros', dtype='I32', shape=[1, 1], role='zero_points'),
+                      dict(name='packed.scales', dtype='F16', shape=[1, 8], role='scales'),
+                      dict(name='packed.g_idx', dtype='I32', shape=[128], role='group_indices')],
              inspection=unavailable('unsupported_representation'), provenance=[]),
         dict(id='fused', name='q.weight', logical_shape=[dim(2), dim(3)], binding='fused_region',
              storage=[dict(name='qkv.weight', dtype='F16', shape=[6, 3])],
@@ -378,7 +413,7 @@ def fixtures():
         ('unsafe-logical-product', [set_('graph/parameters/2/logical_shape',[dim(SAFE),dim(2)])]),
         ('unsafe-physical-product', [set_('graph/parameters/2/storage/0/shape',[SAFE,2])]),
         ('physical-not-logical-geometry', [set_('graph/parameters/0/storage/0/shape',[1,6])]),
-        ('packed-cannot-be-inspected', [set_('graph/parameters/2/inspection',dict(status='available',tensor_id='tensor_native'))]),
+        ('packed-cannot-use-native-identity', [set_('graph/parameters/2/inspection',dict(status='available',tensor_id='tensor_native'))]),
         ('fused-cannot-be-inspected', [set_('graph/parameters/3/inspection',dict(status='available',tensor_id='tensor_native'))]),
         ('rank3-cannot-be-inspected', [set_('graph/parameters/5/inspection',dict(status='available',tensor_id='tensor_volume'))]),
         ('region-storage-closure', [set_('graph/parameters/3/region/storage_name','foreign')]),
@@ -391,6 +426,51 @@ def fixtures():
     case('no-tokenizer-reference', context_edits=[set_('tokenizer_available',False)])
     case('wrong-inventory-geometry', context_edits=[set_('inventory/tensors/0/shape',[3,2])])
     case('wrong-inventory-identity', context_edits=[set_('inventory/tensors/0/name','other.weight')])
+    # These are complete logical matrices backed by exact admitted storage groups.
+    # Their descriptors retain physical dtype/format but expose mathematical shape.
+    packed = deepcopy(parameters[2])
+    packed['inspection'] = dict(status='available', tensor_id='tensor_packed')
+    nvfp4 = dict(id='quantized', name='fp4.weight', logical_shape=[dim(2), dim(32)],
+        binding='quantized', inspection=dict(status='available', tensor_id='tensor_packed'), provenance=[],
+        storage=[dict(name='fp4.weight', dtype='U8', shape=[2,16], role='packed_nvfp4'),
+                 dict(name='fp4.weight_scale', dtype='F8_E4M3', shape=[2,2], role='block_scale'),
+                 dict(name='fp4.weight_scale_2', dtype='F32', shape=[], role='global_weight_scale'),
+                 dict(name='fp4.input_scale', dtype='F32', shape=[], role='input_scale')])
+    for label, parameter, dtype, representation in [
+        ('gptq', packed, 'I32', 'gptq-int4'), ('nvfp4', nvfp4, 'U8', 'nvfp4')]:
+        dims = [d['value'] for d in parameter['logical_shape']]
+        descriptor = dict(id='tensor_packed', name=parameter['name'], path=parameter['name'].split('.'),
+            shape=dims, rank=2, numel=product(dims), storage_dtype=dtype,
+            storage_format=representation, logical_dtype='float32')
+        base_edits = [set_('graph/parameters/2', parameter)]
+        base_context = [set_('inventory/tensors', inventory['tensors'] + [descriptor])]
+        case(label+'-complete-logical-inspection', base_edits, True, context_edits=base_context)
+        case(label+'-complete-logical-alias', base_edits + [
+            set_('graph/parameters/1/alias_of', 'quantized'),
+            set_('graph/parameters/1/logical_shape', parameter['logical_shape']),
+            set_('graph/parameters/1/storage', []),
+            set_('graph/parameters/1/inspection', parameter['inspection'])], True,
+            context_edits=base_context)
+        for suffix, changes in [
+            ('wrong-primary-geometry', [set_('graph/parameters/2/storage/0/shape', [1,1])]),
+            ('wrong-primary-dtype', [set_('graph/parameters/2/storage/0/dtype', 'F32')]),
+            ('wrong-scale-dtype', [set_('graph/parameters/2/storage/'+('2' if label == 'gptq' else '1')+'/dtype', 'F32')]),
+            ('foreign-companion', [set_('graph/parameters/2/storage/1/name', 'foreign.scale')]),
+            ('missing-companion', [set_('graph/parameters/2/storage', parameter['storage'][:-1])]),
+            ('duplicate-companion', [set_('graph/parameters/2/storage/3', parameter['storage'][0])]),
+            ('wrong-logical-identity', [set_('graph/parameters/2/name', 'other.weight')]),
+            ('auxiliary-logical-identity', [set_('graph/parameters/2/name', 'packed.scales')]),
+            ('wrong-actionable-id', [set_('graph/parameters/2/inspection/tensor_id', 'tensor_native')]),
+        ]:
+            case(label+'-'+suffix, base_edits + changes, context_edits=base_context)
+        for suffix, changes in [
+            ('wrong-inventory-format', [set_('inventory/tensors/2/storage_format', 'unknown')]),
+            ('missing-inventory-format', [delete('inventory/tensors/2/storage_format')]),
+            ('wrong-inventory-dtype', [set_('inventory/tensors/2/storage_dtype', 'F16')]),
+            ('wrong-inventory-name', [set_('inventory/tensors/2/name', 'other.weight')]),
+            ('wrong-inventory-shape', [set_('inventory/tensors/2/shape', list(reversed(dims)))]),
+        ]:
+            case(label+'-'+suffix, base_edits, context_edits=base_context + changes)
     # Large-size tests use repeated fixed chunks, never a 32 MiB fixture/object allocation.
     bounds = [dict(name='exact-limit', chunk_bytes=4096, repeat=8192, tail_bytes=0, valid=True),
               dict(name='one-byte-over', chunk_bytes=4096, repeat=8192, tail_bytes=1, valid=False)]

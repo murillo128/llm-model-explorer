@@ -1,15 +1,23 @@
-"""Admission rules for the two reviewed packed layouts, without numeric decoders.
+"""Admission and logical bindings for the two reviewed packed layouts.
 
-These rules validate physical encoding groups. They do not infer a semantic graph
-or manufacture logical parameters for packed storage. See evidence/quantized-admission.md.
+These rules validate physical groups and bind complete mathematical tensors.
+Numeric decoding stays in quantized_decoding; graph semantics stay in analysis.
 """
 
+import hashlib
 from collections.abc import Mapping, Sequence
 from fnmatch import fnmatchcase
 from typing import Literal, Protocol
 
 from .model_files import ModelError, invalid
-from .tensor_source import DTYPES, PhysicalTensor, TensorLocation, native_location, safe_integer
+from .tensor_source import (
+    DTYPES,
+    PhysicalTensor,
+    TensorDescriptor,
+    TensorLocation,
+    native_location,
+    safe_integer,
+)
 
 Encoding = Literal["native", "gptq-int4", "nvfp4"]
 
@@ -157,10 +165,43 @@ def logical_locations(
     }
     for tensor in physical:
         if tensor.name in excluded:
+            packed_suffix = ".qweight" if layout == "gptq-int4" else ".weight"
+            if tensor.name.endswith(packed_suffix):
+                prefix = tensor.name.removesuffix(packed_suffix)
+                name = prefix + ".weight"
+                suffixes = (
+                    (".qweight", ".qzeros", ".scales", ".g_idx")
+                    if layout == "gptq-int4"
+                    else (".weight", ".weight_scale", ".weight_scale_2", ".input_scale")
+                )
+                shape = (
+                    (tensor.shape[1], tensor.shape[0] * 8)
+                    if layout == "gptq-int4"
+                    else (tensor.shape[0], tensor.shape[1] * 2)
+                )
+                locations.append(
+                    TensorLocation(
+                        TensorDescriptor(
+                            id=hashlib.sha256(name.encode("utf-8")).hexdigest(),
+                            name=name,
+                            path=tuple(name.split(".")),
+                            shape=shape,
+                            rank=2,
+                            numel=safe_integer(shape[0] * shape[1]),
+                            storage_dtype=tensor.dtype,
+                            storage_format=layout,
+                        ),
+                        tensor.file,
+                        tensor.offset,
+                        tuple(tensors[prefix + suffix] for suffix in suffixes),
+                    )
+                )
             continue
         leaf = tensor.name.rsplit(".", 1)[-1]
         if tensor.dtype not in DTYPES or leaf in auxiliaries:
-            raise invalid("Unrecognized or orphaned quantized storage.")
+            # Unknown/orphan records remain visible to structural analysis and
+            # inventory diagnostics, never a guessed actionable numeric tensor.
+            continue
         # In these formats native weight/bias fields are complete, uncompressed
         # tensors, unlike encoding auxiliaries above. Physical shape is therefore
         # the full logical shape; no axis transform, alias or region is invented.
@@ -169,4 +210,4 @@ def logical_locations(
             leaf in {"bias", "A_log", "dt_bias"} and len(tensor.shape) == 1
         ):
             locations.append(native_location(tensor))
-    return tuple(locations)
+    return tuple(sorted(locations, key=lambda location: location.descriptor.name))

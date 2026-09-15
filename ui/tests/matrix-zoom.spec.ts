@@ -52,8 +52,8 @@ for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
       expect(c.rows.scaleY).toBe(c.view.scaleY); expect(c.columns.scaleX).toBe(c.view.scaleX);
       expect(c.rows.width).toBe(100); expect(c.columns.height).toBe(100);
       expect(c.rowRect!.top).toBeCloseTo(c.rect.top, 3); expect(c.columnRect!.left).toBeCloseTo(c.rect.left, 3);
-      expect(c.rowRect!.left).toBeGreaterThanOrEqual(c.host.right);
-      expect(c.columnRect!.top).toBeGreaterThanOrEqual(c.host.bottom);
+      expect(c.rowRect!.left - c.rect.right).toBeCloseTo(10, 0);
+      expect(c.columnRect!.top - c.rect.bottom).toBeCloseTo(10, 0);
     }
     await page.evaluate(() => {
       const v = window.matrixFixture.viewports.at(-1)!;
@@ -109,6 +109,68 @@ for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
     await expect(page.locator('.matrix-explorer')).toHaveCount(0);
     expect(await page.evaluate(() => window.matrixFixture.resources())).toEqual({ textures: 0, displays: 0, framebuffers: 0, buffers: 0, programs: 0, cpuBytes: 0 });
   });
+  test('region/range camera history, scoped right-click, fit and source reset', async ({ page }) => {
+    await open(page, 'square');
+    const initial = (await camera(page)).view;
+    await page.evaluate(() => window.matrixFixture.viewports.at(-1)!.zoomToBounds({ columns: [4, 16], rows: [5, 13] }));
+    const first = (await camera(page)).view;
+    await page.evaluate(() => window.matrixFixture.viewports.at(-1)!.zoomToBounds({ rows: [7, 9] }));
+    await page.locator('.matrix-scroll').focus();
+    await page.keyboard.press('Escape');
+    expect((await camera(page)).view).toEqual(first);
+    const handled = await page.locator('.row-distributions canvas').evaluate((canvas) => {
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+      canvas.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    expect(handled).toBe(true);
+    expect((await camera(page)).view).toEqual(initial);
+    await page.keyboard.press('Escape');
+    expect((await camera(page)).view).toEqual(initial);
+    const outside = await page.locator('.matrix-scroll').evaluate((host) => {
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+      host.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    expect(outside).toBe(false);
+    await page.evaluate(() => window.matrixFixture.viewports.at(-1)!.zoomToBounds({ columns: [10, 15] }));
+    await page.getByRole('button', { name: 'Fit width', exact: true }).click();
+    await page.locator('.matrix-scroll').focus();
+    await page.keyboard.press('Escape');
+    expect((await camera(page)).view).toEqual(initial);
+    await page.evaluate(() => window.matrixFixture.viewports.at(-1)!.zoomToBounds({ rows: [10, 15] }));
+    await page.evaluate(() => window.matrixFixture.render('tall'));
+    await expect.poll(() => page.evaluate(() => window.matrixFixture.viewports.at(-1)!.renderer.geometry.rows)).toBe(900);
+    const replaced = (await camera(page)).view;
+    await page.locator('.matrix-scroll').focus();
+    await page.keyboard.press('Escape');
+    expect((await camera(page)).view).toEqual(replaced);
+  });
+  test('wheel and trackpad pinch coalesce into separate gesture-level camera states', async ({ page }) => {
+    await open(page, 'square');
+    const initial = (await camera(page)).view;
+    async function wheel(ctrlKey: boolean) {
+      await page.locator('.matrix-scroll').evaluate((host, ctrlKey) => {
+        const rect = host.querySelector('canvas')!.getBoundingClientRect();
+        for (const deltaY of [-60, -50, -40]) host.dispatchEvent(new WheelEvent('wheel', {
+          deltaY, ctrlKey, clientX: rect.left + 30, clientY: rect.top + 20, bubbles: true, cancelable: true,
+        }));
+      }, ctrlKey);
+    }
+    await wheel(false);
+    const first = (await camera(page)).view;
+    expect(first.scaleX).toBeGreaterThan(initial.scaleX);
+    await page.waitForTimeout(220);
+    await wheel(true);
+    expect((await camera(page)).view.scaleX).toBeGreaterThan(first.scaleX);
+    await page.locator('.matrix-scroll').focus();
+    await page.keyboard.press('Escape');
+    expect((await camera(page)).view).toEqual(first);
+    await page.keyboard.press('Escape');
+    expect((await camera(page)).view).toEqual(initial);
+    await page.keyboard.press('Escape');
+    expect((await camera(page)).view).toEqual(initial);
+  });
 });
 
 test('touch pinch and two simultaneous cameras remain local', async ({ page }) => {
@@ -126,8 +188,15 @@ test('touch pinch and two simultaneous cameras remain local', async ({ page }) =
   const initial = await page.evaluate(() => window.matrixFixture.viewports.find(v => v.renderer.state === 'ready')!.renderer.view!);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x - 20, y }, { x: x + 20, y }] });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - 40, y }, { x: x + 40, y }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - 50, y }, { x: x + 50, y }] });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await expect.poll(() => page.evaluate(() => window.matrixFixture.viewports.find(v => v.renderer.state === 'ready')!.renderer.view!.scaleX)).toBeGreaterThan(initial.scaleX);
+  expect((await camera(page)).view).toEqual(other.view);
+  await first.focus();
+  await page.keyboard.press('Escape');
+  expect(await page.evaluate(() => window.matrixFixture.viewports.find(v => v.renderer.state === 'ready')!.renderer.view!)).toEqual(initial);
+  await page.keyboard.press('Escape');
+  expect(await page.evaluate(() => window.matrixFixture.viewports.find(v => v.renderer.state === 'ready')!.renderer.view!)).toEqual(initial);
   expect((await camera(page)).view).toEqual(other.view);
   expect(await page.evaluate(() => [scrollX, scrollY, visualViewport!.scale])).toEqual([0, 0, 1]);
 });
@@ -145,4 +214,33 @@ test('DPR changes preserve logical origins without reuploading', async ({ page }
   expect(result.after.x).toBe(result.before.x);
   expect(result.after.y).toBe(result.before.y);
   expect(result.after.scaleX).toBe(result.after.scaleY);
+});
+
+test('zoom-back restores stored logical camera after resize/DPR and respects focused controls', async ({ page }) => {
+  await open(page, 'tall');
+  const before = await page.evaluate(() => {
+    const v = window.matrixFixture.viewports.at(-1)!;
+    v.zoomAt(8, 0, 0); v.host.scrollTop = 120; v.refresh();
+    const before = v.renderer.view!;
+    v.zoomToBounds({ rows: [20, 24] });
+    return before;
+  });
+  const zoomed = (await camera(page)).view;
+  await page.evaluate(() => {
+    const control = document.createElement('input');
+    control.setAttribute('aria-label', 'Unrelated input');
+    document.body.append(control); control.focus();
+  });
+  await page.keyboard.press('Escape');
+  expect((await camera(page)).view).toEqual(zoomed);
+  await page.evaluate(() => {
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 });
+    document.getElementById('workspace')!.style.height = '360px';
+    window.dispatchEvent(new Event('resize'));
+  });
+  await page.locator('.matrix-scroll').focus();
+  await page.keyboard.press('Escape');
+  const after = (await camera(page)).view;
+  expect(after.scaleX).toBe(before.scaleX);
+  expect(after.x).toBe(before.x); expect(after.y).toBe(before.y);
 });
