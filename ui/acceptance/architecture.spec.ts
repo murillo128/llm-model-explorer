@@ -442,6 +442,7 @@ test('deterministic production [smollm2] close during progressive data cancels a
   }
 });
 
+// Lifetime and delayed-session regressions preserved from issue #123 at 78a7d3a6d427f28dd42420da6ef2b41fb5d5a2f2.
 test('deterministic production [smollm2] repeated nested return releases obsolete layouts', async ({ page }, info) => {
   const graph = await selectGraph(page);
   const canvas = page.getByLabel('Architecture graph', { exact: true });
@@ -529,4 +530,65 @@ test('deterministic production [smollm2] isolated session replacement rejects a 
       (id: string) => current.graph.nodes.some((node: { id: string }) => node.id === id))).toBe(true);
     expect(observed.some((request) => request.endsWith('/tokenize'))).toBe(false);
   } finally { release(); }
+});
+
+test.describe('Extended mounted lifetime without persistent element handles', () => {
+  test('deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts', async ({ page }, info) => {
+    const graph = await selectGraph(page);
+    const canvas = page.getByLabel('Architecture graph', { exact: true });
+    const ready = async () => {
+      await expect(canvas).toHaveAttribute('aria-busy', 'false');
+      // Layout arrival precedes the camera's animation-frame commit. Match the
+      // component harness before capturing the context that Back must restore.
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    };
+    const layer = graph.repetitions[0]!.instances.at(-1)!.node_id;
+    const attention = graph.nodes.find((node) => node.parent_id === layer && node.attributes.some(
+      (attribute) => attribute.name === 'semantic_role' && attribute.value === 'attention'))!;
+    await findComponent(page, layer); await ready();
+    const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+    const records = await canvas.getAttribute('data-source-node-ids');
+    await page.evaluate(() => { (window as any).__returnCanvas = new WeakRef(document.querySelector('.react-flow')!); });
+    const requests = observed.length;
+    const samples = [];
+    for (let cycle = 0; cycle < 16; cycle++) {
+      await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+      await expect(canvas).toHaveAttribute('data-scope-id', layer);
+      await findComponent(page, attention.id); await ready();
+      const layerCamera = await page.locator('.react-flow__viewport').getAttribute('style');
+      await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+      await expect(canvas).toHaveAttribute('data-scope-id', attention.id);
+      await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+      expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(layerCamera);
+      await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+      await expect(canvas).toHaveAttribute('data-scope-id', '');
+      expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+      expect(await canvas.getAttribute('data-source-node-ids')).toBe(records);
+      await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', layer);
+      expect(await page.evaluate(() => (window as any).__returnCanvas.deref() === document.querySelector('.react-flow'))).toBe(true);
+      await expect.poll(() => page.evaluate(() => window.__architectureProbe().active)).toBe(0);
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const observation = await graphObservation(page, true);
+      expect(observation.observedGraphs).toBe(1);
+      expect(observation.retainedGraphs).toBe(1);
+      expect(observation.peak).toBeLessThanOrEqual(2);
+      samples.push({ cycle, ...observation });
+      await released(page);
+    }
+    expect(observed.slice(requests)).toEqual([]);
+    await info.attach('repeated-return-resources', { body: JSON.stringify({ sourceNodes: graph.nodes.length,
+      sourceEdges: graph.edges.length, samples, memory: 'Main-thread CDP JS heap after explicit GC; not browser RSS or GPU memory.' }), contentType: 'application/json' });
+    // A second warmed window must not merely defer the original linear growth.
+    await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
+    await expect(canvas).toHaveCount(0);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const teardown = await graphObservation(page, true);
+    await info.attach('explorer-teardown', { body: JSON.stringify(teardown), contentType: 'application/json' });
+    expect(teardown.active).toBe(0);
+    expect(teardown.retainedLayouts).toBe(0);
+    expect(teardown.retainedGraphs).toBe(0);
+    expect(await page.evaluate(() => (window as any).__returnCanvas.deref())).toBeUndefined();
+    expect(samples[7]!.retainedLayouts).toBeLessThanOrEqual(samples[1]!.retainedLayouts);
+    expect(samples.at(-1)!.retainedLayouts).toBeLessThanOrEqual(samples[7]!.retainedLayouts);
+  });
 });

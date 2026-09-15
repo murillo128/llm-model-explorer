@@ -1,0 +1,1037 @@
+{
+  "status": "PASS: bounded corrective UI validation; broader integrated acceptance remains with issue 123",
+  "baseline": {
+    "runtime_revision": "f7764fd69fffde644dd484ba2f7ca851123f2206",
+    "ui_source_tree": "9b1c112887446ac7dbb32f4aba9fc420fb0c8bc0",
+    "original_test_revision": "78a7d3a6d427f28dd42420da6ef2b41fb5d5a2f2",
+    "original_spec_sha256": "66572bb8aa6f550f312728010ba3fe12fcb6234318a22feede84cbf0b03e31b4"
+  },
+  "correction": {
+    "product_revision": "6b18768746b17da21f833cc22790785c52849b69",
+    "ui_source_tree": "77aa1ad5046aa9e817db403db3174cc10b828f76",
+    "test_revision": "a1a5f87f55d719546e5088acb9aa2ff3a4735a5b",
+    "initial_test_revision": "d6e41340edf973bae28a1270831cc28267945e99",
+    "test_sha256": {
+      "ui/acceptance/architecture.spec.ts": "85bbacfbae9445fea118f7cc37c9cc44d6e465a1271412fbb0a9bbaf6fddb60e",
+      "ui/acceptance/architecture-probe.ts": "529a30d2cb625a72b64958d2ecc0464e34f04fc649b58f261e341401420b2e87",
+      "ui/src/architecture-explorer/useCanvasCallback.test.tsx": "8ec2a717f1268ed6b64763f814affd26cd798f38ed71d59bec2e6ae8005cdcbc"
+    },
+    "original_eight_cycle_block_byte_identical": true,
+    "original_eight_cycle_block_sha256": "3fdf9fa8d44ef49c391ff2b7eac66ef362dd310be45f7a33b633c97757618275"
+  },
+  "environment": {
+    "node": "24.14.0",
+    "npm": "11.9.0",
+    "python": "3.12.14",
+    "torch": "2.14.0+cpu",
+    "chromium": "153.0.8010.12",
+    "browser": "headed Chromium; isolated Xvfb without GLX; SwiftShader WebGL2; one worker; DPR 1 and 2",
+    "backend": "live reduced deterministic fixtures; offline; OMP_NUM_THREADS=1, MKL_NUM_THREADS=1",
+    "memory": "CDP Runtime.getHeapUsage after explicit HeapProfiler.collectGarbage. Main-thread JS heap only; not browser RSS, peak RSS, or GPU memory."
+  },
+  "original_eight_cycles": {
+    "status": "expected failure: retained 42 <= warmed 12 is false",
+    "trace": "retain-on-failure",
+    "source_nodes": 78,
+    "source_edges": 112,
+    "returned_geometry": {
+      "width": 1442,
+      "height": 636,
+      "nodes": 12,
+      "edges": 14
+    },
+    "columns": [
+      "cycle",
+      "retained_layouts",
+      "retained_source_graphs",
+      "active_workers",
+      "peak_workers",
+      "created_workers",
+      "observed_layouts",
+      "used_main_thread_heap_bytes",
+      "total_main_thread_heap_bytes"
+    ],
+    "samples": [
+      [1, 7, 1, 0, 1, 7, 7, 9081680, 10547200],
+      [2, 12, 1, 0, 1, 12, 12, 9749636, 11071488],
+      [3, 17, 1, 0, 1, 17, 17, 10280916, 11595776],
+      [4, 22, 1, 0, 1, 22, 22, 10766916, 11595776],
+      [5, 27, 1, 0, 1, 27, 27, 11249948, 12120064],
+      [6, 32, 1, 0, 1, 32, 32, 11756844, 12382208],
+      [7, 37, 1, 0, 1, 37, 37, 12183776, 13430784],
+      [8, 42, 1, 0, 1, 42, 42, 12699756, 13692928]
+    ]
+  },
+  "original_extended_control": {
+    "status": "expected retained-layout failure",
+    "trace": "off",
+    "source_nodes": 78,
+    "source_edges": 112,
+    "returned_geometry": {
+      "width": 1442,
+      "height": 636,
+      "nodes": 12,
+      "edges": 14
+    },
+    "columns": [
+      "cycle",
+      "retained_layouts",
+      "retained_source_graphs",
+      "active_workers",
+      "peak_workers",
+      "created_workers",
+      "observed_layouts",
+      "used_main_thread_heap_bytes",
+      "total_main_thread_heap_bytes"
+    ],
+    "samples": [
+      [1, 7, 1, 0, 1, 7, 7, 8834924, 10547200],
+      [2, 12, 1, 0, 1, 12, 12, 9550016, 10809344],
+      [3, 17, 1, 0, 1, 17, 17, 10058892, 11595776],
+      [4, 22, 1, 0, 1, 22, 22, 10575392, 11333632],
+      [5, 27, 1, 0, 1, 27, 27, 11066832, 12382208],
+      [6, 32, 1, 0, 1, 32, 32, 11539268, 12382208],
+      [7, 37, 1, 0, 1, 37, 37, 12011212, 12906496],
+      [8, 42, 1, 0, 1, 42, 42, 12541496, 13692928],
+      [9, 47, 1, 0, 1, 47, 47, 13021852, 13955072],
+      [10, 52, 1, 0, 1, 52, 52, 13499788, 14741504],
+      [11, 57, 1, 0, 1, 57, 57, 13963416, 15265792],
+      [12, 62, 1, 0, 1, 62, 62, 14430228, 15790080],
+      [13, 67, 1, 0, 1, 67, 67, 14879744, 16052224],
+      [14, 72, 1, 0, 1, 72, 72, 15376928, 16314368],
+      [15, 77, 1, 0, 1, 77, 77, 15844256, 16838656],
+      [16, 82, 1, 0, 1, 82, 82, 16274160, 17100800]
+    ],
+    "teardown": {
+      "heap": {
+        "usedSize": 7994440,
+        "totalSize": 10547200,
+        "embedderHeapUsedSize": 1699848,
+        "backingStorageSize": 724979
+      },
+      "collected": true,
+      "active": 0,
+      "created": 82,
+      "peak": 1,
+      "geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14,
+        "layoutMs": 122.90000000596046
+      },
+      "observedGraphs": 1,
+      "observedLayouts": 82,
+      "retainedGraphs": 0,
+      "retainedLayouts": 0
+    }
+  },
+  "corrected_initial_lifetime": [
+    {
+      "title": "deterministic production [smollm2] repeated nested return releases obsolete layouts",
+      "project": "dpr1",
+      "status": "passed",
+      "trace": "off",
+      "source_nodes": 78,
+      "source_edges": 112,
+      "returned_geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14
+      },
+      "columns": [
+        "cycle",
+        "retained_layouts",
+        "retained_source_graphs",
+        "active_workers",
+        "peak_workers",
+        "created_workers",
+        "observed_layouts",
+        "used_main_thread_heap_bytes",
+        "total_main_thread_heap_bytes"
+      ],
+      "samples": [
+        [1, 2, 1, 0, 1, 7, 7, 8349820, 9760768],
+        [2, 2, 1, 0, 1, 12, 12, 8600712, 9498624],
+        [3, 2, 1, 0, 1, 17, 17, 8756580, 9760768],
+        [4, 2, 1, 0, 1, 22, 22, 8813416, 9760768],
+        [5, 2, 1, 0, 1, 27, 27, 8870180, 10022912],
+        [6, 2, 1, 0, 1, 32, 32, 8881644, 10022912],
+        [7, 2, 1, 0, 1, 37, 37, 8945908, 10022912],
+        [8, 2, 1, 0, 1, 42, 42, 9008280, 10022912]
+      ]
+    },
+    {
+      "title": "deterministic production [smollm2] repeated nested return releases obsolete layouts",
+      "project": "dpr2",
+      "status": "passed",
+      "trace": "off",
+      "source_nodes": 78,
+      "source_edges": 112,
+      "returned_geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14
+      },
+      "columns": [
+        "cycle",
+        "retained_layouts",
+        "retained_source_graphs",
+        "active_workers",
+        "peak_workers",
+        "created_workers",
+        "observed_layouts",
+        "used_main_thread_heap_bytes",
+        "total_main_thread_heap_bytes"
+      ],
+      "samples": [
+        [1, 2, 1, 0, 1, 7, 7, 8344096, 10022912],
+        [2, 2, 1, 0, 1, 12, 12, 8591440, 9236480],
+        [3, 2, 1, 0, 1, 17, 17, 8746900, 10022912],
+        [4, 2, 1, 0, 1, 22, 22, 8801896, 9760768],
+        [5, 2, 1, 0, 1, 27, 27, 8858380, 9760768],
+        [6, 2, 1, 0, 1, 32, 32, 8855220, 9760768],
+        [7, 2, 1, 0, 1, 37, 37, 8932148, 9760768],
+        [8, 2, 1, 0, 1, 42, 42, 8993544, 10022912]
+      ]
+    },
+    {
+      "title": "deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts",
+      "project": "dpr1",
+      "status": "passed",
+      "trace": "off",
+      "source_nodes": 78,
+      "source_edges": 112,
+      "returned_geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14
+      },
+      "columns": [
+        "cycle",
+        "retained_layouts",
+        "retained_source_graphs",
+        "active_workers",
+        "peak_workers",
+        "created_workers",
+        "observed_layouts",
+        "used_main_thread_heap_bytes",
+        "total_main_thread_heap_bytes"
+      ],
+      "samples": [
+        [1, 2, 1, 0, 2, 7, 6, 8297880, 10022912],
+        [2, 2, 1, 0, 2, 12, 11, 8607212, 10022912],
+        [3, 2, 1, 0, 2, 17, 16, 8761796, 9760768],
+        [4, 2, 1, 0, 2, 22, 21, 8812244, 9760768],
+        [5, 2, 1, 0, 2, 27, 26, 8878700, 10022912],
+        [6, 2, 1, 0, 2, 32, 31, 8893408, 10022912],
+        [7, 2, 1, 0, 2, 37, 36, 8935108, 9760768],
+        [8, 2, 1, 0, 2, 42, 41, 8993588, 10285056],
+        [9, 2, 1, 0, 2, 47, 46, 9050336, 9760768],
+        [10, 2, 1, 0, 2, 52, 51, 9120640, 10285056],
+        [11, 2, 1, 0, 2, 57, 56, 9174788, 10022912],
+        [12, 2, 1, 0, 2, 62, 61, 9209012, 10022912],
+        [13, 2, 1, 0, 2, 67, 66, 9230104, 10022912],
+        [14, 2, 1, 0, 2, 72, 71, 9239368, 10547200],
+        [15, 2, 1, 0, 2, 77, 76, 9266072, 10022912],
+        [16, 2, 1, 0, 2, 82, 81, 9312572, 10547200]
+      ],
+      "teardown": {
+        "heap": {
+          "usedSize": 7991052,
+          "totalSize": 9236480,
+          "embedderHeapUsedSize": 1680472,
+          "backingStorageSize": 724461
+        },
+        "collected": true,
+        "active": 0,
+        "created": 82,
+        "peak": 2,
+        "geometry": {
+          "width": 1442,
+          "height": 636,
+          "nodes": 12,
+          "edges": 14,
+          "layoutMs": 134.09999999403954
+        },
+        "observedGraphs": 1,
+        "observedLayouts": 81,
+        "retainedGraphs": 0,
+        "retainedLayouts": 0
+      }
+    },
+    {
+      "title": "deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts",
+      "project": "dpr2",
+      "status": "passed",
+      "trace": "off",
+      "source_nodes": 78,
+      "source_edges": 112,
+      "returned_geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14
+      },
+      "columns": [
+        "cycle",
+        "retained_layouts",
+        "retained_source_graphs",
+        "active_workers",
+        "peak_workers",
+        "created_workers",
+        "observed_layouts",
+        "used_main_thread_heap_bytes",
+        "total_main_thread_heap_bytes"
+      ],
+      "samples": [
+        [1, 2, 1, 0, 2, 7, 6, 8336624, 10285056],
+        [2, 2, 1, 0, 2, 12, 11, 8602920, 9760768],
+        [3, 2, 1, 0, 2, 17, 16, 8773072, 10022912],
+        [4, 2, 1, 0, 2, 22, 21, 8819924, 10022912],
+        [5, 2, 1, 0, 2, 27, 26, 8885280, 9760768],
+        [6, 2, 1, 0, 2, 32, 31, 8902608, 10022912],
+        [7, 2, 1, 0, 2, 37, 36, 8940648, 9760768],
+        [8, 2, 1, 0, 2, 42, 41, 9006064, 10022912],
+        [9, 2, 1, 0, 2, 47, 46, 9077728, 10022912],
+        [10, 2, 1, 0, 2, 52, 51, 9163224, 10022912],
+        [11, 2, 1, 0, 2, 57, 56, 9185476, 10285056],
+        [12, 2, 1, 0, 2, 62, 61, 9211260, 10022912],
+        [13, 2, 1, 0, 2, 67, 66, 9234248, 10022912],
+        [14, 2, 1, 0, 2, 72, 71, 9253796, 10022912],
+        [15, 2, 1, 0, 2, 77, 76, 9281472, 10285056],
+        [16, 2, 1, 0, 2, 82, 81, 9320080, 10547200]
+      ],
+      "teardown": {
+        "heap": {
+          "usedSize": 7995828,
+          "totalSize": 8712192,
+          "embedderHeapUsedSize": 1926888,
+          "backingStorageSize": 724460
+        },
+        "collected": true,
+        "active": 0,
+        "created": 82,
+        "peak": 2,
+        "geometry": {
+          "width": 1442,
+          "height": 636,
+          "nodes": 12,
+          "edges": 14,
+          "layoutMs": 156.09999999403954
+        },
+        "observedGraphs": 1,
+        "observedLayouts": 81,
+        "retainedGraphs": 0,
+        "retainedLayouts": 0
+      }
+    }
+  ],
+  "final_settled_negative_control": [
+    {
+      "title": "deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts",
+      "project": "dpr1",
+      "status": "failed",
+      "trace": "off",
+      "source_nodes": 78,
+      "source_edges": 112,
+      "returned_geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14
+      },
+      "columns": [
+        "cycle",
+        "retained_layouts",
+        "retained_source_graphs",
+        "active_workers",
+        "peak_workers",
+        "created_workers",
+        "observed_layouts",
+        "used_main_thread_heap_bytes",
+        "total_main_thread_heap_bytes"
+      ],
+      "samples": [
+        [1, 7, 1, 0, 1, 7, 7, 8840512, 10022912],
+        [2, 12, 1, 0, 1, 12, 12, 9544400, 10809344],
+        [3, 17, 1, 0, 1, 17, 17, 10065720, 11333632],
+        [4, 22, 1, 0, 1, 22, 22, 10596284, 11595776],
+        [5, 27, 1, 0, 1, 27, 27, 11072712, 12644352],
+        [6, 32, 1, 0, 1, 32, 32, 11561016, 12382208],
+        [7, 37, 1, 0, 1, 37, 37, 12025412, 13168640],
+        [8, 42, 1, 0, 1, 42, 42, 12559080, 13430784],
+        [9, 47, 1, 0, 1, 47, 47, 13052160, 14479360],
+        [10, 52, 1, 0, 1, 52, 52, 13533144, 14479360],
+        [11, 57, 1, 0, 1, 57, 57, 13990564, 15265792],
+        [12, 62, 1, 0, 1, 62, 62, 14463552, 15527936],
+        [13, 67, 1, 0, 1, 67, 67, 14905760, 16052224],
+        [14, 72, 1, 0, 1, 72, 72, 15405292, 16838656],
+        [15, 77, 1, 0, 1, 77, 77, 15856276, 17100800],
+        [16, 82, 1, 0, 1, 82, 82, 16289812, 17625088]
+      ],
+      "teardown": {
+        "heap": {
+          "usedSize": 8003712,
+          "totalSize": 10547200,
+          "embedderHeapUsedSize": 1652688,
+          "backingStorageSize": 724979
+        },
+        "collected": true,
+        "active": 0,
+        "created": 82,
+        "peak": 1,
+        "geometry": {
+          "width": 1442,
+          "height": 636,
+          "nodes": 12,
+          "edges": 14,
+          "layoutMs": 420.09999999403954
+        },
+        "observedGraphs": 1,
+        "observedLayouts": 82,
+        "retainedGraphs": 0,
+        "retainedLayouts": 0
+      }
+    }
+  ],
+  "final_settled_correction": [
+    {
+      "title": "deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts",
+      "project": "dpr1",
+      "status": "passed",
+      "trace": "off",
+      "source_nodes": 78,
+      "source_edges": 112,
+      "returned_geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14
+      },
+      "columns": [
+        "cycle",
+        "retained_layouts",
+        "retained_source_graphs",
+        "active_workers",
+        "peak_workers",
+        "created_workers",
+        "observed_layouts",
+        "used_main_thread_heap_bytes",
+        "total_main_thread_heap_bytes"
+      ],
+      "samples": [
+        [1, 2, 1, 0, 1, 7, 7, 8358540, 9236480],
+        [2, 2, 1, 0, 1, 12, 12, 8545048, 9498624],
+        [3, 2, 1, 0, 1, 17, 17, 8724580, 10022912],
+        [4, 2, 1, 0, 1, 22, 22, 8783468, 9760768],
+        [5, 2, 1, 0, 1, 27, 27, 8838664, 9760768],
+        [6, 2, 1, 0, 1, 32, 32, 8852504, 9760768],
+        [7, 2, 1, 0, 1, 37, 37, 8926152, 10022912],
+        [8, 2, 1, 0, 1, 42, 42, 8970612, 9760768],
+        [9, 2, 1, 0, 1, 47, 47, 9035896, 10285056],
+        [10, 2, 1, 0, 1, 52, 52, 9078008, 10022912],
+        [11, 2, 1, 0, 1, 57, 57, 9115688, 10285056],
+        [12, 2, 1, 0, 1, 62, 62, 9132028, 9760768],
+        [13, 2, 1, 0, 1, 67, 67, 9184792, 10022912],
+        [14, 2, 1, 0, 1, 72, 72, 9167724, 10022912],
+        [15, 2, 1, 0, 1, 77, 77, 9209348, 10022912],
+        [16, 2, 1, 0, 1, 82, 82, 9231436, 10022912]
+      ],
+      "teardown": {
+        "heap": {
+          "usedSize": 7951452,
+          "totalSize": 9236480,
+          "embedderHeapUsedSize": 1742488,
+          "backingStorageSize": 724440
+        },
+        "collected": true,
+        "active": 0,
+        "created": 82,
+        "peak": 1,
+        "geometry": {
+          "width": 1442,
+          "height": 636,
+          "nodes": 12,
+          "edges": 14,
+          "layoutMs": 181.90000000596046
+        },
+        "observedGraphs": 1,
+        "observedLayouts": 82,
+        "retainedGraphs": 0,
+        "retainedLayouts": 0
+      }
+    },
+    {
+      "title": "deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts",
+      "project": "dpr2",
+      "status": "passed",
+      "trace": "off",
+      "source_nodes": 78,
+      "source_edges": 112,
+      "returned_geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14
+      },
+      "columns": [
+        "cycle",
+        "retained_layouts",
+        "retained_source_graphs",
+        "active_workers",
+        "peak_workers",
+        "created_workers",
+        "observed_layouts",
+        "used_main_thread_heap_bytes",
+        "total_main_thread_heap_bytes"
+      ],
+      "samples": [
+        [1, 2, 1, 0, 1, 7, 7, 8352192, 9498624],
+        [2, 2, 1, 0, 1, 12, 12, 8588596, 9498624],
+        [3, 2, 1, 0, 1, 17, 17, 8746616, 10022912],
+        [4, 2, 1, 0, 1, 22, 22, 8820804, 9760768],
+        [5, 2, 1, 0, 1, 27, 27, 8887808, 10022912],
+        [6, 2, 1, 0, 1, 32, 32, 8900804, 10022912],
+        [7, 2, 1, 0, 1, 37, 37, 8951748, 10022912],
+        [8, 2, 1, 0, 1, 42, 42, 9027684, 10285056],
+        [9, 2, 1, 0, 1, 47, 47, 9089568, 10022912],
+        [10, 2, 1, 0, 1, 52, 52, 9155704, 10285056],
+        [11, 2, 1, 0, 1, 57, 57, 9174172, 10022912],
+        [12, 2, 1, 0, 1, 62, 62, 9202628, 10022912],
+        [13, 2, 1, 0, 1, 67, 67, 9226720, 10022912],
+        [14, 2, 1, 0, 1, 72, 72, 9255356, 10285056],
+        [15, 2, 1, 0, 1, 77, 77, 9239204, 10285056],
+        [16, 2, 1, 0, 1, 82, 82, 9307684, 10285056]
+      ],
+      "teardown": {
+        "heap": {
+          "usedSize": 7977652,
+          "totalSize": 8974336,
+          "embedderHeapUsedSize": 1719416,
+          "backingStorageSize": 724440
+        },
+        "collected": true,
+        "active": 0,
+        "created": 82,
+        "peak": 1,
+        "geometry": {
+          "width": 1442,
+          "height": 636,
+          "nodes": 12,
+          "edges": 14,
+          "layoutMs": 134.69999998807907
+        },
+        "observedGraphs": 1,
+        "observedLayouts": 82,
+        "retainedGraphs": 0,
+        "retainedLayouts": 0
+      }
+    }
+  ],
+  "retainer_diagnosis": {
+    "baseline_layout_objects": 82,
+    "early_layout_shortest_strong_path_length": 333,
+    "baseline_path": [
+      "Mounted Model overview button React onClick",
+      "Successive Canvas closure contexts: reveal, rememberAnchor, inspection",
+      "Previous result object",
+      "layout"
+    ],
+    "corrected_layout_objects": 2,
+    "corrected_paths": [
+      [
+        "Current control props and callback context",
+        "Current result.layout"
+      ],
+      [
+        "Mounted React fiber effect queue",
+        "Effect cleanup context",
+        "Previous result.layout"
+      ]
+    ],
+    "interpretation": "The observed two layouts form a bounded current/effect-cleanup set. Two is not the test threshold; warmed retained counts must not grow. Both layouts and the source graph are collectable at explorer teardown.",
+    "raw_snapshot_sha256": {
+      "baseline.heapsnapshot": "34673e516f70ae5a0cddfbab8922e5ed26079be8d4669334be18a2774f57859d",
+      "candidate.heapsnapshot": "c56285780d50efb4718a19501a8d1423d9c45155ad24ce034dd6326858a2d0f4"
+    },
+    "raw_artifacts": "Heaps/traces/cache/model payloads remain outside Git."
+  },
+  "camera_diagnostic": {
+    "initial_extra_heap_run": "Failed initial-vs-returned camera comparison: translate(85px,77.5px) vs translate(-50px,7px), zoom 1.",
+    "followup": "Diagnostic with initial two-frame settling passed all 16 returns and captured the corrected heap; captured and settled initial camera both translate(-50px,7px), zoom 1.",
+    "test_correction": "Only the added extended test now uses the existing component harness two-animation-frame settle before camera snapshots. Baseline with this wait still fails the retained-layout invariant; correction passes. Original eight-cycle test/probe unchanged.",
+    "scope": "No camera/layout production code or expectation changed."
+  },
+  "checks": {
+    "ui": {
+      "api_bindings": "PASS",
+      "typecheck": "PASS",
+      "lint": "PASS",
+      "unit_tests": 734,
+      "unit_files": 34,
+      "build": "PASS",
+      "new_callback_tests": 3
+    },
+    "global_geometry": {
+      "passed": 24,
+      "baseline": "5d3522272cae1a7da8afcdf47017702b7698b36c",
+      "comparison": "Exact projection, ELK boxes/ports/routes, source edge IDs and bounds; only milliseconds excluded.",
+      "script_sha256": "65c52d86bf210841c24a1fcc69620f66d1e9434ccadb251f6ef50d5533452700"
+    },
+    "component_browser": {
+      "stats": {
+        "startTime": "2026-09-15T22:42:32.306Z",
+        "duration": 273515.538,
+        "expected": 40,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "cases": [
+        {
+          "title": "authored components retain labels, focus, raw inspection and reversible detail",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 8526
+        },
+        {
+          "title": "exact source and destination dots, fan-out branches and line middles highlight complete forwarded connections",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 5951
+        },
+        {
+          "title": "shared fan-out trunk identifies every branch through native trunk, branch and port transitions",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 9372
+        },
+        {
+          "title": "authored MLP boundary forwarding preserves shared trunks and exact port hover",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 5654
+        },
+        {
+          "title": "isolated Attention boundaries retain exact fan-out, trunk, branch, endpoint and pin interactions",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 7288
+        },
+        {
+          "title": "same-shaped inputs and separate K/V state routes keep exact identity under mouse and keyboard emphasis",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 7511
+        },
+        {
+          "title": "residual and MLP inputs stop at operations; pin survives temporary hover, zoom and inspection close",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 7083
+        },
+        {
+          "title": "24-instance compact navigation, first/last identity, MLP/state focus and exhaustive round trip",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 18969
+        },
+        {
+          "title": "obsolete model layout replies cannot replace the latest graph; a failed worker retries locally",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 3234
+        },
+        {
+          "title": "search and overflow preserve the canvas, projection, generated routes, camera and layout count",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 1885
+        },
+        {
+          "title": "keyboard search reveals collapsed repeated names with parent context and exact source bindings",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 4222
+        },
+        {
+          "title": "breadcrumbs, first/last and mixed variants preserve two independent stack windows and return context",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 12554
+        },
+        {
+          "title": "cross-stack canvas MLP pointer activation keeps focus and instance controls consistent",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 12956
+        },
+        {
+          "title": "cross-stack canvas MLP keyboard activation keeps focus and instance controls consistent",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 14543
+        },
+        {
+          "title": "edge pin, inspection and clear leave focus navigation and layout unchanged",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 4822
+        },
+        {
+          "title": "all operations and camera fit remain distinct; popovers stay in the panel at constrained widths",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 4873
+        },
+        {
+          "title": "partial graphs without repetition retain component navigation and on-demand diagnostics",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 3839
+        },
+        {
+          "title": "concrete repeated weight preserves exact progressive values, independent profiles/statistics and native camera",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 5300
+        },
+        {
+          "title": "close, replace, and reopen fence callbacks and release all numeric resources",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 7465
+        },
+        {
+          "title": "every unavailable binding and V-JEPA patch shape remain metadata without packed-value requests",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 2704
+        },
+        {
+          "title": "renderer allocation failure remains local and retrying a fresh modal works",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 3616
+        },
+        {
+          "title": "context loss during streaming leaves a closable graph-local error and releases resources",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 2967
+        },
+        {
+          "title": "model replacement during loading removes the modal and cancels its old session handles",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 4122
+        },
+        {
+          "title": "development StrictMode streams after replay, replaces weights, and releases every generation",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 5008
+        },
+        {
+          "title": "nested isolation and Back restore exact camera, selected instance, expansion and filters",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 10488
+        },
+        {
+          "title": "component expansion, model-wide exhaustive access and View in model retain exact scope semantics",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 10086
+        },
+        {
+          "title": "the existing derived MLP exposes explicit isolation without changing its source operations",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 6936
+        },
+        {
+          "title": "unrelated model growth leaves a small isolated component readable and its bounds unchanged",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 7138
+        },
+        {
+          "title": "search across scopes preserves independent stack context; explorer and model replacement fence views",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 11382
+        },
+        {
+          "title": "layout failure allows retry and Back; queued late results cannot replace a newer scope or model",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 7847
+        },
+        {
+          "title": "built shell retrieves on demand, supports V-JEPA without tokenization and restores view state",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 3101
+        },
+        {
+          "title": "malformed graphs stay local and partial inventories remain explicit",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 1440
+        },
+        {
+          "title": "a delayed architecture response cannot replace a newer model/session",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 1070
+        },
+        {
+          "title": "third navigation item leaves model and session controls usable at 280 pixels",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 1195
+        },
+        {
+          "title": "nested expansion, instance identity, ports, dimensions, keyboard and camera restoration",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 7949
+        },
+        {
+          "title": "safe labels and expressions remain inert; repeated unmount terminates workers",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 6482
+        },
+        {
+          "title": "full-size qwen3: all instances, bounded document, layout and memory evidence",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 6780
+        },
+        {
+          "title": "full-size qwen35: all instances, bounded document, layout and memory evidence",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 8061
+        },
+        {
+          "title": "full-size vjepa2: all instances, bounded document, layout and memory evidence",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 8342
+        },
+        {
+          "title": "full-size smollm2: all instances, bounded document, layout and memory evidence",
+          "project": "desktop",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 8004
+        }
+      ]
+    },
+    "production_browser": {
+      "stats": {
+        "startTime": "2026-09-15T22:51:11.288Z",
+        "duration": 257333.416,
+        "expected": 14,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "cases": [
+        {
+          "title": "deterministic production [smollm2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 20477
+        },
+        {
+          "title": "deterministic production [qwen3] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 20780
+        },
+        {
+          "title": "deterministic production [qwen35] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 26728
+        },
+        {
+          "title": "deterministic production [vjepa2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 22864
+        },
+        {
+          "title": "deterministic production [smollm2] close during progressive data cancels and releases modal resources",
+          "project": "dpr1",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 9796
+        },
+        {
+          "title": "deterministic production [smollm2] repeated nested return releases obsolete layouts",
+          "project": "dpr1",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 21248
+        },
+        {
+          "title": "deterministic production [smollm2] isolated session replacement rejects a late actual response",
+          "project": "dpr1",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 7722
+        },
+        {
+          "title": "deterministic production [smollm2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 18491
+        },
+        {
+          "title": "deterministic production [qwen3] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 21852
+        },
+        {
+          "title": "deterministic production [qwen35] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 27995
+        },
+        {
+          "title": "deterministic production [vjepa2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 22088
+        },
+        {
+          "title": "deterministic production [smollm2] close during progressive data cancels and releases modal resources",
+          "project": "dpr2",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 10611
+        },
+        {
+          "title": "deterministic production [smollm2] repeated nested return releases obsolete layouts",
+          "project": "dpr2",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 17926
+        },
+        {
+          "title": "deterministic production [smollm2] isolated session replacement rejects a late actual response",
+          "project": "dpr2",
+          "status": "passed",
+          "retry": 0,
+          "duration_ms": 7218
+        }
+      ]
+    }
+  },
+  "commands": [
+    {
+      "cwd": "issue worktree/ui",
+      "command": "npm run check",
+      "exit": 0
+    },
+    {
+      "cwd": "isolated uncorrected runtime/ui with exact 78a7d3a acceptance test/probe",
+      "command": "UI_TEST_PORT=25620 xvfb-run -a --server-args='-screen 0 1600x1200x24 -extension GLX' npm run test:acceptance -- architecture.spec.ts --project=dpr1 --grep 'repeated nested return releases obsolete layouts'",
+      "exit": 1,
+      "expected": "retained-layout growth"
+    },
+    {
+      "cwd": "isolated candidate/ui",
+      "command": "UI_TEST_PORT=25660 xvfb-run -a --server-args='-screen 0 1600x1200x24 -extension GLX' npm run test:acceptance -- architecture.spec.ts --grep 'repeated nested return releases obsolete layouts|extended nested returns stay bounded' --trace off",
+      "exit": 0
+    },
+    {
+      "cwd": "isolated candidate/ui",
+      "command": "node /tmp/issue-149-evidence/global-comparison.mjs",
+      "exit": 0
+    },
+    {
+      "cwd": "isolated candidate/ui",
+      "command": "UI_TEST_PORT=25700 xvfb-run -a --server-args='-screen 0 1600x1200x24 -extension GLX' npm run test:browser -- tests/architecture.spec.ts tests/architecture-controls.spec.ts tests/architecture-components.spec.ts tests/architecture-isolation.spec.ts tests/architecture-connections.spec.ts tests/architecture-inspection.spec.ts tests/architecture-shell.spec.ts --project=desktop --reporter=list,json",
+      "exit": 0
+    },
+    {
+      "cwd": "isolated uncorrected runtime/ui with final test files",
+      "command": "UI_TEST_PORT=25740 xvfb-run -a --server-args='-screen 0 1600x1200x24 -extension GLX' npm run test:acceptance -- architecture.spec.ts --project=dpr1 --grep 'extended nested returns stay bounded' --trace off",
+      "exit": 1,
+      "expected": "retained-layout growth"
+    },
+    {
+      "cwd": "isolated candidate/ui",
+      "command": "UI_TEST_PORT=25760 xvfb-run -a --server-args='-screen 0 1600x1200x24 -extension GLX' npm run test:acceptance -- architecture.spec.ts --grep 'extended nested returns stay bounded' --trace off",
+      "exit": 0
+    },
+    {
+      "cwd": "isolated candidate/ui",
+      "command": "UI_TEST_PORT=25780 xvfb-run -a --server-args='-screen 0 1600x1200x24 -extension GLX' npm run test:acceptance -- architecture.spec.ts --grep 'deterministic production.*(full graph|close during progressive|isolated session replacement|repeated nested return)'",
+      "exit": 0
+    }
+  ],
+  "limits": [
+    "No claim of full local reference acceptance, remaining TCP completion, final exterior visual review, or overall integrated performance acceptance; these remain issue 123 scope.",
+    "CPU/SwiftShader observations do not establish CUDA behavior.",
+    "Not a claim of zero total heap growth; the required invariant concerns collectability of superseded completed layouts."
+  ]
+}
