@@ -537,6 +537,9 @@ with the owning renderer, including context loss/reconstruction.
 
 The card/readout chooses among four pointer-relative placements and clamps within
 the viewport while excluding the inspected neighborhood where viewport dimensions
-permit a 170×212 CSS-pixel inspection surface. The magnified display retains its thin center marker in addition to linked
+permit the complete inspection surface. Its baseline is 170×212 CSS pixels;
+measure wrapped coordinate/value text before paint and on text-layout changes
+so longer readouts expand the reserved height for both full and compact placement.
+The magnified display retains its thin center marker in addition to linked
 guides. Concrete palette, compositing and display encoding are owned by
 [`rendering.md`](rendering.md#concrete-linear-srgb-scalar-and-guide-transfer).

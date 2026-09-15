@@ -28,7 +28,9 @@ Geometry/unit and browser checks cover forward/reverse matrix and one-axis drags
 one-cell indicators, preview cancellation, per-axis centering, attached profiles,
 native overflow, focal preservation, source replacement, resize and DPR changes.
 Magnifier checks cover pointer movement through centers/edges/corners, stationary
-pointer scrolling/zooming, layout translation and compact fallback. Camera checks
+pointer scrolling/zooming, layout translation and compact fallback. They
+also retain complete containment when long coordinates/value text or font changes
+make the rendered readout exceed its baseline height. Camera checks
 cover region/range history, coalesced wheel/trackpad/touch pinch, fit reset, local
 shortcut scope and dismissal priority. Existing exact-pixel, hit-test and resource
 checks remain in force.

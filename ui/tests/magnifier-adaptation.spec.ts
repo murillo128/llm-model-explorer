@@ -140,6 +140,38 @@ test('a short pane retains only its complete compact readout', async ({ page }) 
   await placement(page);
 });
 
+test('wrapped logical coordinates and float32 values use measured full-card and compact heights', async ({ page }) => {
+  await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
+  await page.addStyleTag({ content: '#workspace { height: 264px; }' });
+  const point = await page.evaluate(() => {
+    const view = window.matrixFixture.viewports[0]!;
+    view.zoomAt(1, 0, 0);
+    // Exercise real readout typography with large logical identifiers while
+    // retaining the fixture's tiny scalar allocation and neighborhood resources.
+    view.renderer.cellAt = () => ({ row: 1234567, column: 1234567 });
+    view.renderer.readCell = () => ({ state: 'finite', row: 1234567, column: 1234567, value: Math.fround(1.234567e-30) });
+    const rect = view.canvas.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2,
+      scalars: window.matrixFixture.metrics.scalarAllocations };
+  });
+  await page.mouse.move(point.x, point.y);
+  await expect(page.locator('.inspection-readout')).toContainText('row 1234567 · column 1234567');
+  await expect(page.locator('.inspection-readout')).toContainText(String(Math.fround(1.234567e-30)));
+  await expect(page.locator('.magnifier-card')).toBeVisible();
+  expect((await placement(page)).height).toBeGreaterThan(212);
+  await page.addStyleTag({ content: '.inspection-readout { font-size: 12px; line-height: 18px; }' });
+  await expect(page.locator('.magnifier-card')).toHaveCount(0);
+  expect((await placement(page)).height).toBeGreaterThan(42);
+  await page.addStyleTag({ content: '#workspace { width: 140px; }' });
+  const narrowPoint = await page.locator('.matrix-scroll canvas').boundingBox();
+  await page.mouse.move(narrowPoint!.x + narrowPoint!.width / 2, narrowPoint!.y + narrowPoint!.height / 2);
+  await expect.poll(() => page.locator('.matrix-inspection').evaluate((card) => card.getBoundingClientRect().width)).toBe(140);
+  await placement(page);
+  expect(await page.evaluate(() => window.matrixFixture.metrics.scalarAllocations)).toBe(point.scalars);
+  await page.evaluate(() => window.matrixFixture.render('B'));
+  await expect(page.locator('.matrix-inspection')).toHaveCount(0);
+});
+
 test('visibility history belongs to each Matrix Explorer instance', async ({ page }) => {
   await page.setViewportSize({ width: page.viewportSize()!.width, height: 1500 });
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
