@@ -5,7 +5,7 @@ import type {} from './matrix-explorer-harness';
 const url = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`;
 async function open(page: Page, name: 'short' | 'tall' | 'large' | 'square') {
   await page.goto(url);
-  await page.addStyleTag({ content: '#workspace { height: min(600px, 70vh); }' });
+  await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: min(600px, 70vh); }' });
   await expect(page.locator('.matrix-scroll')).toBeVisible();
   await page.evaluate((name) => window.matrixFixture.render(name), name);
   await expect.poll(() => page.evaluate(() => window.matrixFixture.subscriptions.length)).toBe(2);
@@ -178,7 +178,7 @@ test('touch pinch and two simultaneous cameras remain local', async ({ page }) =
   await expect(page.locator('.matrix-scroll')).toBeVisible();
   await page.evaluate(() => window.matrixFixture.renderPair());
   await expect(page.locator('.matrix-scroll')).toHaveCount(2);
-  await page.addStyleTag({ content: '#workspace { height: 380px; }' });
+  await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: 380px; }' });
   const other = await camera(page);
   const first = page.locator('.matrix-scroll').first();
   const rect = (await first.boundingBox())!;

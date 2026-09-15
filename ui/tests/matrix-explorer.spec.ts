@@ -7,6 +7,10 @@ const url = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/te
 async function open(page: Page, strict = false) {
   await page.goto(url + (strict ? '?strict' : ''));
   await expect(page.getByRole('region', { name: 'Synthetic result matrix' })).toBeVisible();
+  // Card chrome is outside the numerical fixture budget, including at narrow widths.
+  expect(await page.locator('.matrix-surfaces').boundingBox()).toEqual({
+    x: 16, y: 56, width: Math.min(600, page.viewportSize()!.width - 32), height: 220,
+  });
   await nativeCamera(page);
 }
 async function hover(page: Page, row: number, column: number) {

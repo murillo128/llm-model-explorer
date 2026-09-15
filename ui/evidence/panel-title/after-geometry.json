@@ -1,0 +1,93 @@
+{
+  "browser": "153.0.8010.12",
+  "measurements": [
+    {
+      "width": 1178,
+      "header": {
+        "x": 56,
+        "y": 64,
+        "width": 1106,
+        "height": 40,
+        "top": 64,
+        "right": 1162,
+        "bottom": 104,
+        "left": 56
+      },
+      "body": {
+        "x": 56,
+        "y": 104,
+        "width": 1106,
+        "height": 756,
+        "top": 104,
+        "right": 1162,
+        "bottom": 860,
+        "left": 56
+      },
+      "matrix": {
+        "x": 69,
+        "y": 117,
+        "width": 1080,
+        "height": 730,
+        "top": 117,
+        "right": 1149,
+        "bottom": 847,
+        "left": 69
+      },
+      "tooltip": {
+        "x": 52,
+        "y": 70,
+        "width": 116.515625,
+        "height": 32,
+        "top": 70,
+        "right": 168.515625,
+        "bottom": 102,
+        "left": 52
+      },
+      "tooltipUncovered": true
+    },
+    {
+      "width": 1440,
+      "header": {
+        "x": 56,
+        "y": 64,
+        "width": 1368,
+        "height": 40,
+        "top": 64,
+        "right": 1424,
+        "bottom": 104,
+        "left": 56
+      },
+      "body": {
+        "x": 56,
+        "y": 104,
+        "width": 1368,
+        "height": 756,
+        "top": 104,
+        "right": 1424,
+        "bottom": 860,
+        "left": 56
+      },
+      "matrix": {
+        "x": 69,
+        "y": 117,
+        "width": 1342,
+        "height": 730,
+        "top": 117,
+        "right": 1411,
+        "bottom": 847,
+        "left": 69
+      },
+      "tooltip": {
+        "x": 52,
+        "y": 70,
+        "width": 116.515625,
+        "height": 32,
+        "top": 70,
+        "right": 168.515625,
+        "bottom": 102,
+        "left": 52
+      },
+      "tooltipUncovered": true
+    }
+  ]
+}

@@ -19,7 +19,27 @@ async function compactHeader(page: Page) {
   await expect(page.getByText('Full-range bins', { exact: true })).toHaveCount(0);
   const bounds = await geometry(page);
   expect(bounds.height).toBe(40);
-  expect(bounds.matrixTop).toBe(bounds.headerTop + bounds.height);
+  const composition = await page.locator('.viewer-panel').evaluate(panel => {
+    const title = panel.querySelector('.matrix-explorer-header')!;
+    const body = panel.querySelector('.viewer-panel-body')!;
+    const style = getComputedStyle(body), card = body.getBoundingClientRect();
+    const header = title.getBoundingClientRect();
+    const matrix = body.querySelector('.matrix-surfaces')!.getBoundingClientRect();
+    return { siblings: title.parentElement === body.parentElement, containsTitle: body.contains(title),
+      panelWidth: panel.getBoundingClientRect().width, titleWidth: header.width, cardWidth: card.width,
+      cardTop: card.top, titleBottom: header.bottom,
+      insetTop: matrix.top - card.top, insetLeft: matrix.left - card.left,
+      paddingTop: parseFloat(style.paddingTop) + parseFloat(style.borderTopWidth),
+      paddingLeft: parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth) };
+  });
+  expect(composition.siblings).toBe(true);
+  expect(composition.containsTitle).toBe(false);
+  expect(composition.titleWidth).toBe(composition.panelWidth);
+  expect(composition.cardWidth).toBe(composition.panelWidth);
+  expect(composition.cardTop).toBe(composition.titleBottom);
+  expect(composition.insetTop).toBe(composition.paddingTop);
+  expect(composition.insetLeft).toBe(composition.paddingLeft);
+  expect(composition.paddingTop).toBeGreaterThan(0);
   return bounds;
 }
 
@@ -91,6 +111,11 @@ test('metadata previews, pins, anchors below the icon, and leaves scientific wid
   const dialog = page.getByRole('dialog', { name: 'Tensor information' });
   const close = page.getByRole('button', { name: 'Close tensor information' });
   const initial = await geometry(page);
+  const canvas = await page.locator('.matrix-scroll canvas').elementHandle();
+  const lifetime = () => page.evaluate(() => ({ requests: window.explorerFixture.requests.length,
+    cancelled: window.explorerFixture.cancelled, uploads: window.explorerFixture.metrics.uploads,
+    allocations: window.explorerFixture.metrics.scalarAllocations }));
+  const originalLifetime = await lifetime();
   await trigger.hover();
   await expect(dialog).toBeVisible();
   await expect(close).toHaveCount(0);
@@ -130,6 +155,8 @@ test('metadata previews, pins, anchors below the icon, and leaves scientific wid
   await trigger.click();
   await page.getByRole('heading', { name: 'Inventory', exact: true }).click();
   await expect(dialog).toHaveCount(0);
+  expect(await lifetime()).toEqual(originalLifetime);
+  expect(await canvas!.evaluate(node => node === document.querySelector('.matrix-scroll canvas'))).toBe(true);
 });
 
 test('Escape dismisses pinned tensor information before restoring matrix zoom history', async ({ page }) => {
@@ -299,4 +326,21 @@ test('tensor and unavailable auxiliary errors remain in the compact row with hon
   await expect(dialog.locator('dt').filter({ hasText: /^True finite minimum$/ }).locator('+ dd')).toHaveText('Unavailable');
   await expect(dialog.locator('dt').filter({ hasText: /^True finite maximum$/ }).locator('+ dd')).toHaveText('Unavailable');
   expect(await geometry(page)).toEqual(initial);
+});
+
+for (const name of ['empty', 'unsupported']) test(`${name} tensors retain the full-width title and content card without operations`, async ({ page }) => {
+  await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);
+  await page.getByRole('combobox').selectOption('lab/alpha');
+  await page.getByRole('button', { name: new RegExp(`^${name} \\[` ) }).click();
+  await expect(page.getByText(name === 'empty' ? 'Empty tensor — no values to render.'
+    : 'Direct viewing supports complete rank-1 and rank-2 tensors. This rank-3 tensor is available for metadata inspection only.')).toBeVisible();
+  const panel = (await page.locator('.viewer-panel').boundingBox())!;
+  const title = (await page.locator('.matrix-panel-header').boundingBox())!;
+  const body = (await page.locator('.viewer-panel-body').boundingBox())!;
+  expect(title).toEqual({ x: panel.x, y: panel.y, width: panel.width, height: 40 });
+  expect(body.x).toBe(panel.x); expect(body.width).toBe(panel.width);
+  expect(body.y).toBe(title.y + title.height);
+  await expect(page.locator('.matrix-panel-header')).toHaveCount(1);
+  await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  expect(await page.evaluate(() => window.explorerFixture.requests.length)).toBe(0);
 });

@@ -31,9 +31,19 @@ test('concrete repeated weight preserves exact progressive values, independent p
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '6');
   await inspect(page);
   const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const shell = await page.locator('dialog.architecture-inspection').boundingBox();
   await expect(page.getByText('Module: layers.1.linear')).toBeVisible();
   await page.getByLabel('Inspect parameter').selectOption('second');
   await requests(page, 3);
+  await expect(page.locator('.matrix-panel-header')).toHaveCount(1);
+  await expect(page.locator('.architecture-inspection-heading')).toHaveCount(1);
+  const panel = (await page.locator('.viewer-panel').boundingBox())!;
+  const title = (await page.locator('.matrix-panel-header').boundingBox())!;
+  const body = (await page.locator('.viewer-panel-body').boundingBox())!;
+  expect(title).toEqual({ x: panel.x, y: panel.y, width: panel.width, height: 40 });
+  expect(body.y).toBe(title.y + title.height);
+  expect(body.width).toBe(title.width);
+  expect(await page.locator('dialog.architecture-inspection').boundingBox()).toEqual(shell);
   expect(await page.evaluate(() => window.explorerFixture.requests.map((r) => [r.tensor, r.kind]))).toEqual([['B', 'data'], ['B', 'statistics'], ['B', 'distributions']]);
   await page.evaluate(() => { const f = window.explorerFixture; f.emit(0, 1, f.metadata(0)); f.data(0, [-2, 0], 3); });
   await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', 'streaming');
@@ -80,6 +90,7 @@ test('concrete repeated weight preserves exact progressive values, independent p
   expect(await extent.evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(2);
   expect(await page.evaluate(() => window.explorerFixture.metrics.scalarAllocations)).toBe(1);
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+  expect(await page.locator('dialog.architecture-inspection').boundingBox()).toEqual(shell);
   await page.screenshot({ path: info.outputPath('architecture-native-weight.png') });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);

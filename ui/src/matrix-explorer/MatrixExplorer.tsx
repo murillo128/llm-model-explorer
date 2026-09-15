@@ -4,6 +4,7 @@ import type { Inspection } from '../rendering/matrix-inspection';
 import type { RendererState } from '../rendering/tensor-renderer';
 import type { DistributionDomain } from '../rendering/distribution-scale';
 import { PanelHeader } from './PanelHeader';
+import { ViewerPanel } from './ViewerPanel';
 import { InspectionCard } from './InspectionCard';
 import type { MatrixExplorerProps, MatrixUpdates } from './types';
 import './matrix-explorer.css';
@@ -104,10 +105,9 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
       onClick={() => currentViewport.current?.fitWidth()}>Fit width</button> : null;
   const toolbar = typeof header === 'function' ? header(controls, domain)
     : controls ? <PanelHeader identity={header} actions={controls} /> : header;
-  return <div className="matrix-explorer">
-    {toolbar && <div className="matrix-explorer-header">{toolbar}</div>}
+  return <ViewerPanel className="matrix-explorer" header={toolbar}>
     {failed && <p role="alert">Exact rendering is unavailable. WebGL2 resources could not be allocated or were lost. Reopen this view to retry.</p>}
     <div ref={host} />
     {inspection && <InspectionCard inspection={inspection} host={host} />}
-  </div>;
+  </ViewerPanel>;
 }

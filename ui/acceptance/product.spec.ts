@@ -683,7 +683,11 @@ test('integrated inventory preferences and metadata preserve streaming panel geo
   await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
   const initial = await panelGeometry(page);
   expect(initial['.matrix-panel-header']![3]).toBe(40);
-  expect(initial['.matrix-surfaces']![1]).toBe(initial['.matrix-panel-header']![1]! + initial['.matrix-panel-header']![3]!);
+  const cardInset = await page.locator('.viewer-panel-body').evaluate(node => {
+    const style = getComputedStyle(node);
+    return parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop);
+  });
+  expect(initial['.matrix-surfaces']![1]).toBe(initial['.matrix-panel-header']![1]! + initial['.matrix-panel-header']![3]! + cardInset);
   await expect(page.locator('.matrix-panel-header')).toHaveCount(1);
   await expect(page.locator('.distribution-range')).toHaveCount(0);
   await expect(page.getByText('Full-range bins', { exact: true })).toHaveCount(0);

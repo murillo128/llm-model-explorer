@@ -31,6 +31,22 @@ async function noDocumentOverflow(page: Page) {
     viewport: [width, height], scroll: [0, 0] });
 }
 
+async function readableTooltip(page: Page) {
+  const tooltip = page.getByRole('tooltip');
+  await expect(tooltip).toBeVisible();
+  expect(await tooltip.evaluate(node => {
+    const box = node.getBoundingClientRect();
+    const workspace = document.querySelector('#workspace')!.getBoundingClientRect();
+    const header = document.querySelector('.matrix-panel-header')!.getBoundingClientRect();
+    return { bounded: box.left >= workspace.left && box.right <= workspace.right
+      && box.top >= workspace.top && box.bottom <= workspace.bottom,
+    overlapsTitle: box.right > header.left && box.bottom > header.top && box.top < header.bottom,
+    uncovered: [1, box.width / 2, box.width - 1].every(x => [1, box.height / 2, box.height - 1].every(y =>
+      node.contains(document.elementFromPoint(box.left + x, box.top + y)))),
+    textFits: node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight };
+  })).toEqual({ bounded: true, overlapsTitle: true, uncovered: true, textFits: true });
+}
+
 test('quiet branches persist explicit keyboard and pointer choices across explorer visits and reload', async ({ page }) => {
   await openInventory(page);
   const branches = page.locator('.tensor-tree details');
@@ -97,6 +113,7 @@ test('drawer and icon-only rail resize the workspace, retain selection, transfer
   await expect(pane.getByRole('button', { name: 'Expand inventory' })).toHaveCount(0);
   const tooltip = rail.getByRole('tooltip');
   await expect(tooltip).toBeVisible();
+  await readableTooltip(page);
   await expect(show).toHaveAccessibleDescription('Expand inventory');
   await show.blur(); await page.mouse.move(0, 0);
   await expect(tooltip).not.toBeVisible();
@@ -105,6 +122,21 @@ test('drawer and icon-only rail resize the workspace, retain selection, transfer
     .toEqual(['none', 'none']);
   expect(await show.locator('svg path').getAttribute('d')).toBe('M6 2v12M9 5h3M9 8h3M9 11h3');
   await show.hover(); await expect(tooltip).toBeVisible();
+  await readableTooltip(page);
+  // A native modal remains above the ordinary workspace overlay, even at its overlap point.
+  const tipBounds = (await tooltip.boundingBox())!;
+  await page.evaluate(box => {
+    const modal = document.createElement('dialog');
+    modal.id = 'tooltip-precedence-probe';
+    modal.textContent = 'Modal takes precedence';
+    Object.assign(modal.style, { position: 'fixed', margin: '0', left: `${box.x}px`, top: `${box.y}px`,
+      width: `${box.width}px`, height: `${box.height}px`, padding: '0' });
+    document.body.append(modal); modal.showModal();
+  }, tipBounds);
+  expect(await page.evaluate(box => document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)
+    ?.closest('dialog')?.id, tipBounds)).toBe('tooltip-precedence-probe');
+  await page.evaluate(() => { const modal = document.querySelector<HTMLDialogElement>('#tooltip-precedence-probe')!; modal.close(); modal.remove(); });
+  await show.blur();
   await page.mouse.move(0, 0); await expect(tooltip).not.toBeVisible();
   if (process.env.CAPTURE_INVENTORY_EVIDENCE) await page.screenshot({ path: `evidence/inventory-collapsed-${page.viewportSize()!.width}.png` });
   if (page.viewportSize()!.width > 760) expect(hidden.width - initial.width).toBe(inventoryBox.width + 16 - 40);

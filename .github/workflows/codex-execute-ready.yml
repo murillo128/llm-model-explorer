@@ -428,6 +428,70 @@ jobs:
                   return status.get("type") == "active"
               return False
 
+          def resolve_project_id(client, repo_root):
+              """Find one existing Desktop project by its exact canonical repository root."""
+              try:
+                  expected_root = os.path.realpath(repo_root)
+                  cursor, seen, matches = None, set(), set()
+                  for _ in range(20):
+                      page = client.request("project/list", {"limit": 100, "cursor": cursor})
+                      if (not isinstance(page, dict) or not isinstance(page.get("data"), list)
+                              or "nextCursor" not in page):
+                          raise ValueError("project/list returned an invalid page")
+                      for project in page["data"]:
+                          if (not isinstance(project, dict) or not isinstance(project.get("id"), str)
+                                  or not project["id"] or not isinstance(project.get("roots"), list)):
+                              raise ValueError("project/list returned an invalid project")
+                          for root in project["roots"]:
+                              path = root.get("path") if isinstance(root, dict) else None
+                              if not isinstance(path, str) or not os.path.isabs(path) or "\0" in path:
+                                  raise ValueError("project/list returned an invalid project root")
+                              if os.path.realpath(path) == expected_root:
+                                  matches.add(project["id"])
+                      cursor = page["nextCursor"]
+                      if cursor is None:
+                          break
+                      if not isinstance(cursor, str) or not cursor or cursor in seen:
+                          raise ValueError("project/list returned invalid pagination")
+                      seen.add(cursor)
+                  else:
+                      raise ValueError("project/list exceeded the page limit")
+                  if len(matches) != 1:
+                      raise ValueError(f"Expected one project for the repository root; found {len(matches)}")
+                  return matches.pop()
+              except (RuntimeError, ValueError) as exc:
+                  # These optional RPCs may be absent on older servers. Transport failures
+                  # still propagate; never retry thread/start to repair visual grouping.
+                  log("thread_project_warning", level="warning", reason=str(exc),
+                      action="continue_without_project_change")
+                  return None
+
+
+          def assign_thread_project(client, thread_id, thread, project_id):
+              """Only fill an explicitly unassigned, inactive thread; retain manual moves."""
+              if project_id is None:
+                  return
+              if thread.get("projectId") is not None:
+                  log("thread_project_preserved", threadId=thread_id, projectId=thread["projectId"])
+                  return
+              try:
+                  if thread.get("id") != thread_id or "projectId" not in thread:
+                      raise ValueError("App Server did not expose this thread's project assignment")
+                  if status_is_active(thread.get("status")):
+                      raise ValueError("Active thread project left unchanged")
+                  result = client.request(
+                      "thread/metadata/update", {"threadId": thread_id, "projectId": project_id},
+                  )
+                  updated = result.get("thread") if isinstance(result, dict) else None
+                  if (not isinstance(updated, dict) or updated.get("id") != thread_id
+                          or updated.get("projectId") != project_id):
+                      raise ValueError("App Server did not confirm the requested project assignment")
+                  log("thread_project_assigned", threadId=thread_id, projectId=project_id)
+              except (RuntimeError, ValueError) as exc:
+                  log("thread_project_warning", level="warning", threadId=thread_id,
+                      reason=str(exc), action="continue_without_project_change")
+
+
           try:
               ws = WebSocketUnix(SOCKET_PATH)
               client = AppServerClient(ws)
@@ -446,6 +510,8 @@ jobs:
               log("initialized", codexHome=init.get("codexHome"), platformOs=init.get("platformOs"))
               policy = ProfilePolicy(client, init.get("codexHome"), load_settings(os.path.join(STATE_DIR, "codex-settings.json")), os.environ["CODEX_LAUNCH_ROLE"])
 
+              # Resolve before start/resume so the later thread snapshot preserves manual moves.
+              project_id = resolve_project_id(client, REPO_ROOT)
               was_resumed = False
               thread_id = None
               if os.path.exists(THREAD_FILE):
@@ -510,6 +576,7 @@ jobs:
                   log("thread_started", threadId=thread_id, name=display_name, cwd=WORKTREE)
 
               policy.log_confirmation(log, thread_id=thread_id, cwd=WORKTREE, resumed=was_resumed)
+              assign_thread_project(client, thread_id, live_thread, project_id)
               client.thread_id = thread_id
               prompt = f"Execute GitHub issue #{ISSUE_NUMBER} according to AGENTS.md."
               turn_result = client.request(

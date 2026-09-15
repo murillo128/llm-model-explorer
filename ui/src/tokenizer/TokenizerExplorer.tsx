@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import type { ReactNode } from 'react';
 import type { ApiClient } from '../api/client';
 import type { ExplorerContextValue } from '../app/explorer-context';
-import { MatrixExplorer, PanelHeader } from '../matrix-explorer';
+import { MatrixExplorer, PanelHeader, ViewerPanel } from '../matrix-explorer';
 import { PromptTokenizer } from './PromptTokenizer';
 import type { CurrentTokenization } from './PromptTokenizer';
 import { EmbeddingController } from './embedding-controller';
@@ -155,7 +155,7 @@ function EmbeddingRegion({ client, sessionId, current, highlightedRow, revealRow
   const stale = !!visible && !linked;
   const message = status + (stale ? ' Previous matrix is stale; token linkage is disabled.' : '');
   return <div className="embedding-layers" data-embeddings={stale ? 'stale' : 'current'}>
-    {!visible && <EmbeddingHeader status={message} />}
+    {!visible && <ViewerPanel header={<EmbeddingHeader status={message} />} />}
     {[visible, staging].map(snapshot => {
       const source = snapshot?.state.source;
       if (!snapshot || !source) return null;
