@@ -19,12 +19,17 @@ from fastapi.testclient import TestClient
 from starlette.types import Message
 from test_models import make_model, mutate_last_byte, write_weights
 from test_operations import run
+from test_quantized_models import config_for, packed_group, write_storage
 from test_streaming import Frames, forgotten, server
 from test_tensor_data import frames, payload
 from test_tokenization import make_tokenizer
 
 from llm_model_explorer.app import create_app
-from llm_model_explorer.embeddings import resolve_embeddings, subscribe_embeddings
+from llm_model_explorer.embeddings import (
+    resolve_embeddings,
+    resolve_input_table,
+    subscribe_embeddings,
+)
 from llm_model_explorer.materialization import CHUNK_ELEMENTS, _TensorReader
 from llm_model_explorer.model_files import FileSnapshot, ModelError
 from llm_model_explorer.models import ModelCatalogue
@@ -38,19 +43,38 @@ CONTRACT: dict[str, Any] = json.loads(
 )
 ROWS: list[list[float]] = CONTRACT["source"]["input_table"]
 KEY = "model.embed_tokens.weight"
+FAMILIES = {
+    "llama": ("LlamaForCausalLM", KEY),
+    "qwen3": ("Qwen3ForCausalLM", KEY),
+    "qwen3_5": ("Qwen3_5ForConditionalGeneration", "model.language_model.embed_tokens.weight"),
+}
 
 
-def embedding_model(root: Path, dtype: str = "F32", *, vocab: int = 4, hidden: int = 3) -> Path:
+@pytest.fixture(params=FAMILIES)
+def family(request: pytest.FixtureRequest) -> str:
+    return str(request.param)
+
+
+def embedding_model(
+    root: Path, dtype: str = "F32", *, vocab: int = 4, hidden: int = 3, family: str = "llama"
+) -> Path:
     directory = make_model(root)
     config = json.loads((directory / "config.json").read_text())
-    config.update(vocab_size=vocab, hidden_size=hidden)
+    architecture, key = FAMILIES[family]
+    config.update(model_type=family, architectures=[architecture])
+    if family == "qwen3_5":
+        # Conflicting top-level and visual dimensions must never control text rows.
+        config.update(vocab_size=99, hidden_size=88, vision_config={"hidden_size": 77})
+        config["text_config"] = {"vocab_size": vocab, "hidden_size": hidden}
+    else:
+        config.update(vocab_size=vocab, hidden_size=hidden)
     (directory / "config.json").write_text(json.dumps(config))
     values = (
         [v for row in ROWS for v in row] if (vocab, hidden) == (4, 3) else [1.5] * (vocab * hidden)
     )
     write_weights(
         directory / "model.safetensors",
-        [(KEY, dtype, [vocab, hidden], values), ("lm_head.weight", dtype, [1], [-99])],
+        [(key, dtype, [vocab, hidden], values), ("lm_head.weight", dtype, [1], [-99])],
     )
     return directory
 
@@ -63,8 +87,10 @@ def address(client: TestClient) -> str:
 
 @pytest.mark.parametrize("dtype", ["F32", "F16", "BF16"])
 @pytest.mark.parametrize("case", CONTRACT["request_cases"], ids=lambda c: c["name"])
-def test_contract_requests(settings: Settings, dtype: str, case: dict[str, Any]) -> None:
-    directory = embedding_model(settings.model_root, dtype)
+def test_contract_requests(
+    settings: Settings, dtype: str, case: dict[str, Any], family: str
+) -> None:
+    directory = embedding_model(settings.model_root, dtype, family=family)
     before = (directory / "model.safetensors").read_bytes()
     with TestClient(create_app(settings)) as client:
         response = client.post(address(client), json=case["request"])
@@ -169,9 +195,9 @@ def test_preflight_and_control_limits(settings: Settings, monkeypatch: pytest.Mo
 @pytest.mark.parametrize("dtype", ["F32", "F16", "BF16"])
 @pytest.mark.parametrize("hidden", [3, CHUNK_ELEMENTS + 1])
 def test_bounded_physical_reads_and_allocations(
-    settings: Settings, monkeypatch: pytest.MonkeyPatch, dtype: str, hidden: int
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, dtype: str, hidden: int, family: str
 ) -> None:
-    embedding_model(settings.model_root, dtype, vocab=20, hidden=hidden)
+    embedding_model(settings.model_root, dtype, vocab=20, hidden=hidden, family=family)
     source = ModelCatalogue(settings.model_root).pin("test/tiny")
     # Pinning hashes complete assets in bounded blocks by the existing snapshot contract.
     # Instrument after pinning to distinguish it from row lookup/materialization.
@@ -231,8 +257,10 @@ def test_bounded_physical_reads_and_allocations(
 
 
 @pytest.mark.parametrize("fault", ["change", "memory", "native_memory", "short"])
-def test_midstream_faults(settings: Settings, monkeypatch: pytest.MonkeyPatch, fault: str) -> None:
-    directory = embedding_model(settings.model_root)
+def test_midstream_faults(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, fault: str, family: str
+) -> None:
+    directory = embedding_model(settings.model_root, family=family)
     original = ModelSource.iter_rows
 
     def broken(self: ModelSource, *args: Any, **kwargs: Any) -> Any:
@@ -271,8 +299,10 @@ def test_midstream_faults(settings: Settings, monkeypatch: pytest.MonkeyPatch, f
 
 
 @pytest.mark.parametrize("action", ["cancel", "delete_session", "disconnect", "partial_send"])
-def test_progressive_cleanup_and_independent_consumer(settings: Settings, action: str) -> None:
-    embedding_model(settings.model_root)
+def test_progressive_cleanup_and_independent_consumer(
+    settings: Settings, action: str, family: str
+) -> None:
+    embedding_model(settings.model_root, family=family)
 
     async def scenario() -> None:
         app = create_app(settings)
@@ -393,8 +423,8 @@ def test_tcp_progress_and_responsive_io(
         release.set()
 
 
-def test_indexed_shard_and_cors(settings: Settings) -> None:
-    directory = embedding_model(settings.model_root, "BF16")
+def test_indexed_shard_and_cors(settings: Settings, family: str) -> None:
+    directory = embedding_model(settings.model_root, "BF16", family=family)
     shard = directory / "weights" / "input.safetensors"
     shard.parent.mkdir()
     (directory / "model.safetensors").rename(shard)
@@ -402,7 +432,7 @@ def test_indexed_shard_and_cors(settings: Settings) -> None:
         json.dumps(
             {
                 "weight_map": {
-                    KEY: "weights/input.safetensors",
+                    FAMILIES[family][1]: "weights/input.safetensors",
                     "lm_head.weight": "weights/input.safetensors",
                 }
             }
@@ -426,9 +456,9 @@ def test_indexed_shard_and_cors(settings: Settings) -> None:
 
 
 def test_change_during_read_rejects_block(
-    settings: Settings, monkeypatch: pytest.MonkeyPatch
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, family: str
 ) -> None:
-    directory = embedding_model(settings.model_root)
+    directory = embedding_model(settings.model_root, family=family)
     source = ModelCatalogue(settings.model_root).pin("test/tiny")
     result = resolve_embeddings(source, (0,))
     original = FileSnapshot.open
@@ -478,3 +508,106 @@ def test_unsafe_output_size_before_source_access(
     with pytest.raises(ModelError) as exc:
         resolve_embeddings(source, (0, 0))
     assert exc.value.code == "unsupported_size"
+
+
+@pytest.mark.parametrize("kind,family", [("JunHowie", "qwen3"), ("AxionML", "qwen3_5")])
+@pytest.mark.parametrize("dtype", ["F32", "F16", "BF16"])
+def test_quantized_checkpoint_native_input_rows(
+    settings: Settings, kind: str, family: str, dtype: str
+) -> None:
+    directory = embedding_model(settings.model_root, dtype, family=family)
+    path = directory / "config.json"
+    config = json.loads(path.read_text())
+    config["quantization_config"] = config_for(kind)["quantization_config"]
+    path.write_text(json.dumps(config))
+    write_storage(directory / "packed.safetensors", packed_group(kind))
+    # Both native rows and packed linear groups live behind an exact shard index.
+    mapping = {FAMILIES[family][1]: "model.safetensors", "lm_head.weight": "model.safetensors"}
+    mapping.update({name: "packed.safetensors" for name, _, _ in packed_group(kind)})
+    (directory / "model.safetensors.index.json").write_text(json.dumps({"weight_map": mapping}))
+    with TestClient(create_app(settings)) as client:
+        response = client.post(address(client), json={"token_ids": [3, 0, 3]})
+        assert response.status_code == 200
+        result = frames(response.content)
+        assert result[-1] == (4, b"")
+        assert b"".join(data for kind, data in result if kind == 2) == struct.pack(
+            "<9f", *(ROWS[3] + ROWS[0] + ROWS[3])
+        )
+
+
+@pytest.mark.parametrize(
+    "fault", ["missing", "output", "vision", "vocab", "hidden", "ambiguous", "custom"]
+)
+def test_family_mapping_fails_closed(settings: Settings, family: str, fault: str) -> None:
+    directory = embedding_model(settings.model_root, family=family)
+    path = directory / "config.json"
+    config = json.loads(path.read_text())
+    dims = config["text_config"] if family == "qwen3_5" else config
+    if fault in {"vocab", "hidden"}:
+        dims["vocab_size" if fault == "vocab" else "hidden_size"] += 1
+    elif fault == "ambiguous":
+        config["architectures"].append(FAMILIES[family][0])
+    elif fault == "custom":
+        dims["auto_map"] = {"AutoModel": "private.Custom"}
+    else:
+        config["tie_word_embeddings"] = True
+        name = {
+            "missing": "prefix." + FAMILIES[family][1],
+            "output": "lm_head.weight",
+            "vision": "model.visual.embed_tokens.weight",
+        }[fault]
+        write_weights(directory / "model.safetensors", [(name, "F32", [4, 3], [9.0] * 12)])
+    path.write_text(json.dumps(config))
+    with TestClient(create_app(settings)) as client:
+        url = address(client)
+        for ids in ([], [0]):
+            response = client.post(url, json={"token_ids": ids})
+            assert response.status_code == 422
+            assert response.json()["code"] == "unsupported_representation"
+
+
+@pytest.mark.parametrize(
+    "text_config", [None, [], {}, {"vocab_size": 4}, {"vocab_size": True, "hidden_size": 3}]
+)
+def test_nested_dimensions_required(settings: Settings, text_config: object) -> None:
+    directory = embedding_model(settings.model_root, family="qwen3_5")
+    path = directory / "config.json"
+    config = json.loads(path.read_text())
+    config.update(vocab_size=4, hidden_size=3, text_config=text_config)
+    path.write_text(json.dumps(config))
+    with pytest.raises(ModelError) as exc:
+        resolve_embeddings(ModelCatalogue(settings.model_root).pin("test/tiny"), ())
+    assert exc.value.code == "unsupported_representation"
+
+
+def test_duplicate_logical_candidates(
+    settings: Settings, family: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    embedding_model(settings.model_root, family=family)
+    source = ModelCatalogue(settings.model_root).pin("test/tiny")
+    table = resolve_input_table(source)
+    monkeypatch.setattr(ModelSource, "tensors", lambda self: (table, table))
+    with pytest.raises(ModelError) as exc:
+        resolve_embeddings(source, ())
+    assert exc.value.code == "unsupported_representation"
+
+
+def test_duplicate_physical_candidates_rejected_at_admission(
+    settings: Settings, family: str
+) -> None:
+    directory = embedding_model(settings.model_root, family=family)
+    write_weights(
+        directory / "duplicate.safetensors", [(FAMILIES[family][1], "F32", [4, 3], [1.0] * 12)]
+    )
+    assert ModelCatalogue(settings.model_root).discover() == ()
+
+
+def test_non_text_model_has_no_input_capability(settings: Settings) -> None:
+    directory = embedding_model(settings.model_root)
+    path = directory / "config.json"
+    config = json.loads(path.read_text())
+    config.update(model_type="vjepa2", architectures=["VJEPA2Model"])
+    path.write_text(json.dumps(config))
+    with pytest.raises(ModelError) as exc:
+        resolve_embeddings(ModelCatalogue(settings.model_root).pin("test/tiny"), (0,))
+    assert exc.value.code == "unsupported_representation"

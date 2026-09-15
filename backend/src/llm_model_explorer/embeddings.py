@@ -21,21 +21,37 @@ def unsupported() -> ModelError:
 
 
 def resolve_input_table(source: ModelSource) -> TensorDescriptor:
-    """Support the standard Llama causal-LM checkpoint used by SmolLM2 Base.
+    """Resolve an architecture-owned input table in the actionable logical inventory.
 
     Require agreement between local config and the exact architecture-owned
     tensor key/dimensions. Custom code mappings and ambiguous architectures are
     unsupported; output heads and similarly named weights are never fallbacks.
     """
     config = source.configuration()
-    if (
-        config.get("model_type") != "llama"
-        or config.get("architectures") != ["LlamaForCausalLM"]
-        or config.get("auto_map")
-        or "quantization_config" in config
-    ):
+    if config.get("auto_map"):
         raise unsupported()
-    vocab, hidden = config.get("vocab_size"), config.get("hidden_size")
+    mappings = (
+        ("llama", "LlamaForCausalLM", "model.embed_tokens.weight", None),
+        ("qwen3", "Qwen3ForCausalLM", "model.embed_tokens.weight", None),
+        (
+            "qwen3_5",
+            "Qwen3_5ForConditionalGeneration",
+            "model.language_model.embed_tokens.weight",
+            "text_config",
+        ),
+    )
+    matches = [
+        (name, nested)
+        for model_type, architecture, name, nested in mappings
+        if config.get("model_type") == model_type and config.get("architectures") == [architecture]
+    ]
+    if len(matches) != 1:
+        raise unsupported()
+    name, nested = matches[0]
+    dimensions = config if nested is None else config.get(nested)
+    if not isinstance(dimensions, dict) or dimensions.get("auto_map"):
+        raise unsupported()
+    vocab, hidden = dimensions.get("vocab_size"), dimensions.get("hidden_size")
     if (
         type(vocab) is not int
         or type(hidden) is not int
@@ -43,19 +59,19 @@ def resolve_input_table(source: ModelSource) -> TensorDescriptor:
         or not 0 < hidden <= MAX_SAFE_INTEGER
     ):
         raise unsupported()
-    matches = [t for t in source.tensors() if t.name == "model.embed_tokens.weight"]
-    if len(matches) != 1:
+    tables = [t for t in source.tensors() if t.name == name]
+    if len(tables) != 1:
         raise unsupported()
-    table = matches[0]
+    table = tables[0]
     if (
         table.shape != (vocab, hidden)
         or table.rank != 2
         or table.numel != vocab * hidden
-        or table.storage_format != "safetensors"
-        or table.storage_dtype not in {"F32", "F16", "BF16"}
         or table.logical_dtype != "float32"
     ):
         raise unsupported()
+    # Admission owns numeric availability; iter_rows owns physical decoding.
+    # Quantization elsewhere in the checkpoint does not disable a native table.
     source.check_unchanged()
     return table
 
