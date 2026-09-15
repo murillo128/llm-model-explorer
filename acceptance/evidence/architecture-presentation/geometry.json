@@ -1,0 +1,507 @@
+{
+  "input": {
+    "file": "source-graph.json",
+    "sha256": "4b57294eccdb08f1ba7dbd351a127051dcf80726ec826507b9c5b2afc60cf9a7",
+    "graphId": "7a11207126ee52d510e406921fa8d0890fd7aba9bd4e6e1b7b5449cb2de14379",
+    "sourceNodes": 948,
+    "sourceEdges": 1329,
+    "instances": 24
+  },
+  "environment": {
+    "node": "v24.14.0",
+    "platform": "linux",
+    "architecture": "x64"
+  },
+  "method": "Source-preserving projection and ELK automatic horizontal layout. No supplied coordinates, node dragging, or checkpoint-specific placement.",
+  "viewport": "Geometry is independent of viewport width. Browser evidence separately exercises resize, camera retention, and context-selected repetition windows at 1178 and 1440 CSS pixels.",
+  "scenarios": [
+    {
+      "name": "overview",
+      "visibleNodes": 13,
+      "visibleConnections": 8,
+      "representedSourceEdges": 40,
+      "hiddenSourceEdges": 1247,
+      "filteredSourceEdges": 42,
+      "bounds": {
+        "width": 1276,
+        "height": 636
+      },
+      "milliseconds": 137.9,
+      "pass": true,
+      "checkedRoutes": 8,
+      "checkedSerialSiblingDependencies": 8,
+      "cyclicSiblingDependencies": 0,
+      "endpointMismatches": 0,
+      "unrelatedNodeOrHeaderIntersections": 0,
+      "distinctSignalsSharingSegments": 0,
+      "labelNodeIntersections": 0,
+      "labelOverlaps": 0,
+      "violations": []
+    },
+    {
+      "name": "window",
+      "visibleNodes": 17,
+      "visibleConnections": 17,
+      "representedSourceEdges": 44,
+      "hiddenSourceEdges": 1243,
+      "filteredSourceEdges": 42,
+      "bounds": {
+        "width": 2100,
+        "height": 636
+      },
+      "milliseconds": 45.97,
+      "pass": true,
+      "checkedRoutes": 17,
+      "checkedSerialSiblingDependencies": 12,
+      "cyclicSiblingDependencies": 0,
+      "endpointMismatches": 0,
+      "unrelatedNodeOrHeaderIntersections": 0,
+      "distinctSignalsSharingSegments": 0,
+      "labelNodeIntersections": 0,
+      "labelOverlaps": 0,
+      "violations": []
+    },
+    {
+      "name": "layer-first",
+      "instance": {
+        "index": 0,
+        "variant": "linear_attention"
+      },
+      "visibleNodes": 20,
+      "visibleConnections": 17,
+      "representedSourceEdges": 52,
+      "hiddenSourceEdges": 1235,
+      "filteredSourceEdges": 42,
+      "bounds": {
+        "width": 2520,
+        "height": 652
+      },
+      "milliseconds": 28.51,
+      "pass": true,
+      "checkedRoutes": 17,
+      "checkedSerialSiblingDependencies": 15,
+      "cyclicSiblingDependencies": 0,
+      "endpointMismatches": 0,
+      "unrelatedNodeOrHeaderIntersections": 0,
+      "distinctSignalsSharingSegments": 0,
+      "labelNodeIntersections": 0,
+      "labelOverlaps": 0,
+      "violations": []
+    },
+    {
+      "name": "nested-first",
+      "instance": {
+        "index": 0,
+        "variant": "linear_attention"
+      },
+      "visibleNodes": 53,
+      "visibleConnections": 54,
+      "representedSourceEdges": 91,
+      "hiddenSourceEdges": 1196,
+      "filteredSourceEdges": 42,
+      "bounds": {
+        "width": 6030,
+        "height": 1122
+      },
+      "milliseconds": 58.99,
+      "pass": true,
+      "checkedRoutes": 54,
+      "checkedSerialSiblingDependencies": 51,
+      "cyclicSiblingDependencies": 0,
+      "endpointMismatches": 0,
+      "unrelatedNodeOrHeaderIntersections": 0,
+      "distinctSignalsSharingSegments": 0,
+      "labelNodeIntersections": 0,
+      "labelOverlaps": 0,
+      "violations": []
+    },
+    {
+      "name": "layer-different-variant",
+      "instance": {
+        "index": 3,
+        "variant": "full_attention"
+      },
+      "visibleNodes": 21,
+      "visibleConnections": 20,
+      "representedSourceEdges": 54,
+      "hiddenSourceEdges": 1233,
+      "filteredSourceEdges": 42,
+      "bounds": {
+        "width": 2718,
+        "height": 781
+      },
+      "milliseconds": 28.29,
+      "pass": true,
+      "checkedRoutes": 20,
+      "checkedSerialSiblingDependencies": 16,
+      "cyclicSiblingDependencies": 0,
+      "endpointMismatches": 0,
+      "unrelatedNodeOrHeaderIntersections": 0,
+      "distinctSignalsSharingSegments": 0,
+      "labelNodeIntersections": 0,
+      "labelOverlaps": 0,
+      "violations": []
+    },
+    {
+      "name": "nested-different-variant",
+      "instance": {
+        "index": 3,
+        "variant": "full_attention"
+      },
+      "visibleNodes": 54,
+      "visibleConnections": 59,
+      "representedSourceEdges": 96,
+      "hiddenSourceEdges": 1191,
+      "filteredSourceEdges": 42,
+      "bounds": {
+        "width": 6212,
+        "height": 1325
+      },
+      "milliseconds": 64.33,
+      "pass": true,
+      "checkedRoutes": 59,
+      "checkedSerialSiblingDependencies": 49,
+      "cyclicSiblingDependencies": 0,
+      "endpointMismatches": 0,
+      "unrelatedNodeOrHeaderIntersections": 0,
+      "distinctSignalsSharingSegments": 0,
+      "labelNodeIntersections": 0,
+      "labelOverlaps": 0,
+      "violations": []
+    },
+    {
+      "name": "layer-last",
+      "instance": {
+        "index": 23,
+        "variant": "full_attention"
+      },
+      "visibleNodes": 20,
+      "visibleConnections": 18,
+      "representedSourceEdges": 53,
+      "hiddenSourceEdges": 1234,
+      "filteredSourceEdges": 42,
+      "bounds": {
+        "width": 2504,
+        "height": 673
+      },
+      "milliseconds": 23.46,
+      "pass": true,
+      "checkedRoutes": 18,
+      "checkedSerialSiblingDependencies": 15,
+      "cyclicSiblingDependencies": 0,
+      "endpointMismatches": 0,
+      "unrelatedNodeOrHeaderIntersections": 0,
+      "distinctSignalsSharingSegments": 0,
+      "labelNodeIntersections": 0,
+      "labelOverlaps": 0,
+      "violations": []
+    },
+    {
+      "name": "overview-dimensions",
+      "visibleNodes": 13,
+      "visibleConnections": 8,
+      "representedSourceEdges": 40,
+      "hiddenSourceEdges": 1247,
+      "filteredSourceEdges": 42,
+      "bounds": {
+        "width": 2019,
+        "height": 636
+      },
+      "milliseconds": 15,
+      "pass": true,
+      "checkedRoutes": 8,
+      "checkedSerialSiblingDependencies": 8,
+      "cyclicSiblingDependencies": 0,
+      "endpointMismatches": 0,
+      "unrelatedNodeOrHeaderIntersections": 0,
+      "distinctSignalsSharingSegments": 0,
+      "labelNodeIntersections": 0,
+      "labelOverlaps": 0,
+      "violations": []
+    },
+    {
+      "name": "exhaustive",
+      "visibleNodes": 948,
+      "visibleConnections": 1168,
+      "representedSourceEdges": 1329,
+      "hiddenSourceEdges": 0,
+      "filteredSourceEdges": 0,
+      "bounds": {
+        "width": 114902,
+        "height": 8661
+      },
+      "milliseconds": 820.95,
+      "pass": true,
+      "checkedRoutes": 1168,
+      "checkedSerialSiblingDependencies": 1045,
+      "cyclicSiblingDependencies": 0,
+      "endpointMismatches": 0,
+      "unrelatedNodeOrHeaderIntersections": 0,
+      "distinctSignalsSharingSegments": 0,
+      "labelNodeIntersections": 0,
+      "labelOverlaps": 0,
+      "violations": []
+    }
+  ],
+  "coordinateSamples": [
+    {
+      "scope": "f580d5d9b4de388c1df62ff6d92c2ae43bac8478ff1d083c6122b2bcc22aff6c",
+      "label": "model.language_model",
+      "dependencies": [
+        {
+          "from": "c678e8a69d0ec83b9dc94677772a0a9c1927c3573d23282e6f11b6f2cfa6bf45",
+          "to": "614431267d09e4dc9983424b3db4d1beec02b72a4352667acea815c6fb8b2887",
+          "gap": 56
+        },
+        {
+          "from": "614431267d09e4dc9983424b3db4d1beec02b72a4352667acea815c6fb8b2887",
+          "to": "repeat:e98e13af2165e7b7f71767a28f65ba53f92a638f574a22b68c1985b01d13cabe:1:23",
+          "gap": 88
+        },
+        {
+          "from": "repeat:e98e13af2165e7b7f71767a28f65ba53f92a638f574a22b68c1985b01d13cabe:1:23",
+          "to": "34d5e75c4512e360dd746b6c3b01a21de13d020dc47a87ef0ebb057369f4506c",
+          "gap": 40
+        }
+      ],
+      "boxes": [
+        {
+          "id": "c678e8a69d0ec83b9dc94677772a0a9c1927c3573d23282e6f11b6f2cfa6bf45",
+          "label": "embedding lookup",
+          "x": 286,
+          "y": 583,
+          "width": 150,
+          "height": 100
+        },
+        {
+          "id": "614431267d09e4dc9983424b3db4d1beec02b72a4352667acea815c6fb8b2887",
+          "label": "model.language_model.layers.0",
+          "x": 492,
+          "y": 263,
+          "width": 4674,
+          "height": 811
+        },
+        {
+          "id": "repeat:e98e13af2165e7b7f71767a28f65ba53f92a638f574a22b68c1985b01d13cabe:1:23",
+          "label": "Instances 1\u201323",
+          "x": 5254,
+          "y": 476,
+          "width": 150,
+          "height": 172
+        },
+        {
+          "id": "34d5e75c4512e360dd746b6c3b01a21de13d020dc47a87ef0ebb057369f4506c",
+          "label": "rms norm zero centered",
+          "x": 5444,
+          "y": 476,
+          "width": 150,
+          "height": 100
+        }
+      ]
+    },
+    {
+      "scope": "614431267d09e4dc9983424b3db4d1beec02b72a4352667acea815c6fb8b2887",
+      "label": "model.language_model.layers.0",
+      "dependencies": [
+        {
+          "from": "b769eab925871e3f737f292f07e7124016a9610788a3ee05e2819675c19d5f38",
+          "to": "99c9a8bea1d7a02e07a10757a129fe71254704aa5ba7756ac0cf645cb2e00f61",
+          "gap": 56
+        },
+        {
+          "from": "99c9a8bea1d7a02e07a10757a129fe71254704aa5ba7756ac0cf645cb2e00f61",
+          "to": "6438f1986d9572a82db191da02214a9493d8fb504241767ac525595aa4408fb9",
+          "gap": 56
+        },
+        {
+          "from": "6438f1986d9572a82db191da02214a9493d8fb504241767ac525595aa4408fb9",
+          "to": "d0d5862ef30d64531384c7218ad3a11615ae0d4bcff18985ed8fc078cf0b2ddc",
+          "gap": 48
+        },
+        {
+          "from": "d0d5862ef30d64531384c7218ad3a11615ae0d4bcff18985ed8fc078cf0b2ddc",
+          "to": "mlp:2ab560bebbace15d78133a3a36f070daea1b523d8baae9fb974af58e5db87ae0",
+          "gap": 56
+        }
+      ],
+      "boxes": [
+        {
+          "id": "b769eab925871e3f737f292f07e7124016a9610788a3ee05e2819675c19d5f38",
+          "label": "rms norm zero centered",
+          "x": 516,
+          "y": 724,
+          "width": 150,
+          "height": 100
+        },
+        {
+          "id": "99c9a8bea1d7a02e07a10757a129fe71254704aa5ba7756ac0cf645cb2e00f61",
+          "label": "model.language_model.layers.0.linear_attn",
+          "x": 722,
+          "y": 364,
+          "width": 2978,
+          "height": 686
+        },
+        {
+          "id": "6438f1986d9572a82db191da02214a9493d8fb504241767ac525595aa4408fb9",
+          "label": "add",
+          "x": 3756,
+          "y": 572,
+          "width": 150,
+          "height": 124
+        },
+        {
+          "id": "d0d5862ef30d64531384c7218ad3a11615ae0d4bcff18985ed8fc078cf0b2ddc",
+          "label": "rms norm zero centered",
+          "x": 3954,
+          "y": 572,
+          "width": 150,
+          "height": 100
+        },
+        {
+          "id": "mlp:2ab560bebbace15d78133a3a36f070daea1b523d8baae9fb974af58e5db87ae0",
+          "label": "MLP",
+          "x": 4160,
+          "y": 492,
+          "width": 776,
+          "height": 332
+        }
+      ]
+    },
+    {
+      "scope": "99c9a8bea1d7a02e07a10757a129fe71254704aa5ba7756ac0cf645cb2e00f61",
+      "label": "model.language_model.layers.0.linear_attn",
+      "dependencies": [
+        {
+          "from": "5ebd9aad3674d7c338b0505569e65d898a0ef50212d47d75e1f70bf07d19bfb0",
+          "to": "d8fe905317051b1354f5a7acdb2a23db4aa03c18ba8bb6c1b6d67ff00680c943",
+          "gap": 48
+        },
+        {
+          "from": "5ebd9aad3674d7c338b0505569e65d898a0ef50212d47d75e1f70bf07d19bfb0",
+          "to": "e370129f8acf054a0bad27e84a47c2bfe3a11de2e475d7b25246ef20c1527a66",
+          "gap": 48
+        },
+        {
+          "from": "5ebd9aad3674d7c338b0505569e65d898a0ef50212d47d75e1f70bf07d19bfb0",
+          "to": "384ef9d4a855c5971caaeb635bab424596f844fe695714224e08aae478b5cfdd",
+          "gap": 634
+        },
+        {
+          "from": "5ebd9aad3674d7c338b0505569e65d898a0ef50212d47d75e1f70bf07d19bfb0",
+          "to": "0cc4f26aaa8af4c82b3d412985d681b7e68df08f11508d4ec127467e6771a82f",
+          "gap": 436
+        }
+      ],
+      "boxes": [
+        {
+          "id": "5ebd9aad3674d7c338b0505569e65d898a0ef50212d47d75e1f70bf07d19bfb0",
+          "label": "mask padding states",
+          "x": 746,
+          "y": 700,
+          "width": 150,
+          "height": 124
+        },
+        {
+          "id": "d8fe905317051b1354f5a7acdb2a23db4aa03c18ba8bb6c1b6d67ff00680c943",
+          "label": "linear",
+          "x": 944,
+          "y": 444,
+          "width": 150,
+          "height": 100
+        },
+        {
+          "id": "e370129f8acf054a0bad27e84a47c2bfe3a11de2e475d7b25246ef20c1527a66",
+          "label": "linear",
+          "x": 944,
+          "y": 926,
+          "width": 150,
+          "height": 100
+        },
+        {
+          "id": "384ef9d4a855c5971caaeb635bab424596f844fe695714224e08aae478b5cfdd",
+          "label": "linear",
+          "x": 1530,
+          "y": 785,
+          "width": 150,
+          "height": 100
+        },
+        {
+          "id": "0cc4f26aaa8af4c82b3d412985d681b7e68df08f11508d4ec127467e6771a82f",
+          "label": "linear",
+          "x": 1332,
+          "y": 700,
+          "width": 150,
+          "height": 100
+        }
+      ]
+    },
+    {
+      "scope": "mlp:2ab560bebbace15d78133a3a36f070daea1b523d8baae9fb974af58e5db87ae0",
+      "label": "MLP",
+      "dependencies": [
+        {
+          "from": "2ab560bebbace15d78133a3a36f070daea1b523d8baae9fb974af58e5db87ae0",
+          "to": "c656a2abb33e4c796e93c755bbc8cb62413479d066d86840821775b4e87fcb6a",
+          "gap": 40
+        },
+        {
+          "from": "c656a2abb33e4c796e93c755bbc8cb62413479d066d86840821775b4e87fcb6a",
+          "to": "f69bb6022b0404c07ddf935991838200072a1bacca4f3b7d927fc8ed7868a4b7",
+          "gap": 48
+        },
+        {
+          "from": "046ab7cae2e8f796ab674812cce812779fff0b10494e21958e506f74bf9eb6b0",
+          "to": "f69bb6022b0404c07ddf935991838200072a1bacca4f3b7d927fc8ed7868a4b7",
+          "gap": 48
+        },
+        {
+          "from": "f69bb6022b0404c07ddf935991838200072a1bacca4f3b7d927fc8ed7868a4b7",
+          "to": "2d35d20f7a0cf2b02b28b1fefd078309a5bcb9cfce7f49bfd42bd3b1313698d5",
+          "gap": 40
+        }
+      ],
+      "boxes": [
+        {
+          "id": "2ab560bebbace15d78133a3a36f070daea1b523d8baae9fb974af58e5db87ae0",
+          "label": "linear",
+          "x": 4184,
+          "y": 572,
+          "width": 150,
+          "height": 100
+        },
+        {
+          "id": "c656a2abb33e4c796e93c755bbc8cb62413479d066d86840821775b4e87fcb6a",
+          "label": "silu",
+          "x": 4374,
+          "y": 572,
+          "width": 150,
+          "height": 100
+        },
+        {
+          "id": "f69bb6022b0404c07ddf935991838200072a1bacca4f3b7d927fc8ed7868a4b7",
+          "label": "multiply",
+          "x": 4572,
+          "y": 572,
+          "width": 150,
+          "height": 124
+        },
+        {
+          "id": "046ab7cae2e8f796ab674812cce812779fff0b10494e21958e506f74bf9eb6b0",
+          "label": "linear",
+          "x": 4374,
+          "y": 700,
+          "width": 150,
+          "height": 100
+        },
+        {
+          "id": "2d35d20f7a0cf2b02b28b1fefd078309a5bcb9cfce7f49bfd42bd3b1313698d5",
+          "label": "linear",
+          "x": 4762,
+          "y": 572,
+          "width": 150,
+          "height": 100
+        }
+      ]
+    }
+  ]
+}

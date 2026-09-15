@@ -1,8 +1,10 @@
 # Issue 106: projection checkpoint
 
-This intermediate checkpoint covers source-preserving view derivation. It does
-not establish automatic layout or final browser acceptance; the production
-canvas is not yet switched to this projection.
+This historical intermediate checkpoint covered source-preserving view derivation
+before the production canvas used it. The independent review returned
+PASS_WITH_NOTES on a7367ce, allowing UI integration.
+Final layout and browser evidence is recorded in
+[the acceptance report](../../../acceptance/architecture-presentation-evidence.md).
 
 ## Inputs and boundaries
 
@@ -63,5 +65,4 @@ npm --prefix ui test -- src/architecture-explorer/projection.test.ts
 npm --prefix ui run typecheck
 ```
 
-Final layout, port/line interactions, integrated acceptance and comparison
-captures will be recorded after this checkpoint passes independent review.
+This checkpoint does not replace the repository final PR audit.
