@@ -1,4 +1,5 @@
 import { useContext, useId, useLayoutEffect, useRef } from 'react';
+import type { PointerEvent } from 'react';
 import type { Edge, EdgeProps } from '@xyflow/react';
 import type { Graph, Route } from './graph';
 import { formatShape } from './graph';
@@ -20,12 +21,18 @@ export function Connection({ data }: EdgeProps<ConnectionEdge>) {
   const sourcePort = sourceNode.ports.find((p) => p.id === connection.source.port_id)!;
   const targetPort = targetNode.ports.find((p) => p.id === connection.target.port_id)!;
   const label = `${sourceNode.label}.${sourcePort.label} → ${targetNode.label}.${targetPort.label}`;
+  const hoverLine = (event: PointerEvent<SVGGElement>) => {
+    const matrix = event.currentTarget.getScreenCTM();
+    if (!matrix) return;
+    const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
+    interaction.hover({ edgeIds: interaction.lineHit(connection.id, point) });
+  };
   return <g className="architecture-connection" data-edge-id={connection.id} data-emphasized={active}
     data-source-node={connection.source.node_id} data-source-port={connection.source.port_id}
     data-target-node={connection.target.node_id} data-target-port={connection.target.port_id}
     data-original-edge-ids={JSON.stringify(connection.originalEdgeIds)} data-kind={connection.kind}
     role="button" tabIndex={0} aria-label={`${connection.kind} connection: ${label}`}
-    onPointerEnter={() => interaction.hover({ edgeId: connection.id })} onPointerLeave={() => interaction.hover(null)}
+    onPointerEnter={hoverLine} onPointerMove={hoverLine} onPointerLeave={() => interaction.hover(null)}
     onFocus={() => interaction.focus({ edgeId: connection.id })} onBlur={() => interaction.focus(null)}
     onClick={(event) => { event.stopPropagation(); interaction.pin(connection.id, event.currentTarget as unknown as HTMLElement); }}
     onKeyDown={(event) => {

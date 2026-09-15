@@ -11,6 +11,7 @@ import { deriveMlpGroups } from './derived-groups';
 import { displayLabel, instanceOf, patternSummary } from './presentation';
 import { Connection, ConnectionInspection } from './Connection';
 import { ConnectionContext } from './connection-context';
+import { connectionHitResolver } from './connection-hit';
 import type { ConnectionEdge } from './Connection';
 import type { EmphasisTarget } from './connection-context';
 
@@ -240,20 +241,27 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
   useEffect(() => () => { cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current); }, []);
   const hover = useCallback((target: EmphasisTarget | null) => {
     cancelAnimationFrame(hoverFrame.current);
-    if (target) setTemporary(target); else hoverFrame.current = requestAnimationFrame(() => setTemporary(null));
+    if (target) setTemporary((previous) => {
+      // Pointer movement along the same represented segment changes no state.
+      if ('edgeIds' in target && previous && 'edgeIds' in previous && target.edgeIds.length === previous.edgeIds.length &&
+        target.edgeIds.every((id, index) => id === previous.edgeIds[index])) return previous;
+      return target;
+    }); else hoverFrame.current = requestAnimationFrame(() => setTemporary(null));
   }, []);
   const keyboardFocus = useCallback((target: EmphasisTarget | null) => {
     cancelAnimationFrame(focusFrame.current);
     if (target) setFocused(target); else focusFrame.current = requestAnimationFrame(() => setFocused(null));
   }, []);
   const pin = useCallback((id: string, trigger: HTMLElement) => { view.update({ edge: id }); setPinned(id); setInspection({ edgeId: id, trigger }); }, [view]);
+  const lineHit = useMemo(() => connectionHitResolver(result.layout?.projection.edges ?? [], result.layout?.routes ?? []), [result.layout]);
   const emphasis = useMemo(() => {
     const projection = result.layout?.projection;
     if (!projection) return new Set<string>();
-    return new Set(connectionSet(projection, temporary ?? focused ?? { edgeId: pinned ?? '' }));
+    const target = temporary ?? focused ?? { edgeId: pinned ?? '' };
+    return new Set('edgeIds' in target ? projection.edges.filter((edge) => target.edgeIds.includes(edge.id)).map((edge) => edge.id) : connectionSet(projection, target));
   }, [focused, pinned, result.layout, temporary]);
   const emphasizedPorts = useMemo(() => new Set(result.layout?.projection.edges.filter((e) => emphasis.has(e.id)).flatMap((e) => [endpointKey(e.source), endpointKey(e.target)])), [emphasis, result.layout]);
-  const interaction = useMemo(() => ({ emphasized: emphasis, ports: emphasizedPorts, zoom, hover, focus: keyboardFocus, pin }), [emphasis, emphasizedPorts, hover, keyboardFocus, pin, zoom]);
+  const interaction = useMemo(() => ({ emphasized: emphasis, ports: emphasizedPorts, zoom, lineHit, hover, focus: keyboardFocus, pin }), [emphasis, emphasizedPorts, hover, keyboardFocus, lineHit, pin, zoom]);
   const nodes = useMemo<CanvasNode[]>(() => (result.layout?.boxes ?? []).map((box) => {
     const record = projected.get(box.id)!;
     return { id: box.id, type: 'architecture', position: { x: box.x, y: box.y },

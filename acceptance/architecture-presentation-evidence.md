@@ -161,3 +161,46 @@ Reference provisioning/reproduction remains governed by [architecture.md](archit
 The browser connection suite writes real screenshot/coordinate files to its
 Playwright output directory. Those fixtures do not establish model support;
 the original cache reproduction is also distinct from fresh checkpoint acceptance.
+
+## Audit correction: shared fan-out hover
+
+The native-pointer regression reproduced the audit failure on `47d66b6`: the
+shared RMSNorm → Q/K/V trunk highlighted only Q. Line hits now combine the exact
+source-port identity with generated collinear route overlap. A trunk highlights
+only the branches represented on that segment; an exclusive segment identifies
+its own branch. Pointer movement updates that choice even within one SVG path.
+Crossings, neighboring lines and different source ports remain independent.
+Projection, layout, styles and the native-weight modal are unchanged.
+
+Fresh validation of this correction:
+
+- `npm --prefix ui run check`: **600 unit tests**, binding freshness, TypeScript,
+  ESLint and production build pass. Five new geometry tests include partially
+  shared trunks, reversed/subdivided sections, exact port aliases and crossings.
+- **46 architecture browser cases** pass across the desktop/narrow projects.
+  The new native-pointer case covers trunk → exclusive branch → source/destination
+  port, zoom, exact emphasized edges/endpoints, pinned-selection restoration and
+  unchanged camera, node/port/route coordinates and layout count. It failed on the
+  audited head before passing with the correction.
+- **10 built-UI/live-backend architecture cases** pass at DPR 1 and 2, covering
+  all four deterministic checkpoints and progressive modal cancellation. The
+  first attempt could not open the sandbox's X display; all cases ran after
+  granting the test process display access. Full local-reference results above
+  are retained from the earlier acceptance run, not claimed as fresh reruns.
+
+The production build was also opened against the retained original 948-node,
+1329-edge response replay. At 1178 and 1440 px, the selected full-attention view
+contains 49 visible nodes and 54 connections. Native shared-trunk and source-port
+hits emphasize exactly three Q/K/V connections and four endpoints; the exclusive
+Q branch emphasizes one connection and two endpoints. The six captures were
+opened and inspected. See [shared trunk at 1178](evidence/architecture-presentation/shared-trunk-1178.png),
+[shared trunk at 1440](evidence/architecture-presentation/shared-trunk-1440.png)
+and [exclusive branch at 1440](evidence/architecture-presentation/exclusive-branch-1440.png).
+The existing centered camera at 1178 clips the left part of the source node label;
+its output marker/label and all three destination markers remain visible.
+
+[shared-trunk.json](evidence/architecture-presentation/shared-trunk.json) retains
+the source references, independently discovered pointer locations, exact emphasis
+sets, capture hashes and stable geometry/camera observations. Layout count stays
+at six throughout these interactions, and document bounds stay at the viewport
+size. This is UI reproduction evidence; full graph payloads remain outside Git.
