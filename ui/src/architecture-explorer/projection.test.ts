@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { assertTraceability } from '../../tests/architecture-invariants';
 import { makeProjectionFixture, type ProjectionFixtureOptions } from '../../tests/architecture-projection-fixture';
 import { validateArchitecture } from '../api/architecture-validation';
 import { deriveMlpGroups } from './derived-groups';
-import type { Graph } from './graph';
 import { connectionSet, endpointKey, projectGraph, type Endpoint, type Projection } from './projection';
 
 const ep = (node_id: string, port_id: string): Endpoint => ({ node_id, port_id });
@@ -12,39 +12,6 @@ const selected = (index: number, extra: string[] = []) => ({ expanded: ['model',
 function freeze(value: unknown) {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
 }
-function assertTraceability(graph: Graph, projected: Projection) {
-  const sourceEdges = new Map(graph.edges.map((e) => [e.id, e]));
-  const nodes = new Map(projected.nodes.map((n) => [n.id, n]));
-  for (const node of projected.nodes) {
-    expect(node.sourceIds.length).toBeGreaterThan(0);
-    for (const id of node.sourceIds) expect(graph.nodes.some((n) => n.id === id)).toBe(true);
-    for (const port of node.ports) for (const original of port.endpoints) {
-      expect(graph.nodes.find((n) => n.id === original.node_id)?.ports.some((p) => p.id === original.port_id)).toBe(true);
-    }
-  }
-  for (const edge of projected.edges) {
-    const source = nodes.get(edge.source.node_id)?.ports.find((p) => p.id === edge.source.port_id);
-    const target = nodes.get(edge.target.node_id)?.ports.find((p) => p.id === edge.target.port_id);
-    expect(source?.direction).toBe('output'); expect(target?.direction).toBe('input');
-    const originals = new Set<string>();
-    for (const path of edge.paths) {
-      expect(path.length).toBeGreaterThan(0);
-      expect(source?.endpoints).toContainEqual(path[0]!.source);
-      expect(target?.endpoints).toContainEqual(path.at(-1)!.target);
-      path.forEach((item, i) => {
-        expect(item).toBe(sourceEdges.get(item.id)); originals.add(item.id);
-        if (i) expect(item.source).toEqual(path[i - 1]!.target);
-      });
-    }
-    expect(new Set(edge.originalEdgeIds)).toEqual(originals);
-  }
-  const represented = new Set(projected.edges.flatMap((e) => e.originalEdgeIds));
-  const hidden = new Set(projected.hiddenEdgeIds), filtered = new Set(projected.filteredEdgeIds);
-  expect([...represented].some((id) => hidden.has(id) || filtered.has(id))).toBe(false);
-  expect([...hidden].some((id) => filtered.has(id))).toBe(false);
-  expect(new Set([...represented, ...hidden, ...filtered])).toEqual(new Set(sourceEdges.keys()));
-}
-
 describe('source-preserving visible projection', () => {
   it.each([
     {}, { variants: ['full_attention', 'linear_attention', 'full_attention'] },
@@ -158,7 +125,7 @@ describe('source-preserving visible projection', () => {
     expect(new Set(projection.edges.flatMap((e) => e.originalEdgeIds))).toEqual(new Set(graph.edges.map((e) => e.id)));
     expect(projection.nodes.some((n) => n.presentation)).toBe(false);
     expect(projection.hiddenEdgeIds).toEqual([]); expect(projection.filteredEdgeIds).toEqual([]);
-    assertTraceability(graph, projection);
+    assertTraceability(graph, projection, true);
   });
 
   it('preserves bypass dependencies across compressed before/after ranges without a false middle endpoint', () => {

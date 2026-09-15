@@ -1,0 +1,386 @@
+{
+  "baseline": "c71f1b81bedfb534a6147f5c119ab0cfbf2cfeee",
+  "kind": "built UI, live synthetic numeric/tokenizer service, authored structural graph",
+  "geometries": [
+    {
+      "viewport": {
+        "width": 1178,
+        "height": 900
+      },
+      "browser": "153.0.8010.12",
+      "project": "dpr1",
+      "observations": {
+        "tensor": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1178,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1178,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1178,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 403.09375,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 635,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "tokenizer": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1178,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1178,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1178,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 405.171875,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 635,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "architectureShell": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1178,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1178,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1178,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 407.828125,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 635,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "architecture": {
+          ".architecture-toolbar": {
+            "x": 21,
+            "y": 69,
+            "width": 1136,
+            "height": 39
+          },
+          ".architecture-repetitions": {
+            "x": 21,
+            "y": 108,
+            "width": 1136,
+            "height": 39
+          },
+          ".architecture-focus-controls": {
+            "x": 21,
+            "y": 147,
+            "width": 1136,
+            "height": 27
+          },
+          ".architecture-flow": {
+            "x": 21,
+            "y": 201.5,
+            "width": 1136,
+            "height": 653.5
+          }
+        }
+      }
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "browser": "153.0.8010.12",
+      "project": "dpr1",
+      "observations": {
+        "tensor": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1440,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1440,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 403.09375,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 897,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "tokenizer": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1440,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1440,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 405.171875,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 897,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "architectureShell": {
+          ".app-bar": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 52,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".app-status-bar": {
+            "x": 0,
+            "y": 872,
+            "width": 1440,
+            "height": 28,
+            "font": "12px / 18px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(251, 250, 247)"
+          },
+          ".workspace-frame": {
+            "x": 0,
+            "y": 52,
+            "width": 1440,
+            "height": 820,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar nav": {
+            "x": 156.15625,
+            "y": 0,
+            "width": 407.828125,
+            "height": 51,
+            "font": "15px / 22.5px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgba(0, 0, 0, 0)"
+          },
+          ".app-bar select": {
+            "x": 897,
+            "y": 9.5,
+            "width": 420,
+            "height": 32,
+            "font": "13px Inter, system-ui, sans-serif",
+            "color": "rgb(32, 32, 29)",
+            "background": "rgb(255, 255, 255)"
+          }
+        },
+        "architecture": {
+          ".architecture-toolbar": {
+            "x": 21,
+            "y": 69,
+            "width": 1398,
+            "height": 39
+          },
+          ".architecture-repetitions": {
+            "x": 21,
+            "y": 108,
+            "width": 1398,
+            "height": 39
+          },
+          ".architecture-focus-controls": {
+            "x": 21,
+            "y": 147,
+            "width": 1398,
+            "height": 27
+          },
+          ".architecture-flow": {
+            "x": 21,
+            "y": 201.5,
+            "width": 1398,
+            "height": 653.5
+          }
+        }
+      }
+    }
+  ],
+  "images": [
+    {
+      "file": "safety-architecture-1178.png",
+      "sha256": "80eab26fdc82cab6f2220240d793021f28e09ed8ac2394e059c51a9aa10b490a"
+    },
+    {
+      "file": "safety-architecture-1440.png",
+      "sha256": "c5f9dc5817d04dc66b6184b964ac7549c7eab139390a976bd78ad95a12a25717"
+    },
+    {
+      "file": "safety-tensor-1178.png",
+      "sha256": "34dcbb6c8fe9324d21003e167a62acdd776d8605ac2cd5d836b8aba12bc13791"
+    },
+    {
+      "file": "safety-tensor-1440.png",
+      "sha256": "6c8e78a27000a3770e7d88a84c26a6bfebb03df850fdc3b12afc64f996101a5a"
+    },
+    {
+      "file": "safety-tokenizer-1178.png",
+      "sha256": "14c8bbe398a363646259be3dd83eef278c536a42dc4531279617306e4b1b504b"
+    },
+    {
+      "file": "safety-tokenizer-1440.png",
+      "sha256": "3a87c474a5fe65d75a2c52cc8262fd602368268f397c82ce605836c38933d6d2"
+    }
+  ]
+}

@@ -1,0 +1,255 @@
+{
+  "baseline": "c71f1b81bedfb534a6147f5c119ab0cfbf2cfeee",
+  "date": "2026-09-15",
+  "source_sha256": {
+    "ui/tests/architecture-invariants.ts": "72fe3c9c423a223b47d076378b6af20372b2bfb8f81f151a22f999e57f5f9267",
+    "ui/src/architecture-explorer/invariants.test.ts": "0a32b56558f40e7f63c72e326dd8b55bdd05bade78f553a8255c80068de9f0b7",
+    "ui/src/architecture-explorer/projection.test.ts": "be2ce4fbc205a3c22ac1100470161d3d5bcfced7283fbee860c8d5a5353ab962",
+    "ui/acceptance/architecture.spec.ts": "24ab06704cd47944852b372851c11e8273ebb9ebc022447a838cffb6784e5280",
+    "ui/acceptance/product.spec.ts": "9e92caf679a0738ed6debd194f5c98085460c46f2ff6eeeb6e24c27d667cb2b9"
+  },
+  "commands": [
+    {
+      "command": "npm --prefix ui run check",
+      "result": "pass",
+      "unit_tests": 710
+    },
+    {
+      "command": "npm run test:browser -- architecture.spec.ts architecture-connections.spec.ts architecture-inspection.spec.ts architecture-shell.spec.ts",
+      "result": "pass",
+      "tests": 46
+    },
+    {
+      "command": "xvfb-run -a npm run test:acceptance -- product.spec.ts --grep 'architecture safety baseline' --project=dpr1",
+      "result": "pass",
+      "tests": 2
+    },
+    {
+      "command": "python -m pytest backend/tests/test_dense_architecture.py backend/tests/test_qwen35_architecture.py backend/tests/test_vjepa2_architecture.py -ra",
+      "result": "pass",
+      "tests": 109
+    },
+    {
+      "command": "python api/validate_contract.py",
+      "result": "pass",
+      "architecture_cases": 144
+    },
+    {
+      "command": "LMEX_ARCHITECTURE_REFERENCES=<approved-local-manifest> LMEX_REQUIRE_ARCHITECTURE_REFERENCES=1 python -m pytest acceptance/test_architecture.py -ra",
+      "result": "pass",
+      "tests": 7,
+      "references_skipped": 0
+    },
+    {
+      "command": "LMEX_ARCHITECTURE_REFERENCES=<approved-local-manifest> LMEX_REQUIRE_ARCHITECTURE_REFERENCES=1 xvfb-run -a npm run test:acceptance -- architecture.spec.ts --project=dpr1",
+      "result": "pass",
+      "tests": 9,
+      "references_skipped": 0,
+      "cases": [
+        {
+          "title": "deterministic production [smollm2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "duration_ms": 10030,
+          "layout_observation": {
+            "kind": "synthetic checkpoint",
+            "family": "smollm2",
+            "nodes": 74,
+            "edges": 98,
+            "layoutMs": 216.90000000596046,
+            "heapSnapshot": {
+              "usedSize": 18333944,
+              "totalSize": 30793728,
+              "embedderHeapUsedSize": 25357488,
+              "backingStorageSize": 1149080
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 1000
+            },
+            "browser": "153.0.8010.12"
+          }
+        },
+        {
+          "title": "deterministic production [qwen3] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "duration_ms": 10468,
+          "layout_observation": {
+            "kind": "synthetic checkpoint",
+            "family": "qwen3",
+            "nodes": 78,
+            "edges": 102,
+            "layoutMs": 217.5,
+            "heapSnapshot": {
+              "usedSize": 18346660,
+              "totalSize": 30269440,
+              "embedderHeapUsedSize": 25722704,
+              "backingStorageSize": 1156973
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 1000
+            },
+            "browser": "153.0.8010.12"
+          }
+        },
+        {
+          "title": "deterministic production [qwen35] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "duration_ms": 10971,
+          "layout_observation": {
+            "kind": "synthetic checkpoint",
+            "family": "qwen35",
+            "nodes": 89,
+            "edges": 121,
+            "layoutMs": 224.90000000596046,
+            "heapSnapshot": {
+              "usedSize": 15610732,
+              "totalSize": 33415168,
+              "embedderHeapUsedSize": 27846928,
+              "backingStorageSize": 1186738
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 1000
+            },
+            "browser": "153.0.8010.12"
+          }
+        },
+        {
+          "title": "deterministic production [vjepa2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "duration_ms": 10166,
+          "layout_observation": {
+            "kind": "synthetic checkpoint",
+            "family": "vjepa2",
+            "nodes": 89,
+            "edges": 122,
+            "layoutMs": 229.40000000596046,
+            "heapSnapshot": {
+              "usedSize": 16431160,
+              "totalSize": 34463744,
+              "embedderHeapUsedSize": 34736712,
+              "backingStorageSize": 1219890
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 1000
+            },
+            "browser": "153.0.8010.12"
+          }
+        },
+        {
+          "title": "complete local reference [smollm2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "duration_ms": 35682,
+          "layout_observation": {
+            "kind": "actual checkpoint",
+            "family": "smollm2",
+            "nodes": 971,
+            "edges": 1386,
+            "layoutMs": 1235.300000011921,
+            "heapSnapshot": {
+              "usedSize": 81515372,
+              "totalSize": 138145792,
+              "embedderHeapUsedSize": 181579896,
+              "backingStorageSize": 1254884
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 1000
+            },
+            "browser": "153.0.8010.12"
+          }
+        },
+        {
+          "title": "complete local reference [qwen3] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "duration_ms": 196431,
+          "layout_observation": {
+            "kind": "actual checkpoint",
+            "family": "qwen3",
+            "nodes": 963,
+            "edges": 1350,
+            "layoutMs": 1187.300000011921,
+            "heapSnapshot": {
+              "usedSize": 84723984,
+              "totalSize": 142065664,
+              "embedderHeapUsedSize": 178923968,
+              "backingStorageSize": 1187898
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 1000
+            },
+            "browser": "153.0.8010.12"
+          }
+        },
+        {
+          "title": "complete local reference [qwen35] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "duration_ms": 215107,
+          "layout_observation": {
+            "kind": "actual checkpoint",
+            "family": "qwen35",
+            "nodes": 948,
+            "edges": 1329,
+            "layoutMs": 994.7000000178814,
+            "heapSnapshot": {
+              "usedSize": 74822692,
+              "totalSize": 135389184,
+              "embedderHeapUsedSize": 173774184,
+              "backingStorageSize": 1137188
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 1000
+            },
+            "browser": "153.0.8010.12"
+          }
+        },
+        {
+          "title": "complete local reference [vjepa2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "status": "passed",
+          "duration_ms": 36479,
+          "layout_observation": {
+            "kind": "actual checkpoint",
+            "family": "vjepa2",
+            "nodes": 782,
+            "edges": 1079,
+            "layoutMs": 855.4000000059605,
+            "heapSnapshot": {
+              "usedSize": 46879876,
+              "totalSize": 106270720,
+              "embedderHeapUsedSize": 90160584,
+              "backingStorageSize": 929850
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 1000
+            },
+            "browser": "153.0.8010.12"
+          }
+        },
+        {
+          "title": "deterministic production [smollm2] close during progressive data cancels and releases modal resources",
+          "project": "dpr1",
+          "status": "passed",
+          "duration_ms": 7958
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Reference browser rerun is DPR 1; DPR 2 reference browser cases were not rerun in this issue.",
+    "Authored and synthetic checkpoint fixtures do not establish actual checkpoint support.",
+    "Static graph and sampled numeric inspection evidence is not inference equivalence or a general performance guarantee."
+  ]
+}
