@@ -82,9 +82,8 @@ issue-119 oracle controls passed. Independent API validation passed OpenAPI 3.1,
 reproducible wire fixtures.
 
 These observations are synthetic/source-metadata evidence. Complete local
-checkpoint and built-browser evidence is recorded separately after UI integration;
-fixture success is not a claim of actual reference acceptance or inference
-equivalence.
+checkpoint and built-browser evidence is recorded separately below; fixture
+success is not a claim of actual reference acceptance or inference equivalence.
 
 
 ## Intermediate independent review and complete local checkpoints
@@ -106,7 +105,123 @@ records fingerprints, inventories, upstream and producer revisions, cold/warm
 readiness, memory and exact graph identities. Startup measurements include model
 root discovery/hashing; they are not isolated per-model compute benchmarks.
 
+| Actual local checkpoint | Nodes / edges | Cold / warm readiness |
+| --- | ---: | ---: |
+| SmolLM2-135M Base | 1,031 / 1,596 | 21.237 / 10.304 s |
+| Qwen3-0.6B GPTQ Int4 | 1,019 / 1,546 | 21.671 / 9.594 s |
+| Qwen3.5-0.8B NVFP4 | 972 / 1,377 | 18.269 / 10.033 s |
+| V-JEPA2 ViT-L | 854 / 1,259 | 19.923 / 10.694 s |
+
 The four fixture checkpoints remain a separate test input. No checkpoint weights,
-cache payloads or private model paths are committed. The subsequent browser gate
-checks source groups/labels, recursive horizontal geometry, native shared-trunk
-and port hover, and logical weight modals against the built UI.
+cache payloads or private model paths are committed.
+
+## UI behavior and regression coverage
+
+Navigation prefers explicit source groups and retains their source IDs for
+selection, inspection, breadcrumbs and Focus MLP. Authored role labels remain
+visible, including Qwen3.5's joint query/gate projection. Original operation paths
+remain searchable through the designated semantic-key provenance; generic
+description names are not component-path aliases. Legacy group-less MLP fixtures
+retain the existing bounded derivation and reversible raw detail.
+
+Projection tests compare authored boundaries to the legacy graph with the
+independent operation-level oracle. Layout tests check horizontal nested groups
+at two widths. Browser tests exercise the existing renderer's exact source,
+destination, branch, shared-trunk and group-port hover, preserve camera/layout
+during inspection, and check explicit components without a duplicate derived MLP.
+
+The normal UI check passed generated API bindings, TypeScript, lint, all 713 unit
+tests and a production build. The source-path adjustment also passed TypeScript,
+lint, targeted projection/invariant tests and a fresh production build. The
+independent seven-case conservation check is now part of the existing TCP
+Architecture acceptance entry point, including CI.
+
+
+### Browser reproduction
+
+Use the existing approved local-reference manifest described in
+[architecture.md](architecture.md); it must resolve all four complete checkpoints.
+From a built checkout, run the Architecture suite and shell regression separately:
+
+```sh
+export PYTHONPATH="$PWD/backend/src"
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HUB_OFFLINE=1 TOKENIZERS_PARALLELISM=false
+export LMEX_REQUIRE_ARCHITECTURE_REFERENCES=1
+# LMEX_ARCHITECTURE_REFERENCES points to the operator's approved manifest.
+cd ui
+UI_TEST_PORT=16620 xvfb-run -a --server-args='-screen 0 1600x1200x24 -extension GLX' \
+  npm run test:acceptance -- architecture.spec.ts --project=dpr1
+UI_TEST_PORT=17620 xvfb-run -a --server-args='-screen 0 1600x1200x24 -extension GLX' \
+  npm run test:acceptance -- product.spec.ts --grep 'architecture safety baseline' --project=dpr1
+```
+
+On this host, Xvfb's default GLX initialization crashed inside the NVIDIA EGL
+library before Chromium could launch. Disabling that X-server extension restored
+the display; a separate headed Chromium capability check confirmed WebGL2. The
+suite retains its configured SwiftShader renderer and all numerical assertions.
+This is a local invocation setting; repository runner/workflow configuration is
+unchanged.
+
+
+### Observed built-browser results
+
+The main Architecture suite passed **9 tests, no skips**, on isolated commit
+`64e765361506c1c217f813c998eb3b87dcbddab3`: four deterministic checkpoint fixtures,
+all four complete local checkpoints, and cancellation/resource release during
+progressive weight streaming. The runtime source is identical to `41211aa`; later
+commits only refine acceptance coverage and retain evidence. These checks verify
+exhaustive source/edge traceability, concrete instance bindings, native rank-1 and
+rank-2 samples, fixture GPTQ/NVFP4 samples, modal camera/resource restoration,
+unknown inspection honesty, and no tokenizer call for V-JEPA.
+
+The component-browser coverage includes 48 unaffected connection, inspection,
+lifecycle and shell scenarios at `18c391d`, plus all 18 affected component/control
+scenarios passing at `41211aa` on desktop and narrow viewports. The initial new
+component check incorrectly expected offscreen DOM; it now verifies complete
+projection identity and reveals the node before DOM inspection. The path-search
+regression was fixed by limiting aliases to semantic-key provenance. No source
+semantics or numerical expectations changed to resolve these failures.
+
+Actual Qwen3 and Qwen3.5 reference cases took about six minutes each because they
+exercise complete large native embedding matrices. These timings include the
+existing weight-modal acceptance workload; they are not graph-layout timings.
+
+
+### Retained component captures
+
+All linked component captures use complete approved local checkpoints, the built
+UI, real backend, 1440 × 1000 viewport and DPR 1. They are not UI-authored graphs.
+The executor visually inspected compact and expanded views: component membership
+is distinct, flow remains horizontal, norms/residuals remain outside, and V-JEPA's
+encoder and predictor have independent navigation context. Expanded Attention
+views fit wide graphs into the viewport; native zoom/inspection retains readable
+per-operation detail. Screenshots establish presentation, not computational
+conservation (which is checked separately above).
+
+| Checkpoint / instance | Compact layer | Expanded Attention | Expanded MLP |
+| --- | --- | --- | --- |
+| Qwen3 layer 0 | [Compact](evidence/architecture-grouping/reference-qwen3-0-0-compact.png) | [Attention](evidence/architecture-grouping/reference-qwen3-0-0-attention.png) | [MLP](evidence/architecture-grouping/reference-qwen3-0-0-mlp.png) |
+| Qwen3.5 layer 0, linear | [Compact](evidence/architecture-grouping/reference-qwen35-0-0-compact.png) | [Attention](evidence/architecture-grouping/reference-qwen35-0-0-attention.png) | [MLP](evidence/architecture-grouping/reference-qwen35-0-0-mlp.png) |
+| Qwen3.5 layer 3, full | [Compact](evidence/architecture-grouping/reference-qwen35-0-3-compact.png) | [Attention](evidence/architecture-grouping/reference-qwen35-0-3-attention.png) | [MLP](evidence/architecture-grouping/reference-qwen35-0-3-mlp.png) |
+| V-JEPA encoder layer 0 | [Compact](evidence/architecture-grouping/reference-vjepa2-0-0-compact.png) | [Attention](evidence/architecture-grouping/reference-vjepa2-0-0-attention.png) | [MLP](evidence/architecture-grouping/reference-vjepa2-0-0-mlp.png) |
+| V-JEPA predictor layer 0 | [Compact](evidence/architecture-grouping/reference-vjepa2-1-0-compact.png) | [Attention](evidence/architecture-grouping/reference-vjepa2-1-0-attention.png) | [MLP](evidence/architecture-grouping/reference-vjepa2-1-0-mlp.png) |
+
+
+The final per-variant Qwen3.5 pair passed **2 tests, no skips**, on
+`508b17e9323bb48737de73d6a36787d3577a5d89`. It checks the first instance of each
+actual variant rather than the first two layers: the approved model starts with
+linear attention and first uses full attention at layer 3. Both expanded forms
+are fitted and checked horizontally, including the linear mask-input path.
+
+The existing shell safety baseline passed **3 tests, no skips**, at 390, 1178 and
+1440 pixels on `64e7653`. It preserves shell geometry, Tensor/Tokenizer state and
+Architecture navigation; the executor also inspected representative captures.
+The [browser receipt](evidence/architecture-grouping/browser.json) retains exact
+source snapshots, per-case outcomes, browser/viewport details, observed layout
+measurements and shell geometry. Local runs use one worker with independent
+ports; values are single-run observations rather than performance guarantees.
+
+All local gates are complete. CPU-only backend skips remain explicit; no CUDA
+acceptance or dynamic inference-equivalence claim is made. Final-head CI and
+integration freshness are verified on the PR before the normal audit handoff.
