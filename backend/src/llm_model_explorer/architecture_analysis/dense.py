@@ -5,6 +5,7 @@ from typing import Literal
 from . import records as r
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
 from .dense_config import SOURCE_REVISION, DenseConfig, checked
+from .semantic import operation_role, role_attribute, source_key
 from .validation import require
 
 
@@ -81,7 +82,7 @@ class DenseGraph:
                 id=self.nid(key),
                 parent_id=self.nid(parent),
                 kind=kind,
-                label=key,
+                label=operation_role(key, operation).replace("_", " "),
                 operation=operation,
                 ports=[self.port(k, v) for k, v in inputs.items()]
                 + [self.port("out", output, True)],
@@ -90,14 +91,22 @@ class DenseGraph:
                 attributes=[
                     r.ArchitectureAttribute(name=k, value=v, provenance=self.provenance(*fields))
                     for k, v in (attributes or {}).items()
-                ],
-                provenance=self.provenance(*fields),
+                ]
+                + [role_attribute(self.b.producer, operation_role(key, operation))],
+                provenance=self.provenance(*fields) + [source_key(self.b.producer, key)],
                 **kwargs,
             )
         )
         return key
 
-    def group(self, key: str, parent: str | None, ports: list[r.ArchitecturePort]) -> None:
+    def group(
+        self,
+        key: str,
+        parent: str | None,
+        ports: list[r.ArchitecturePort],
+        *,
+        role: str | None = None,
+    ) -> None:
         kwargs = {} if parent is None else {"parent_id": self.nid(parent)}
         if parent is not None:
             self.children.setdefault(parent, []).append(self.nid(key))
@@ -105,13 +114,13 @@ class DenseGraph:
             r.ArchitectureGroupNode(
                 id=self.nid(key),
                 kind="group",
-                label=key,
+                label=role.upper() if role == "mlp" else role.title() if role else key,
                 ports=ports,
                 children=self.children.get(key, []),
                 parameter_ids=[],
                 references=[r.ArchitectureModuleReference(kind="module", name=key)],
-                attributes=[],
-                provenance=self.b.producer.provenance(),
+                attributes=[] if role is None else [role_attribute(self.b.producer, role)],
+                provenance=self.b.producer.provenance() + [source_key(self.b.producer, key)],
                 **kwargs,
             )
         )
@@ -249,30 +258,34 @@ class DenseGraph:
         mask, scores = shape("B", 1, "S", "S"), shape("B", c.heads, "S", "S")
         norm = self.norm(key + ".input_layernorm", key, hidden, c.hidden)
         self.edge(key, norm, source_port="x")
+        attention = key + ".self_attn"
+        self.edge(norm, attention)
+        for auxiliary in ("cos", "sin", "mask"):
+            self.edge(key, attention, auxiliary, auxiliary)
         projected: dict[str, str] = {}
         for branch, heads in (("q", c.heads), ("k", c.kv_heads), ("v", c.kv_heads)):
             base = key + ".self_attn."
             proj = self.linear(
-                base + branch + "_proj", key, c.hidden, heads * c.head_dim, c.attention_bias
+                base + branch + "_proj", attention, c.hidden, heads * c.head_dim, c.attention_bias
             )
-            self.edge(norm, proj)
+            self.edge(attention, proj, source_port="x")
             split_shape = shape("B", "S", heads, c.head_dim)
             split = self.node(
                 base + branch + "_heads",
-                key,
+                attention,
                 "reshape",
                 {"x": shape("B", "S", heads * c.head_dim)},
                 split_shape,
             )
             self.edge(proj, split)
             if c.qwen and branch in {"q", "k"}:
-                normalized = self.norm(base + branch + "_norm", key, split_shape, c.head_dim)
+                normalized = self.norm(base + branch + "_norm", attention, split_shape, c.head_dim)
                 self.edge(split, normalized)
                 split = normalized
             head_shape = shape("B", heads, "S", c.head_dim)
             trans = self.node(
                 base + branch + "_transpose",
-                key,
+                attention,
                 "transpose",
                 {"x": split_shape},
                 head_shape,
@@ -282,20 +295,20 @@ class DenseGraph:
             if branch in {"q", "k"}:
                 rope = self.node(
                     base + branch + "_rotary",
-                    key,
+                    attention,
                     "rotary_position",
                     {"x": head_shape, "cos": rotary, "sin": rotary},
                     head_shape,
                     formula="x * cos + rotate_half(x) * sin",
                 )
                 self.edge(trans, rope)
-                self.edge(key, rope, "cos", "cos")
-                self.edge(key, rope, "sin", "sin")
+                self.edge(attention, rope, "cos", "cos")
+                self.edge(attention, rope, "sin", "sin")
                 trans = rope
             if branch in {"k", "v"}:
                 repeat = self.node(
                     base + branch + "_repeat",
-                    key,
+                    attention,
                     "repeat_kv",
                     {"x": head_shape},
                     shape("B", c.heads, "S", c.head_dim),
@@ -309,7 +322,7 @@ class DenseGraph:
         heads_shape = shape("B", c.heads, "S", c.head_dim)
         kt = self.node(
             base + "key_transpose",
-            key,
+            attention,
             "transpose",
             {"x": heads_shape},
             shape("B", c.heads, c.head_dim, "S"),
@@ -318,7 +331,7 @@ class DenseGraph:
         self.edge(projected["k"], kt)
         qk = self.node(
             base + "qk_product",
-            key,
+            attention,
             "matmul",
             {"q": heads_shape, "kt": shape("B", c.heads, c.head_dim, "S")},
             scores,
@@ -327,7 +340,7 @@ class DenseGraph:
         self.edge(kt, qk, "kt")
         scale = self.node(
             base + "scale",
-            key,
+            attention,
             "scale",
             {"x": scores},
             scores,
@@ -335,16 +348,18 @@ class DenseGraph:
             fields=("head_dim",),
         )
         self.edge(qk, scale)
-        masked = self.node(base + "mask", key, "add_mask", {"x": scores, "mask": mask}, scores)
+        masked = self.node(
+            base + "mask", attention, "add_mask", {"x": scores, "mask": mask}, scores
+        )
         self.edge(scale, masked)
-        self.edge(key, masked, "mask", "mask")
+        self.edge(attention, masked, "mask", "mask")
         softmax = self.node(
-            base + "softmax", key, "softmax", {"x": scores}, scores, attributes={"axis": -1.0}
+            base + "softmax", attention, "softmax", {"x": scores}, scores, attributes={"axis": -1.0}
         )
         self.edge(masked, softmax)
         av = self.node(
             base + "value_product",
-            key,
+            attention,
             "matmul",
             {"probabilities": scores, "v": heads_shape},
             heads_shape,
@@ -353,7 +368,7 @@ class DenseGraph:
         self.edge(projected["v"], av, "v")
         trans = self.node(
             base + "output_transpose",
-            key,
+            attention,
             "transpose",
             {"x": heads_shape},
             shape("B", "S", c.heads, c.head_dim),
@@ -362,29 +377,46 @@ class DenseGraph:
         self.edge(av, trans)
         merge = self.node(
             base + "merge_heads",
-            key,
+            attention,
             "reshape",
             {"x": shape("B", "S", c.heads, c.head_dim)},
             shape("B", "S", c.heads * c.head_dim),
         )
         self.edge(trans, merge)
-        out = self.linear(base + "o_proj", key, c.heads * c.head_dim, c.hidden, c.attention_bias)
+        out = self.linear(
+            base + "o_proj", attention, c.heads * c.head_dim, c.hidden, c.attention_bias
+        )
         self.edge(merge, out)
+        self.edge(out, attention, "out")
+        self.group(
+            attention,
+            key,
+            [
+                self.port("x", hidden),
+                self.port("cos", rotary),
+                self.port("sin", rotary),
+                self.port("mask", mask),
+                self.port("out", hidden, True),
+            ],
+            role="attention",
+        )
         residual = self.node(
             key + ".attention_residual", key, "add", {"skip": hidden, "branch": hidden}, hidden
         )
         self.edge(key, residual, "skip", "x")
-        self.edge(out, residual, "branch")
+        self.edge(attention, residual, "branch")
         post = self.norm(key + ".post_attention_layernorm", key, hidden, c.hidden)
         self.edge(residual, post)
-        gate = self.linear(key + ".mlp.gate_proj", key, c.hidden, c.intermediate, c.mlp_bias)
-        up = self.linear(key + ".mlp.up_proj", key, c.hidden, c.intermediate, c.mlp_bias)
-        self.edge(post, gate)
-        self.edge(post, up)
+        mlp = key + ".mlp"
+        self.edge(post, mlp)
+        gate = self.linear(key + ".mlp.gate_proj", mlp, c.hidden, c.intermediate, c.mlp_bias)
+        up = self.linear(key + ".mlp.up_proj", mlp, c.hidden, c.intermediate, c.mlp_bias)
+        self.edge(mlp, gate, source_port="x")
+        self.edge(mlp, up, source_port="x")
         intermediate = shape("B", "S", c.intermediate)
         act = self.node(
             key + ".mlp.activation",
-            key,
+            mlp,
             "silu",
             {"x": intermediate},
             intermediate,
@@ -394,20 +426,22 @@ class DenseGraph:
         self.edge(gate, act)
         multiply = self.node(
             key + ".mlp.multiply",
-            key,
+            mlp,
             "multiply",
             {"gate": intermediate, "up": intermediate},
             intermediate,
         )
         self.edge(act, multiply, "gate")
         self.edge(up, multiply, "up")
-        down = self.linear(key + ".mlp.down_proj", key, c.intermediate, c.hidden, c.mlp_bias)
+        down = self.linear(key + ".mlp.down_proj", mlp, c.intermediate, c.hidden, c.mlp_bias)
         self.edge(multiply, down)
+        self.edge(down, mlp, "out")
+        self.group(mlp, key, [self.port("x", hidden), self.port("out", hidden, True)], role="mlp")
         final = self.node(
             key + ".mlp_residual", key, "add", {"skip": hidden, "branch": hidden}, hidden
         )
         self.edge(residual, final, "skip")
-        self.edge(down, final, "branch")
+        self.edge(mlp, final, "branch")
         self.edge(final, key, "out")
         self.group(
             key,
@@ -582,7 +616,7 @@ def register_dense_descriptions(registry: DescriptionRegistry) -> None:
     ):
         registry.register(
             Description(
-                Producer(name, "1", SOURCE_REVISION),
+                Producer(name, "2", SOURCE_REVISION),
                 "language_model",
                 frozenset({family}),
                 frozenset({architecture}),
