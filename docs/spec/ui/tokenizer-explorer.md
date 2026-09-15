@@ -146,7 +146,7 @@ While a replacement tokenization or embedding result is pending, the last succes
 
 Token-to-row linkage is active only when the visible tokenization and visible embedding matrix belong to the same authoritative generation. If a newer tokenization is already current while an older embedding matrix remains visible as stale context, they must not be linked as if their row identities still matched.
 
-Empty token sequences and models for which input-embedding lookup is unavailable are explicit states, and tokenization remains usable when embedding lookup is unavailable or fails. Failure of a new embedding lookup does not roll back or invalidate a newer successful tokenization.
+Empty token sequences and models for which input-embedding lookup is unavailable are explicit states, and tokenization remains usable when embedding lookup is unavailable or fails. Failure of a new embedding lookup does not roll back or invalidate a newer successful tokenization. The graceful unavailable message is reserved for `unsupported_representation`; transport, protocol, and rendering failures remain distinct failed states. Architecture and quantization decisions belong to the backend input-table resolver, never browser-side family gates.
 
 The input-embedding extension does not add positional encoding, transformer execution, logits, generation, or another later inference stage.
 

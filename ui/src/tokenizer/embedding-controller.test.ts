@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import { ApiFailure } from '../api/errors';
 import type { StreamOptions } from '../api/client';
 import type { StreamOutcome } from '../api/lmex-decoder';
 import type { Metadata } from '../api/validation';
@@ -77,5 +78,22 @@ it('fences completion and cancels transport when a replacement renderer fails', 
   requests[0]!.done.resolve({ kind: 'complete', metadata, byteLength: 24 });
   await Promise.resolve();
   expect(changed).toHaveBeenLastCalledWith({ status: 'failed' });
+  controller.dispose();
+});
+
+it.each([
+  ['http', 'unsupported_representation', 'unsupported'],
+  ['http', 'internal_error', 'failed'],
+  ['protocol', undefined, 'failed'],
+  ['transport', undefined, 'failed'],
+] as const)('classifies %s/%s without hiding failures as unsupported', async (kind, code, status) => {
+  const { client, requests } = harness();
+  const changed = vi.fn();
+  const controller = new EmbeddingController(client, 's', [2, 0, 2], new AbortController().signal, changed);
+  controller.start();
+  requests[0]!.done.reject(new ApiFailure(kind, 'Fixture failure', code === 'unsupported_representation' ? 422 : 500,
+    code ? { code, message: 'Fixture' } : undefined));
+  await Promise.resolve(); await Promise.resolve();
+  expect(changed).toHaveBeenLastCalledWith({ status });
   controller.dispose();
 });

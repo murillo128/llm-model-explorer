@@ -458,6 +458,32 @@ test('real ordered embeddings render progressively with exact duplicate rows and
   expect((await metrics(page)).arrays).toEqual([]);
 });
 
+for (const family of ['qwen3', 'qwen3_5']) test(`real ${family} input embeddings preserve token linkage and recover after unsupported model`, async ({ page }) => {
+  const input = await tokenizer(page);
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(`acceptance/${family}`);
+  await embeddingDone(page, 1);
+  const tokenized = page.waitForResponse(r => r.url().endsWith('/tokenize') && r.request().postDataJSON().text === 'AA');
+  await input.fill('AA');
+  const result = await (await tokenized).json();
+  await embeddingDone(page, result.tokens.length);
+  expect(result.tokens[1].id).toBe(result.tokens[2].id);
+  const matrix = page.locator('.matrix-scroll');
+  await matrix.focus();
+  for (let row = 0; row < result.tokens.length; row++) {
+    if (row) await matrix.press('ArrowDown');
+    await expect(page.locator('.inspection-readout')).toHaveText(`row ${row} · column 0${value(result.tokens[row].id * 576)}`);
+    await expect(page.locator(`[data-token-index="${row}"]`)).toHaveAttribute('data-active-token', '');
+  }
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/unsupported');
+  await expect(page.getByText(/Input embeddings are unavailable/)).toBeVisible();
+  await input.fill('still usable');
+  await expect(page.locator('.tokenizer-status')).toContainText('current prompt');
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(`acceptance/${family}`);
+  await expect(page.locator('.embedding-shape')).toContainText('× 576] · float32');
+  await expect(page.getByText(/Input embeddings are unavailable/)).toHaveCount(0);
+  await closeSession(page);
+});
+
 test('real A→B→A response reordering and model/session changes show only the latest generation', async ({ page }) => {
   const input = await tokenizer(page);
   let release!: () => void;

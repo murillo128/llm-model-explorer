@@ -53,3 +53,28 @@ ModelOpt NVFP4 retains the admitted E2M1 layout and group size 16. U8 `weight` h
 Decode requested ranges and ordered rows lazily with memory proportional to the requested chunk and its companion metadata. Strided packed reads must retain source-mutation semantics, including concurrent shard truncation, without exposing live mapped storage to computation. All source checks, safe-integer bounds, cancellation and shared artifact publication rules remain in force. Statistics and distributions consume the same logical float32 materialization as tensor streaming; existing per-tensor artifacts may be reused without introducing a checkpoint-wide decompression product.
 
 Where a logical representation is supported, numeric materialization remains backend-owned and may be persisted as a derived artifact. The architecture view must never feed its descriptive graph into embedding lookup as if that were an executable or numerically supported model.
+
+## Input embedding table resolution
+
+Resolve input embeddings from an explicit architecture/configuration mapping and
+exactly one matching actionable logical tensor descriptor:
+
+| Model type / architecture | Input table | Dimension configuration |
+| --- | --- | --- |
+| `llama` / `LlamaForCausalLM` (including SmolLM2) | `model.embed_tokens.weight` | Top-level `vocab_size`, `hidden_size` |
+| `qwen3` / `Qwen3ForCausalLM` | `model.embed_tokens.weight` | Top-level `vocab_size`, `hidden_size` |
+| `qwen3_5` / `Qwen3_5ForConditionalGeneration` | `model.language_model.embed_tokens.weight` | `text_config.vocab_size`, `text_config.hidden_size` |
+
+Require one unambiguous architecture, positive integer dimensions, and an exact
+`[vocab_size, hidden_size]` logical float32 table. Custom code mappings and
+ambiguous candidates remain unsupported. Qwen3.5 top-level and vision dimensions
+do not replace its text configuration. Non-text families such as V-JEPA have no
+accepted input-table mapping. Shape coincidence, an output head, or
+`tie_word_embeddings` alone never establishes an input-table storage alias.
+
+Checkpoint admission and the shared logical tensor path own numeric availability.
+A checkpoint's quantization metadata does not disable an actionable native
+F32/F16/BF16 input table. Reuse logical ordered row access without tokenizer-specific
+physical decoders; actionable packed tables use that same seam.
+Only missing/unaccepted mappings or unavailable representations are unsupported;
+source mutation, I/O, and delivery faults retain their existing failure codes.
