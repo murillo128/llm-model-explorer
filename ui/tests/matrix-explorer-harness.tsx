@@ -1,14 +1,18 @@
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { MatrixExplorer } from '../src/matrix-explorer';
 import type { MatrixCell, MatrixSource, MatrixUpdates } from '../src/matrix-explorer';
 import { TensorViewport } from '../src/rendering/tensor-viewport';
 import { GridRenderer } from '../src/rendering/tensor-renderer';
+import { MatrixViewport } from '../src/rendering/matrix-viewport';
 
 // No application, session, model, tensor tree, API or global application stylesheet.
 const metrics = { textures: new Set<WebGLTexture>(), displays: new Set<WebGLRenderbuffer>(),
   framebuffers: new Set<WebGLFramebuffer>(), buffers: new Set<WebGLBuffer>(), programs: new Set<WebGLProgram>(),
-  uploads: 0, scalarAllocations: 0, integerAllocations: 0, detached: 0 };
+  uploads: 0, scalarAllocations: 0, integerAllocations: 0, detached: 0, refreshes: 0 };
+const present = MatrixViewport.prototype.refresh;
+MatrixViewport.prototype.refresh = function () { metrics.refreshes++; return present.call(this); };
 const proto = WebGL2RenderingContext.prototype;
 for (const [create, remove, live] of [
   ['createTexture', 'deleteTexture', metrics.textures],
@@ -85,9 +89,10 @@ function resources() {
     cpuBytes: renderers.reduce((sum, r) => sum + r.diagnostics.cpuBytes, 0) };
 }
 function renderPair() { root.render(<><Host source={sources.square} /><Host source={sources.short} /></>); }
+function dispose() { flushSync(() => root.render(null)); }
 render('A');
-window.matrixFixture = { renderPair, viewports, sources, subscriptions, renderers, metrics, cells, rows, columns, render, resources };
+window.matrixFixture = { renderPair, viewports, sources, subscriptions, renderers, metrics, cells, rows, columns, render, resources, dispose };
 declare global { interface Window { matrixFixture: {
   renderPair: typeof renderPair; viewports: typeof viewports; sources: typeof sources; subscriptions: typeof subscriptions; renderers: typeof renderers; metrics: typeof metrics;
-  cells: typeof cells; rows: typeof rows; columns: typeof columns; render: typeof render; resources: typeof resources;
+  cells: typeof cells; rows: typeof rows; columns: typeof columns; render: typeof render; resources: typeof resources; dispose: typeof dispose;
 } } }

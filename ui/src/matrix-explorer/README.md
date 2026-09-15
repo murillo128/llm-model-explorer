@@ -30,6 +30,12 @@ units are elements, and each surface accepts a consecutive C-order prefix starti
 at zero. No accumulated chunk list or extra scalar copy lives in this composition.
 The renderer's optional CPU array remains the exact inspection copy.
 
+The first scalar upload is presented immediately. Later uploads remain synchronous
+and exact while redraws are coalesced to one animation frame. No scalar queue or
+replay buffer is added. `updates.flush?.()` presents pending uploads synchronously
+when a consumer needs to promote a completed staging view atomically. Detaching
+cancels the pending frame and fences retained upload/flush callbacks.
+
 Omit `distributions` for matrix-only mode. When authoritative profiles exist,
 set `distributions: true` and deliver `updates.distribution('rows', counts, offset)`
 for `[rows, 100]` counts and `'columns'` for `[100, columns]`. Profiles use the

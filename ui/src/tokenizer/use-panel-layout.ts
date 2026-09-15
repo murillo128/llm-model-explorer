@@ -3,8 +3,6 @@ import { useLayoutEffect, useRef, useState } from 'react';
 const dividerHeight = 12;
 const promptMinimum = 160;
 const embeddingsMinimum = 180;
-// Header (40), status (21), their gap (6), and editor borders (2).
-const promptChrome = 69;
 
 /** Only workspace and editor geometry allocate panels; matrix state never does. */
 export function usePanelLayout() {
@@ -12,10 +10,20 @@ export function usePanelLayout() {
   const [available, setAvailable] = useState(0);
   const [contentHeight, setContentHeight] = useState(100);
   const [manualHeight, setManualHeight] = useState<number | null>(null);
+  const [promptChrome, setPromptChrome] = useState(95);
   useLayoutEffect(() => {
     const node = workspace.current!;
-    const observer = new ResizeObserver(() => setAvailable(node.clientHeight));
+    const panel = node.querySelector<HTMLElement>('.prompt-panel')!;
+    const editor = panel.querySelector<HTMLElement>('.tokenizer-editor')!;
+    const observer = new ResizeObserver(() => {
+      setAvailable(node.clientHeight);
+      // Actual title, card padding/borders, status and editor border geometry.
+      // Scientific content is deliberately outside this measurement boundary.
+      setPromptChrome(panel.getBoundingClientRect().height - editor.clientHeight);
+    });
     observer.observe(node);
+    observer.observe(panel);
+    observer.observe(editor);
     return () => observer.disconnect();
   }, []);
 

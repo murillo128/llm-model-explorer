@@ -79,8 +79,11 @@ Token identity is not encoded by assigning a different color to every token. The
 Tokenizer Explorer composes two vertically stacked, visually distinct panels:
 **Prompt / Tokens** wraps the existing editable annotation surface, and
 **Input Embeddings** uses the same reusable `MatrixExplorer` as Tensor Explorer.
-Both use compact structural inspector headers. Wrapping the prompt must preserve
-its inline text/bracket/ID layout and native editor behavior; it must not
+Each has its own full-width compact title bar above its own content card, using
+the shared title/body composition from `visual-language.md`. The surrounding
+workspace is a neutral layout container, with no third enclosing card. Empty,
+loading, unavailable and failed embeddings retain the full-width title/body.
+Wrapping the prompt must preserve its inline text/bracket/ID layout and native editor behavior; it must not
 introduce another token strip or prompt camera.
 
 The workspace is bounded by the application shell. By default, Prompt / Tokens
@@ -91,7 +94,10 @@ recomputes the automatic allocation. Input Embeddings fills all remaining height
 including for short token sequences; underfilled matrix content follows the
 shared Matrix Explorer's geometry rather than a tokenizer-specific camera.
 
-A subtle focusable horizontal divider is the primary panel-height resize control.
+A focusable horizontal divider is the primary panel-height resize control. Its
+12 CSS-pixel hit area occupies the natural separation between the two cards;
+the resting state adds no standalone rule or thick handle. Hover, keyboard focus
+and active dragging highlight the adjacent card boundary, retaining discoverability.
 Pointer dragging adjusts the split continuously. Up/Down change the prompt height
 by 16 CSS pixels; Home/End reach the allowed bounds. Expose orientation, the
 controlled panel, current height and bounds accessibly, with a resize cursor and
@@ -118,8 +124,11 @@ The Input Embeddings header uses the shared Matrix Explorer header composition
 for matrix identity, available shape and logical dtype, operation status, and
 viewport controls. Do not repeat row/hidden-dimension counts as a separate block
 between panels. The matrix inherits the shared square-cell camera, fit-width,
-direct inspection, adaptive magnifier, and aligned distributions when its source
-provides them. Do not compute missing distributions or fork matrix functionality
+zoom history,
+region/range navigation, direct inspection, adaptive magnifier, fixed right/bottom
+distribution tracks and non-consuming overlay scrollbars. Short matrices remain
+thin strips with aligned data and blank margins, never stretched or transposed.
+Do not compute missing distributions or fork matrix functionality
 inside the tokenizer component.
 
 ## Accepted input-embedding extension
@@ -149,6 +158,37 @@ Token-to-row linkage is active only when the visible tokenization and visible em
 Empty token sequences and models for which input-embedding lookup is unavailable are explicit states, and tokenization remains usable when embedding lookup is unavailable or fails. Failure of a new embedding lookup does not roll back or invalidate a newer successful tokenization. The graceful unavailable message is reserved for `unsupported_representation`; transport, protocol, and rendering failures remain distinct failed states. Architecture and quantization decisions belong to the backend input-table resolver, never browser-side family gates.
 
 The input-embedding extension does not add positional encoding, transformer execution, logits, generation, or another later inference stage.
+
+### Derived scientific data and lifetime
+
+Use the independent typed input-embedding statistics and distribution operations
+specified in [the API contract](../api/contract.md#input-embedding-analysis) for
+exactly the current ordered token IDs. Reserve the shared viewer's histogram
+tracks before allocating its source. Forward the authoritative domain/count
+sections through `MatrixUpdates`; completed statistics use the same transfer
+behavior as Tensor Explorer. No browser histograms, full-vocabulary fallback,
+second scalar payload or invented checkpoint identity/storage dtype is permitted.
+
+The information action uses the shared preview/pinned popover and displays the
+visible derived matrix's shape, logical dtype, element count, completed statistics
+and available full-range bin domain. Keep luminosity percentile anchors separate
+from histogram endpoints. Missing, incomplete or failed analysis stays explicit.
+Each operation has compact independent status and cancellation in the title bar;
+auxiliary failure or cancellation preserves usable values and current tokenization.
+Empty token sequences do not start lookup or analysis operations. Start analysis
+once value metadata confirms a supported input table, without waiting for values
+to complete; unavailable tables do not trigger speculative analysis requests.
+
+All three streams share the tokenizer generation, session/model/options and exact
+ordered IDs. Late results cannot cross generations even when shapes match.
+Early auxiliary counts may use one generation-bounded staging buffer, released
+on subscription, replacement or disposal; scalar chunks are consumed directly.
+The old visible matrix retains only its own scientific data while explicitly
+stale. Promote a replacement when its values complete, independently of auxiliary
+completion; its pending analysis never borrows prior counts/domain. Keep at most
+one visible and one staging matrix, and release all superseded consumers and
+scalar/count resources. Header changes, analysis arrival and splitter movement
+do not remount the editor/viewer, restart transport or change the split.
 
 ## Reuse in later inference views
 

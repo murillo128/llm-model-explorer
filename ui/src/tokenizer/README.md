@@ -46,26 +46,36 @@ change removes that authoritative result immediately while its mapped annotation
 remain stale. The embedding region itself stays mounted. `TokenizerExplorer` in
 `TokenizerExplorer.tsx` adapts the application's session lifetime to this workspace.
 
-`EmbeddingController` calls the shared typed `streamInputEmbeddings` method.
+`EmbeddingController` owns the shared typed value, statistics and distribution
+streams for one exact ordered sequence. Independent auxiliary results feed the
+same `MatrixUpdates` transfer/domain/count protocol as Tensor Explorer.
 Validated META synchronously mounts the Matrix Explorer before DATA can arrive
 in the same network chunk. `StreamWords` consumes split float32 words directly;
-only the renderer retains an inspection copy. No histogram/statistics are inferred.
+only the renderer retains an inspection copy. Early auxiliary counts use one
+bounded generation-owned buffer until subscription, then release it. No
+histogram/statistics are inferred. The source advertises distributions before
+allocation so pending tracks preserve geometry.
 Resubscribing after any received bytes restarts the lookup at offset zero;
 StrictMode's synchronous pre-DATA detach/reattach can reuse the untouched stream.
 Every callback is fenced by the tokenizer abort signal and transport epoch.
 The last complete renderer remains mounted during recomputation. A replacement
-streams into a hidden, inert sibling renderer and is promoted only on COMPLETE.
+streams into a hidden, inert sibling renderer and is promoted only on COMPLETE,
+after flushing its final queued draw. Uploads stay synchronous and exact while
+the shared viewer coalesces subsequent progressive redraws per animation frame.
 Failed/superseded staging renderers are disposed without replacing the prior
 matrix. At most two renderer allocations are retained, with no extra scalar cache.
 
-`TokenizerWorkspace` frames the PromptTokenizer surface with a compact
-`PanelHeader` and gives Input Embeddings the same header through
+`TokenizerWorkspace` frames PromptTokenizer and Input Embeddings as independent
+`ViewerPanel` cards in a neutral workspace. It gives Input Embeddings a
+`PanelHeader` through
 `MatrixExplorer.header`. Matrix shape and logical dtype appear once beside its
-identity; loading/error status uses the reserved header slot. Camera controls,
+identity; independent loading/error/cancellation uses the reserved header slot.
+`EmbeddingHeader` supplies real derived metadata through the shared information
+popover, without inventing checkpoint identity or physical dtype. Camera controls,
 inspection and magnifier remain entirely in the shared matrix implementation.
 
 `use-panel-layout.ts` allocates the bounded workspace from CodeMirror's measured
-content height and a workspace ResizeObserver. The prompt wraps and grows up to
+content height and measured title/card/editor chrome through ResizeObserver. The prompt wraps and grows up to
 the automatic workspace-relative cap, then scrolls internally. The horizontal
 divider supports captured pointer dragging, Up/Down, Home/End, and double
 activation to restore automatic sizing. Manual height lives only in the mounted

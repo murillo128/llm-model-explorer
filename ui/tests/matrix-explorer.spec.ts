@@ -26,6 +26,41 @@ async function hover(page: Page, row: number, column: number) {
 }
 for (const dpr of [1, 2]) test.describe(`standalone matrix at DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
+  test('uploads exact chunks immediately and coalesces draws with disposal fencing', async ({ page }) => {
+    await open(page);
+    await page.evaluate(() => window.matrixFixture.render('full'));
+    await expect.poll(() => page.evaluate(() => window.matrixFixture.subscriptions.length)).toBe(2);
+    const immediate = await page.evaluate(() => {
+      const f = window.matrixFixture, updates = f.subscriptions.at(-1)!;
+      const uploads = f.metrics.uploads, refreshes = f.metrics.refreshes;
+      const resources = f.resources();
+      for (const offset of [0, 5, 10]) updates.values(Float32Array.from({ length: 5 }, (_, i) => offset + i), offset);
+      const scalar = f.renderers.find(r => r.state === 'ready' && r.geometry.columns === 5 && r.geometry.rows === 3)!;
+      return { uploads: f.metrics.uploads - uploads, refreshes: f.metrics.refreshes - refreshes,
+        presented: f.metrics.refreshes, prefix: scalar.populatedPrefix, value: scalar.readCell(2, 4),
+        resources, after: f.resources() };
+    });
+    expect(immediate).toMatchObject({ uploads: 3, refreshes: 1, prefix: 15, value: { state: 'finite', value: 14 } });
+    expect(immediate.after).toEqual(immediate.resources);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(await page.evaluate(() => window.matrixFixture.metrics.refreshes)).toBe(immediate.presented + 1);
+    await page.locator('.matrix-scroll').focus();
+    await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown');
+    for (let column = 0; column < 4; column++) await page.keyboard.press('ArrowRight');
+    await expect(page.locator('.inspection-readout')).toContainText('14');
+    await page.evaluate(() => window.matrixFixture.render('B'));
+    await expect.poll(() => page.evaluate(() => window.matrixFixture.subscriptions.length)).toBe(3);
+    const stopped = await page.evaluate(() => {
+      const f = window.matrixFixture, updates = f.subscriptions.at(-1)!;
+      updates.values(new Float32Array([1]), 0); updates.values(new Float32Array([2]), 1);
+      f.dispose(); updates.flush?.();
+      return f.metrics.refreshes;
+    });
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(await page.evaluate(() => window.matrixFixture.metrics.refreshes)).toBe(stopped);
+    expect(await page.evaluate(() => window.matrixFixture.resources())).toEqual({ textures: 0, displays: 0,
+      framebuffers: 0, buffers: 0, programs: 0, cpuBytes: 0 });
+  });
   test('progressive exact values, native orientation and linked callbacks without auxiliary artifacts', async ({ page }) => {
     await open(page);
     const start = await page.evaluate(() => {
