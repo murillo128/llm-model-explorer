@@ -8,6 +8,8 @@ import { dirname, join } from 'node:path';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import type { Graph } from '../src/architecture-explorer/graph';
+import { projectGraph } from '../src/architecture-explorer/projection';
+import { assertTraceability } from '../tests/architecture-invariants';
 import { installProbe } from './probe';
 import { nativeCamera } from '../tests/native-camera';
 
@@ -120,6 +122,15 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     test.setTimeout(reference ? 600_000 : 90_000);
     const graph = await selectGraph(page);
     expect(graph.coverage).toBe('complete');
+    // Apply the common source oracle to actual backend graphs, including dense
+    // Qwen/Llama differences and both visual stacks (not UI stress templates).
+    assertTraceability(graph, projectGraph(graph, { expanded: [], exhaustive: true }), true);
+    for (const repetition of graph.repetitions) for (const instance of [repetition.instances[0]!, repetition.instances.at(-1)!]) {
+      const expanded = [instance.node_id];
+      for (let node = graph.nodes.find((item) => item.id === instance.node_id); node?.parent_id;
+        node = graph.nodes.find((item) => item.id === node!.parent_id)) expanded.push(node.parent_id);
+      assertTraceability(graph, projectGraph(graph, { expanded }));
+    }
     const canvas = page.getByLabel('Architecture graph', { exact: true });
     await expect(page.getByLabel('Show dimensions')).not.toBeChecked();
     const ids = await page.getByLabel('Select graph component', { exact: true }).locator('option').evaluateAll((options) => options.map((o) => (o as HTMLOptionElement).value).filter(Boolean));

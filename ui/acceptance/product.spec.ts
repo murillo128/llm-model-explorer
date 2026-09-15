@@ -11,6 +11,7 @@ import { installProbe } from './probe';
 import { camera, zoom, drag, panelGeometry, promptViewport, tokenizerGeometry, settledPrompt } from './usability';
 import { nativeCamera } from '../tests/native-camera';
 import { revealTensor } from '../tests/tensor-tree-helpers';
+import { makeProjectionFixture } from '../tests/architecture-projection-fixture';
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
 const componentPort = Number(process.env.UI_TEST_PORT ?? 4173);
@@ -1057,6 +1058,59 @@ async function polishCapture(page: Page, info: TestInfo, name: string) {
   await page.screenshot({ path, animations: 'disabled' });
   await info.attach(name, { path, contentType: 'image/png' });
 }
+
+for (const width of [1178, 1440]) test(`architecture safety baseline preserves shell and other explorers at ${width}px`, async ({ page }, info) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width, height: 900 });
+  // Only structural architecture is authored. Tensor values, distributions,
+  // tokenization and embeddings use the production TCP fixture service.
+  await page.route('**/architecture', (route) => route.fulfill({ json: {
+    status: 'available', model_id: 'acceptance/fixture', diagnostics: [], graph: makeProjectionFixture({ count: 4 }),
+  } }));
+  const shell = () => page.evaluate(() => Object.fromEntries(
+    ['.app-bar', '.app-status-bar', '.workspace-frame', '.app-bar nav', '.app-bar select'].map((selector) => {
+      const element = document.querySelector(selector)!;
+      const { x, y, width, height } = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return [selector, { x, y, width, height, font: style.font, color: style.color, background: style.backgroundColor }];
+    })));
+  const observations: Record<string, unknown> = {};
+  await open(page); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  const baseline = await shell();
+  await documentFits(page);
+  await polishCapture(page, info, `safety-tensor-${width}`);
+  observations.tensor = baseline;
+
+  const editor = await tokenizer(page);
+  await editor.fill('Hello, architecture!');
+  await expect(page.getByText(/tokens · current prompt/)).toBeVisible();
+  await expect(page.locator('.input-embeddings [data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+  await expect(page.locator('.input-embeddings .embedding-layer:not([data-staging]) .matrix-panel-status')).toBeEmpty();
+  await settledPrompt(page); await documentFits(page);
+  expect(await shell()).toEqual(baseline);
+  await polishCapture(page, info, `safety-tokenizer-${width}`);
+
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await expect(canvas).toHaveAttribute('data-layout-count', /^[1-9]\d*$/);
+  await documentFits(page); expect(await shell()).toEqual(baseline);
+  await polishCapture(page, info, `safety-architecture-${width}`);
+  // Measurements are evidence, not a golden toolbar placement requirement.
+  observations.architecture = await page.evaluate(() => Object.fromEntries(
+    ['.architecture-toolbar', '.architecture-repetitions', '.architecture-focus-controls', '.architecture-flow'].map((selector) => {
+      const { x, y, width, height } = document.querySelector(selector)!.getBoundingClientRect();
+      return [selector, { x, y, width, height }];
+    })));
+  await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
+  await complete(page); await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await documentFits(page); expect(await shell()).toEqual(baseline);
+  await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
+  await info.attach(`safety-geometry-${width}`, { contentType: 'application/json', body: JSON.stringify({
+    viewport: page.viewportSize(), browser: page.context().browser()!.version(), project: info.project.name, observations,
+  }, null, 2) });
+});
 
 for (const width of [1178, 1440]) {
   test(`polish inventory captures retain selected scientific work at ${width}px`, async ({ page }, info) => {
