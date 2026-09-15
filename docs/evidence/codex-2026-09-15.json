@@ -1,0 +1,245 @@
+{
+  "date": "2026-09-15",
+  "cli_and_server_version": "0.154.0",
+  "models": [
+    {
+      "model": "gpt-6-astra",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra"
+      ]
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra"
+      ]
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ]
+    }
+  ],
+  "native_agents": [
+    {
+      "role": "bounded-explorer",
+      "parent": "01a0a501-8865-7381-86c5-9e52892cf1bd",
+      "thread": "01a0a501-adca-7061-989e-4134c296988f",
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "sandbox": "readOnly"
+    },
+    {
+      "role": "command-runner",
+      "parent": "01a0a501-8865-7381-86c5-9e52892cf1bd",
+      "thread": "01a0a501-c33a-7c71-b6c4-fb83a46aa8e7",
+      "model": "gpt-5.6-luna",
+      "effort": "low",
+      "sandbox": "readOnly"
+    },
+    {
+      "role": "independent-reviewer",
+      "parent": "01a0a501-8865-7381-86c5-9e52892cf1bd",
+      "thread": "01a0a501-dd4f-7c92-bc34-b8ede12978d1",
+      "model": "gpt-6-astra",
+      "effort": "ultra",
+      "sandbox": "readOnly"
+    }
+  ],
+  "native_spawn_checks": [
+    {
+      "type": "function_call",
+      "name": "spawn_agent",
+      "arguments": {
+        "task_name": "fixture_explorer",
+        "agent_type": "bounded-explorer",
+        "fork_turns": "none",
+        "model": "gpt-6-astra",
+        "reasoning_effort": "ultra"
+      }
+    },
+    {
+      "type": "function_call_output",
+      "output": "{\"task_name\":\"/root/fixture_explorer\"}"
+    },
+    {
+      "type": "function_call",
+      "name": "spawn_agent",
+      "arguments": {
+        "task_name": "fixture_commands",
+        "agent_type": "command-runner",
+        "fork_turns": "none"
+      }
+    },
+    {
+      "type": "function_call_output",
+      "output": "{\"task_name\":\"/root/fixture_commands\"}"
+    },
+    {
+      "type": "function_call",
+      "name": "spawn_agent",
+      "arguments": {
+        "task_name": "fixture_review",
+        "agent_type": "independent-reviewer",
+        "fork_turns": "none",
+        "model": "gpt-5.6-luna",
+        "reasoning_effort": "low"
+      }
+    },
+    {
+      "type": "function_call_output",
+      "output": "{\"task_name\":\"/root/fixture_review\"}"
+    },
+    {
+      "type": "function_call",
+      "name": "spawn_agent",
+      "arguments": {
+        "task_name": "fixture_limit_probe",
+        "agent_type": "bounded-explorer",
+        "fork_turns": "none"
+      }
+    },
+    {
+      "type": "function_call_output",
+      "output": "collab spawn failed: agent thread limit reached"
+    },
+    {
+      "type": "function_call",
+      "name": "spawn_agent",
+      "arguments": {
+        "task_name": "fixture_invalid_role_probe",
+        "agent_type": "nonexistent-fixture-test-role",
+        "fork_turns": "none"
+      }
+    },
+    {
+      "type": "function_call_output",
+      "output": "unknown agent_type 'nonexistent-fixture-test-role'"
+    }
+  ],
+  "resumption": {
+    "thread_id": "01a0a4fd-57ab-75e2-bb14-0d31d293d565",
+    "limitation": "Loaded idle thread ignores thread/resume model/config effort override; explicit turn/start adopted desired effort.",
+    "cases": [
+      {
+        "event": "resume-before",
+        "model": "gpt-6-astra",
+        "effort": "ultra"
+      },
+      {
+        "event": "turn-completed",
+        "requested_model": "gpt-6-astra",
+        "requested_effort": "xhigh",
+        "turn_id": "01a0a4ff-5bd7-7db3-b18a-3668f9db9974",
+        "status": "completed"
+      },
+      {
+        "event": "resume-after",
+        "model": "gpt-6-astra",
+        "effort": "xhigh"
+      },
+      {
+        "event": "resume-before",
+        "model": "gpt-6-astra",
+        "effort": "xhigh"
+      },
+      {
+        "event": "turn-completed",
+        "requested_model": "gpt-6-astra",
+        "requested_effort": "ultra",
+        "turn_id": "01a0a4ff-64ae-75b3-942e-5be4bb108473",
+        "status": "completed"
+      },
+      {
+        "event": "resume-after",
+        "model": "gpt-6-astra",
+        "effort": "ultra"
+      }
+    ]
+  },
+  "native_cli_general": {
+    "model": "gpt-6-astra",
+    "reasoningEffort": "xhigh",
+    "sandbox": {
+      "type": "readOnly",
+      "networkAccess": false
+    },
+    "approvalPolicy": "never",
+    "thread_id": "01a0a502-0222-7342-9023-62969a4f65fc"
+  },
+  "profile_parser_validation": [
+    {
+      "case": "codex-critical.config.toml",
+      "exit": 0
+    },
+    {
+      "case": "codex-general.config.toml",
+      "exit": 0
+    },
+    {
+      "case": "codex-review.config.toml",
+      "exit": 0
+    },
+    {
+      "case": "unknown-key",
+      "exit": 1
+    },
+    {
+      "case": "zero-cap",
+      "exit": 1
+    },
+    {
+      "case": "invalid-toml",
+      "exit": 1
+    }
+  ],
+  "permissions_inheritance": {
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "low",
+    "sandbox": {
+      "type": "workspaceWrite",
+      "writableRoots": [],
+      "networkAccess": false,
+      "excludeTmpdirEnvVar": false,
+      "excludeSlashTmp": false
+    }
+  },
+  "snapshot_sha": "f5038db763cb5d50f9204a76394d13c8849948cf",
+  "fixture": "add(a,b) returns a+b; prescribed check assert add(2,3)==5",
+  "noninterference": {
+    "global_config_restored_to_original_sha256": true,
+    "shared_server_pid_unchanged": 5244,
+    "existing_sessions_mutated": 0,
+    "epic_labels_mutated": 0,
+    "temporary_trust_entry_removed": true
+  },
+  "exact_command_correction": {
+    "diagnostic_command": {
+      "turn_id": "01a0a505-b7dc-7c01-8054-ba1fac8a0b67",
+      "command": "/bin/bash -lc 'python3 -B check.py .'",
+      "exitCode": 0,
+      "status": "completed"
+    },
+    "corrected_command": {
+      "turn_id": "01a0a507-edb1-7cd3-b33b-c80dbf1ba9b7",
+      "command": "/bin/bash -lc 'python3 -B check.py'",
+      "exitCode": 0,
+      "status": "completed"
+    }
+  }
+}

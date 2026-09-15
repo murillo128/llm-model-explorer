@@ -91,6 +91,7 @@ jobs:
           REVIEW_HEAD_SHA: ${{ steps.target.outputs.head_sha }}
           REVIEW_BASE_SHA: ${{ steps.target.outputs.base_sha }}
           GITHUB_TOKEN: ${{ github.token }}
+          CODEX_PROFILE_NAME: ${{ vars.CODEX_AUDIT_PROFILE || 'codex-review' }}
         run: |
           set -euo pipefail
           umask 077
@@ -148,6 +149,7 @@ jobs:
 
           git -C "$repo_root" show "${GITHUB_SHA}:.github/workflows/codex-execute-ready.yml" > "${state_dir}/published-launcher.yml"
           git -C "$repo_root" show "${GITHUB_SHA}:.github/scripts/prepare_pr_audit.py" > "${state_dir}/prepare_pr_audit.py"
+          git -C "$repo_root" show "${GITHUB_SHA}:.github/scripts/codex_profile.py" > "${state_dir}/codex_profile.py"
           audit_client="${state_dir}/pr-audit-client.py"
           python3 "${state_dir}/prepare_pr_audit.py" "${state_dir}/published-launcher.yml" "$audit_client"
 
@@ -226,6 +228,7 @@ jobs:
               SKILLFORGE_REPO_ROOT_RESOLVED="$repo_root" \
               SKILLFORGE_REVIEW_WORKTREE="$worktree" \
               SKILLFORGE_TASK_PROMPT="$task_prompt" \
+              CODEX_PROFILE_NAME="$CODEX_PROFILE_NAME" CODEX_LAUNCH_ROLE="audit" \
               ISSUE_NUMBER="$ISSUE_NUMBER" ISSUE_TITLE="" PR_NUMBER="$PR_NUMBER" \
               REVIEW_HEAD_SHA="$REVIEW_HEAD_SHA" \
               GITHUB_REPOSITORY="$GITHUB_REPOSITORY" \

@@ -73,6 +73,14 @@ The label is authoritative. State-only transitions normally produce no comment.
 
 `completed` is post-merge. Executors and independent reviewers never merge, enable auto-merge, close issues, or set completed. After `codex-pr-audit` obtains `PASS` or `PASS_WITH_NOTES` with `final-capable: yes` on its current exact PR head, the audit controller has standing authority to merge that exact head, make `completed` observable, and close the issue. The reviewer verdict alone has no mutation authority.
 
+## Codex model and delegation policy
+
+Use the native roles and operating instructions in [`docs/codex-operations.md`](docs/codex-operations.md). The owner may choose available authorized roles/models and raise capability when ambiguity warrants it. Ordinary development starts with an explicitly selected Astra xhigh profile; preserve an explicit higher selection. Critical semantics, isolation, concurrency, security, numerical computation and complex integration require Astra Ultra. Independent review requires fresh context and Astra Max or Ultra, never an inherited economical helper model.
+
+Keep one product change owner and at most three concurrent auxiliary subagents per session. Bounded exploration uses the `bounded-explorer` role (Terra medium); prescribed commands and CI/log collection use `command-runner` (Luna low). Explicitly select the role with fresh context; do not fork the owner's full history into an economical helper. The owner designs invariants/oracles and judges computational preservation. Helpers cannot edit source or expectations, weaken checks, mutate Git/GitHub, or launch competing heavy suites. Use a stable isolated snapshot and separate ports/output directories for checks. Escalate or disclose an authorized fallback if a helper model is unavailable; fail closed when required critical capability is unavailable.
+
+Internal delegation does not change an epic's `max_parallel_workers`, issue holds, ownership or the final audit boundary. An implementation helper is not the independent final reviewer. Existing active turns retain their selections; adopt a different profile only through an explicitly requested new or inactive session.
+
 ## Epic workflow
 
 An epic parent starts with a compact seed contract (`execution_mode: epic-dag`, child issue set, parallelism limit, optional integration branch), **not** a manually generated DAG. Its initial state is `execution-ready`; fully designed children normally start `queued`.
