@@ -1,6 +1,7 @@
+import { findComponent, graphAction, graphPreference, viewOptions } from '../tests/architecture-controls';
 /* eslint-disable @typescript-eslint/no-explicit-any -- Native test-only observations and evidence. */
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Page, TestInfo } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -8,6 +9,8 @@ import { dirname, join } from 'node:path';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import type { Graph } from '../src/architecture-explorer/graph';
+import { projectGraph } from '../src/architecture-explorer/projection';
+import { assertTraceability } from '../tests/architecture-invariants';
 import { installProbe } from './probe';
 import { nativeCamera } from '../tests/native-camera';
 
@@ -44,7 +47,7 @@ async function control(path: string, body?: object) {
 }
 async function openParameter(page: Page, graph: Graph, parameter: Graph['parameters'][number]) {
   const node = graph.nodes.find((n) => n.parameter_ids.includes(parameter.id))!;
-  await page.getByLabel('Select graph component', { exact: true }).selectOption(node.id);
+  await findComponent(page, node.id);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
   await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
   await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
@@ -66,6 +69,61 @@ async function selectGraph(page: Page): Promise<Graph> {
   expect(body.model_id).toBe(modelId);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-graph-id', body.graph.graph_id);
   return body.graph;
+}
+
+async function inspectComponents(page: Page, graph: Graph, info: TestInfo, family: string, reference: boolean) {
+  const role = (node: Graph['nodes'][number], value: string) => node.attributes.some((a) => a.name === 'semantic_role' && a.value === value);
+  const components = graph.nodes.filter((node) => node.kind === 'group' && (role(node, 'attention') || role(node, 'mlp')));
+  expect(components).toHaveLength(2 * graph.repetitions.reduce((n, r) => n + r.instances.length, 0));
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
+  const capture = async (name: string) => {
+    if (info.project.name !== 'dpr1') return;
+    const path = info.outputPath(`${reference ? 'reference' : 'fixture'}-${family}-${name}.png`);
+    await page.screenshot({ path });
+    await info.attach(`components-${name}`, { path, contentType: 'image/png' });
+  };
+  const nodeBox = (id: string) => page.locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`);
+  const horizontal = async (before: string, after: string) => {
+    // Expanded source groups can be wider than the viewport. Fit the current
+    // focus before comparing both ends; React Flow culls offscreen node DOM.
+    await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await expect(nodeBox(before)).toBeAttached(); await expect(nodeBox(after)).toBeAttached();
+    const a = await nodeBox(before).boundingBox(), b = await nodeBox(after).boundingBox();
+    expect(a).toBeTruthy(); expect(b).toBeTruthy();
+    expect(b!.x).toBeGreaterThanOrEqual(a!.x + a!.width - 1);
+  };
+  for (const repetition of graph.repetitions) {
+    const instances = family === 'qwen35'
+      ? repetition.instances.filter((instance, index, all) => all.findIndex((other) => other.variant === instance.variant) === index)
+      : repetition.instances.slice(0, 1);
+    for (const instance of instances) {
+      const attention = components.find((n) => n.parent_id === instance.node_id && role(n, 'attention'))!;
+      const mlp = components.find((n) => n.parent_id === instance.node_id && role(n, 'mlp'))!;
+      await findComponent(page, instance.node_id);
+      await graphAction(page, 'Focus layer'); await ready();
+      await horizontal(attention.id, mlp.id);
+      await expect(page.locator('.architecture-node[data-presentation="mlp"]')).toHaveCount(0);
+      const label = `${graph.repetitions.indexOf(repetition)}-${instance.index}`;
+      await capture(`${label}-compact`);
+      await findComponent(page, attention.id);
+      await graphAction(page, 'Toggle selected group'); await ready();
+      await page.getByRole('button', { name: 'Center selected', exact: true }).click(); await ready();
+      const projections = graph.nodes.filter((n) => n.parent_id === attention.id &&
+        (role(n, 'query_projection') || role(n, 'query_gate_projection') || role(n, 'mask_padding_states')));
+      const output = graph.nodes.find((n) => n.parent_id === attention.id && role(n, 'output_projection'));
+      if (projections.length && output) await horizontal(projections[0]!.id, output.id);
+      await capture(`${label}-attention`);
+      await graphAction(page, 'Focus MLP'); await ready();
+      await expect(page.getByRole('button', { name: 'MLP', exact: true })).toBeVisible();
+      await expect(page.getByText('MLP (derived)', { exact: true })).toHaveCount(0);
+      const up = graph.nodes.find((n) => n.parent_id === mlp.id && role(n, 'up_projection'))!;
+      const down = graph.nodes.find((n) => n.parent_id === mlp.id && role(n, 'down_projection'))!;
+      await horizontal(up.id, down.id);
+      await capture(`${label}-mlp`);
+    }
+  }
 }
 
 test.beforeEach(async ({ page }, info) => {
@@ -120,11 +178,25 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     test.setTimeout(reference ? 600_000 : 90_000);
     const graph = await selectGraph(page);
     expect(graph.coverage).toBe('complete');
+    // Apply the common source oracle to actual backend graphs, including dense
+    // Qwen/Llama differences and both visual stacks (not UI stress templates).
+    assertTraceability(graph, projectGraph(graph, { expanded: [], exhaustive: true }), true);
+    for (const repetition of graph.repetitions) for (const instance of [repetition.instances[0]!, repetition.instances.at(-1)!]) {
+      const expanded = [instance.node_id];
+      for (let node = graph.nodes.find((item) => item.id === instance.node_id); node?.parent_id;
+        node = graph.nodes.find((item) => item.id === node!.parent_id)) expanded.push(node.parent_id);
+      assertTraceability(graph, projectGraph(graph, { expanded }));
+    }
     const canvas = page.getByLabel('Architecture graph', { exact: true });
+    await inspectComponents(page, graph, info, family, reference);
+    await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).not.toBeChecked();
-    const ids = await page.getByLabel('Select graph component', { exact: true }).locator('option').evaluateAll((options) => options.map((o) => (o as HTMLOptionElement).value).filter(Boolean));
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Find component', exact: true }).click();
+    const ids = await page.getByRole('listbox', { name: 'Components', exact: true }).getByRole('option').evaluateAll((options) => options.map((o) => (o as HTMLElement).dataset.nodeId));
     expect(ids).toEqual(graph.nodes.map((n) => n.id));
-    await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await graphAction(page, 'Show all operations');
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
     // Visible routes compose boundary forwarding. Every original edge remains
     // traceable even though one route may represent several source segments.
@@ -133,11 +205,13 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     const roots = new Set(graph.nodes.filter((n) => !n.parent_id).map((n) => n.id));
     for (const repetition of graph.repetitions) {
       const last = repetition.instances.at(-1)!;
-      await page.getByLabel('Select graph component', { exact: true }).selectOption(last.node_id);
-      await expect(page.locator('.architecture-coverage')).toContainText(new RegExp(`instance ${last.index}`, 'i'));
+      await findComponent(page, last.node_id);
+      await expect(page.getByRole('combobox', { name: /Expand instance of/ }).locator('option:checked')).toContainText(new RegExp(`instance ${last.index}`, 'i'));
     }
-    await page.getByLabel('Show dimensions').check();
+    await graphPreference(page, 'Show dimensions', true);
+    await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).toBeChecked();
+    await page.keyboard.press('Escape');
     const client = await page.context().newCDPSession(page);
     await info.attach('production-architecture-layout', { body: JSON.stringify({ kind: reference ? 'actual checkpoint' : 'synthetic checkpoint', family,
       nodes: graph.nodes.length, edges: graph.edges.length, layoutMs: Number(await canvas.getAttribute('data-layout-ms')),
@@ -230,9 +304,11 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
     await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).toBeChecked();
+    await page.keyboard.press('Escape');
     if (family === 'vjepa2') expect(observed.some((p) => p.endsWith('/tokenize'))).toBe(false);
-    await page.getByRole('button', { name: 'Collapse all', exact: true }).click();
+    await graphAction(page, 'Collapse all');
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(roots.size));
     expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(
       graph.edges.filter((edge) => roots.has(edge.source.node_id) && roots.has(edge.target.node_id)).map((edge) => edge.id));

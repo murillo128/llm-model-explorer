@@ -11,6 +11,8 @@ import { installProbe } from './probe';
 import { camera, zoom, drag, panelGeometry, promptViewport, tokenizerGeometry, settledPrompt } from './usability';
 import { nativeCamera } from '../tests/native-camera';
 import { revealTensor } from '../tests/tensor-tree-helpers';
+import { findComponent } from '../tests/architecture-controls';
+import { makeProjectionFixture } from '../tests/architecture-projection-fixture';
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
 const componentPort = Number(process.env.UI_TEST_PORT ?? 4173);
@@ -1057,6 +1059,100 @@ async function polishCapture(page: Page, info: TestInfo, name: string) {
   await page.screenshot({ path, animations: 'disabled' });
   await info.attach(name, { path, contentType: 'image/png' });
 }
+
+for (const width of [390, 1178, 1440]) test(`architecture safety baseline preserves shell and other explorers at ${width}px`, async ({ page }, info) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width, height: 900 });
+  // Only structural architecture is authored. Tensor values, distributions,
+  // tokenization and embeddings use the production TCP fixture service.
+  await page.route('**/architecture', (route) => route.fulfill({ json: {
+    status: 'available', model_id: 'acceptance/fixture', diagnostics: [], graph: makeProjectionFixture({ count: 4 }),
+  } }));
+  const shell = () => page.evaluate(() => Object.fromEntries(
+    ['.app-bar', '.app-status-bar', '.workspace-frame', '.app-bar nav', '.app-bar select'].map((selector) => {
+      const element = document.querySelector(selector)!;
+      const { x, y, width, height } = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return [selector, { x, y, width, height, font: style.font, color: style.color, background: style.backgroundColor }];
+    })));
+  const observations: Record<string, unknown> = {};
+  await open(page); await complete(page);
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  const baseline = await shell();
+  const fixedShell = async () => {
+    const current = await shell();
+    // The existing active-tab font weight changes the nav's content width.
+    // Record each active view; compare its exact geometry on return below.
+    for (const [selector, value] of Object.entries(baseline)) {
+      if (selector === '.app-bar select' && width === 390) {
+        // At narrow widths the selector flexes with the existing active-tab font
+        // width. Its styling/height stays fixed; exact same-view geometry is
+        // checked during every Architecture action and on Tensor return below.
+        expect(current[selector]).toMatchObject({ y: value.y, height: value.height, font: value.font, color: value.color, background: value.background });
+      } else if (selector !== '.app-bar nav') expect(current[selector]).toEqual(value);
+    }
+  };
+  await documentFits(page);
+  await polishCapture(page, info, `safety-tensor-${width}`);
+  observations.tensor = baseline;
+
+  // Keep the selected session: tokenizer() is an independent-test setup helper
+  // that deliberately creates a new session, so use navigation directly here.
+  await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
+  await embeddingDone(page, 1);
+  const editor = page.getByRole('textbox', { name: 'Prompt', exact: true });
+  await editor.fill('Hello, architecture!');
+  await expect(page.getByText(/tokens · current prompt/)).toBeVisible();
+  await expect(page.locator('.input-embeddings [data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+  await expect(page.locator('.input-embeddings .embedding-layer:not([data-staging]) .matrix-panel-status')).toBeEmpty();
+  await settledPrompt(page); await documentFits(page);
+  await fixedShell(); observations.tokenizer = await shell();
+  await polishCapture(page, info, `safety-tokenizer-${width}`);
+
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await expect(canvas).toHaveAttribute('data-layout-count', /^[1-9]\d*$/);
+  await documentFits(page); await fixedShell(); observations.architectureShell = await shell();
+  await polishCapture(page, info, `safety-architecture-${width}`);
+  // Measurements are evidence, not a golden toolbar placement requirement.
+  observations.architecture = await page.evaluate(() => Object.fromEntries(
+    ['.architecture-toolbar', '.architecture-context-row', '.architecture-flow'].map((selector) => {
+      const { x, y, width, height } = document.querySelector(selector)!.getBoundingClientRect();
+      return [selector, { x, y, width, height }];
+    })));
+  const readyGraph = async () => {
+    await expect(canvas).toHaveAttribute('aria-busy', 'false');
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  };
+  const boundedControls = async () => {
+    await readyGraph(); await documentFits(page); await fixedShell();
+    expect(await shell()).toEqual(observations.architectureShell);
+    // Native horizontal scrollbars add their own height at constrained widths.
+    // Bound each content row independently of that platform chrome.
+    expect(await page.locator('.architecture-toolbar').evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(50);
+    expect(await page.locator('.architecture-context-row').evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(45);
+    await expect(page.getByRole('button', { name: 'Show all operations', exact: true })).toHaveCount(0);
+  };
+  await expect(page.getByRole('combobox', { name: /Expand instance of/ })).toHaveCount(0);
+  await boundedControls();
+  await page.getByRole('button', { name: 'Explore stack Decoder layers', exact: true }).click();
+  await boundedControls(); await polishCapture(page, info, `controls-stack-${width}`);
+  await findComponent(page, 'layer-3.attention.Q');
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  await boundedControls(); await polishCapture(page, info, `controls-node-${width}`);
+  await page.locator('.architecture-connection[data-source-node="layer-3.attention.Q"][data-target-node="layer-3.attention.rope-Q"]').focus(); await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Close connection inspection' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await boundedControls(); await polishCapture(page, info, `controls-edge-${width}`);
+  await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
+  await complete(page); await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await documentFits(page); expect(await shell()).toEqual(baseline);
+  await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
+  await info.attach(`safety-geometry-${width}`, { contentType: 'application/json', body: JSON.stringify({
+    viewport: page.viewportSize(), browser: page.context().browser()!.version(), project: info.project.name, observations,
+  }, null, 2) });
+});
 
 for (const width of [1178, 1440]) {
   test(`polish inventory captures retain selected scientific work at ${width}px`, async ({ page }, info) => {

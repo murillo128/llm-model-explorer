@@ -1,3 +1,4 @@
+import { findComponent, graphAction } from './architecture-controls';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { nativeCamera } from './native-camera';
@@ -10,7 +11,7 @@ async function open(page: Page, model = 'lab/alpha', strict = false) {
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '3');
 }
 async function inspect(page: Page, node = 'linear1') {
-  await page.getByRole('combobox', { name: 'Select graph component' }).selectOption(node);
+  await findComponent(page, node);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
   const trigger = page.getByRole('button', { name: 'Inspect selected', exact: true });
   await trigger.focus(); await page.keyboard.press('Enter');
@@ -27,7 +28,7 @@ const released = (page: Page) => expect.poll(() => page.evaluate(() => ({
 
 test('concrete repeated weight preserves exact progressive values, independent profiles/statistics and native camera', async ({ page }, info) => {
   await open(page);
-  await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+  await graphAction(page, 'Show all operations');
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '6');
   await inspect(page);
   const camera = await page.locator('.react-flow__viewport').getAttribute('style');

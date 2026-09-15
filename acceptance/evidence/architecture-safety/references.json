@@ -1,0 +1,432 @@
+{
+  "baseline": "c71f1b81bedfb534a6147f5c119ab0cfbf2cfeee",
+  "source_test_head": "7237768280a90f08277a80c60399470426b09df9",
+  "observed_date": "2026-09-15",
+  "kind": "fresh complete local reference HTTP acceptance; no checkpoint data included",
+  "references": [
+    {
+      "repository": "HuggingFaceTB/SmolLM2-135M",
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "revision_source": "operator manifest",
+      "fingerprint": "aeda1cbf6516239fa4d305117c5a70ca5f4a3af06ef7575544dc97914c61e57e",
+      "files": [
+        {
+          "name": "config.json",
+          "bytes": 704
+        },
+        {
+          "name": "generation_config.json",
+          "bytes": 111
+        },
+        {
+          "name": "merges.txt",
+          "bytes": 466391
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 269060552
+        },
+        {
+          "name": "special_tokens_map.json",
+          "bytes": 831
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 2104556
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 3658
+        },
+        {
+          "name": "vocab.json",
+          "bytes": 800662
+        }
+      ],
+      "total_bytes": 272437465,
+      "physical_tensors": 272,
+      "quantization": null,
+      "tokenizer_available": true,
+      "environment": {
+        "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+        "python": "3.12.14",
+        "machine": "x86_64",
+        "cpu_count": 16
+      },
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 9.756186575017637,
+          "peak_rss_kib": 396608
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 5.427577592025045,
+          "peak_rss_kib": 383164
+        }
+      ],
+      "scope": "language_model",
+      "coverage": "complete",
+      "nodes": 971,
+      "edges": 1386,
+      "parameters": 273,
+      "graph_id": "72626383f9dc6b6f7b48f6977674648be952ee66b74a96a3499fca5a9a04fc12",
+      "producer_artifact": {
+        "byte_length": 2027959,
+        "format": 2,
+        "key": "a8d2ce6d11a6e3b53259efc4b09b58c1343cbac0ac7287a667b7939e9d59acea",
+        "payload": "payload.bin",
+        "sha256": "8289bc23cdfce6632bd883e6d4318c87e23639631ae216fbf91669fa775197ba",
+        "spec": {
+          "analysis_options": {},
+          "analyzer_revision": "static-graph-core-2",
+          "description": "smollm2-dense",
+          "description_revision": "1",
+          "kind": "architecture_graph",
+          "media_type": "application/json",
+          "model_fingerprint": "aeda1cbf6516239fa4d305117c5a70ca5f4a3af06ef7575544dc97914c61e57e",
+          "schema_revision": "bdc74dbecc91e6ae8c4b66acdbb25c8a87e8c11a9f35cab0f609fce86453e2cd",
+          "scope": "language_model",
+          "serializer_revision": "architecture-json-1",
+          "source_revision": "753d61104116eefc8ffc977327b441ee0c8d599f"
+        }
+      },
+      "family": "smollm2"
+    },
+    {
+      "repository": "JunHowie/Qwen3-0.6B-GPTQ-Int4",
+      "revision": "b9d87006067b0c0c2dea836370d6288e14f112ab",
+      "revision_source": "operator manifest",
+      "fingerprint": "31bd7a3f28c9ef9a65b5c6039eec5d4defe5a0e75148af472bde6c3ca4864be2",
+      "files": [
+        {
+          "name": "added_tokens.json",
+          "bytes": 707
+        },
+        {
+          "name": "config.json",
+          "bytes": 1924
+        },
+        {
+          "name": "generation_config.json",
+          "bytes": 214
+        },
+        {
+          "name": "merges.txt",
+          "bytes": 1671853
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 541343840
+        },
+        {
+          "name": "quantize_config.json",
+          "bytes": 485
+        },
+        {
+          "name": "special_tokens_map.json",
+          "bytes": 491
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 11422654
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 5423
+        },
+        {
+          "name": "vocab.json",
+          "bytes": 2776833
+        }
+      ],
+      "total_bytes": 557224424,
+      "physical_tensors": 898,
+      "quantization": {
+        "bits": 4,
+        "checkpoint_format": "gptq",
+        "desc_act": false,
+        "group_size": 128,
+        "hyb_act": false,
+        "lm_head": false,
+        "meta": {
+          "damp_auto_increment": 0.01,
+          "damp_percent": 0.05,
+          "mse": 0.0,
+          "quantizer": [
+            "gptqmodel:4.0.0"
+          ],
+          "static_groups": false,
+          "true_sequential": true,
+          "uri": "https://github.com/modelcloud/gptqmodel",
+          "v2": false,
+          "v2_alpha": 0.25
+        },
+        "pack_dtype": "int32",
+        "quant_method": "gptq",
+        "sym": true
+      },
+      "tokenizer_available": true,
+      "environment": {
+        "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+        "python": "3.12.14",
+        "machine": "x86_64",
+        "cpu_count": 16
+      },
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 9.804483618005179,
+          "peak_rss_kib": 396052
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 5.37837906301138,
+          "peak_rss_kib": 386092
+        }
+      ],
+      "scope": "language_model",
+      "coverage": "complete",
+      "nodes": 963,
+      "edges": 1350,
+      "parameters": 311,
+      "graph_id": "a0a49fd30af5da1ce90e732fe64397a3939d521034c436534ae7a9baedf91920",
+      "producer_artifact": {
+        "byte_length": 2227419,
+        "format": 2,
+        "key": "2575298f9e52e52223afd136e72120862b37e002982e27afa343a3f49fa27c4b",
+        "payload": "payload.bin",
+        "sha256": "6409f5f7fd1cf558a08b9499cbe9962f7b0b0ddbd707766b166c54ad2b46e9f9",
+        "spec": {
+          "analysis_options": {},
+          "analyzer_revision": "static-graph-core-2",
+          "description": "qwen3-dense",
+          "description_revision": "1",
+          "kind": "architecture_graph",
+          "media_type": "application/json",
+          "model_fingerprint": "31bd7a3f28c9ef9a65b5c6039eec5d4defe5a0e75148af472bde6c3ca4864be2",
+          "schema_revision": "bdc74dbecc91e6ae8c4b66acdbb25c8a87e8c11a9f35cab0f609fce86453e2cd",
+          "scope": "language_model",
+          "serializer_revision": "architecture-json-1",
+          "source_revision": "753d61104116eefc8ffc977327b441ee0c8d599f"
+        }
+      },
+      "family": "qwen3"
+    },
+    {
+      "repository": "AxionML/Qwen3.5-0.8B-NVFP4",
+      "revision": "2ac1e750cda67cc8538d731f6216f77b9c3a6f72",
+      "revision_source": "operator manifest",
+      "fingerprint": "907c94e9c7953070c91e7e94d0a09dff0dc1e6f2b230530bd7eecc6e984909e0",
+      "files": [
+        {
+          "name": "config.json",
+          "bytes": 5094
+        },
+        {
+          "name": "generation_config.json",
+          "bytes": 115
+        },
+        {
+          "name": "hf_quant_config.json",
+          "bytes": 1502
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 1031686072
+        },
+        {
+          "name": "preprocessor_config.json",
+          "bytes": 390
+        },
+        {
+          "name": "processor_config.json",
+          "bytes": 1300
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 12807982
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 16709
+        },
+        {
+          "name": "video_preprocessor_config.json",
+          "bytes": 385
+        },
+        {
+          "name": "vocab.json",
+          "bytes": 6722759
+        }
+      ],
+      "total_bytes": 1051242308,
+      "physical_tensors": 1046,
+      "quantization": {
+        "config_groups": {
+          "group_0": {
+            "input_activations": {
+              "dynamic": false,
+              "num_bits": 4,
+              "type": "float",
+              "group_size": 16
+            },
+            "weights": {
+              "dynamic": false,
+              "num_bits": 4,
+              "type": "float",
+              "group_size": 16
+            },
+            "targets": [
+              "Linear"
+            ]
+          }
+        },
+        "ignore": [
+          "lm_head",
+          "model.language_model.layers.0.linear_attn.conv1d",
+          "model.language_model.layers.1.linear_attn.conv1d",
+          "model.language_model.layers.10.linear_attn.conv1d",
+          "model.language_model.layers.12.linear_attn.conv1d",
+          "model.language_model.layers.13.linear_attn.conv1d",
+          "model.language_model.layers.14.linear_attn.conv1d",
+          "model.language_model.layers.16.linear_attn.conv1d",
+          "model.language_model.layers.17.linear_attn.conv1d",
+          "model.language_model.layers.18.linear_attn.conv1d",
+          "model.language_model.layers.2.linear_attn.conv1d",
+          "model.language_model.layers.20.linear_attn.conv1d",
+          "model.language_model.layers.21.linear_attn.conv1d",
+          "model.language_model.layers.22.linear_attn.conv1d",
+          "model.language_model.layers.4.linear_attn.conv1d",
+          "model.language_model.layers.5.linear_attn.conv1d",
+          "model.language_model.layers.6.linear_attn.conv1d",
+          "model.language_model.layers.8.linear_attn.conv1d",
+          "model.language_model.layers.9.linear_attn.conv1d",
+          "model.visual*",
+          "mtp.layers.0*"
+        ],
+        "quant_algo": "NVFP4",
+        "producer": {
+          "name": "modelopt",
+          "version": "0.0.1.dev1+g82f1d216d"
+        },
+        "quant_method": "modelopt"
+      },
+      "tokenizer_available": true,
+      "environment": {
+        "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+        "python": "3.12.14",
+        "machine": "x86_64",
+        "cpu_count": 16
+      },
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 9.753941516013583,
+          "peak_rss_kib": 396212
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 5.40380600001663,
+          "peak_rss_kib": 380532
+        }
+      ],
+      "scope": "language_model",
+      "coverage": "complete",
+      "nodes": 948,
+      "edges": 1329,
+      "parameters": 333,
+      "graph_id": "2f617a8a083ded8f24561af87de456b0a8527958911b0e8205dcb995640fc9c4",
+      "producer_artifact": {
+        "byte_length": 2064390,
+        "format": 2,
+        "key": "84c5149a564d9d705701c67ec43600158003a3070cc1fb89c098582f4737e846",
+        "payload": "payload.bin",
+        "sha256": "7f9e1437dc5e900460518b514e796a43075795e2b83db17df06fbe620606d0bb",
+        "spec": {
+          "analysis_options": {},
+          "analyzer_revision": "static-graph-core-2",
+          "description": "transformers-qwen35-nvfp4",
+          "description_revision": "1",
+          "kind": "architecture_graph",
+          "media_type": "application/json",
+          "model_fingerprint": "907c94e9c7953070c91e7e94d0a09dff0dc1e6f2b230530bd7eecc6e984909e0",
+          "schema_revision": "bdc74dbecc91e6ae8c4b66acdbb25c8a87e8c11a9f35cab0f609fce86453e2cd",
+          "scope": "language_model",
+          "serializer_revision": "architecture-json-1",
+          "source_revision": "transformers/2cba19507be799b7bef247ca6c1c4708bf881b5b"
+        }
+      },
+      "family": "qwen35"
+    },
+    {
+      "repository": "facebook/vjepa2-vitl-fpc64-256",
+      "revision": "b3c1679b7c34d3255ef3547f27c7b226aefab26f",
+      "revision_source": "operator manifest",
+      "fingerprint": "062f2bf6be583704b8285ceec1359f066eebf7af344924f8ac4568d8b8b2e8fa",
+      "files": [
+        {
+          "name": "config.json",
+          "bytes": 785
+        },
+        {
+          "name": "model.safetensors",
+          "bytes": 1303947864
+        },
+        {
+          "name": "video_preprocessor_config.json",
+          "bytes": 1298
+        }
+      ],
+      "total_bytes": 1303949947,
+      "physical_tensors": 587,
+      "quantization": null,
+      "tokenizer_available": false,
+      "environment": {
+        "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+        "python": "3.12.14",
+        "machine": "x86_64",
+        "cpu_count": 16
+      },
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 9.755072558997199,
+          "peak_rss_kib": 396380
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 5.42896447199746,
+          "peak_rss_kib": 380292
+        }
+      ],
+      "scope": "visual_encoder_predictor",
+      "coverage": "complete",
+      "nodes": 782,
+      "edges": 1079,
+      "parameters": 587,
+      "graph_id": "96a1c0e8c0ab9a0165dc9d4051be9914938936d918b4a67bce5476d04f2ddb2f",
+      "producer_artifact": {
+        "byte_length": 1818621,
+        "format": 2,
+        "key": "b38e4040a506b23bc2d385cf1c9a787ff488f2f956c97947181a93b107ecfba1",
+        "payload": "payload.bin",
+        "sha256": "a15a8da4c0ed82c1d6ba5e9a9c5e89efb2e20c75eee23567fa5f7550314fed4e",
+        "spec": {
+          "analysis_options": {},
+          "analyzer_revision": "static-graph-core-2",
+          "description": "transformers-vjepa2",
+          "description_revision": "1",
+          "kind": "architecture_graph",
+          "media_type": "application/json",
+          "model_fingerprint": "062f2bf6be583704b8285ceec1359f066eebf7af344924f8ac4568d8b8b2e8fa",
+          "schema_revision": "bdc74dbecc91e6ae8c4b66acdbb25c8a87e8c11a9f35cab0f609fce86453e2cd",
+          "scope": "visual_encoder_predictor",
+          "serializer_revision": "architecture-json-1",
+          "source_revision": "transformers/753d61104116eefc8ffc977327b441ee0c8d599f"
+        }
+      },
+      "family": "vjepa2"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { chooseInstance, findComponent, graphAction, graphPreference } from './architecture-controls';
 import { expect, test } from '@playwright/test';
 import type { Locator, Page, TestInfo } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
@@ -30,17 +31,17 @@ async function open(page: Page, fixture = 'connections') {
   await ready(page);
 }
 async function layer(page: Page, index: number) {
-  await page.getByRole('combobox', { name: 'Expand instance of Decoder layers', exact: true }).selectOption(`layer-${index}`);
-  await page.getByRole('button', { name: 'Focus layer', exact: true }).click();
+  await chooseInstance(page, 'Decoder layers', `layer-${index}`);
+  await graphAction(page, 'Focus layer');
   await ready(page);
 }
 async function fullAttention(page: Page) {
   await open(page);
   await layer(page, 3);
-  await page.getByRole('combobox', { name: 'Select graph component', exact: true }).selectOption('layer-3.attention');
-  await page.getByRole('button', { name: 'Toggle selected group', exact: true }).click();
+  await findComponent(page, 'layer-3.attention');
+  await graphAction(page, 'Toggle selected group');
   await ready(page);
-  await page.getByRole('button', { name: 'Fit graph', exact: true }).click();
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
   await expect(port(page, 'layer-3.attention.core', 'K')).toBeVisible();
 }
 async function stableState(page: Page, clearHover = true) {
@@ -203,13 +204,13 @@ test('shared fan-out trunk identifies every branch through native trunk, branch 
   await page.mouse.move(0, 0); await pinned.focus(); await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog', { name: 'Connection inspection', exact: true })).toBeVisible();
   await page.keyboard.press('Escape'); await expect(pinned).toBeFocused();
-  await page.getByRole('button', { name: 'Fit graph', exact: true }).focus();
+  await page.getByRole('button', { name: 'Fit view', exact: true }).focus();
   await page.mouse.move(trunk.x, trunk.y); await emphasized(page, fanout);
   await page.mouse.move(branch.x, branch.y); await emphasized(page, [owner]);
   await hoverDot(port(page, 'layer-3.input-norm', 'out')); await emphasized(page, fanout);
   await page.mouse.move(0, 0); await emphasized(page, [pinned]);
   await unchanged(page, before);
-  await page.getByRole('button', { name: 'Zoom graph in', exact: true }).click();
+  await graphAction(page, 'Zoom graph in');
   const zoomed = await stableState(page);
   const zoomedTrunk = await fanoutPoint(page, fanout, fanout);
   await page.mouse.move(zoomedTrunk.x, zoomedTrunk.y); await emphasized(page, fanout);
@@ -219,6 +220,24 @@ test('shared fan-out trunk identifies every branch through native trunk, branch 
   await hoverDot(port(page, 'layer-3.input-norm', 'out')); await emphasized(page, fanout);
   await page.mouse.move(0, 0); await emphasized(page, [pinned]);
   await unchanged(page, zoomed);
+});
+
+test('authored MLP boundary forwarding preserves shared trunks and exact port hover', async ({ page }) => {
+  await open(page, 'components');
+  await layer(page, 3);
+  await findComponent(page, 'layer-3.mlp');
+  await graphAction(page, 'Toggle selected group');
+  await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const fanout = ['gate', 'up'].map((name) => connection(page, 'layer-3.post-norm', 'out', `layer-3.${name}`, 'x'));
+  const before = await stableState(page);
+  await hoverDot(port(page, 'layer-3.post-norm', 'out')); await emphasized(page, fanout);
+  const trunk = await fanoutPoint(page, fanout, fanout);
+  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, fanout);
+  const branch = await fanoutPoint(page, fanout, [fanout[1]!]);
+  await page.mouse.move(branch.x, branch.y); await emphasized(page, [fanout[1]!]);
+  await hoverDot(port(page, 'layer-3.gate', 'x')); await emphasized(page, [fanout[0]!]);
+  await unchanged(page, before);
 });
 
 test('same-shaped inputs and separate K/V state routes keep exact identity under mouse and keyboard emphasis', async ({ page }) => {
@@ -242,15 +261,15 @@ test('same-shaped inputs and separate K/V state routes keep exact identity under
     await hoverDot(port(page, 'layer-3.attention.core', `next_${name}`)); await emphasized(page, [outgoing]);
     await page.mouse.move(0, 0); await port(page, 'layer-3.attention.core', `prior_${name}`).focus();
     await emphasized(page, [incoming]);
-    await page.getByRole('button', { name: 'Fit graph', exact: true }).focus();
+    await page.getByRole('button', { name: 'Fit view', exact: true }).focus();
   }
   await emphasized(page, []); await unchanged(page, before);
 });
 
 test('residual and MLP inputs stop at operations; pin survives temporary hover, zoom and inspection close', async ({ page }, info) => {
   await open(page); await layer(page, 3);
-  await page.getByRole('button', { name: 'Focus MLP', exact: true }).click();
-  await ready(page); await page.getByRole('button', { name: 'Fit graph', exact: true }).click();
+  await graphAction(page, 'Focus MLP');
+  await ready(page); await page.getByRole('button', { name: 'Fit view', exact: true }).click();
   const gate = connection(page, 'layer-3.silu', 'out', 'layer-3.multiply', 'gate');
   const up = connection(page, 'layer-3.up', 'out', 'layer-3.multiply', 'up');
   const down = connection(page, 'layer-3.multiply', 'out', 'layer-3.down', 'x');
@@ -269,11 +288,11 @@ test('residual and MLP inputs stop at operations; pin survives temporary hover, 
     expect(await inspection.evaluate((dialog) => dialog.contains(document.activeElement))).toBe(true);
   }
   await page.keyboard.press('Escape'); await expect(inspection).toHaveCount(0); await expect(gate).toBeFocused();
-  await page.getByRole('button', { name: 'Fit graph', exact: true }).focus();
+  await page.getByRole('button', { name: 'Fit view', exact: true }).focus();
   await hoverLine(page, up); await emphasized(page, [up]);
   await page.mouse.move(0, 0); await emphasized(page, [gate]);
   await unchanged(page, before);
-  await page.getByRole('button', { name: 'Zoom graph in', exact: true }).click();
+  await graphAction(page, 'Zoom graph in');
   const zoomed = await stableState(page);
   await hoverLine(page, up); await emphasized(page, [up]);
   await capture(page, info, 'zoomed-line-hover');
@@ -288,8 +307,8 @@ test('residual and MLP inputs stop at operations; pin survives temporary hover, 
   await unchanged(page, zoomed);
   await page.getByRole('button', { name: 'Clear connection selection', exact: true }).click();
   await page.mouse.move(0, 0); await emphasized(page, []);
-  await page.getByRole('button', { name: /^(Back to layer|Focus layer)$/ }).click();
-  await ready(page); await page.getByRole('button', { name: 'Fit graph', exact: true }).click();
+  await graphAction(page, /^(Back to layer|Focus layer)$/);
+  await ready(page); await page.getByRole('button', { name: 'Fit view', exact: true }).click();
   const residual = connection(page, 'layer-3.residual-1', 'out', 'layer-3.residual-2', 'residual');
   const norm = connection(page, 'layer-3.residual-1', 'out', 'layer-3.post-norm', 'x');
   await hoverDot(port(page, 'layer-3.residual-2', 'residual')); await emphasized(page, [residual]);
@@ -318,40 +337,40 @@ test('24-instance compact navigation, first/last identity, MLP/state focus and e
   await expect(page.getByRole('button', { name: /Previous window/ }).first()).toBeEnabled();
   await page.getByRole('button', { name: /Previous window/ }).first().click(); await ready(page);
   await layer(page, 0);
-  await expect(page.getByRole('combobox', { name: 'Select graph component', exact: true })).toHaveValue('layer-0');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-0');
   await expect(port(page, 'layer-0.attention', 'current_mask')).toBeAttached();
   await expect(port(page, 'layer-0.attention', 'positions')).toHaveCount(0);
   await expect(port(page, 'layer-0.attention', 'mask')).toHaveCount(0);
-  await page.getByLabel('Unused interfaces', { exact: true }).check(); await ready(page);
+  await graphPreference(page, 'Unused interfaces', true); await ready(page);
   await expect(port(page, 'layer-0.attention', 'positions')).toBeAttached();
   await expect(page.locator('.architecture-connection[data-target-node="layer-0.attention"][data-target-port="positions"]')).toHaveCount(0);
-  await page.getByLabel('Unused interfaces', { exact: true }).uncheck(); await ready(page);
-  await page.getByRole('button', { name: 'State dependencies', exact: true }).click(); await ready(page);
+  await graphPreference(page, 'Unused interfaces', false); await ready(page);
+  await graphAction(page, 'State dependencies'); await ready(page);
   await expect(page.locator('.architecture-connection[data-kind="data"]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Select Prior conv', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Select Prior delta', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Back to layer', exact: true }).click(); await ready(page);
+  await graphAction(page, 'Back to layer'); await ready(page);
   await layer(page, 3);
   await expect(port(page, 'layer-3.attention', 'positions')).toBeAttached();
   await expect(port(page, 'layer-3.attention', 'mask')).toBeAttached();
   await expect(port(page, 'layer-3.attention', 'current_mask')).toHaveCount(0);
-  await page.getByRole('button', { name: 'State dependencies', exact: true }).click(); await ready(page);
+  await graphAction(page, 'State dependencies'); await ready(page);
   await expect(page.getByRole('button', { name: 'Select Prior K', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Select Prior V', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Select Prior conv', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Overview', exact: true }).click(); await ready(page);
+  await page.getByRole('button', { name: 'Model overview', exact: true }).click(); await ready(page);
   await layer(page, 23);
-  await expect(page.getByRole('combobox', { name: 'Select graph component', exact: true })).toHaveValue('layer-23');
-  await expect(page.locator('.architecture-coverage')).toContainText(/instance 23/i);
-  await page.getByLabel('Show dimensions', { exact: true }).check(); await ready(page);
-  await page.getByRole('button', { name: 'Expand all', exact: true }).click(); await ready(page);
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-23');
+  await expect(page.getByRole('combobox', { name: /Expand instance of/ }).locator('option:checked')).toContainText(/instance 23/i);
+  await graphPreference(page, 'Show dimensions', true); await ready(page);
+  await graphAction(page, 'Show all operations'); await ready(page);
   await expect(graph(page)).toHaveAttribute('data-visible-nodes', String(source.nodes.length));
   expect(JSON.parse((await graph(page).getAttribute('data-source-node-ids'))!)).toEqual(source.nodes.map((node) => node.id));
   expect(JSON.parse((await graph(page).getAttribute('data-represented-edge-ids'))!)).toEqual(source.edges.map((edge) => edge.id));
   const coordinates = info.outputPath('authored-exhaustive-coordinates.json');
   await writeFile(coordinates, JSON.stringify(await stableState(page)));
   await info.attach('authored-exhaustive-coordinates', { path: coordinates, contentType: 'application/json' });
-  await page.getByRole('button', { name: 'Overview', exact: true }).click(); await ready(page);
+  await page.getByRole('button', { name: 'Model overview', exact: true }).click(); await ready(page);
   expect(Number(await graph(page).getAttribute('data-visible-nodes'))).toBeLessThan(20);
   expect(await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight])).toEqual([1178, 900]);
 });

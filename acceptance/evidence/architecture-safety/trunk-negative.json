@@ -1,0 +1,21 @@
+{
+  "source_head": "7237768280a90f08277a80c60399470426b09df9",
+  "isolated_mutation": {
+    "file": "ui/src/architecture-explorer/connection-hit.ts",
+    "change": "Return [edgeId] immediately from the hit resolver; source elsewhere and test expectations unchanged."
+  },
+  "command": "npm run test:browser -- architecture-connections.spec.ts --grep 'shared fan-out trunk' --project=desktop",
+  "exit_code": 1,
+  "outcome": "Expected assertion failure at emphasized() on the native shared trunk",
+  "assertion": "ui/tests/architecture-connections.spec.ts:73, called at line 187",
+  "expected_edges": [
+    "connection:edge-105:edge-112",
+    "connection:edge-105:edge-113",
+    "connection:edge-105:edge-114"
+  ],
+  "actual_edges": [
+    "connection:edge-105:edge-112"
+  ],
+  "actual_destination": "layer-3.attention.Q:x",
+  "positive_control": "Unmodified resolver passed all 46 architecture component browser cases."
+}
