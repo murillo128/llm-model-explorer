@@ -54,6 +54,31 @@ server serves `ui/dist` and a runtime URL file; it does not proxy API traffic or
 serve development modules. CORS allows only the static origin and exposes
 `X-Operation-Id` through the production middleware.
 
+## CI ownership
+
+On `main`, Application acceptance runs `bash acceptance/check-integration.sh
+--main-ci`: acceptance lint/format checks, the real HTTP suite, a production UI
+build from the same checkout, and the complete product browser suite at DPR 1
+and 2. It does not rerun backend unit/type/lint checks, UI unit/type/lint or
+component-browser checks, or API fixture/binding validation. Those remain owned
+by `backend-ci.yml`, `ui-ci.yml`, and `api-contract.yml`, respectively, subject to
+their existing path filters. Their Python-version and browser-project coverage
+is unchanged. The historical application job/check name is retained.
+
+PRs and epic integration branches still use `check-integration.sh` without
+arguments, including their contract/binding checks and DPR 1 product coverage.
+`check.sh` remains the standalone full local command: it runs every layer and
+produces the aggregate report. The lean main CI gate uploads HTTP JUnit and
+product browser evidence, not a duplicated component report. API-tool environment
+setup is unnecessary in that main gate and is skipped; backend, Node and browser
+setup remain available for real integration tests. No test results or backend
+responses are cached or mocked by this change.
+
+The entrypoint regression tests use command stubs solely to verify orchestration,
+including failure propagation; they do not replace application tests. Run them
+without application dependencies using `python -m unittest discover -s acceptance
+-p test_ci_entrypoints.py`.
+
 ## Fixture and coverage
 
 `fixtures.py` generates HF-compatible safetensors and tokenizer assets outside

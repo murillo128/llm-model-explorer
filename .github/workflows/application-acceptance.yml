@@ -55,6 +55,7 @@ jobs:
           ln -s "$env_dir" backend/.venv
       - run: uv sync --locked --project backend --python 3.12
       - name: Reuse persistent API environment
+        if: github.ref != 'refs/heads/main'
         shell: bash
         run: |
           env_dir="${{ runner.tool_cache }}/llm-model-explorer/application/api-python-3.12-${{ hashFiles('api/requirements.txt') }}"
@@ -79,7 +80,8 @@ jobs:
         shell: bash
         run: |
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-            bash acceptance/check.sh
+            # Component/API checks belong to their dedicated workflows.
+            bash acceptance/check-integration.sh --main-ci
           else
             bash acceptance/check-integration.sh
           fi
