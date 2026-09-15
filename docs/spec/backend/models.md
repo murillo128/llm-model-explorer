@@ -75,6 +75,6 @@ accepted input-table mapping. Shape coincidence, an output head, or
 Checkpoint admission and the shared logical tensor path own numeric availability.
 A checkpoint's quantization metadata does not disable an actionable native
 F32/F16/BF16 input table. Reuse logical ordered row access without tokenizer-specific
-physical decoders; a future actionable packed table can use that same seam.
+physical decoders; actionable packed tables use that same seam.
 Only missing/unaccepted mappings or unavailable representations are unsupported;
 source mutation, I/O, and delivery faults retain their existing failure codes.

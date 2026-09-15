@@ -611,3 +611,40 @@ def test_non_text_model_has_no_input_capability(settings: Settings) -> None:
     with pytest.raises(ModelError) as exc:
         resolve_embeddings(ModelCatalogue(settings.model_root).pin("test/tiny"), (0,))
     assert exc.value.code == "unsupported_representation"
+
+
+@pytest.mark.parametrize("family", ["qwen3", "qwen3_5"])
+def test_actionable_packed_table_reuses_logical_rows(settings: Settings, family: str) -> None:
+    from quantized_oracles import gptq_fixture, nvfp4_fixture
+
+    fixture = gptq_fixture() if family == "qwen3" else nvfp4_fixture()
+    prefix = FAMILIES[family][1].removesuffix(".weight")
+    fixture = replace(
+        fixture,
+        storage=tuple(
+            replace(item, name=prefix + "." + item.name.rsplit(".", 1)[1])
+            for item in fixture.storage
+        ),
+    )
+    directory = fixture.write(settings.model_root, split=True)
+    path = directory / "config.json"
+    config = json.loads(path.read_text())
+    config.update(_name_or_path="test/tiny", architectures=[FAMILIES[family][0]])
+    dims = config.setdefault("text_config", {}) if family == "qwen3_5" else config
+    dims.update(vocab_size=fixture.shape[0], hidden_size=fixture.shape[1])
+    path.write_text(json.dumps(config))
+    ids = [fixture.shape[0] - 1, 0, 0]
+    oracle = fixture.expected()
+    width = fixture.shape[1] * 4
+    expected = b"".join(oracle[token * width : (token + 1) * width] for token in ids)
+    with TestClient(create_app(settings)) as client:
+        url = address(client)
+        response = client.post(url, json={"token_ids": ids})
+        assert response.status_code == 200
+        result = frames(response.content)
+        assert result[-1] == (4, b"")
+        assert b"".join(data for kind, data in result if kind == 2) == expected
+        empty = frames(client.post(url, json={"token_ids": []}).content)
+        assert json.loads(empty[0][1])["shape"] == [0, fixture.shape[1]]
+        assert empty[-1] == (4, b"")
+    assert not numeric_cache_entries(settings.cache_dir)
