@@ -37,6 +37,9 @@ typecheck, lint and build), all 12 new layout scenarios, and the 60 existing
 tokenizer/shell scenarios. The offscreen camera fixtures explicitly reserve a
 small embeddings viewport so their scroll/reveal assertions remain meaningful
 with the larger automatic embeddings allocation.
+The targeted real backend/browser prompt acceptance also passed at DPR 1 and 2:
+embedding completion preserves prompt pixels, selection, history and composition
+inside the adaptive allocation.
 
 These small screenshots show the production workspace at 1440×900 and 390×844.
 The word spans, IDs and embeddings are synthetic test fixtures, not model results.
