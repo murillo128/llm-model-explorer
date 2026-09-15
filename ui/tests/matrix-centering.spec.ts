@@ -30,7 +30,11 @@ for (const dpr of [1, 1.25, 2]) test.describe(`centered scientific content DPR $
         const offsetX = Math.floor((Math.floor(g.clientWidth * dpr) - g.view.width) / 2) / dpr;
         const offsetY = Math.floor((Math.floor(g.clientHeight * dpr) - g.view.height) / 2) / dpr;
         return Math.max(Math.abs(g.matrix.left - (Math.round(g.host.left * dpr) / dpr + offsetX)),
-          Math.abs(g.matrix.top - (Math.round(g.host.top * dpr) / dpr + offsetY)));
+          Math.abs(g.matrix.top - (Math.round(g.host.top * dpr) / dpr + offsetY)),
+          // Host CSS bounds change before ResizeObserver resolves the available
+          // scientific height. Wait for that complete layout, not an old camera
+          // still centered within its old client box.
+          g.column.bottom - g.pane.bottom, g.row.right - g.pane.right);
       }).toBeLessThan(0.03);
       const g = await geometry(page);
       expect(g.view.scaleX).toBe(1); expect(g.view.scaleY).toBe(1);

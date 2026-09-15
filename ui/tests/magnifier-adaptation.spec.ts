@@ -120,12 +120,12 @@ test('focused inspection follows dimension-preserving layout shifts, resize and 
   await expect(page.locator('.inspection-readout')).toContainText('row 0 · column 0');
   const original = page.viewportSize()!;
   await page.setViewportSize({ width: original.width - 30, height: original.height });
-  await placement(page);
+  await expect(async () => { await placement(page); }).toPass({ timeout: 2000 });
   const cdp = await context.newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: original.width - 31, height: original.height, deviceScaleFactor: 1.25, mobile: false });
   await expect.poll(() => page.evaluate(() => window.matrixFixture.viewports[0]!.renderer.view!.dpr)).toBe(1.25);
   await expect(page.locator('.inspection-readout')).toContainText('row 0 · column 0');
-  await placement(page);
+  await expect(async () => { await placement(page); }).toPass({ timeout: 2000 });
   await page.evaluate(() => window.matrixFixture.render('B'));
   await expect(page.locator('.matrix-inspection')).toHaveCount(0);
 });
@@ -163,8 +163,8 @@ test('wrapped logical coordinates and float32 values use measured full-card and 
   await expect(page.locator('.magnifier-card')).toHaveCount(0);
   expect((await placement(page)).height).toBeGreaterThan(42);
   await page.addStyleTag({ content: '#workspace { width: 140px; }' });
-  const narrowPoint = await page.locator('.matrix-scroll canvas').boundingBox();
-  await page.mouse.move(narrowPoint!.x + narrowPoint!.width / 2, narrowPoint!.y + narrowPoint!.height / 2);
+  // Centering follows ResizeObserver; hover waits for the tiny canvas to settle.
+  await page.locator('.matrix-scroll canvas').hover();
   await expect.poll(() => page.locator('.matrix-inspection').evaluate((card) => card.getBoundingClientRect().width)).toBe(140);
   await placement(page);
   expect(await page.evaluate(() => window.matrixFixture.metrics.scalarAllocations)).toBe(point.scalars);

@@ -7,7 +7,7 @@ import type { ZoomBounds } from './zoom-selection-geometry';
 
 type Surface = { renderer: GridRenderer; axis?: 'rows' | 'columns'; overlay: HTMLDivElement };
 type Gesture = { surface: Surface; id: number; x: number; y: number; view: ViewGeometry;
-  startColumn: number; startRow: number; bounds: ZoomBounds; active: boolean };
+  viewportWidth: number; viewportHeight: number; startColumn: number; startRow: number; bounds: ZoomBounds; active: boolean };
 
 /** Transient view navigation; never touches scalar/count storage. */
 export class MatrixZoomSelection {
@@ -70,6 +70,7 @@ export class MatrixZoomSelection {
     if (!surface.renderer.cellAt(event.clientX - rect.left, event.clientY - rect.top)) return;
     const { columns, rows } = this.viewport.matrix.renderer.geometry;
     this.gesture = { surface, id: event.pointerId, x: event.clientX, y: event.clientY, view,
+      viewportWidth: this.viewport.matrix.host.clientWidth, viewportHeight: this.viewport.matrix.host.clientHeight,
       startColumn: selectionBoundary(view, event.clientX - rect.left, 'columns', columns),
       startRow: selectionBoundary(view, event.clientY - rect.top, 'rows', rows), bounds: {}, active: false };
     surface.renderer.canvas.setPointerCapture(event.pointerId);
@@ -152,10 +153,12 @@ export class MatrixZoomSelection {
     if (g && g.surface.renderer.canvas.hasPointerCapture(g.id)) g.surface.renderer.canvas.releasePointerCapture(g.id);
   };
 
-  /** A changed camera invalidates a gesture; progressive uploads alone do not. */
+  /** Camera/viewport changes invalidate a gesture; progressive uploads alone do not. */
   refresh() {
     const g = this.gesture, view = g?.surface.renderer.view;
-    if (g && (!view || (['x', 'y', 'scaleX', 'scaleY', 'dpr', 'width', 'height'] as const)
+    // Underfilled data can move within a resized viewport without changing view.
+    if (g && (this.viewport.matrix.host.clientWidth !== g.viewportWidth ||
+      this.viewport.matrix.host.clientHeight !== g.viewportHeight || !view || (['x', 'y', 'scaleX', 'scaleY', 'dpr', 'width', 'height'] as const)
       .some((key) => view[key] !== g.view[key]))) this.cancel();
   }
 

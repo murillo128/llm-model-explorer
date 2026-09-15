@@ -140,6 +140,27 @@ for (const dpr of [1, 1.25, 2]) test.describe(`selection DPR ${dpr}`, () => {
       await expect(previews(page)).toHaveCount(0);
     }
   });
+  test('underfilled viewport resize cancels selection even when the logical view stays identical', async ({ page }) => {
+    await open(page);
+    await page.evaluate(() => window.matrixFixture.render('short'));
+    await expect.poll(() => page.evaluate(() => window.matrixFixture.subscriptions.length)).toBe(3);
+    await page.evaluate(() => window.matrixFixture.viewports.at(-1)!.zoomAt(1, 0, 0));
+    const view = (await state(page)).view;
+    for (const [dimension, position] of [['width', 'x'], ['height', 'y']] as const) {
+      const before = await state(page), box = (await page.locator('.matrix-scroll canvas').boundingBox())!;
+      await drag(page, await point(page, 5, 1), await point(page, 40, 3));
+      await expect(previews(page)).toHaveCount(3);
+      await page.locator('#workspace').evaluate((node, dimension) => {
+        (node as HTMLElement).style[dimension] = `${node.getBoundingClientRect()[dimension] - 30}px`;
+      }, dimension);
+      await expect.poll(async () => (await state(page))[dimension]).toBe(before[dimension] - 30);
+      await expect.poll(async () => (await page.locator('.matrix-scroll canvas').boundingBox())![position]).not.toBe(box[position]);
+      expect((await state(page)).view).toEqual(view);
+      await expect(previews(page)).toHaveCount(0);
+      await page.mouse.up();
+      expect((await state(page)).view).toEqual(view);
+    }
+  });
 });
 
 test('click threshold, degenerate drag, Escape, pointer cancel, capture loss and wheel cancellation', async ({ page }) => {
