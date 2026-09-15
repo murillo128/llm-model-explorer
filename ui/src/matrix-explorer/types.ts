@@ -18,6 +18,8 @@ export interface MatrixUpdates {
   distribution(axis: 'rows' | 'columns', counts: Uint32Array, offset: number): void;
   /** Shared bin endpoints from the distribution producer, never percentile anchors. */
   distributionDomain(domain: DistributionDomain): void;
+  /** Present queued uploads before an atomic consumer promotion, if supported. */
+  flush?(): void;
 }
 
 /** Keep this object stable for one generation. Replacement detaches the old

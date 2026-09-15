@@ -41,32 +41,35 @@ resource observations at both device pixel ratios.
 ## Validation
 
 - API binding drift check, TypeScript, ESLint and production build passed.
-- All 800 UI unit tests passed. Two Architecture test files (23 tests) were
-  rerun after replacing an external dependency symlink in the isolated snapshot
-  with a local dependency copy; the other 777 tests passed in the initial run.
-  The final controller regression run passed all 21 tests, including a new check
-  that every progressive upload is preserved without redundant status publication.
-- All 148 focused desktop/narrow browser cases passed: tokenizer editing,
+- All 804 UI unit tests passed, including immediate exact uploads, coalesced
+  presentation, final draw before replacement promotion, and stale-frame disposal.
+- Focused desktop/narrow browser coverage includes tokenizer editing,
   replacement and disposal, automatic/manual panel layout, shared matrix and
   overlay scrollbars, Tensor title/inventory, and Architecture weight inspection.
 - Python acceptance lint and formatting passed.
 - TCP acceptance passed: 24 tests, with eight explicit skips for unavailable
   CUDA or unconfigured local reference/quantized checkpoints.
-- Production UI/live-backend DPR 1: all 36 runnable cases passed (25 initial
-  successes plus 11 corrected or remaining cases); five unconfigured local
-  reference cases were explicitly skipped. This includes all four Architecture
-  fixture families and progressive weight-modal cancellation/focus cleanup.
-- Focused production DPR 2: all 12 cases passed, including exact scientific
+- Final production UI/live-backend DPR 1 focused checks passed: exact parity,
+  independent auxiliary failure/cancellation, and both long-prompt widths.
+- Focused production DPR 2: all 18 cases passed, including exact scientific
   parity, auxiliary failure/cancellation, duplicate rows, stale generations,
-  editor history/IME, both viewport overflow matrices, both long-prompt widths,
-  and Architecture modal binding/lifetime/focus.
+  editor history/IME, camera/overflow behavior, both long-prompt widths,
+  all four Architecture fixture families, and progressive modal closure.
+- Complete desktop/native-scrollbar and production DPR 1 gates are recorded in
+  the PR's UI and Application acceptance checks. Five production local-reference
+  cases require configured checkpoint directories and are explicitly skipped
+  when those are absent; fixture success does not establish reference acceptance.
 
-The long-prompt layout cases retain all value/analysis completion and geometry
-assertions, with rendering waits of 75 seconds at DPR 1 and 120 seconds at DPR 2.
-Traces showed roughly four-second network delivery followed by expensive native
-SwiftShader redraws for 630 rows and both profiles; earlier 45/75-second waits
-expired. The controller now publishes only status transitions while forwarding
-every exact progressive upload. These checks do not establish rendering throughput.
+The shared consumer uploads every scalar/count chunk immediately, presents the
+first values progressively, and coalesces subsequent redraws per animation frame.
+It retains no extra scalar payload. The controller flushes pending presentation
+before promoting a completed replacement and publishes only status transitions.
+Native browser checks verify exact uploads/inspection, one queued refresh, and
+resource cleanup at DPR 1/2 and desktop/narrow widths. The four 630-row layout
+cases passed in approximately 13–21 seconds per case, including resize and camera
+interactions. They retain the inherited 45-second completion wait and 90-second
+case budget with every value/analysis and geometry assertion. These observations
+are correctness evidence, not a rendering throughput benchmark.
 
 ## Reproduction
 

@@ -188,6 +188,8 @@ export class EmbeddingController {
               this.state.statisticsMetadata = outcome.metadata;
               this.updates?.transfer({ statistics: outcome.metadata });
             }
+            this.updates?.flush?.();
+            if (!current(result)) return;
             this.update(result, 'complete');
           } else this.fail(result, outcome.kind === 'cancelled' ? 'cancelled'
             : result === 'values' && outcome.error.code === 'unsupported_representation' ? 'unsupported' : 'failed');

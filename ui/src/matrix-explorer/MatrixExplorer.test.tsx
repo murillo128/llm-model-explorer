@@ -9,7 +9,7 @@ import type { MatrixSource, MatrixUpdates } from './types';
 
 const fake = vi.hoisted(() => ({ fail: false, transferFails: false, views: [] as {
   options: MatrixViewportOptions; upload: ReturnType<typeof vi.fn>; transfer: ReturnType<typeof vi.fn>;
-  fitWidth: ReturnType<typeof vi.fn>; revealRow: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn>;
+  fitWidth: ReturnType<typeof vi.fn>; revealRow: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn>; refresh: ReturnType<typeof vi.fn>;
 }[] }));
 vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
   matrix;
@@ -21,7 +21,7 @@ vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
     const transfer = vi.fn(() => { if (fake.transferFails) throw new Error('Invalid transfer'); });
     this.matrix = { renderer: { upload, setTransfer: transfer } };
     this.dispose = vi.fn(() => { options.onInspection?.(null); host.replaceChildren(); });
-    fake.views.push({ options, upload, transfer, fitWidth: this.fitWidth, revealRow: this.revealRow, dispose: this.dispose });
+    fake.views.push({ options, upload, transfer, fitWidth: this.fitWidth, revealRow: this.revealRow, dispose: this.dispose, refresh: this.refresh });
   }
   fitWidth = vi.fn();
   revealRow = vi.fn();
@@ -37,6 +37,42 @@ function source(): MatrixSource & { updates: MatrixUpdates[]; detach: ReturnType
   return { descriptor: { shape: [2, 3], rank: 2, numel: 6, logical_dtype: 'float32' }, updates, detach,
     subscribe(sink) { updates.push(sink); return detach; } };
 }
+it('uploads immediately, coalesces presentation, flushes atomically and cancels stale frames', () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let sequence = 0;
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.set(++sequence, callback); return sequence; });
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => { frames.delete(id); });
+  const a = source(), b = source();
+  const view = render(<MatrixExplorer source={a} />);
+  const updates = a.updates[0]!, renderer = fake.views[0]!;
+  const chunks = [1, 2, 3].map(value => new Float32Array([value]));
+  updates.values(chunks[0]!, 0);
+  expect(renderer.refresh).toHaveBeenCalledOnce();
+  updates.values(chunks[1]!, 1); updates.values(chunks[2]!, 2);
+  expect(renderer.upload).toHaveBeenCalledTimes(3);
+  chunks.forEach((chunk, offset) => {
+    expect(renderer.upload.mock.calls[offset]![0]).toBe(chunk);
+    expect(renderer.upload.mock.calls[offset]![1]).toBe(offset);
+  });
+  expect(renderer.refresh).toHaveBeenCalledOnce();
+  expect(frames.size).toBe(1);
+  const frame = [...frames.values()][0]!; frames.clear(); frame(0);
+  expect(renderer.refresh).toHaveBeenCalledTimes(2);
+  updates.values(new Float32Array([4]), 3);
+  const cancelled = [...frames.values()][0]!;
+  updates.flush!(); updates.flush!(); cancelled(0);
+  expect(frames.size).toBe(0);
+  expect(renderer.refresh).toHaveBeenCalledTimes(3);
+  updates.values(new Float32Array([5]), 4);
+  const obsolete = [...frames.values()][0]!;
+  view.rerender(<MatrixExplorer source={b} />);
+  expect(frames.size).toBe(0);
+  obsolete(0); updates.values(new Float32Array([6]), 5); updates.flush!();
+  expect(renderer.refresh).toHaveBeenCalledTimes(3);
+  expect(renderer.upload).toHaveBeenCalledTimes(5);
+  expect(renderer.dispose).toHaveBeenCalledOnce();
+  view.unmount();
+});
 it('fences retained subscriptions and disposes their allocation even when unsubscribe throws', () => {
   const a = source(), b = source();
   const view = render(<MatrixExplorer source={a} />);

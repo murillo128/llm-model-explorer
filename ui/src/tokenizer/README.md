@@ -59,7 +59,9 @@ Resubscribing after any received bytes restarts the lookup at offset zero;
 StrictMode's synchronous pre-DATA detach/reattach can reuse the untouched stream.
 Every callback is fenced by the tokenizer abort signal and transport epoch.
 The last complete renderer remains mounted during recomputation. A replacement
-streams into a hidden, inert sibling renderer and is promoted only on COMPLETE.
+streams into a hidden, inert sibling renderer and is promoted only on COMPLETE,
+after flushing its final queued draw. Uploads stay synchronous and exact while
+the shared viewer coalesces subsequent progressive redraws per animation frame.
 Failed/superseded staging renderers are disposed without replacing the prior
 matrix. At most two renderer allocations are retained, with no extra scalar cache.
 

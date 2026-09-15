@@ -1102,18 +1102,15 @@ for (const width of [1178, 1440]) {
   });
 
   test(`polish real tokenizer auto sizing and accessible manual split at ${width}px`, async ({ page }, info) => {
-    test.setTimeout(info.project.name === 'dpr2' ? 180_000 : 120_000);
     await page.setViewportSize({ width, height: 900 });
     const editor = await tokenizer(page);
     const fill = async (text: string) => {
       const response = page.waitForResponse(r => r.url().endsWith('/tokenize') && r.request().postDataJSON().text === text);
       await editor.press('ControlOrMeta+A'); await page.keyboard.insertText(text);
       const tokens = (await (await response).json()).tokens;
-      // Hundreds of progressive rows redraw all three native surfaces. Shared
-      // SwiftShader runs exceeded 45 s at DPR 1 and 75 s at DPR 2 despite ~4 s
-      // network delivery. Scope the rendering budget to this layout gate;
-      // retain every complete-value/analysis and geometry assertion.
-      await embeddingDone(page, tokens.length, info.project.name === 'dpr2' ? 120_000 : 75_000); await settledPrompt(page);
+      // Hundreds of progressive row uploads can exceed the ordinary 15 s wait
+      // under DPR 2 SwiftShader. This is a completion/geometry gate, not latency.
+      await embeddingDone(page, tokens.length, 45_000); await settledPrompt(page);
       return tokens.length as number;
     };
     const bounded = async () => {

@@ -125,6 +125,24 @@ const scalarBytes = new Uint8Array(new Float32Array([-7.5, 8, 1, -2, -7.5, 8]).b
 const countBytes = new Uint8Array(histogram.buffer);
 const tick = async () => { await Promise.resolve(); await Promise.resolve(); };
 
+it.each([false, true])('flushes the final values before promotion and respects presentation failure=%s', async fail => {
+  const { client, requests } = harness();
+  const events: string[] = [];
+  const updates: MatrixUpdates = { values: vi.fn(), transfer: vi.fn(), distribution: vi.fn(), distributionDomain: vi.fn(),
+    flush: () => { events.push('present'); if (fail) controller.renderingFailed(); } };
+  const controller = new EmbeddingController(client, 's', [2, 0, 2], new AbortController().signal, (state, allocate) => {
+    events.push(state.status);
+    if (allocate) state.source!.subscribe(updates);
+  });
+  controller.start(); requests[0]!.options.onMetadata!(metadata);
+  requests[0]!.options.onData!(scalarBytes, 0);
+  requests[0]!.done.resolve({ kind: 'complete', metadata, byteLength: 24 });
+  await tick();
+  expect(events.slice(-2)).toEqual(['present', fail ? 'failed' : 'complete']);
+  expect(updates.values).toHaveBeenCalledExactlyOnceWith(new Float32Array([-7.5, 8, 1, -2, -7.5, 8]), 0);
+  controller.dispose();
+});
+
 it('uploads every progressive chunk without republishing unchanged result status', async () => {
   const { client, requests, auxiliary } = harness();
   const updates: MatrixUpdates = { values: vi.fn(), transfer: vi.fn(), distribution: vi.fn(), distributionDomain: vi.fn() };
