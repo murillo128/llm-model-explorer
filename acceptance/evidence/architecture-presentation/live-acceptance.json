@@ -1,0 +1,210 @@
+{
+  "stats": {
+    "startTime": "2026-09-15T09:23:07.293Z",
+    "duration": 1488273.544,
+    "expected": 18,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "case": "deterministic production [smollm2] full graph, concrete bindings and native modal",
+      "project": "dpr1",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 10399
+        }
+      ]
+    },
+    {
+      "case": "deterministic production [qwen3] full graph, concrete bindings and native modal",
+      "project": "dpr1",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 10490
+        }
+      ]
+    },
+    {
+      "case": "deterministic production [qwen35] full graph, concrete bindings and native modal",
+      "project": "dpr1",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 10858
+        }
+      ]
+    },
+    {
+      "case": "deterministic production [vjepa2] full graph, concrete bindings and native modal",
+      "project": "dpr1",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 11522
+        }
+      ]
+    },
+    {
+      "case": "complete local reference [smollm2] full graph, concrete bindings and native modal",
+      "project": "dpr1",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 43252
+        }
+      ]
+    },
+    {
+      "case": "complete local reference [qwen3] full graph, concrete bindings and native modal",
+      "project": "dpr1",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 247987
+        }
+      ]
+    },
+    {
+      "case": "complete local reference [qwen35] full graph, concrete bindings and native modal",
+      "project": "dpr1",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 213785
+        }
+      ]
+    },
+    {
+      "case": "complete local reference [vjepa2] full graph, concrete bindings and native modal",
+      "project": "dpr1",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 36153
+        }
+      ]
+    },
+    {
+      "case": "deterministic production [smollm2] close during progressive data cancels and releases modal resources",
+      "project": "dpr1",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 7975
+        }
+      ]
+    },
+    {
+      "case": "deterministic production [smollm2] full graph, concrete bindings and native modal",
+      "project": "dpr2",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 10246
+        }
+      ]
+    },
+    {
+      "case": "deterministic production [qwen3] full graph, concrete bindings and native modal",
+      "project": "dpr2",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 10076
+        }
+      ]
+    },
+    {
+      "case": "deterministic production [qwen35] full graph, concrete bindings and native modal",
+      "project": "dpr2",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 10303
+        }
+      ]
+    },
+    {
+      "case": "deterministic production [vjepa2] full graph, concrete bindings and native modal",
+      "project": "dpr2",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 10391
+        }
+      ]
+    },
+    {
+      "case": "complete local reference [smollm2] full graph, concrete bindings and native modal",
+      "project": "dpr2",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 36269
+        }
+      ]
+    },
+    {
+      "case": "complete local reference [qwen3] full graph, concrete bindings and native modal",
+      "project": "dpr2",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 372724
+        }
+      ]
+    },
+    {
+      "case": "complete local reference [qwen35] full graph, concrete bindings and native modal",
+      "project": "dpr2",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 394205
+        }
+      ]
+    },
+    {
+      "case": "complete local reference [vjepa2] full graph, concrete bindings and native modal",
+      "project": "dpr2",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 41488
+        }
+      ]
+    },
+    {
+      "case": "deterministic production [smollm2] close during progressive data cancels and releases modal resources",
+      "project": "dpr2",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 8552
+        }
+      ]
+    }
+  ]
+}

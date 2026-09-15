@@ -133,7 +133,8 @@ shared the host. Global Fit renders more DOM than a culled detail viewport.
 
 - Repository UI gate: API binding freshness, TypeScript, ESLint, **595 unit tests** and production build pass.
 - 44 architecture browser cases pass across desktop/narrow projects, plus a four-case evidence rerun. Native pointer hits test exact source/destination dots and independently targetable interiors; no forced events. Assertions cover fan-out, boundary chains, residuals, K/V, same-shaped ports, stop-at-computation, pin/clear, Tab/Escape/focus return and unchanged geometry/camera/layout count. Existing native streaming, disposal, unavailable representations and shell isolation pass.
-- Production HTTP architecture acceptance: **7 passed**, requiring all four complete local references. The built-browser architecture harness exercises all four synthetic checkpoints and all four complete local references at DPR 1 and 2, plus progressive cancellation, with the command below. Its final run outcome accompanies the PR validation.
+- Production HTTP architecture acceptance: **7 passed**, requiring all four complete local references. Built-browser/live-backend architecture acceptance: **18 passed in 24.8 minutes**. All four synthetic checkpoints and all four complete local references passed at DPR 1 and 2, together with progressive cancellation. Actual references were SmolLM2 Base, Qwen3 GPTQ, Qwen3.5 NVFP4 and V-JEPA 2; no reference was skipped. Native vectors/matrices were compared with the local value oracle, and unavailable packed/higher-rank representations remained metadata.
+- The [live acceptance receipt](evidence/architecture-presentation/live-acceptance.json) retains case names, projects, outcomes and durations without model/cache data. A fresh-cache development run also passed **12/12 browser cases with two workers** after preoptimizing the two worker-loaded ELK modules; no dependency-triggered page reload remained.
 
 ```sh
 npm --prefix ui ci
