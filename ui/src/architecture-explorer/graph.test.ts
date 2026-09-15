@@ -1,31 +1,34 @@
+import { layoutGraph } from './auto-layout';
 import { expect, it, vi } from 'vitest';
 import fixture from '../../../api/fixtures/architecture.json';
 import { validateSchema } from '../api/validation';
-import { formatShape, GraphViews, layoutGraph } from './graph';
+import { formatShape, GraphViews } from './graph';
 import { requestLayout } from './layout';
 import { referenceFixture, references } from '../../tests/architecture-fixtures';
 import { validateArchitecture } from '../api/architecture-validation';
 
 const graph = validateSchema('ArchitectureAvailableResponse', fixture.response).graph;
-it.each(references)('validates full-size $name fixtures and preserves exact configured instance order', (reference) => {
+it.each(references)('validates full-size $name fixtures and preserves exact configured instance order', async (reference) => {
   const response = referenceFixture(reference.name);
   expect(() => validateArchitecture(response, { modelId: reference.model, tokenizerAvailable: !reference.visual,
     inventory: { tensors: [], coverage: 'partial', diagnostics: [] } })).not.toThrow();
-  const layout = layoutGraph(response.graph, response.graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id));
+  const layout = await layoutGraph(response.graph, { expanded: [], exhaustive: true });
   expect(layout.boxes).toHaveLength(response.graph.nodes.length);
   expect(layout.edgeIds).toEqual(response.graph.edges.map((e) => e.id));
   expect(response.graph.repetitions.map((r) => r.instances.length)).toEqual(reference.stacks);
   if (reference.hybrid) expect(response.graph.repetitions[0]!.instances.map((i) => i.variant)).toEqual(
     Array.from({ length: 6 }, () => ['linear_attention', 'linear_attention', 'linear_attention', 'full_attention']).flat());
-});
-it('retains every expanded record and exact crossing edge, with parent-before-child layout', () => {
-  const all = layoutGraph(graph, graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id));
+}, 60_000);
+it('retains every expanded record and source connection while compacting repeated siblings', async () => {
+  const all = await layoutGraph(graph, { expanded: [], exhaustive: true });
   expect(all.boxes.map((b) => b.id).sort()).toEqual(graph.nodes.map((n) => n.id).sort());
   expect(all.edgeIds).toEqual(graph.edges.map((e) => e.id));
-  const compact = layoutGraph(graph, ['root']);
-  expect(compact.boxes.map((b) => b.id)).toEqual(['root', 'layer0', 'layer1', 'tokens']);
+  const compact = await layoutGraph(graph, { expanded: ['root'] });
+  expect(compact.boxes.map((b) => b.id)).toEqual(['root', 'repeat:layers:0:1', 'tokens']);
+  expect(compact.projection.nodes.find((n) => n.presentation === 'repetition')!.sourceIds).toEqual(['layer0', 'layer1']);
   const crossing = graph.edges.find((e) => e.source.node_id === 'layer0' && e.target.node_id === 'layer1')!;
-  expect(compact.edgeIds).toContain(crossing.id);
+  expect(compact.edgeIds).not.toContain(crossing.id);
+  expect(compact.projection.hiddenEdgeIds).toContain(crossing.id);
   for (const box of all.boxes) {
     if (!box.parentId) continue;
     const parent = all.boxes.find((p) => p.id === box.parentId)!;
@@ -49,18 +52,56 @@ it('renders dimensions as text, distinguishing scalar, unknown, symbol and expre
     { kind: 'expression', text: 'window.alert(1)', symbols: [] }, { kind: 'unknown', reason: 'unresolved' }]))
     .toBe('[3 × B × (window.alert(1)) × ? (unresolved)]');
 });
-it('terminates obsolete and timed-out layout workers', async () => {
+function layoutWorker() {
+  return { postMessage: vi.fn(), terminate: vi.fn(),
+    onmessage: null as ((event: MessageEvent) => void) | null, onerror: null as (() => void) | null };
+}
+it.each(['abort', 'timeout'])('rejects %s immediately and terminates after the nested-worker teardown acknowledgement', async (cause) => {
   vi.useFakeTimers();
   try {
-    const worker = { postMessage: vi.fn(), terminate: vi.fn(), onmessage: null, onerror: null };
+    const worker = layoutWorker();
     const create = () => worker as unknown as Worker;
     const abort = new AbortController();
-    const pending = requestLayout(graph, [], abort.signal, create);
-    abort.abort(); await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    const pending = requestLayout(graph, { expanded: [] }, abort.signal, create);
+    const assertion = cause === 'abort' ? expect(pending).rejects.toMatchObject({ name: 'AbortError' }) : expect(pending).rejects.toThrow('exceeded');
+    if (cause === 'abort') abort.abort(); else await vi.advanceTimersByTimeAsync(10_000);
+    await assertion;
+    expect(worker.postMessage).toHaveBeenLastCalledWith({ cancel: true });
+    expect(worker.terminate).not.toHaveBeenCalled();
+    worker.onmessage!({ data: { cancelled: true } } as MessageEvent);
     expect(worker.terminate).toHaveBeenCalledOnce();
-    const timeout = requestLayout(graph, [], new AbortController().signal, create);
-    const assertion = expect(timeout).rejects.toThrow('exceeded');
-    await vi.advanceTimersByTimeAsync(10_001); await assertion;
-    expect(worker.terminate).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(worker.terminate).toHaveBeenCalledOnce();
+  } finally { vi.useRealTimers(); }
+});
+it.each(['abort', 'timeout'])('bounds %s worker teardown to 1000ms when no acknowledgement arrives', async (cause) => {
+  vi.useFakeTimers();
+  try {
+    const worker = layoutWorker(), abort = new AbortController();
+    const pending = requestLayout(graph, { expanded: [] }, abort.signal, () => worker as unknown as Worker);
+    const assertion = cause === 'abort' ? expect(pending).rejects.toMatchObject({ name: 'AbortError' }) : expect(pending).rejects.toThrow('exceeded');
+    if (cause === 'abort') abort.abort(); else await vi.advanceTimersByTimeAsync(10_000);
+    await assertion;
+    await vi.advanceTimersByTimeAsync(999); expect(worker.terminate).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1); expect(worker.terminate).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  } finally { vi.useRealTimers(); }
+});
+it('rejects late layout replies after cancellation instead of publishing obsolete geometry', async () => {
+  vi.useFakeTimers();
+  try {
+    const worker = layoutWorker(), abort = new AbortController(), published = vi.fn(), rejected = vi.fn();
+    const pending = requestLayout(graph, { expanded: [] }, abort.signal, () => worker as unknown as Worker);
+    const originalReply = worker.onmessage!;
+    const outcome = pending.then(published, rejected);
+    abort.abort(); await outcome;
+    expect(rejected).toHaveBeenCalledWith(expect.objectContaining({ name: 'AbortError' }));
+    const late = { data: { layout: { boxes: [{ id: 'obsolete' }] } } } as MessageEvent;
+    originalReply(late); // An already queued completion callback also sees the settled request.
+    worker.onmessage!(late); // The active callback reaps the owner even when completion races its ACK.
+    await Promise.resolve();
+    expect(published).not.toHaveBeenCalled(); expect(worker.terminate).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
   } finally { vi.useRealTimers(); }
 });

@@ -72,6 +72,7 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
       {node.description && <p>{node.description}</p>}
       {node.formula && <pre>{node.formula}</pre>}
       {node.ports.map((p) => <p key={p.id}>{p.direction} {p.label}: {formatShape(p.shape)}</p>)}
+      {!!selected.filteredInputs?.length && <p>Declared inputs without internal consumers: {selected.filteredInputs.join(', ')}. Their branches are filtered in the compact graph; enable Unused interfaces to show them.</p>}
       {node.references.map((r, i) => r.kind === 'module' ? <p key={i}>Module: {r.name}</p> : r.kind === 'tokenizer' ? <p key={i}>Tokenizer context for this model</p> : null)}
       {node.attributes.map((a, i) => <div key={i}><p>{a.name}: {JSON.stringify(a.value)}</p><Provenance records={a.provenance} /></div>)}
       <Provenance records={node.provenance} />

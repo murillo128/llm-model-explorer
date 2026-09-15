@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { BrowserContext } from '@playwright/test';
+import type { BrowserContext, Route } from '@playwright/test';
 import { contractInventory, contractResponse, referenceFixture } from './architecture-fixtures';
 
 async function backend(context: BrowserContext) {
@@ -31,7 +31,7 @@ test('built shell retrieves on demand, supports V-JEPA without tokenization and 
   expect(requests.filter((p) => p.endsWith('/architecture'))).toHaveLength(0);
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
   const graph = page.getByLabel('Architecture graph', { exact: true });
-  await expect(graph).toHaveAttribute('data-visible-nodes', '4');
+  await expect(graph).toHaveAttribute('data-visible-nodes', '3');
   await page.getByRole('button', { name: 'Expand all', exact: true }).click();
   await expect(graph).toHaveAttribute('data-visible-nodes', '6');
   await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
@@ -58,6 +58,23 @@ test('malformed graphs stay local and partial inventories remain explicit', asyn
   await expect(page.getByText('Fixture has no native weights.')).toBeVisible();
 });
 
+test('a delayed architecture response cannot replace a newer model/session', async ({ page, context }) => {
+  const requests = await backend(context);
+  let old: Route | undefined;
+  await context.route('https://architecture.example/sessions/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/architecture', (route) => { old = route; });
+  await page.goto('/');
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(contractResponse.model_id);
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  await expect.poll(() => Boolean(old)).toBe(true);
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(referenceFixture('vjepa2').model_id);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  await expect(canvas).toHaveAttribute('data-graph-id', 'fixture-vjepa2');
+  await old!.fulfill({ json: contractResponse });
+  await expect(canvas).toHaveAttribute('data-graph-id', 'fixture-vjepa2');
+  await expect(page.getByRole('combobox', { name: 'Select graph component', exact: true })).toHaveValue('');
+  expect(requests.some((request) => request.endsWith('/tokenize'))).toBe(false);
+});
+
 test('third navigation item leaves model and session controls usable at 280 pixels', async ({ page, context }) => {
   await backend(context); await page.setViewportSize({ width: 280, height: 400 }); await page.goto('/');
   const model = page.getByRole('combobox', { name: 'Model', exact: true });
@@ -67,5 +84,5 @@ test('third navigation item leaves model and session controls usable at 280 pixe
   expect(a.width).toBeGreaterThanOrEqual(36); expect(a.x + a.width).toBeLessThanOrEqual(b.x);
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
   await model.selectOption(contractResponse.model_id);
-  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '4');
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '3');
 });

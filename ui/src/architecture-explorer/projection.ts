@@ -29,7 +29,9 @@ export interface ProjectionOptions {
   deriveMlp?: boolean;
   showUnused?: boolean;
   showContext?: boolean;
-  stateScope?: string;
+  stateScope?: string | undefined;
+  /** Layout-only label visibility; it never changes source projection semantics. */
+  dimensions?: boolean;
 }
 export interface Projection {
   nodes: ProjectedNode[]; edges: ProjectedEdge[];

@@ -8,7 +8,6 @@ import { dirname, join } from 'node:path';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import type { Graph } from '../src/architecture-explorer/graph';
-import { layoutGraph } from '../src/architecture-explorer/graph';
 import { installProbe } from './probe';
 import { nativeCamera } from '../tests/native-camera';
 
@@ -31,6 +30,7 @@ async function control(path: string, body?: object) {
 async function openParameter(page: Page, graph: Graph, parameter: Graph['parameters'][number]) {
   const node = graph.nodes.find((n) => n.parameter_ids.includes(parameter.id))!;
   await page.getByLabel('Select graph component', { exact: true }).selectOption(node.id);
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
   await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
   await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
 }
@@ -111,15 +111,15 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     expect(ids).toEqual(graph.nodes.map((n) => n.id));
     await page.getByRole('button', { name: 'Expand all', exact: true }).click();
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
-    // Every source edge survives full expansion; compact boundaries retain explicit edges.
-    const expanded = layoutGraph(graph, graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id));
-    expect(expanded.edgeIds).toEqual(graph.edges.map((e) => e.id));
-    const compact = layoutGraph(graph, []), roots = new Set(compact.boxes.map((n) => n.id));
-    expect(compact.edgeIds).toEqual(graph.edges.filter((e) => roots.has(e.source.node_id) && roots.has(e.target.node_id)).map((e) => e.id));
+    // Visible routes compose boundary forwarding. Every original edge remains
+    // traceable even though one route may represent several source segments.
+    expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((n) => n.id));
+    expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((e) => e.id));
+    const roots = new Set(graph.nodes.filter((n) => !n.parent_id).map((n) => n.id));
     for (const repetition of graph.repetitions) {
       const last = repetition.instances.at(-1)!;
       await page.getByLabel('Select graph component', { exact: true }).selectOption(last.node_id);
-      await expect(page.locator('.architecture-coverage')).toContainText(`instance ${last.index}`);
+      await expect(page.locator('.architecture-coverage')).toContainText(new RegExp(`instance ${last.index}`, 'i'));
     }
     await page.getByLabel('Show dimensions').check();
     await expect(page.getByLabel('Show dimensions')).toBeChecked();
@@ -196,7 +196,9 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     await expect(page.getByLabel('Show dimensions')).toBeChecked();
     if (family === 'vjepa2') expect(observed.some((p) => p.endsWith('/tokenize'))).toBe(false);
     await page.getByRole('button', { name: 'Collapse all', exact: true }).click();
-    await expect(canvas).toHaveAttribute('data-visible-nodes', String(compact.boxes.length));
+    await expect(canvas).toHaveAttribute('data-visible-nodes', String(roots.size));
+    expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(
+      graph.edges.filter((edge) => roots.has(edge.source.node_id) && roots.has(edge.target.node_id)).map((edge) => edge.id));
     await page.getByRole('button', { name: 'Center selected', exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   });

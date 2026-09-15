@@ -14,6 +14,8 @@ Use a single pannable, zoomable canvas with fit-to-window and centering on a sel
 
 Start compact, grouping repeated layers. Allow expansion of a representative interior, selection of a concrete instance, expansion of chosen instances, and an Expand all action that reveals every instance and required mathematical operation. A representative display must clearly identify its selected instance; inspecting a weight must never silently use layer zero for every repetition.
 
+A compact repetition shows its multiplicity and truthful variant summary. Stack exploration uses a viewport-dependent contiguous window with explicit before/after ranges; selecting an instance uses its actual source and parameter references. Preserve nonperiodic variants and multiple independent stacks. Model, stack, layer, MLP and state focus are expansion/filter states of this canvas, with an explicit return to global context.
+
 Keep actual layer order and variant differences visible when grouped. Preserve external dependencies across collapsed boundaries through meaningful ports/connections. Collapsing must not erase a skip connection, create a false serial path, or treat distinct hybrid blocks as identical. Expanded topology must be recoverable from the same graph without new analysis.
 
 Expanding a group preserves the acted-on location/context; do not reset the camera or automatically fit the entire graph after every expansion. Maintain camera, expanded groups, and selection while closing inspection or switching explorers during the browser session, keyed by model and graph identity. Server-restart persistence is not required. Reject late responses and clear invalid selections on session/model/graph replacement.
@@ -21,6 +23,41 @@ Expanding a group preserves the acted-on location/context; do not reset the came
 Viewport culling and asynchronous layout are allowed optimizations; discarding graph records or silently reducing detail is not. Bound layout work and provide an explicit recoverable failure rather than an indefinitely frozen canvas. All reference graphs must be usable when fully expanded on the documented acceptance environment. Record actual layout time, memory, and graph size rather than inventing a performance guarantee.
 
 React Flow and ELK are implementation candidates, not mandatory backend dependencies or reasons to change the graph contract. The layout implementation may be replaced without changing model semantics. Do not add a second matrix renderer, graph editor, export suite, or complex navigation framework in this increment.
+
+## Source projection, automatic placement and connections
+
+Keep the received graph unchanged. Derive visible records with source node IDs,
+repetition/instance identity and exact original edge/port references. Compose
+input/output boundary forwarding without traversing computational operations;
+exclude collapsed descendants and internal paths from rendering and geometry.
+A reversible derived MLP group requires matching parameter/module ownership and
+exact gate/up/SiLU/multiply/down topology. Unmatched operations remain explicit.
+
+Place dependency chains left-to-right recursively inside every expanded scope,
+including repeated layers, attention and derived MLP groups. Successive serial
+stages have nonoverlapping horizontal bounds; parallel branches, auxiliary inputs
+and state/residual routes may occupy separate rows. Containers account for child
+sizes, headers, ports and connector labels. Pan/zoom handles overflow without
+wrapping a serial chain or changing the shell. Use generated routes with exact
+endpoints, readable destination arrowheads and clearance from unrelated bodies
+and labels. Distinct signals remain individually identifiable; a shared trunk
+requires the same actual source port and explicit fan-out branch points.
+
+Pointing to or focusing a line emphasizes its complete visible connection,
+arrowhead and both endpoint markers/labels. An input port emphasizes only its
+incoming connections; an output port emphasizes all outgoing connections at that
+exact port. Follow composed boundaries, stop at computation, and keep same-shaped
+ports independent. Click or keyboard activation pins connection inspection;
+leaving transient hover/focus restores any pin. Use the shared warm amber token,
+stroke/focus treatment and generous hit targets. These interactions do not move
+nodes, fit the camera, reanalyse the graph or invoke layout.
+
+Declared interfaces remain inspectable when unconsumed branches are filtered.
+Determine consumption from source connectivity, with an explicit reversible
+filter. State focus shows only existing prior/next dependencies owned by the
+selected instance, keeps K/V distinct and identifies excluded flows. Exhaustive
+expansion restores original operations and interfaces without a representative
+or layer-count limit.
 
 ## Clean default presentation and dimensions
 
@@ -44,7 +81,7 @@ Resource references are semantic: model scope, modules, parameters, and an optio
 
 ## Language and V-JEPA presentation
 
-For language models, show tokenization as a distinct context block before the neural model when applicable. It explains the source of token IDs and preserves the tokenizer reference; it does not execute tokenization or require a new cross-explorer action. Other Qwen modalities remain labelled context, outside detailed language coverage.
+For language models, show tokenization as a distinct context block before the neural model when applicable. It preserves the tokenizer reference; a portless context node does not gain invented computational edges or ports. It does not execute tokenization or require a new cross-explorer action. Other Qwen modalities remain labelled context, outside detailed language coverage.
 
 For the selected V-JEPA 2 model, use symbolic visual input, patch preparation, encoder, context/target selection inputs, predictor, and representation outputs. Both stacks expand in the same global canvas. No text-tokenizer error, vocabulary head, video player, upload selector, preprocessing control, action planner, or training graph is introduced. Native matrix/vector weights use the same modal; higher-rank parameters retain explicit shape/limitation information.
 
