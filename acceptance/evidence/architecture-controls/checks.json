@@ -56,5 +56,29 @@
   "limitations": [
     "Authored graph fixture and live fixture numeric/tokenizer service; does not establish real-checkpoint acceptance.",
     "Exact-head CI results are recorded on the PR."
-  ]
+  ],
+  "navigation_follow_up": {
+    "reproduced_on": "db9edc66905f1a91f4901df2c60b94ce2c1b8faa",
+    "regression": "Cross-stack derived MLP canvas activation must align focus, active stack and concrete instance while preserving independent windows and selected source.",
+    "baseline_result": "FAIL: encoder MLP breadcrumb with no Encoder instance picker after keyboard activation.",
+    "validated_source_sha256": {
+      "ui/src/architecture-explorer/ArchitectureCanvas.tsx": "2a244a3394d4ee262839a2a2cce2546ba00d005dbe1d428061f8bc8ab38dad76",
+      "ui/tests/architecture-controls.spec.ts": "6c87c7b210ff250d2792f1c4ca8c8066e213cfac651c3e05e72cf8a1690c450e"
+    },
+    "checks": [
+      {
+        "command": "npm run check",
+        "result": "PASS: generated bindings, typecheck, lint, 710 unit tests and production build."
+      },
+      {
+        "command": "npm run typecheck && npm run lint",
+        "result": "PASS after final browser-test camera setup adjustment."
+      },
+      {
+        "command": "npm run test:browser -- architecture-controls.spec.ts --grep 'cross-stack canvas MLP'",
+        "result": "PASS: 4 cross-stack pointer/keyboard regressions across desktop and narrow viewports. Existing 12 control cases also passed on the same production source."
+      }
+    ],
+    "visual_evidence": "Original captures/source hashes remain those of the initial controls implementation; navigation-only follow-up does not change control styling or graph engine."
+  }
 }

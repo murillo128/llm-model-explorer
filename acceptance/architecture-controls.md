@@ -95,6 +95,28 @@ source hashes, the validated source snapshot and the timing of final CSS/capture
 adjustments. Required application and full UI CI results belong to the exact PR
 head and are recorded on the PR.
 
+## Cross-stack canvas navigation regression
+
+Revealing an encoder MLP operation, then a predictor operation, leaves both
+stack windows available on the global canvas. Activating the encoder's derived
+MLP label must switch both its breadcrumb and contextual instance controls to the
+encoder. The shared navigation handler now persists focus and active repetition
+together, resolving derived MLPs through their source owner. Stack overview uses
+its explicit repetition because its focal node is the common stack parent.
+Selection and each stack's expansion/window state remain independent.
+
+The new browser regression first reproduced the missing Encoder picker on
+`db9edc66905f1a91f4901df2c60b94ce2c1b8faa`. It exercises pointer and keyboard
+activation through the actual canvas, verifies the concrete variant, both
+navigation endpoints, independent windows and unchanged selected source, then
+remounts the explorer and follows Open instance and Previous/Next. The original
+12 visual captures and their source receipt describe the initial controls
+implementation; this follow-up changes only navigation wiring and adds this
+regression. Follow-up source hashes and validation are recorded separately in
+the check receipt. The full UI check passed again (710 unit tests), all four
+pointer/keyboard regression cases passed at desktop/narrow widths, and the 12
+existing controls cases passed on the same production source.
+
 ## Reproduction
 
 Use the locked Node/Python/Chromium environments and an isolated `UI_TEST_PORT`.

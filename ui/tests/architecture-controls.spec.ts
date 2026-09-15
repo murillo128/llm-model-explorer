@@ -155,6 +155,60 @@ test('breadcrumbs, first/last and mixed variants preserve two independent stack 
   await expect(page.getByRole('button', { name: 'Explore stack Encoder layers', exact: true })).toBeVisible();
 });
 
+for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack canvas MLP ${activation} activation keeps focus and instance controls consistent`, async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('mixed-stacks'); await ready(page);
+  await findComponent(page, 'encoder.layer-3.gate'); await ready(page);
+  await findComponent(page, 'predictor.layer-1.attention.Q'); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  const before = await snapshot(page);
+  const windows = before.requests.at(-1)!.options.repetitions;
+  expect(windows).toEqual({ 'encoder-layers': { start: 3, count: 1 }, 'predictor-layers': { start: 1, count: 1 } });
+  const mlp = page.locator('[data-id="mlp:encoder.layer-3.gate"] .architecture-node-label');
+  // Reach the other expanded stack through camera controls, without changing focus.
+  const panel = (await page.locator('.architecture-flow').boundingBox())!;
+  const inView = () => mlp.evaluateAll((elements, panel) => {
+    // React Flow can cull the target until zoom exposes it; do not wait for
+    // attachment before issuing the camera action that makes it reachable.
+    const box = elements[0]?.getBoundingClientRect();
+    return box !== undefined && box.width > 0 && box.height > 0 && box.x >= panel.x && box.y >= panel.y &&
+      box.right <= panel.x + panel.width && box.bottom <= panel.y + panel.height;
+  }, panel);
+  for (let i = 0; i < 16 && !await inView(); i++) { await graphAction(page, 'Zoom graph out'); await ready(page); }
+  expect(await inView()).toBe(true);
+  if (activation === 'pointer') await mlp.click();
+  else { await mlp.focus(); await page.keyboard.press('Enter'); }
+  await ready(page);
+  const crumb = page.getByRole('navigation', { name: 'Architecture focus' });
+  await expect(crumb).toContainText('Encoder layers');
+  await expect(crumb).toContainText('Layer 3');
+  await expect(crumb).toContainText('MLP (derived)');
+  const picker = page.getByRole('combobox', { name: 'Expand instance of Encoder layers', exact: true });
+  await expect(picker).toHaveValue('encoder.layer-3');
+  await expect(picker.locator('option:checked')).toHaveText('Instance 3 · full attention');
+  await expect(page.getByRole('combobox', { name: 'Expand instance of Predictor layers', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Previous instance of Encoder layers', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Next instance of Encoder layers', exact: true })).toBeEnabled();
+  await expect(page.locator('.architecture-visible-range')).toHaveText('Visible 3');
+  // Canvas navigation changes focus, independently of the selected source node.
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'predictor.layer-1.attention.Q');
+  const after = await snapshot(page);
+  expect(after.requests.at(-1)!.graph).toEqual(before.requests.at(-1)!.graph);
+  expect(after.requests.at(-1)!.options.repetitions).toEqual(windows);
+  assertTransportProjection(after.requests.at(-1)!.graph, after.layouts.at(-1)!);
+  await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click();
+  await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click(); await ready(page);
+  await expect(crumb).toContainText('MLP (derived)');
+  await expect(picker).toHaveValue('encoder.layer-3');
+  expect((await snapshot(page)).requests.at(-1)!.options.repetitions).toEqual(windows);
+  await page.getByRole('button', { name: 'Open instance', exact: true }).click(); await ready(page);
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'encoder.layer-3');
+  await page.getByRole('button', { name: 'Previous instance of Encoder layers', exact: true }).click(); await ready(page);
+  await expect(picker).toHaveValue('encoder.layer-2');
+  await page.getByRole('button', { name: 'Next instance of Encoder layers', exact: true }).click(); await ready(page);
+  await expect(picker).toHaveValue('encoder.layer-3');
+  expect((await snapshot(page)).requests.at(-1)!.options.repetitions).toEqual(windows);
+});
+
 test('edge pin, inspection and clear leave focus navigation and layout unchanged', async ({ page }) => {
   await chooseInstance(page, 'Layers', 'layer1');
   await graphAction(page, 'Show all operations');
