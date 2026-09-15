@@ -1,0 +1,6 @@
+# Native Codex >= 0.134 profile. Select explicitly with --profile codex-critical.
+model = "gpt-6-astra"
+model_reasoning_effort = "ultra"
+
+[agents]
+max_concurrent_threads_per_session = 3
