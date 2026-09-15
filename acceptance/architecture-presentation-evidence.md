@@ -100,10 +100,21 @@ application bars and rounded outer corners remain in the comparison mask.
 Viewport/document/body/scroll geometry is equal. Ten additional before/after
 captures compare the initial Architecture shell and whole Tensor/Tokenizer views,
 including switching through Architecture: **zero changed pixels**. Image SHA-256
-values are retained; matching Tensor/Tokenizer images need not be duplicated.
+values are retained, with shared byte-identical examples for
+[Tensor at 1178](evidence/architecture-presentation/tensor-preserved-1178.png) and
+[Tokenizer at 1440](evidence/architecture-presentation/tokenizer-preserved-1440.png).
 The baseline Tokenizer prompt clears on returning from another explorer; the
 populated and return states are compared separately. Native modal styling and
 resource/focus behavior retain their existing baseline.
+
+The final ten shell comparisons pin Chromium's `--disable-lcd-text` flag
+symmetrically for both builds. The initial comparison found two differing LCD
+text fringe pixels in the Tensor inventory at `(21,84)` and `(21,85)`; subsequent
+captures reproduced both pixel states on both builds with identical DOM, styles
+and scroll position. The JSON retains this observation and the original hashes.
+With the raster setting fixed, all ten comparisons pass exactly, without image
+edits, extra masks or pixel tolerance. The 50 graph-state exterior comparisons
+above retain their original matching browser settings and also pass exactly.
 
 ## Size, duration and memory observations
 
