@@ -91,7 +91,6 @@ jobs:
           REVIEW_HEAD_SHA: ${{ steps.target.outputs.head_sha }}
           REVIEW_BASE_SHA: ${{ steps.target.outputs.base_sha }}
           GITHUB_TOKEN: ${{ github.token }}
-          CODEX_PROFILE_NAME: ${{ vars.CODEX_AUDIT_PROFILE || 'codex-review' }}
         run: |
           set -euo pipefail
           umask 077
@@ -209,6 +208,8 @@ jobs:
           print(f"Pre-launch guard passed for current PR #{expected_pr} head {expected_head}.")
           PY
 
+          python3 "${state_dir}/codex_profile.py" prepare-issue "${state_dir}/codex-settings.json"
+
           task_prompt="Audit PR #${PR_NUMBER} for issue #${ISSUE_NUMBER} according to AGENTS.md."
           ready_file="${state_dir}/app-server-ready"
           error_file="${state_dir}/app-server-error"
@@ -228,7 +229,7 @@ jobs:
               SKILLFORGE_REPO_ROOT_RESOLVED="$repo_root" \
               SKILLFORGE_REVIEW_WORKTREE="$worktree" \
               SKILLFORGE_TASK_PROMPT="$task_prompt" \
-              CODEX_PROFILE_NAME="$CODEX_PROFILE_NAME" CODEX_LAUNCH_ROLE="audit" \
+              CODEX_LAUNCH_ROLE="audit" \
               ISSUE_NUMBER="$ISSUE_NUMBER" ISSUE_TITLE="" PR_NUMBER="$PR_NUMBER" \
               REVIEW_HEAD_SHA="$REVIEW_HEAD_SHA" \
               GITHUB_REPOSITORY="$GITHUB_REPOSITORY" \
