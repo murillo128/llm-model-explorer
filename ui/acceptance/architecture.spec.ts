@@ -95,7 +95,9 @@ async function inspectComponents(page: Page, graph: Graph, info: TestInfo, famil
     expect(b!.x).toBeGreaterThanOrEqual(a!.x + a!.width - 1);
   };
   for (const repetition of graph.repetitions) {
-    const instances = family === 'qwen35' ? repetition.instances.slice(0, 2) : repetition.instances.slice(0, 1);
+    const instances = family === 'qwen35'
+      ? repetition.instances.filter((instance, index, all) => all.findIndex((other) => other.variant === instance.variant) === index)
+      : repetition.instances.slice(0, 1);
     for (const instance of instances) {
       const attention = components.find((n) => n.parent_id === instance.node_id && role(n, 'attention'))!;
       const mlp = components.find((n) => n.parent_id === instance.node_id && role(n, 'mlp'))!;
@@ -109,7 +111,7 @@ async function inspectComponents(page: Page, graph: Graph, info: TestInfo, famil
       await graphAction(page, 'Toggle selected group'); await ready();
       await page.getByRole('button', { name: 'Center selected', exact: true }).click(); await ready();
       const projections = graph.nodes.filter((n) => n.parent_id === attention.id &&
-        (role(n, 'query_projection') || role(n, 'query_gate_projection')));
+        (role(n, 'query_projection') || role(n, 'query_gate_projection') || role(n, 'mask_padding_states')));
       const output = graph.nodes.find((n) => n.parent_id === attention.id && role(n, 'output_projection'));
       if (projections.length && output) await horizontal(projections[0]!.id, output.id);
       await capture(`${label}-attention`);
