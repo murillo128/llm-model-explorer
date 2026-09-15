@@ -1078,6 +1078,14 @@ for (const width of [1178, 1440]) test(`architecture safety baseline preserves s
   await open(page); await complete(page);
   await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
   const baseline = await shell();
+  const fixedShell = async () => {
+    const current = await shell();
+    // The existing active-tab font weight changes the nav's content width.
+    // Record each active view; compare its exact geometry on return below.
+    for (const [selector, value] of Object.entries(baseline)) {
+      if (selector !== '.app-bar nav') expect(current[selector]).toEqual(value);
+    }
+  };
   await documentFits(page);
   await polishCapture(page, info, `safety-tensor-${width}`);
   observations.tensor = baseline;
@@ -1088,14 +1096,14 @@ for (const width of [1178, 1440]) test(`architecture safety baseline preserves s
   await expect(page.locator('.input-embeddings [data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
   await expect(page.locator('.input-embeddings .embedding-layer:not([data-staging]) .matrix-panel-status')).toBeEmpty();
   await settledPrompt(page); await documentFits(page);
-  expect(await shell()).toEqual(baseline);
+  await fixedShell(); observations.tokenizer = await shell();
   await polishCapture(page, info, `safety-tokenizer-${width}`);
 
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
   await expect(canvas).toHaveAttribute('data-layout-count', /^[1-9]\d*$/);
-  await documentFits(page); expect(await shell()).toEqual(baseline);
+  await documentFits(page); await fixedShell(); observations.architectureShell = await shell();
   await polishCapture(page, info, `safety-architecture-${width}`);
   // Measurements are evidence, not a golden toolbar placement requirement.
   observations.architecture = await page.evaluate(() => Object.fromEntries(
