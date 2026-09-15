@@ -100,3 +100,8 @@ The current run's concise results and unresolved prerequisites are recorded in
 [architecture evidence](architecture-evidence.md). Neither static analysis nor
 these checks claims inference correctness, quantization numerical equivalence,
 universal checkpoint support, or hardware throughput.
+
+The subsequent [navigation integration acceptance](architecture-integration.md)
+for #123 found retained obsolete layouts during repeated isolated-view returns.
+That integration remains incomplete pending an owning UI correction; earlier
+checkpoint results do not satisfy its remaining acceptance gates.
