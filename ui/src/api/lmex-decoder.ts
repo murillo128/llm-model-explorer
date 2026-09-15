@@ -95,7 +95,7 @@ export class LmexDecoder {
     requireProtocol(this.metadata || [1, 5, 6].includes(this.type), 'Frame before metadata');
     requireProtocol(this.type !== 1 || !this.metadata, 'Duplicate metadata');
     if (this.type === 2) {
-      requireProtocol(this.metadata!.kind !== 'tensor_statistics', 'Statistics cannot contain DATA');
+      requireProtocol(this.metadata!.kind !== 'tensor_statistics' && this.metadata!.kind !== 'input_embeddings_statistics', 'Statistics cannot contain DATA');
       requireProtocol(this.remaining % 4 === 0, 'Unaligned DATA frame');
       requireProtocol(this.remaining <= this.metadata!.byte_length - this.received, 'Declared DATA overrun');
     } else if (this.type === 4 || this.type === 6) {
@@ -128,7 +128,7 @@ export class LmexDecoder {
       }
       case 4:
         requireProtocol(this.received === this.metadata!.byte_length, 'COMPLETE byte count mismatch');
-        if (this.metadata!.kind === 'tensor_distributions') {
+        if (this.metadata!.kind === 'tensor_distributions' || this.metadata!.kind === 'input_embeddings_distributions') {
           const m = this.metadata!;
           requireProtocol(this.rowSum === this.columnSum && this.rowSum <= product([m.rows, m.columns]), 'Distribution count totals disagree');
           requireProtocol(m.domain_minimum === null || this.rowSum > 0, 'Finite domain requires finite counts');
@@ -147,7 +147,7 @@ export class LmexDecoder {
   }
 
   private checkCounts(bytes: Uint8Array): void {
-    if (this.metadata?.kind !== 'tensor_distributions') return;
+    if (this.metadata?.kind !== 'tensor_distributions' && this.metadata?.kind !== 'input_embeddings_distributions') return;
     const m = this.metadata;
     const accept = (count: number, endOffset: number) => {
       requireProtocol(m.domain_minimum !== null || count === 0, 'Nonzero count in null domain');

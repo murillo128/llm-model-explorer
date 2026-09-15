@@ -50,9 +50,7 @@ class Percentiles(Control):
     p99: float | None
 
 
-class TensorStatisticsMetadata(Control):
-    kind: Literal["tensor_statistics"]
-    tensor_id: Text
+class StatisticsFields(Control):
     count: Size
     finite_count: Size
     non_finite_count: Size
@@ -82,6 +80,11 @@ class TensorStatisticsMetadata(Control):
         return self
 
 
+class TensorStatisticsMetadata(StatisticsFields):
+    kind: Literal["tensor_statistics"]
+    tensor_id: Text
+
+
 class DistributionSection(Control):
     name: Literal["row_counts", "column_counts"]
     shape: Annotated[list[Size], Field(min_length=2, max_length=2)]
@@ -89,9 +92,7 @@ class DistributionSection(Control):
     byte_length: Size
 
 
-class TensorDistributionsMetadata(Control):
-    kind: Literal["tensor_distributions"]
-    tensor_id: Text
+class DistributionsFields(Control):
     rows: Size
     columns: Size
     bin_count: Annotated[Size, Field(ge=100, le=100)]
@@ -131,6 +132,11 @@ class TensorDistributionsMetadata(Control):
         return self
 
 
+class TensorDistributionsMetadata(DistributionsFields):
+    kind: Literal["tensor_distributions"]
+    tensor_id: Text
+
+
 class InputEmbeddingsMetadata(Control):
     kind: Literal["input_embeddings"]
     token_ids: list[Size]
@@ -151,11 +157,42 @@ class InputEmbeddingsMetadata(Control):
         return self
 
 
+class InputEmbeddingsStatisticsMetadata(StatisticsFields):
+    kind: Literal["input_embeddings_statistics"]
+    token_ids: list[Size]
+    shape: Annotated[list[Size], Field(min_length=2, max_length=2)]
+
+    @model_validator(mode="after")
+    def embedding_geometry(self) -> Self:
+        if (
+            self.shape[0] != len(self.token_ids)
+            or self.shape[1] == 0
+            or self.count != _product(self.shape)
+        ):
+            raise ValueError("input embedding statistics geometry")
+        return self
+
+
+class InputEmbeddingsDistributionsMetadata(DistributionsFields):
+    kind: Literal["input_embeddings_distributions"]
+    token_ids: list[Size]
+
+    @model_validator(mode="after")
+    def embedding_geometry(self) -> Self:
+        if self.rows != len(self.token_ids) or self.columns == 0:
+            raise ValueError("input embedding distribution geometry")
+        if self.rows == 0 and self.domain_minimum is not None:
+            raise ValueError("empty input embeddings require a null domain")
+        return self
+
+
 Metadata = (
     TensorMetadata
     | InputEmbeddingsMetadata
     | TensorStatisticsMetadata
     | TensorDistributionsMetadata
+    | InputEmbeddingsStatisticsMetadata
+    | InputEmbeddingsDistributionsMetadata
 )
 METADATA: TypeAdapter[Metadata] = TypeAdapter(Annotated[Metadata, Field(discriminator="kind")])
 

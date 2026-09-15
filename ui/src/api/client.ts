@@ -130,6 +130,16 @@ export class ApiClient {
     const token_ids = [...body.token_ids];
     return this.stream(`${this.sessionPath(session)}/embeddings`, token_ids, 'input_embeddings', options, { token_ids });
   }
+  streamInputEmbeddingsStatistics(session: string, body: Schemas['InputEmbeddingsRequest'], options: StreamOptions = {}): StreamOperation {
+    validateSchema('InputEmbeddingsRequest', body);
+    const token_ids = [...body.token_ids];
+    return this.stream(`${this.sessionPath(session)}/embeddings/statistics`, token_ids, 'input_embeddings_statistics', options, { token_ids });
+  }
+  streamInputEmbeddingsDistributions(session: string, body: Schemas['InputEmbeddingsRequest'], options: StreamOptions = {}): StreamOperation {
+    validateSchema('InputEmbeddingsRequest', body);
+    const token_ids = [...body.token_ids];
+    return this.stream(`${this.sessionPath(session)}/embeddings/distributions`, token_ids, 'input_embeddings_distributions', options, { token_ids });
+  }
   private stream(path: string, identity: string | readonly number[], kind: Metadata['kind'], options: StreamOptions, body?: Schemas['InputEmbeddingsRequest']): StreamOperation {
     const controller = new AbortController();
     let operationId: string | undefined;
@@ -155,7 +165,7 @@ export class ApiClient {
         requireProtocol(response.body, 'Missing stream body');
         const decoder = new LmexDecoder({ ...options, onMetadata: (metadata) => {
           requireProtocol(metadata.kind === kind, 'Unexpected stream result kind');
-          requireProtocol(metadata.kind === 'input_embeddings'
+          requireProtocol('token_ids' in metadata
             ? Array.isArray(identity) && metadata.token_ids.length === identity.length && metadata.token_ids.every((id, i) => id === identity[i])
             : metadata.tensor_id === identity, 'Unexpected stream result identity');
           options.onMetadata?.(metadata);

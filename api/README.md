@@ -137,3 +137,15 @@ Baseline native inventory responses now include `coverage: complete` and empty
 inventories (including empty ones) are explicit; their quantized producer belongs
 to the checkpoint-admission child. The validator regenerates all three fixture
 files together; existing tensor/tokenizer/embedding golden files remain unchanged.
+
+## Input-embedding analysis extension
+
+`fixtures/embedding-analysis.json` supplies independently gathered numerical
+oracles and schema/wire rejection cases for the two analysis operations. The
+small input tables use canonical float32 hex to retain nonfinite values without
+non-standard JSON. Requested IDs include duplicates, singleton and empty input;
+fixtures cover exact full-range histogram counts, constants and float32 extremes.
+Backend HTTP tests and UI decoder/client tests consume these cases. Regenerate
+all fixtures with `api/validate_contract.py --write` and the bindings with the
+existing UI generator. Existing tensor, embedding-value and architecture fixtures
+remain unchanged.

@@ -24,7 +24,7 @@ export function product(shape: number[]): number {
 
 function crossFields(name: string, value: unknown): void {
   if (name === 'StreamMetadata') {
-    crossFields(({ tensor: 'TensorMetadata', input_embeddings: 'InputEmbeddingsMetadata', tensor_statistics: 'TensorStatisticsMetadata', tensor_distributions: 'TensorDistributionsMetadata' })[(value as Metadata).kind], value);
+    crossFields(({ tensor: 'TensorMetadata', input_embeddings: 'InputEmbeddingsMetadata', input_embeddings_statistics: 'InputEmbeddingsStatisticsMetadata', input_embeddings_distributions: 'InputEmbeddingsDistributionsMetadata', tensor_statistics: 'TensorStatisticsMetadata', tensor_distributions: 'TensorDistributionsMetadata' })[(value as Metadata).kind], value);
   } else if (name === 'TensorMetadata' || name === 'InputEmbeddingsMetadata') {
     const m = value as Schemas['TensorMetadata'] | Schemas['InputEmbeddingsMetadata'];
     requireProtocol(m.byte_length === safeSize(product(m.shape) * 4), 'Tensor byte length differs from shape');
@@ -36,19 +36,26 @@ function crossFields(name: string, value: unknown): void {
     requireProtocol(m.rank === m.shape.length && m.numel === product(m.shape), 'Invalid tensor descriptor dimensions');
   } else if (name === 'TensorInventory') {
     for (const tensor of (value as Schemas['TensorInventory']).tensors) crossFields('TensorDescriptor', tensor);
-  } else if (name === 'TensorStatisticsMetadata') {
-    const m = value as Schemas['TensorStatisticsMetadata'];
+  } else if (name === 'TensorStatisticsMetadata' || name === 'InputEmbeddingsStatisticsMetadata') {
+    const m = value as Schemas['TensorStatisticsMetadata'] | Schemas['InputEmbeddingsStatisticsMetadata'];
+    if (m.kind === 'input_embeddings_statistics') {
+      requireProtocol(m.shape[0] === m.token_ids.length && m.count === product(m.shape), 'Invalid embedding statistics geometry');
+    }
     requireProtocol(m.count === safeSize(m.finite_count + m.non_finite_count), 'Invalid statistics counts');
     if (m.finite_count > 0) {
       const ordered = [m.minimum, m.percentiles.p01, m.percentiles.p05, m.percentiles.p50, m.percentiles.p95, m.percentiles.p99, m.maximum] as number[];
       requireProtocol(ordered.every((v, i) => i === 0 || v >= ordered[i - 1]!), 'Invalid statistics range or percentile ordering');
+      requireProtocol(m.mean! >= m.minimum! && m.mean! <= m.maximum!, 'Invalid statistics mean');
     }
   } else if (name === 'DistributionSection') {
     const m = value as Schemas['DistributionSection'];
     requireProtocol(m.byte_length === safeSize(product(m.shape) * 4), 'Invalid distribution section length');
     safeSize(m.offset + m.byte_length);
-  } else if (name === 'TensorDistributionsMetadata') {
-    const m = value as Schemas['TensorDistributionsMetadata'];
+  } else if (name === 'TensorDistributionsMetadata' || name === 'InputEmbeddingsDistributionsMetadata') {
+    const m = value as Schemas['TensorDistributionsMetadata'] | Schemas['InputEmbeddingsDistributionsMetadata'];
+    if (m.kind === 'input_embeddings_distributions') {
+      requireProtocol(m.rows === m.token_ids.length, 'Invalid embedding distribution row count');
+    }
     const [row, column] = m.sections;
     requireProtocol(row && column, 'Missing distribution sections');
     for (const section of m.sections) crossFields('DistributionSection', section);

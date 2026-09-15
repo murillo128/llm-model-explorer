@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import fixtures from '../../../api/fixtures/conformance.json';
 import embeddings from '../../../api/fixtures/embeddings.json';
+import analysis from '../../../api/fixtures/embedding-analysis.json';
 import { LmexDecoder } from './lmex-decoder';
 import { ApiFailure } from './errors';
 import { validateSchema } from './validation';
@@ -24,7 +25,7 @@ function unaligned(hex: string): Uint8Array {
   return storage.subarray(1);
 }
 
-function check(fixture: typeof fixtures.wire_cases[number] | typeof embeddings.wire_cases[number], chunks: Iterable<Uint8Array>): void {
+function check(fixture: typeof fixtures.wire_cases[number] | typeof embeddings.wire_cases[number] | typeof analysis.wire_cases[number], chunks: Iterable<Uint8Array>): void {
   const expected = fixture.expected;
   let offset = 0;
   const data = Buffer.from(expected.data_hex ?? '', 'hex');
@@ -59,7 +60,7 @@ function* lengths(bytes: Uint8Array, sizes: number[]) {
 }
 
 describe('shared wire conformance', () => {
-  for (const fixture of [...fixtures.wire_cases, ...embeddings.wire_cases]) {
+  for (const fixture of [...fixtures.wire_cases, ...embeddings.wire_cases, ...analysis.wire_cases]) {
     it(`${fixture.name}: coalesced, every split, single bytes, Fibonacci and seeded random chunks`, () => {
       const bytes = unaligned(fixture.wire_hex);
       check(fixture, [bytes]);
@@ -76,7 +77,7 @@ describe('shared wire conformance', () => {
 });
 
 describe('shared schema conformance', () => {
-  for (const fixture of [...fixtures.schema_cases, ...embeddings.schema_cases]) it(fixture.name, () => {
+  for (const fixture of [...fixtures.schema_cases, ...embeddings.schema_cases, ...analysis.schema_cases]) it(fixture.name, () => {
     const validate = () => validateSchema(fixture.schema as keyof components['schemas'], fixture.value);
     if (fixture.valid) expect(validate).not.toThrow();
     else expect(validate).toThrow(ApiFailure);
