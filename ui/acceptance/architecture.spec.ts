@@ -12,6 +12,7 @@ import type { Graph } from '../src/architecture-explorer/graph';
 import { projectGraph } from '../src/architecture-explorer/projection';
 import { assertTraceability } from '../tests/architecture-invariants';
 import { installProbe } from './probe';
+import { installArchitectureProbe } from './architecture-probe';
 import { nativeCamera } from '../tests/native-camera';
 import { fanoutPoint } from '../tests/architecture-pointer';
 
@@ -40,6 +41,18 @@ function packedValue(family: string, row: number, column: number, inputs: number
 }
 
 async function metrics(page: Page) { return page.evaluate(() => (window as any).__acceptance.metrics()); }
+async function graphObservation(page: Page, collect = false) {
+  const client = await page.context().newCDPSession(page);
+  if (collect) await client.send('HeapProfiler.collectGarbage');
+  const heap = await client.send('Runtime.getHeapUsage');
+  await client.detach();
+  return { heap, collected: collect, ...await page.evaluate(() => window.__architectureProbe()) };
+}
+async function recordGraph(page: Page, info: TestInfo, label: string, graph: Graph) {
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  await info.attach(label, { body: JSON.stringify({ sourceNodes: graph.nodes.length, sourceEdges: graph.edges.length,
+    viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), ...await graphObservation(page) }), contentType: 'application/json' });
+}
 async function control(path: string, body?: object) {
   const response = await fetch(`${backend}/__test/${path}`, body ? {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -197,6 +210,7 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
         visibleNodes: Number(await canvas.getAttribute('data-visible-nodes')), visibleEdges: Number(await canvas.getAttribute('data-visible-edges')),
         layoutMs: Number(await canvas.getAttribute('data-layout-ms')), initialCamera: camera,
         component: await root.boundingBox(), boundaryFanout: fanout ? targets.filter((item) => item.source === fanout.source).length : 0,
+        resources: await graphObservation(page),
       }), contentType: 'application/json' });
       await page.mouse.move(0, 0);
       await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
@@ -237,6 +251,7 @@ test.beforeEach(async ({ page }, info) => {
   }, { timeout: reference ? 300_000 : 30_000 }).toBe(200);
   page.on('request', (r) => { if (r.url().startsWith(backend)) observed.push(new URL(r.url()).pathname); });
   await page.addInitScript(installProbe);
+  await page.addInitScript(installArchitectureProbe);
   await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
   await page.goto('/');
 });
@@ -267,6 +282,7 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
       assertTraceability(graph, projectGraph(graph, { expanded }));
     }
     const canvas = page.getByLabel('Architecture graph', { exact: true });
+    await recordGraph(page, info, 'compact-graph', graph);
     await inspectComponents(page, graph, info, family, reference);
     await inspectIsolation(page, graph, info, family, reference);
     await viewOptions(page);
@@ -278,6 +294,7 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     await page.keyboard.press('Escape');
     await graphAction(page, 'Show all operations');
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await recordGraph(page, info, 'exhaustive-graph', graph);
     // Visible routes compose boundary forwarding. Every original edge remains
     // traceable even though one route may represent several source segments.
     expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((n) => n.id));
@@ -353,10 +370,11 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     }
     await page.keyboard.press('Escape'); await released(page);
     if (!reference && ['qwen3', 'qwen35'].includes(family)) {
-      const packed = graph.parameters.filter((p) => p.binding === 'quantized' && p.inspection.status === 'available')
+      const packed = graph.parameters.filter((p) => p.binding === 'quantized' && p.inspection.status === 'available' && p.name.includes('.1.'))
         .sort((a, b) => size(a) - size(b))[0]!;
       expect(packed).toBeTruthy();
-      await openParameter(page, graph, packed);
+      const packedRequests = observed.length;
+      await openParameter(page, graph, packed, true);
       await expect(matrixCanvas).toBeVisible();
       await nativeCamera(page);
       await page.mouse.move(0, 0);
@@ -371,8 +389,13 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
         await expect.poll(async () => Number(await scalar.textContent())).toBe(
           packedValue(family, packedRow, selectedColumn, packedColumns));
       }
-      expect(observed.some((path) => path.includes(`/tensors/${packed.inspection.status === 'available' ? packed.inspection.tensor_id : ''}/data`))).toBe(true);
+      const tensor = packed.inspection.status === 'available' ? packed.inspection.tensor_id : '';
+      expect(observed.slice(packedRequests).filter((path) => path.endsWith('/data'))).toEqual([
+        expect.stringMatching(new RegExp(`/tensors/${tensor}/data$`)),
+      ]);
       await page.keyboard.press('Escape'); await released(page);
+      await page.getByRole('button', { name: 'Back', exact: true }).click();
+      await expect(canvas).toHaveAttribute('aria-busy', 'false');
     }
     const unavailable = graph.parameters.find((p) => p.inspection.status === 'unavailable');
     if (unavailable) {
@@ -417,4 +440,81 @@ test('deterministic production [smollm2] close during progressive data cancels a
     await control('release', {});
     await expect(page.getByRole('dialog')).toHaveCount(0);
   }
+});
+
+test('deterministic production [smollm2] repeated nested return releases layouts and fences replaced sessions', async ({ page }, info) => {
+  const graph = await selectGraph(page);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
+  const layer = graph.repetitions[0]!.instances.at(-1)!.node_id;
+  const attention = graph.nodes.find((node) => node.parent_id === layer && node.attributes.some(
+    (attribute) => attribute.name === 'semantic_role' && attribute.value === 'attention'))!;
+  await findComponent(page, layer); await ready();
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const records = await canvas.getAttribute('data-source-node-ids');
+  const mounted = await page.locator('.react-flow').elementHandle();
+  const requests = observed.length;
+  const samples = [];
+  for (let cycle = 0; cycle < 8; cycle++) {
+    await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+    await expect(canvas).toHaveAttribute('data-scope-id', layer);
+    await findComponent(page, attention.id); await ready();
+    const layerCamera = await page.locator('.react-flow__viewport').getAttribute('style');
+    await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+    await expect(canvas).toHaveAttribute('data-scope-id', attention.id);
+    await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(layerCamera);
+    await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+    await expect(canvas).toHaveAttribute('data-scope-id', '');
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+    expect(await canvas.getAttribute('data-source-node-ids')).toBe(records);
+    await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', layer);
+    expect(await mounted!.evaluate((element) => element === document.querySelector('.react-flow'))).toBe(true);
+    await expect.poll(() => page.evaluate(() => window.__architectureProbe().active)).toBe(0);
+    const observation = await graphObservation(page, true);
+    expect(observation.observedGraphs).toBe(1);
+    expect(observation.retainedGraphs).toBe(1);
+    // React may retain current and alternate render trees. Earlier layouts must
+    // be collectable; history may retain view IDs/options, never one graph per visit.
+    expect(observation.retainedLayouts).toBeLessThanOrEqual(2);
+    expect(observation.peak).toBeLessThanOrEqual(2);
+    samples.push({ cycle, ...observation });
+    await released(page);
+  }
+  expect(observed.slice(requests)).toEqual([]);
+  await info.attach('repeated-return-resources', { body: JSON.stringify({ sourceNodes: graph.nodes.length,
+    sourceEdges: graph.edges.length, samples, memory: 'Main-thread CDP JS heap after explicit GC; not browser RSS or GPU memory.' }), contentType: 'application/json' });
+  const path = info.outputPath('nested-return.png');
+  await page.screenshot({ path }); await info.attach('nested-return', { path, contentType: 'image/png' });
+
+  await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+  // Delay an actual response from the replacement session, then select another
+  // model. The old scoped canvas and the late network result must stay obsolete.
+  let release!: () => void, arrived!: () => void;
+  const waiting = new Promise<void>((resolve) => { arrived = resolve; });
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  let delayed = false;
+  await page.route('**/architecture', async (route) => {
+    if (delayed) { await route.continue(); return; }
+    delayed = true;
+    const response = await route.fetch();
+    arrived(); await held;
+    await route.fulfill({ response });
+  });
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('qwen3');
+  await waiting;
+  await expect(canvas).toHaveCount(0);
+  const replacement = page.waitForResponse((response) => response.url().endsWith('/architecture') && response.status() === 200);
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('vjepa2');
+  const current = await (await fetch((await replacement).url())).json();
+  await expect(canvas).toHaveAttribute('data-graph-id', current.graph.graph_id); await ready();
+  release();
+  await page.unrouteAll({ behavior: 'wait' });
+  await expect(canvas).toHaveAttribute('data-graph-id', current.graph.graph_id);
+  await expect(canvas).toHaveAttribute('data-scope-id', '');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!).every(
+    (id: string) => current.graph.nodes.some((node: { id: string }) => node.id === id))).toBe(true);
+  expect(observed.some((request) => request.endsWith('/tokenize'))).toBe(false);
 });
