@@ -87,8 +87,18 @@ export class TensorViewport {
 
   private readonly setCeilings: () => void;
 
-  /** Overlay chrome uses the same gesture handlers and camera as the data. */
-  addZoomTarget(target: HTMLElement) {
+  /** Preserve native wheel ancestry for strips and the existing matrix zoom policy. */
+  attachOverlay(target: HTMLElement) {
+    if (this.options.zoom) { this.addZoomTarget(target); return; }
+    // The native extent supplies the horizontal sticky bounds. Its explicit
+    // data height keeps the overlay out of flow sizing; the strip viewport
+    // already has enough height for the controls. Browser scrolling remains
+    // responsible for wheel units, modifiers, momentum and endpoint clamping.
+    this.extent.append(target);
+    Object.assign(target.style, { position: 'sticky', left: '0px', top: '0px' });
+  }
+
+  private addZoomTarget(target: HTMLElement) {
     if (!this.options.zoom || this.zoomTargets.has(target)) return;
     this.zoomTargets.add(target);
     target.addEventListener('wheel', this.wheel, { passive: false });
@@ -309,8 +319,13 @@ export class TensorViewport {
     this.surface.style.height = `${view.cssHeight}px`;
     const offsetX = this.options.zoom ? centeredOffset(this.host.clientWidth, view.width, dpr) : 0;
     const offsetY = this.options.zoom ? centeredOffset(this.host.clientHeight, view.height, dpr) : 0;
-    this.surface.style.left = `${this.host.scrollLeft + offsetX + Math.round(left * dpr) / dpr - left}px`;
-    this.surface.style.top = `${this.host.scrollTop + offsetY + Math.round(top * dpr) / dpr - top}px`;
+    // A smaller extent must also move the old absolute surface back inside it.
+    // Otherwise the surface itself retains the old range and prevents native
+    // scroll clamping after zoom/DPR changes at the far end.
+    const scrollX = Math.min(this.host.scrollLeft, Math.max(0, Math.round(extentRect.width) - this.host.clientWidth));
+    const scrollY = Math.min(this.host.scrollTop, Math.max(0, Math.round(extentRect.height) - this.host.clientHeight));
+    this.surface.style.left = `${scrollX + offsetX + Math.round(left * dpr) / dpr - left}px`;
+    this.surface.style.top = `${scrollY + offsetY + Math.round(top * dpr) / dpr - top}px`;
     this.canvas.dataset.origin = `${view.x},${view.y}`;
     this.renderer.draw();
     this.options.onViewChange?.(view);

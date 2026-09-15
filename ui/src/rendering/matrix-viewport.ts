@@ -94,8 +94,8 @@ export class MatrixViewport {
         this.zoomSelection?.refresh();
         this.inspection?.refresh();
       } });
-      this.scrollbars = new MatrixScrollbars(this.main, host);
-      this.matrix.addZoomTarget(this.scrollbars.element);
+      this.scrollbars = new MatrixScrollbars(this.main, descriptor.rank === 1 ? this.main : host);
+      this.matrix.attachOverlay(this.scrollbars.element);
       if (descriptor.rank === 2 && options.onInspection) this.inspection = new MatrixInspection(this, options.onInspection);
       if (descriptor.rank === 2 && descriptor.numel > 0) this.zoomSelection = new MatrixZoomSelection(this,
         (active) => this.inspection?.suspend(active));
