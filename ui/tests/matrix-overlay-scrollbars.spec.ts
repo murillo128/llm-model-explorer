@@ -6,7 +6,7 @@ const url = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/te
 const horizontal = 'Scroll matrix horizontally', vertical = 'Scroll matrix vertically';
 async function open(page: Page) {
   await page.goto(url); await expect(page.locator('.matrix-scroll')).toBeVisible();
-  await page.addStyleTag({ content: '#workspace { height: min(600px, 70vh); }' });
+  await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: min(600px, 70vh); }' });
   await page.evaluate(() => window.matrixFixture.render('square'));
   await expect(page.locator('.row-distributions canvas')).toBeVisible();
 }

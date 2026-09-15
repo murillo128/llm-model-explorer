@@ -6,7 +6,7 @@ for (const dpr of [1, 2]) test(`zoomed profile pixels track exact matrix rows an
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: page.viewportSize()!.width, height: page.viewportSize()!.height, deviceScaleFactor: dpr, mobile: false });
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
-  await page.addStyleTag({ content: '#workspace { height: 600px; max-height: 70vh; }' });
+  await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: min(600px, 70vh); }' });
   await expect(page.locator('.matrix-scroll')).toBeVisible();
   await page.evaluate(() => window.matrixFixture.render('square'));
   await expect(page.locator('.matrix-surfaces canvas')).toHaveCount(3);
@@ -47,7 +47,7 @@ for (const dpr of [1, 2]) test(`fractional selection stays aligned with profile 
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: page.viewportSize()!.width, height: page.viewportSize()!.height, deviceScaleFactor: dpr, mobile: false });
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
-  await page.addStyleTag({ content: '#workspace { height: 600px; max-height: 70vh; } .matrix-scroll { max-width: 40px; max-height: 40px; }' });
+  await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: min(600px, 70vh); } .matrix-scroll { max-width: 40px; max-height: 40px; }' });
   await expect(page.locator('.matrix-scroll')).toBeVisible();
   await page.evaluate(() => window.matrixFixture.render('square'));
   await expect(page.locator('.matrix-surfaces canvas')).toHaveCount(3);

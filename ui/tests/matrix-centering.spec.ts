@@ -19,7 +19,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`centered scientific content DPR $
   for (const name of ['short', 'tall', 'full', 'square'] as const) test(`${name}: independent centering, fixed profile tracks, resize and source reset`, async ({ page }) => {
     await page.goto(url);
     await expect(page.locator('.matrix-scroll')).toBeVisible();
-    await page.addStyleTag({ content: '#workspace { height: min(600px, 70vh); }' });
+    await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: min(600px, 70vh); }' });
     await page.evaluate(name => window.matrixFixture.render(name), name);
     await expect(page.locator('.matrix-surfaces canvas')).toHaveCount(3);
     await page.evaluate(() => window.matrixFixture.viewports.at(-1)!.zoomAt(1, 0, 0));
@@ -74,7 +74,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`centered scientific content DPR $
   test('focal cell stays at its screen point when centered data begins overflowing', async ({ page }) => {
     await page.goto(url);
     await expect(page.locator('.matrix-scroll')).toBeVisible();
-    await page.addStyleTag({ content: '#workspace { height: min(600px, 70vh); }' });
+    await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: min(600px, 70vh); }' });
     await page.evaluate(() => window.matrixFixture.render('square'));
     await expect(page.locator('.matrix-surfaces canvas')).toHaveCount(3);
     const result = await page.evaluate(() => {

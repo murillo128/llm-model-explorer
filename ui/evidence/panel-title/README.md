@@ -55,3 +55,11 @@ graph camera, cancellation and resource release. Only the intended title/card
 offset assertion changes in integrated acceptance; numeric or screenshot
 oracles are not relaxed. The downstream Tokenizer two-panel integration remains
 owned by its separate issue.
+
+Standalone numerical fixtures reserve their existing viewer dimensions separately
+from the new card's border/padding. Their `--fixture-viewer-width` and
+`--fixture-viewer-height` inputs preserve the original scientific area; the default
+is explicitly checked at `(16,56)`, width `min(600, viewport − 32)`, height `220`.
+Magnifier hysteresis/placement, wrapped readouts, zoom, centering, overlay controls,
+selection and exact-pixel assertions remain unchanged. Full application title
+tests independently verify the real card, its padding and full-width title.

@@ -64,7 +64,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`adaptive magnifier DPR ${dpr}`, (
 
   test('pointer placement follows the center and stays legal at every edge after scroll and zoom', async ({ page }) => {
     await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
-    await page.addStyleTag({ content: '#workspace { width: min(1050px, 100%); height: 650px; }' });
+    await page.addStyleTag({ content: '#workspace { --fixture-viewer-width: 1050px; --fixture-viewer-height: 650px; }' });
     await page.evaluate(() => {
       const f = window.matrixFixture;
       f.sources.square = { ...f.sources.square,
@@ -132,7 +132,7 @@ test('focused inspection follows dimension-preserving layout shifts, resize and 
 
 test('a short pane retains only its complete compact readout', async ({ page }) => {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
-  await page.addStyleTag({ content: '#workspace { height: 130px; }' });
+  await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: 130px; }' });
   await page.evaluate(() => window.matrixFixture.viewports[0]!.zoomAt(devicePixelRatio, 0, 0));
   await page.locator('.matrix-scroll').focus();
   await expect(page.locator('.inspection-readout')).toContainText('row 0 · column 0');
@@ -142,7 +142,7 @@ test('a short pane retains only its complete compact readout', async ({ page }) 
 
 test('wrapped logical coordinates and float32 values use measured full-card and compact heights', async ({ page }) => {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
-  await page.addStyleTag({ content: '#workspace { height: 264px; }' });
+  await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: 264px; }' });
   const point = await page.evaluate(() => {
     const view = window.matrixFixture.viewports[0]!;
     view.zoomAt(1, 0, 0);
@@ -162,7 +162,7 @@ test('wrapped logical coordinates and float32 values use measured full-card and 
   await page.addStyleTag({ content: '.inspection-readout { font-size: 12px; line-height: 18px; }' });
   await expect(page.locator('.magnifier-card')).toHaveCount(0);
   expect((await placement(page)).height).toBeGreaterThan(42);
-  await page.addStyleTag({ content: '#workspace { width: 140px; }' });
+  await page.addStyleTag({ content: '#workspace { --fixture-viewer-width: 140px; }' });
   // Centering follows ResizeObserver; hover waits for the tiny canvas to settle.
   await page.locator('.matrix-scroll canvas').hover();
   await expect.poll(() => page.locator('.matrix-inspection').evaluate((card) => card.getBoundingClientRect().width)).toBe(140);
@@ -176,7 +176,7 @@ test('visibility history belongs to each Matrix Explorer instance', async ({ pag
   await page.setViewportSize({ width: page.viewportSize()!.width, height: 1500 });
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
   // Leave enough protected free space in both panes to isolate zoom policy.
-  await page.addStyleTag({ content: '#workspace { height: 600px; }' });
+  await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: 600px; }' });
   await page.evaluate(() => window.matrixFixture.renderPair());
   await expect(page.locator('.matrix-scroll')).toHaveCount(2);
   await page.evaluate(() => {
