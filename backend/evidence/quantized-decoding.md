@@ -44,3 +44,80 @@ cases cover both formats before a file read, after a read, and immediately befor
 the vectorized gather; each yields `model_content_changed` without a process
 crash. The earlier live-mapping implementation was rejected at intermediate
 review after a SIGBUS reproduction and is replaced by owned file reads.
+
+## Logical integration and actual checkpoints
+
+The inventory binds one logical matrix to each complete validated group; its
+companions account for physical storage without becoming fake parameters.
+Unknown/orphan records retain a named partial-coverage diagnostic. Tensor data,
+ordered row access, statistics and distributions share the same materialization
+and existing per-tensor cache product. Native bytes and cache keys are unchanged.
+Packed producers have separate versioned recipes. Graph bindings retain packed
+provenance and expose actual logical IDs; the analyzer revision invalidates old
+graph artifacts with unavailable inspections. All three semantic validators check
+logical identity and complete packed geometry. OpenAPI schemas and generated
+TypeScript bindings need no shape change.
+
+The installed exact reviewed checkpoints produced these guarded inventories:
+
+| Checkpoint | Physical records | Logical tensors | Decoded matrices | Coverage |
+| --- | ---: | ---: | ---: | --- |
+| Qwen3 GPTQ Int4 | 898 | 310 | 196 | complete, no diagnostics |
+| Qwen3.5 NVFP4 | 1,046 | 488 | 186 | complete, no diagnostics |
+
+[Reference comparison evidence](quantized-reference-comparison.json) records
+checkpoint and upstream revisions, content fingerprints, reference-source hashes,
+decoder-source hash, exact ranges, decoded digests and comparison metrics. The
+offline reproduction script is `scripts/check_quantized_reference.py`; it checks
+locally supplied source files and never executes checkpoint or downloaded code.
+One complete projection per format plus ranges across other layers were compared
+in chunks of at most 65,536 values:
+
+- GPTQ: 1,105,522 float32 values, including the complete `[1024,1024]` layer-0
+  key projection, with zero canonical bit mismatches.
+- NVFP4: 68,722 float32 values, including the complete `[16,1024]` layer-0
+  `in_proj_a`, with zero canonical bit mismatches.
+
+Upstream inference-half rounding and the ModelOpt Python LUT's negative-zero
+collapse are measured separately; neither is misreported as canonical equivalence.
+These observations establish the tested ranges, not whole-checkpoint inference
+correctness or support for additional quantization variants.
+
+Both actual Qwen checkpoints also pass the existing cold/warm TCP architecture
+reference checks, with complete inventories and complete graph coverage. The
+deterministic production-browser acceptance opens their synthetic packed weights
+through the real Matrix Explorer and verifies adjacent exact cell values; existing
+native inspection and resource-release checks pass. Actual-checkpoint browser
+reference runs remain separate from those deterministic browser results.
+
+## Final local validation
+
+Using the repository-locked Python 3.12 / PyTorch 2.14 CPU and Node 24.14 environments:
+
+- Backend Ruff/format/mypy pass; full backend suite: **1,057 passed, 19 skipped**
+  (CUDA unavailable).
+- API validation: **283 references, 88 instance cases, 144 architecture cases,
+  76 wire fixtures**; regeneration is reproducible. UI generated bindings remain
+  unchanged.
+- UI API check, typecheck, lint and production build pass; unit tests:
+  **664 passed across 28 files**.
+- Network acceptance: **19 passed, 6 skipped** (optional reference/CUDA modes).
+  Separate manifest-enabled Qwen3 and Qwen3.5 cold/warm architecture checks:
+  **2 passed**.
+- DPR1 production-browser architecture acceptance: **5 passed, 4 skipped**
+  (actual-reference browser mode not enabled). This includes both packed formats,
+  native inspection, modal closure and resource release.
+
+Reproduction uses `backend`'s Ruff, format, mypy and pytest gates;
+`api/validate_contract.py` with and without `--write`; UI `api:check`, `typecheck`,
+`lint`, `test`, `build`; `pytest acceptance`; and
+`npm run test:acceptance -- architecture.spec.ts --project=dpr1` under Xvfb.
+For the installed reference checks, set `LMEX_ARCHITECTURE_REFERENCES` and run
+`pytest acceptance/test_architecture.py -k 'complete_local_architecture_reference and (qwen3 or qwen35)'`.
+Use an absolute worktree `PYTHONPATH` when reusing an external Python environment.
+
+Local UI dependencies were reused through temporary symlinks. Vite's runner
+config loader and a temporary Vitest filesystem allowlist handled those external
+dependencies without changing product configuration. Headed Chromium ran outside
+the filesystem sandbox with temporary XDG config/cache directories and the
+already installed browser cache. CI uses its normal isolated dependencies.

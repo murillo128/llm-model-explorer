@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from acceptance.architecture_fixtures import generate, value
+from acceptance.architecture_fixtures import generate, packed_value, value
 from acceptance.test_network import Frames, Service
 from api.architecture_conformance import validate_architecture
 
@@ -49,7 +49,7 @@ def file_state(root):
     }
 
 
-def test_all_descriptions_over_tcp_readonly_cold_warm_and_native_values(tmp_path):
+def test_all_descriptions_over_tcp_readonly_cold_warm_and_logical_values(tmp_path):
     root = tmp_path / "models"
     generate(root)
     before = file_state(root)
@@ -71,15 +71,15 @@ def test_all_descriptions_over_tcp_readonly_cold_warm_and_native_values(tmp_path
             graphs[family] = graph
             assert graph["coverage"] == "complete"
             assert [len(r["instances"]) for r in graph["repetitions"]] == counts
-            assert inventory["coverage"] == (
-                "partial" if family in {"qwen3", "qwen35"} else "complete"
-            )
+            assert inventory["coverage"] == "complete"
+            assert inventory["diagnostics"] == []
             # Exercise a later concrete instance, both native ranks, and exact bytes.
             for rank in (1, 2):
                 parameter = next(
                     p
                     for p in graph["parameters"]
                     if p["inspection"]["status"] == "available"
+                    and p["binding"] == "native"
                     and len(p["logical_shape"]) == rank
                     and (rank == 2 or ".1." in p["name"])
                 )
@@ -99,6 +99,31 @@ def test_all_descriptions_over_tcp_readonly_cold_warm_and_native_values(tmp_path
                     assert bytes(payload) == b"".join(
                         struct.pack("<f", value(i)) for i in range(descriptor["numel"])
                     )
+            if family in {"qwen3", "qwen35"}:
+                parameter = next(p for p in graph["parameters"] if p["binding"] == "quantized")
+                assert parameter["inspection"]["status"] == "available"
+                tid = parameter["inspection"]["tensor_id"]
+                descriptor = next(t for t in inventory["tensors"] if t["id"] == tid)
+                rows, columns = descriptor["shape"]
+                expected = b"".join(
+                    struct.pack("<f", packed_value(family, row, column, columns))
+                    for row in range(rows)
+                    for column in range(columns)
+                )
+                for _ in range(2):
+                    with service.client.stream("GET", f"{prefix}/tensors/{tid}/data") as response:
+                        assert response.status_code == 200
+                        reader = Frames(response)
+                        kind, metadata = reader.next()
+                        assert kind == 1 and json.loads(metadata)["shape"] == [rows, columns]
+                        payload = bytearray()
+                        while True:
+                            kind, data = reader.next()
+                            if kind == 4:
+                                break
+                            assert kind == 2
+                            payload.extend(data)
+                        assert payload == expected
             if family == "vjepa2":
                 assert graph["scope"] == "visual_encoder_predictor"
                 assert not any(
