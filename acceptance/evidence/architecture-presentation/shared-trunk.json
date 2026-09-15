@@ -1,0 +1,318 @@
+{
+  "date": "2026-09-15",
+  "reproduced_audit_head": "47d66b6e335d0fb7ac276151a20503f9c217e271",
+  "input": "Production build with retained original graph response replay; no fresh checkpoint-support claim",
+  "graph_id": "7a11207126ee52d510e406921fa8d0890fd7aba9bd4e6e1b7b5449cb2de14379",
+  "viewport_height": 900,
+  "device_scale_factor": 1,
+  "browser_errors": [],
+  "observations": [
+    {
+      "name": "shared-trunk",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 49,
+      "visibleEdges": 54,
+      "layoutCount": 6,
+      "camera": "translate(-653.277px, -562.083px) scale(0.872964)",
+      "body": [
+        1178,
+        900
+      ],
+      "emphasizedEdges": [
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:8710552362501adce6ddf0ae16533913b21b233128819c0c7e4bf9691019677c",
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:f0cad3db34e237f9fbb7566fba87beb93e96f6efd94fdad86fe88392f2caccaa",
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a"
+      ],
+      "emphasizedPorts": [
+        [
+          "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+          "out"
+        ],
+        [
+          "6662284be043a4e62918b47810e48bc17b6fdaaa0ba0aca7f1b289b46caaea3c",
+          "x"
+        ],
+        [
+          "e61761a5ff9468288f16ce0783248145ea313650b79ef3c810de09959b0ab07a",
+          "x"
+        ],
+        [
+          "12670646d935e4feacfe0b0a7916607b2da0293d9260f82dcc447b10eacd7dad",
+          "x"
+        ]
+      ]
+    },
+    {
+      "name": "exclusive-branch",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 49,
+      "visibleEdges": 54,
+      "layoutCount": 6,
+      "camera": "translate(-653.277px, -562.083px) scale(0.872964)",
+      "body": [
+        1178,
+        900
+      ],
+      "emphasizedEdges": [
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a"
+      ],
+      "emphasizedPorts": [
+        [
+          "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+          "out"
+        ],
+        [
+          "6662284be043a4e62918b47810e48bc17b6fdaaa0ba0aca7f1b289b46caaea3c",
+          "x"
+        ]
+      ]
+    },
+    {
+      "name": "source-port",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 49,
+      "visibleEdges": 54,
+      "layoutCount": 6,
+      "camera": "translate(-653.277px, -562.083px) scale(0.872964)",
+      "body": [
+        1178,
+        900
+      ],
+      "emphasizedEdges": [
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:8710552362501adce6ddf0ae16533913b21b233128819c0c7e4bf9691019677c",
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:f0cad3db34e237f9fbb7566fba87beb93e96f6efd94fdad86fe88392f2caccaa",
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a"
+      ],
+      "emphasizedPorts": [
+        [
+          "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+          "out"
+        ],
+        [
+          "6662284be043a4e62918b47810e48bc17b6fdaaa0ba0aca7f1b289b46caaea3c",
+          "x"
+        ],
+        [
+          "e61761a5ff9468288f16ce0783248145ea313650b79ef3c810de09959b0ab07a",
+          "x"
+        ],
+        [
+          "12670646d935e4feacfe0b0a7916607b2da0293d9260f82dcc447b10eacd7dad",
+          "x"
+        ]
+      ]
+    },
+    {
+      "name": "shared-trunk",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 49,
+      "visibleEdges": 54,
+      "layoutCount": 6,
+      "camera": "translate(-700px, -679.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "emphasizedEdges": [
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:8710552362501adce6ddf0ae16533913b21b233128819c0c7e4bf9691019677c",
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:f0cad3db34e237f9fbb7566fba87beb93e96f6efd94fdad86fe88392f2caccaa",
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a"
+      ],
+      "emphasizedPorts": [
+        [
+          "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+          "out"
+        ],
+        [
+          "6662284be043a4e62918b47810e48bc17b6fdaaa0ba0aca7f1b289b46caaea3c",
+          "x"
+        ],
+        [
+          "e61761a5ff9468288f16ce0783248145ea313650b79ef3c810de09959b0ab07a",
+          "x"
+        ],
+        [
+          "12670646d935e4feacfe0b0a7916607b2da0293d9260f82dcc447b10eacd7dad",
+          "x"
+        ]
+      ]
+    },
+    {
+      "name": "exclusive-branch",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 49,
+      "visibleEdges": 54,
+      "layoutCount": 6,
+      "camera": "translate(-700px, -679.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "emphasizedEdges": [
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a"
+      ],
+      "emphasizedPorts": [
+        [
+          "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+          "out"
+        ],
+        [
+          "6662284be043a4e62918b47810e48bc17b6fdaaa0ba0aca7f1b289b46caaea3c",
+          "x"
+        ]
+      ]
+    },
+    {
+      "name": "source-port",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 49,
+      "visibleEdges": 54,
+      "layoutCount": 6,
+      "camera": "translate(-700px, -679.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "emphasizedEdges": [
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:8710552362501adce6ddf0ae16533913b21b233128819c0c7e4bf9691019677c",
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:f0cad3db34e237f9fbb7566fba87beb93e96f6efd94fdad86fe88392f2caccaa",
+        "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a"
+      ],
+      "emphasizedPorts": [
+        [
+          "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+          "out"
+        ],
+        [
+          "6662284be043a4e62918b47810e48bc17b6fdaaa0ba0aca7f1b289b46caaea3c",
+          "x"
+        ],
+        [
+          "e61761a5ff9468288f16ce0783248145ea313650b79ef3c810de09959b0ab07a",
+          "x"
+        ],
+        [
+          "12670646d935e4feacfe0b0a7916607b2da0293d9260f82dcc447b10eacd7dad",
+          "x"
+        ]
+      ]
+    }
+  ],
+  "native_pointer_checks": [
+    {
+      "width": 1178,
+      "trunk": {
+        "x": 137.67751932144165,
+        "y": 553.7214653491974,
+        "hitId": "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a"
+      },
+      "exclusive": {
+        "x": 322.7459177970886,
+        "y": 553.7214653491974,
+        "hitId": "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a"
+      },
+      "endpoints": [
+        {
+          "id": "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:8710552362501adce6ddf0ae16533913b21b233128819c0c7e4bf9691019677c",
+          "source": [
+            "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+            "out"
+          ],
+          "target": [
+            "12670646d935e4feacfe0b0a7916607b2da0293d9260f82dcc447b10eacd7dad",
+            "x"
+          ]
+        },
+        {
+          "id": "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:f0cad3db34e237f9fbb7566fba87beb93e96f6efd94fdad86fe88392f2caccaa",
+          "source": [
+            "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+            "out"
+          ],
+          "target": [
+            "e61761a5ff9468288f16ce0783248145ea313650b79ef3c810de09959b0ab07a",
+            "x"
+          ]
+        },
+        {
+          "id": "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a",
+          "source": [
+            "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+            "out"
+          ],
+          "target": [
+            "6662284be043a4e62918b47810e48bc17b6fdaaa0ba0aca7f1b289b46caaea3c",
+            "x"
+          ]
+        }
+      ],
+      "stable": true
+    },
+    {
+      "width": 1440,
+      "trunk": {
+        "x": 197,
+        "y": 546,
+        "hitId": "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a"
+      },
+      "exclusive": {
+        "x": 415,
+        "y": 546,
+        "hitId": "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a"
+      },
+      "endpoints": [
+        {
+          "id": "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:8710552362501adce6ddf0ae16533913b21b233128819c0c7e4bf9691019677c",
+          "source": [
+            "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+            "out"
+          ],
+          "target": [
+            "12670646d935e4feacfe0b0a7916607b2da0293d9260f82dcc447b10eacd7dad",
+            "x"
+          ]
+        },
+        {
+          "id": "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:f0cad3db34e237f9fbb7566fba87beb93e96f6efd94fdad86fe88392f2caccaa",
+          "source": [
+            "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+            "out"
+          ],
+          "target": [
+            "e61761a5ff9468288f16ce0783248145ea313650b79ef3c810de09959b0ab07a",
+            "x"
+          ]
+        },
+        {
+          "id": "connection:e798e026fe8af2653539a26969551924449e76984bc9009c5b264ce5f14f86fe:d79dd40790ec01df6230470d700df38ea347611a6f51cb41867a4259fcfd554a",
+          "source": [
+            "ee7ea01a24df1b1f34624a96c9a2cf1cacfe72f2f4fef906c0a95a496aba3c61",
+            "out"
+          ],
+          "target": [
+            "6662284be043a4e62918b47810e48bc17b6fdaaa0ba0aca7f1b289b46caaea3c",
+            "x"
+          ]
+        }
+      ],
+      "stable": true
+    }
+  ],
+  "captures": {
+    "shared-trunk-1178.png": "13ab0b64f152711c557aa366fe278bf64a86f51859b6883609d41718087dcf16",
+    "shared-trunk-1440.png": "f41dff86e7b770e707fbfadd6e7128aa5e2a74149384e881a014510b4689fcd0",
+    "exclusive-branch-1440.png": "95e134b37c168b574e05768f8d6c33ac3664318c8b56a11246c7b22f421c3ef7"
+  }
+}

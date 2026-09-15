@@ -7,10 +7,11 @@ async function open(page: Page, model = 'lab/alpha', strict = false) {
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(model);
   await expect(page.getByText('Partial tensor inventory:', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
-  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '4');
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '3');
 }
 async function inspect(page: Page, node = 'linear1') {
   await page.getByRole('combobox', { name: 'Select graph component' }).selectOption(node);
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
   const trigger = page.getByRole('button', { name: 'Inspect selected', exact: true });
   await trigger.focus(); await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toBeVisible();

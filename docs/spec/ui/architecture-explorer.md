@@ -24,6 +24,14 @@ Viewport culling and asynchronous layout are allowed optimizations; discarding g
 
 React Flow and ELK are implementation candidates, not mandatory backend dependencies or reasons to change the graph contract. The layout implementation may be replaced without changing model semantics. Do not add a second matrix renderer, graph editor, export suite, or complex navigation framework in this increment.
 
+## Source-preserving visible projection
+
+Keep the received graph unchanged. Visible presentation records retain source node IDs, repetition/instance identity, and exact original edge/port references. Compose boundary forwarding without traversing computational operations. Model, stack, layer, MLP and state focus are expansion/filter states of the same canvas, with an explicit return to global context. Stack window size depends on the view/context rather than a globally fixed layer count.
+
+A reversible derived MLP group requires matching parameter/module ownership and exact gate/up/SiLU/multiply/down topology. Mark it as derived; unmatched operations remain explicit. A presentation boundary alias is not a new mathematical operation or backend identity.
+
+Declared interfaces remain inspectable when unconsumed branches are filtered. Determine consumption from source connectivity, with an explicit reversible filter. State focus shows existing prior/next dependencies owned by the selected instance, keeps K/V distinct and identifies excluded flows. Exhaustive expansion restores original operations and interfaces without a representative or layer-count limit.
+
 ## Automatic layout and directional routing
 
 The graph communicates computational direction primarily from left to right. Apply that ordering recursively at every expanded scope: the model, repeated stacks, concrete layers, attention blocks, and other expanded groups. Successive stages in a genuine serial dependency chain advance horizontally in their actual dependency order; a serial set of layers or operations must not degrade into a vertical list merely because it is nested inside a group.

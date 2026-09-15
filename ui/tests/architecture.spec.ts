@@ -5,7 +5,7 @@ const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1
 test('nested expansion, instance identity, ports, dimensions, keyboard and camera restoration', async ({ page }, info) => {
   await page.goto(harness);
   const graph = page.getByLabel('Architecture graph', { exact: true });
-  await expect(graph).toHaveAttribute('data-visible-nodes', '4');
+  await expect(graph).toHaveAttribute('data-visible-nodes', '3');
   const instance = page.getByRole('combobox', { name: /Expand instance of/ });
   await instance.selectOption('layer1');
   await expect(graph).toHaveAttribute('data-visible-nodes', '5');
@@ -15,13 +15,18 @@ test('nested expansion, instance identity, ports, dimensions, keyboard and camer
   await label.focus();
   const before = await label.boundingBox();
   await page.keyboard.press('ArrowLeft'); await expect(graph).toHaveAttribute('data-visible-nodes', '4');
-  await expect.poll(async () => Math.abs((await label.boundingBox())!.y - before!.y)).toBeLessThan(2);
+  await expect.poll(async () => {
+    const after = (await label.boundingBox())!;
+    return Math.max(Math.abs(after.x - before!.x), Math.abs(after.y - before!.y));
+  }).toBeLessThan(2);
   await page.keyboard.press('ArrowRight'); await expect(graph).toHaveAttribute('data-visible-nodes', '5');
   await page.getByRole('button', { name: 'Expand all', exact: true }).click();
   await expect(graph).toHaveAttribute('data-visible-nodes', '6');
   await page.getByRole('button', { name: 'Fit graph', exact: true }).click();
-  await expect(page.locator('.react-flow__edge')).toHaveCount(contractResponse.graph.edges.length);
-  const shapeText = page.locator('.react-flow__edge-text').filter({ hasText: /\[2\]/ });
+  expect(JSON.parse((await graph.getAttribute('data-represented-edge-ids'))!)).toEqual(contractResponse.graph.edges.map((edge) => edge.id));
+  // The leave + between forwarding segments form one complete visible route.
+  await expect(page.locator('.architecture-connection[data-source-node="linear0"][data-source-port="out"][data-target-node="layer1"][data-target-port="in"]')).toHaveCount(1);
+  const shapeText = page.locator('.architecture-edge-label').filter({ hasText: /\[2\]/ });
   await expect(shapeText).toHaveCount(0);
   await page.getByLabel('Show dimensions').check(); await expect(shapeText.first()).toBeVisible();
   await info.attach('expanded-port-graph', { body: await page.screenshot(), contentType: 'image/png' });
@@ -56,11 +61,12 @@ test('safe labels and expressions remain inert; repeated unmount terminates work
   const dialogs: string[] = [];
   page.on('dialog', (dialog) => { dialogs.push(dialog.message()); void dialog.dismiss(); });
   await page.goto(`${harness}?inert`);
-  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '4');
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '3');
+  await page.getByRole('button', { name: 'Expand all', exact: true }).click();
   await page.getByRole('button', { name: 'Fit graph', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Select <img src=x onerror=alert(1)>', exact: true })).toBeVisible();
   await page.getByLabel('Show dimensions').check();
-  await expect(page.locator('.react-flow__edge-text').filter({ hasText: 'window.alert(1)' })).toBeVisible();
+  await expect(page.locator('.architecture-edge-label').filter({ hasText: 'window.alert(1)' })).toBeVisible();
   expect(dialogs).toEqual([]); await expect(page.locator('img')).toHaveCount(0);
   for (let i = 0; i < 3; i++) {
     await page.getByRole('button', { name: 'Expand all', exact: true }).click();

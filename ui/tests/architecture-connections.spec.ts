@@ -1,0 +1,421 @@
+import { expect, test } from '@playwright/test';
+import type { Locator, Page, TestInfo } from '@playwright/test';
+import { writeFile } from 'node:fs/promises';
+import { makeProjectionFixture } from './architecture-projection-fixture';
+import type { Graph } from '../src/architecture-explorer/graph';
+
+const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
+const graph = (page: Page) => page.getByLabel('Architecture graph', { exact: true });
+const connection = (page: Page, source: string, from: string, target: string, to: string) => page.locator(
+  `.architecture-connection[data-source-node=${JSON.stringify(source)}][data-source-port=${JSON.stringify(from)}][data-target-node=${JSON.stringify(target)}][data-target-port=${JSON.stringify(to)}]`);
+const port = (page: Page, node: string, id: string) => page.locator(
+  `.architecture-port[data-node-id=${JSON.stringify(node)}][data-port-id=${JSON.stringify(id)}]`);
+async function capture(page: Page, info: TestInfo, name: string) {
+  const path = info.outputPath(`${name}.png`);
+  await page.screenshot({ path });
+  await info.attach(name, { path, contentType: 'image/png' });
+}
+async function ready(page: Page) {
+  await expect(graph(page)).toHaveAttribute('aria-busy', 'false');
+  await expect(graph(page)).toHaveAttribute('data-layout-count', /^[1-9]\d*$/);
+  await expect(page.getByText('Laying out architecture…', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.locator('.architecture-node').first()).toBeAttached();
+}
+async function open(page: Page, fixture = 'connections') {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(harness);
+  await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption(fixture);
+  await expect(graph(page)).toHaveAttribute('data-graph-id', /^authored-projection-/);
+  await ready(page);
+}
+async function layer(page: Page, index: number) {
+  await page.getByRole('combobox', { name: 'Expand instance of Decoder layers', exact: true }).selectOption(`layer-${index}`);
+  await page.getByRole('button', { name: 'Focus layer', exact: true }).click();
+  await ready(page);
+}
+async function fullAttention(page: Page) {
+  await open(page);
+  await layer(page, 3);
+  await page.getByRole('combobox', { name: 'Select graph component', exact: true }).selectOption('layer-3.attention');
+  await page.getByRole('button', { name: 'Toggle selected group', exact: true }).click();
+  await ready(page);
+  await page.getByRole('button', { name: 'Fit graph', exact: true }).click();
+  await expect(port(page, 'layer-3.attention.core', 'K')).toBeVisible();
+}
+async function stableState(page: Page, clearHover = true) {
+  if (clearHover) await page.mouse.move(0, 0);
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  return page.evaluate(() => ({
+    layoutCount: document.querySelector('[aria-label="Architecture graph"]')?.getAttribute('data-layout-count'),
+    camera: document.querySelector('.react-flow__viewport')?.getAttribute('style'),
+    nodes: [...document.querySelectorAll<HTMLElement>('.react-flow__node')].map((node) => ({
+      id: node.dataset.id, position: node.style.transform, width: node.style.width, height: node.style.height,
+    })),
+    ports: [...document.querySelectorAll<HTMLElement>('.architecture-port')].map((port) => ({
+      node: port.dataset.nodeId, port: port.dataset.portId, left: port.style.left, top: port.style.top,
+    })),
+    routes: [...document.querySelectorAll('.architecture-connection')].map((edge) => ({
+      id: edge.getAttribute('data-edge-id')!, paths: [...edge.querySelectorAll('.architecture-edge-line')].map((path) => path.getAttribute('d')),
+    })).sort((a, b) => a.id.localeCompare(b.id)),
+  }));
+}
+async function unchanged(page: Page, before: Awaited<ReturnType<typeof stableState>>) {
+  expect(await stableState(page, false)).toEqual(before);
+}
+async function emphasized(page: Page, expected: Locator[]) {
+  const ids = await Promise.all(expected.map(async (edge) => {
+    await expect(edge).toHaveCount(1);
+    await expect(edge.locator('.architecture-edge-line[marker-end]')).toHaveCount(1);
+    return (await edge.getAttribute('data-edge-id'))!;
+  }));
+  await expect.poll(() => page.locator('.architecture-connection[data-emphasized="true"]').evaluateAll((edges) =>
+    edges.map((edge) => edge.getAttribute('data-edge-id')!).sort())).toEqual(ids.sort());
+  const endpointIds = new Set<string>();
+  for (const edge of expected) {
+    for (const end of ['source', 'target']) endpointIds.add(JSON.stringify([
+      await edge.getAttribute(`data-${end}-node`), await edge.getAttribute(`data-${end}-port`),
+    ]));
+  }
+  await expect.poll(() => page.locator('.architecture-port[data-emphasized="true"]').evaluateAll((ports) =>
+    ports.map((port) => JSON.stringify([port.getAttribute('data-node-id'), port.getAttribute('data-port-id')])).sort()))
+    .toEqual([...endpointIds].sort());
+}
+async function hoverDot(point: Locator) {
+  await expect(point).toBeVisible();
+  await point.locator('.architecture-port-dot').hover();
+}
+/** Choose an actual interior path point where native hit testing identifies this
+ * route. No node dragging or manually supplied layout coordinates are involved. */
+async function hoverLine(page: Page, edge: Locator) {
+  const result = await edge.evaluate((element) => {
+    const expected = element.getAttribute('data-edge-id');
+    const hits: string[] = [];
+    for (const path of element.querySelectorAll<SVGPathElement>('.architecture-edge-hit')) {
+      const matrix = path.getScreenCTM(); if (!matrix) continue;
+      const length = path.getTotalLength();
+      for (const fraction of [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8]) {
+        const p = path.getPointAtLength(length * fraction).matrixTransform(matrix);
+        if (p.x < 1 || p.x > innerWidth - 1 || p.y < 1 || p.y > innerHeight - 1) continue;
+        const hit = document.elementFromPoint(p.x, p.y);
+        const target = hit?.closest('.architecture-connection');
+        if (target?.getAttribute('data-edge-id') === expected) return { location: { x: p.x, y: p.y }, hits };
+        hits.push(`${Math.round(p.x)},${Math.round(p.y)}: ${hit?.tagName}.${hit?.getAttribute('class')} node=${hit?.closest('.react-flow__node')?.getAttribute('data-id')} edge=${target?.getAttribute('data-edge-id')}`);
+      }
+    }
+    return { location: null, hits };
+  });
+  expect(result.location, `Each connection needs its own pointer-targetable line interior: ${result.hits.join('; ')}`).not.toBeNull();
+  await page.mouse.move(result.location!.x, result.location!.y);
+  return result.location!;
+}
+/** Find a trunk or exclusive branch from generated SVG geometry, independently
+ * of the production hit resolver. The pointer still uses native browser hits. */
+async function fanoutPoint(page: Page, edges: Locator[], expected: Locator[]) {
+  const ids = await Promise.all(edges.map(async (edge) => (await edge.getAttribute('data-edge-id'))!));
+  const expectedIds = await Promise.all(expected.map(async (edge) => (await edge.getAttribute('data-edge-id'))!));
+  const result = await page.evaluate(({ ids, expectedIds }) => {
+    type Point = { x: number; y: number };
+    const routes = ids.map((id) => {
+      const element = [...document.querySelectorAll('.architecture-connection')].find((edge) => edge.getAttribute('data-edge-id') === id)!;
+      const segments = [...element.querySelectorAll<SVGPathElement>('.architecture-edge-hit')].flatMap((path) => {
+        const matrix = path.getScreenCTM()!;
+        const values = path.getAttribute('d')!.match(/[-+]?(?:\d*\.?\d+)(?:e[-+]?\d+)?/gi)!.map(Number);
+        const points: DOMPoint[] = [];
+        for (let i = 0; i < values.length; i += 2) points.push(new DOMPoint(values[i], values[i + 1]).matrixTransform(matrix));
+        return points.slice(1).map((point, i) => [points[i]!, point] as const);
+      });
+      return { id, segments };
+    });
+    function distance(point: Point, [a, b]: readonly [Point, Point]) {
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
+      return Math.hypot(point.x - a.x - t * dx, point.y - a.y - t * dy);
+    }
+    for (const { segments } of routes) for (const [a, b] of segments) for (const fraction of [0.5, 0.25, 0.75]) {
+      const point = { x: a.x + (b.x - a.x) * fraction, y: a.y + (b.y - a.y) * fraction };
+      if (point.x < 1 || point.x > innerWidth - 1 || point.y < 1 || point.y > innerHeight - 1) continue;
+      const distances = routes.map((route) => ({ id: route.id, distance: Math.min(...route.segments.map((segment) => distance(point, segment))) }));
+      const represented = distances.filter((route) => route.distance < 0.01).map((route) => route.id).sort();
+      if (JSON.stringify(represented) !== JSON.stringify([...expectedIds].sort())) continue;
+      // Exclusive samples stay clear of other branches' 12 CSS pixel hit corridors.
+      if (distances.some((route) => !expectedIds.includes(route.id) && route.distance < 7)) continue;
+      const hitId = document.elementFromPoint(point.x, point.y)?.closest('.architecture-connection')?.getAttribute('data-edge-id');
+      if (hitId && expectedIds.includes(hitId)) return { ...point, hitId };
+    }
+    return null;
+  }, { ids, expectedIds });
+  expect(result, 'Generated fan-out must expose a native-pointer target for the requested trunk/branch').not.toBeNull();
+  return result!;
+}
+function originalIds(source: Graph, segments: [string, string, string, string][]) {
+  return segments.map(([s, from, t, to]) => {
+    const edge = source.edges.find((edge) => edge.source.node_id === s && edge.source.port_id === from && edge.target.node_id === t && edge.target.port_id === to);
+    expect(edge, `Missing independently authored segment ${s}.${from} → ${t}.${to}`).toBeTruthy();
+    return edge!.id;
+  });
+}
+
+test('exact source and destination dots, fan-out branches and line middles highlight complete forwarded connections', async ({ page }, info) => {
+  await fullAttention(page);
+  const source = makeProjectionFixture({ count: 4 });
+  const fanout = ['Q', 'K', 'V'].map((name) => connection(page, 'layer-3.input-norm', 'out', `layer-3.attention.${name}`, 'x'));
+  for (const [index, name] of ['Q', 'K', 'V'].entries()) expect(JSON.parse((await fanout[index]!.getAttribute('data-original-edge-ids'))!)).toEqual(originalIds(source, [
+    ['layer-3.input-norm', 'out', 'layer-3.attention', 'x'], ['layer-3.attention', 'x', `layer-3.attention.${name}`, 'x'],
+  ]));
+  const before = await stableState(page);
+  await hoverDot(port(page, 'layer-3.input-norm', 'out'));
+  await emphasized(page, fanout);
+  await unchanged(page, before);
+  await capture(page, info, 'source-dot-fanout');
+  await hoverLine(page, fanout[1]!); await emphasized(page, [fanout[1]!]);
+  await unchanged(page, before);
+  await capture(page, info, 'line-hover-complete-forwarding');
+  await hoverDot(port(page, 'layer-3.attention.K', 'x')); await emphasized(page, [fanout[1]!]);
+  // A neighboring source branch remains individually targetable.
+  await hoverLine(page, fanout[2]!); await emphasized(page, [fanout[2]!]);
+  await page.mouse.move(0, 0); await emphasized(page, []);
+  await unchanged(page, before);
+});
+
+test('shared fan-out trunk identifies every branch through native trunk, branch and port transitions', async ({ page }, info) => {
+  await fullAttention(page);
+  const fanout = ['Q', 'K', 'V'].map((name) => connection(page, 'layer-3.input-norm', 'out', `layer-3.attention.${name}`, 'x'));
+  const before = await stableState(page);
+  const trunk = await fanoutPoint(page, fanout, fanout);
+  await page.mouse.move(trunk.x, trunk.y);
+  await emphasized(page, fanout);
+  await unchanged(page, before);
+  await capture(page, info, 'shared-trunk-fanout');
+  // Follow the native trunk owner's route to an exclusive branch. This needs
+  // pointer-move resolution even when the enclosing SVG connection is unchanged.
+  const owner = fanout[(await Promise.all(fanout.map((edge) => edge.getAttribute('data-edge-id')))).indexOf(trunk.hitId)]!;
+  const branch = await fanoutPoint(page, fanout, [owner]);
+  await page.mouse.move(branch.x, branch.y);
+  await emphasized(page, [owner]);
+  await unchanged(page, before);
+  await capture(page, info, 'exclusive-branch-after-trunk');
+  await hoverDot(port(page, 'layer-3.input-norm', 'out')); await emphasized(page, fanout);
+  await hoverDot(port(page, 'layer-3.attention.K', 'x')); await emphasized(page, [fanout[1]!]);
+  await unchanged(page, before);
+  // Pin a single branch; temporary trunk and endpoint emphasis restores it on exit.
+  const pinned = fanout[2]!;
+  await page.mouse.move(0, 0); await pinned.focus(); await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'Connection inspection', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(pinned).toBeFocused();
+  await page.getByRole('button', { name: 'Fit graph', exact: true }).focus();
+  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, fanout);
+  await page.mouse.move(branch.x, branch.y); await emphasized(page, [owner]);
+  await hoverDot(port(page, 'layer-3.input-norm', 'out')); await emphasized(page, fanout);
+  await page.mouse.move(0, 0); await emphasized(page, [pinned]);
+  await unchanged(page, before);
+  await page.getByRole('button', { name: 'Zoom graph in', exact: true }).click();
+  const zoomed = await stableState(page);
+  const zoomedTrunk = await fanoutPoint(page, fanout, fanout);
+  await page.mouse.move(zoomedTrunk.x, zoomedTrunk.y); await emphasized(page, fanout);
+  await capture(page, info, 'zoomed-shared-trunk-fanout');
+  const zoomedBranch = await fanoutPoint(page, fanout, [fanout[1]!]);
+  await page.mouse.move(zoomedBranch.x, zoomedBranch.y); await emphasized(page, [fanout[1]!]);
+  await hoverDot(port(page, 'layer-3.input-norm', 'out')); await emphasized(page, fanout);
+  await page.mouse.move(0, 0); await emphasized(page, [pinned]);
+  await unchanged(page, zoomed);
+});
+
+test('same-shaped inputs and separate K/V state routes keep exact identity under mouse and keyboard emphasis', async ({ page }) => {
+  await fullAttention(page);
+  const source = makeProjectionFixture({ count: 4 });
+  const k = connection(page, 'layer-3.attention.rope-K', 'out', 'layer-3.attention.core', 'K');
+  const v = connection(page, 'layer-3.attention.V', 'out', 'layer-3.attention.core', 'V');
+  const priorK = connection(page, 'layer-3.prior-K', 'out', 'layer-3.attention.core', 'prior_K');
+  const priorV = connection(page, 'layer-3.prior-V', 'out', 'layer-3.attention.core', 'prior_V');
+  const nextK = connection(page, 'layer-3.attention.core', 'next_K', 'layer-3.next-K', 'x');
+  const nextV = connection(page, 'layer-3.attention.core', 'next_V', 'layer-3.next-V', 'x');
+  const before = await stableState(page);
+  await hoverDot(port(page, 'layer-3.attention.core', 'K')); await emphasized(page, [k]);
+  await hoverDot(port(page, 'layer-3.attention.core', 'V')); await emphasized(page, [v]);
+  for (const [name, incoming, outgoing] of [['K', priorK, nextK], ['V', priorV, nextV]] as const) {
+    expect(JSON.parse((await incoming.getAttribute('data-original-edge-ids'))!)).toEqual(originalIds(source, [
+      [`layer-3.prior-${name}`, 'out', 'layer-3.attention', `prior_${name}`],
+      ['layer-3.attention', `prior_${name}`, 'layer-3.attention.core', `prior_${name}`],
+    ]));
+    await hoverLine(page, incoming); await emphasized(page, [incoming]);
+    await hoverDot(port(page, 'layer-3.attention.core', `next_${name}`)); await emphasized(page, [outgoing]);
+    await page.mouse.move(0, 0); await port(page, 'layer-3.attention.core', `prior_${name}`).focus();
+    await emphasized(page, [incoming]);
+    await page.getByRole('button', { name: 'Fit graph', exact: true }).focus();
+  }
+  await emphasized(page, []); await unchanged(page, before);
+});
+
+test('residual and MLP inputs stop at operations; pin survives temporary hover, zoom and inspection close', async ({ page }, info) => {
+  await open(page); await layer(page, 3);
+  await page.getByRole('button', { name: 'Focus MLP', exact: true }).click();
+  await ready(page); await page.getByRole('button', { name: 'Fit graph', exact: true }).click();
+  const gate = connection(page, 'layer-3.silu', 'out', 'layer-3.multiply', 'gate');
+  const up = connection(page, 'layer-3.up', 'out', 'layer-3.multiply', 'up');
+  const down = connection(page, 'layer-3.multiply', 'out', 'layer-3.down', 'x');
+  const before = await stableState(page);
+  await hoverDot(port(page, 'layer-3.multiply', 'gate')); await emphasized(page, [gate]);
+  await expect(down).toHaveAttribute('data-emphasized', 'false');
+  await page.mouse.move(0, 0); await gate.focus(); await emphasized(page, [gate]);
+  await page.keyboard.press('Enter');
+  const inspection = page.getByRole('dialog', { name: 'Connection inspection', exact: true });
+  await expect(inspection).toBeVisible();
+  await expect(inspection).toContainText('layer-3.silu');
+  await expect(inspection).toContainText('layer-3.multiply');
+  await expect(page.getByRole('button', { name: 'Close connection inspection', exact: true })).toBeFocused();
+  for (const key of ['Shift+Tab', 'Shift+Tab', 'Tab', 'Tab', 'Tab']) {
+    await page.keyboard.press(key);
+    expect(await inspection.evaluate((dialog) => dialog.contains(document.activeElement))).toBe(true);
+  }
+  await page.keyboard.press('Escape'); await expect(inspection).toHaveCount(0); await expect(gate).toBeFocused();
+  await page.getByRole('button', { name: 'Fit graph', exact: true }).focus();
+  await hoverLine(page, up); await emphasized(page, [up]);
+  await page.mouse.move(0, 0); await emphasized(page, [gate]);
+  await unchanged(page, before);
+  await page.getByRole('button', { name: 'Zoom graph in', exact: true }).click();
+  const zoomed = await stableState(page);
+  await hoverLine(page, up); await emphasized(page, [up]);
+  await capture(page, info, 'zoomed-line-hover');
+  await unchanged(page, zoomed);
+  const linePoint = await hoverLine(page, up);
+  await page.mouse.click(linePoint.x, linePoint.y);
+  await expect(inspection).toBeVisible();
+  await expect(inspection).toContainText('layer-3.up');
+  await page.getByRole('button', { name: 'Close connection inspection', exact: true }).click();
+  await expect(inspection).toHaveCount(0); await expect(up).toBeFocused();
+  await page.mouse.move(0, 0); await emphasized(page, [up]);
+  await unchanged(page, zoomed);
+  await page.getByRole('button', { name: 'Clear connection selection', exact: true }).click();
+  await page.mouse.move(0, 0); await emphasized(page, []);
+  await page.getByRole('button', { name: /^(Back to layer|Focus layer)$/ }).click();
+  await ready(page); await page.getByRole('button', { name: 'Fit graph', exact: true }).click();
+  const residual = connection(page, 'layer-3.residual-1', 'out', 'layer-3.residual-2', 'residual');
+  const norm = connection(page, 'layer-3.residual-1', 'out', 'layer-3.post-norm', 'x');
+  await hoverDot(port(page, 'layer-3.residual-2', 'residual')); await emphasized(page, [residual]);
+  await hoverDot(port(page, 'layer-3.residual-1', 'out')); await emphasized(page, [residual, norm]);
+});
+
+test('24-instance compact navigation, first/last identity, MLP/state focus and exhaustive round trip', async ({ page }, info) => {
+  await open(page, 'hybrid'); await page.setViewportSize({ width: 1178, height: 900 });
+  const source = makeProjectionFixture();
+  await expect(page.locator('.architecture-node[data-presentation="repetition"]')).toContainText('24');
+  await expect(page.locator('.architecture-node[data-presentation="repetition"]')).toContainText('18 linear');
+  await expect(page.locator('.architecture-node[data-presentation="repetition"]')).toContainText('6 full');
+  expect(Number(await graph(page).getAttribute('data-visible-nodes'))).toBeLessThan(20);
+  const beforeResize = await stableState(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const afterResize = await stableState(page);
+  // A host resize may update the camera; generated node/port/route coordinates
+  // and the completed layout count must remain unchanged.
+  expect({ ...afterResize, camera: beforeResize.camera }).toEqual(beforeResize);
+  await page.setViewportSize({ width: 1178, height: 900 });
+  const restoredSize = await stableState(page);
+  expect({ ...restoredSize, camera: beforeResize.camera }).toEqual(beforeResize);
+  await page.getByRole('button', { name: /Explore stack/ }).first().click(); await ready(page);
+  await expect(page.getByRole('button', { name: /Previous window/ }).first()).toBeDisabled();
+  await page.getByRole('button', { name: /Next window/ }).first().click(); await ready(page);
+  await expect(page.getByRole('button', { name: /Previous window/ }).first()).toBeEnabled();
+  await page.getByRole('button', { name: /Previous window/ }).first().click(); await ready(page);
+  await layer(page, 0);
+  await expect(page.getByRole('combobox', { name: 'Select graph component', exact: true })).toHaveValue('layer-0');
+  await expect(port(page, 'layer-0.attention', 'current_mask')).toBeAttached();
+  await expect(port(page, 'layer-0.attention', 'positions')).toHaveCount(0);
+  await expect(port(page, 'layer-0.attention', 'mask')).toHaveCount(0);
+  await page.getByLabel('Unused interfaces', { exact: true }).check(); await ready(page);
+  await expect(port(page, 'layer-0.attention', 'positions')).toBeAttached();
+  await expect(page.locator('.architecture-connection[data-target-node="layer-0.attention"][data-target-port="positions"]')).toHaveCount(0);
+  await page.getByLabel('Unused interfaces', { exact: true }).uncheck(); await ready(page);
+  await page.getByRole('button', { name: 'State dependencies', exact: true }).click(); await ready(page);
+  await expect(page.locator('.architecture-connection[data-kind="data"]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Select Prior conv', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Select Prior delta', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to layer', exact: true }).click(); await ready(page);
+  await layer(page, 3);
+  await expect(port(page, 'layer-3.attention', 'positions')).toBeAttached();
+  await expect(port(page, 'layer-3.attention', 'mask')).toBeAttached();
+  await expect(port(page, 'layer-3.attention', 'current_mask')).toHaveCount(0);
+  await page.getByRole('button', { name: 'State dependencies', exact: true }).click(); await ready(page);
+  await expect(page.getByRole('button', { name: 'Select Prior K', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Select Prior V', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Select Prior conv', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Overview', exact: true }).click(); await ready(page);
+  await layer(page, 23);
+  await expect(page.getByRole('combobox', { name: 'Select graph component', exact: true })).toHaveValue('layer-23');
+  await expect(page.locator('.architecture-coverage')).toContainText(/instance 23/i);
+  await page.getByLabel('Show dimensions', { exact: true }).check(); await ready(page);
+  await page.getByRole('button', { name: 'Expand all', exact: true }).click(); await ready(page);
+  await expect(graph(page)).toHaveAttribute('data-visible-nodes', String(source.nodes.length));
+  expect(JSON.parse((await graph(page).getAttribute('data-source-node-ids'))!)).toEqual(source.nodes.map((node) => node.id));
+  expect(JSON.parse((await graph(page).getAttribute('data-represented-edge-ids'))!)).toEqual(source.edges.map((edge) => edge.id));
+  const coordinates = info.outputPath('authored-exhaustive-coordinates.json');
+  await writeFile(coordinates, JSON.stringify(await stableState(page)));
+  await info.attach('authored-exhaustive-coordinates', { path: coordinates, contentType: 'application/json' });
+  await page.getByRole('button', { name: 'Overview', exact: true }).click(); await ready(page);
+  expect(Number(await graph(page).getAttribute('data-visible-nodes'))).toBeLessThan(20);
+  expect(await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight])).toEqual([1178, 900]);
+});
+
+interface WorkerObservation {
+  live: number;
+  created: number;
+  mode: 'normal' | 'fail-next' | 'hold-next';
+  held: number;
+  release: (() => void)[];
+}
+test('obsolete model layout replies cannot replace the latest graph; a failed worker retries locally', async ({ page }) => {
+  await page.addInitScript(() => {
+    const state: WorkerObservation = { live: 0, created: 0, mode: 'fail-next', held: 0, release: [] };
+    Object.assign(window, { architectureLayoutWorkers: state });
+    const Original = window.Worker;
+    window.Worker = class extends Original {
+      private alive = true;
+      private delayed = false;
+      private handler: ((this: Worker, event: MessageEvent) => unknown) | null = null;
+      constructor(url: string | URL, options?: WorkerOptions) {
+        super(url, options); state.live++; state.created++;
+      }
+      override set onmessage(callback: ((this: Worker, event: MessageEvent) => unknown) | null) {
+        this.handler = callback;
+        super.onmessage = (event) => {
+          if (this.delayed) {
+            state.held++;
+            state.release.push(() => { state.held--; callback?.call(this, event); });
+          } else callback?.call(this, event);
+        };
+      }
+      override get onmessage() { return this.handler; }
+      override postMessage(message: unknown, transfer: Transferable[] | StructuredSerializeOptions = []) {
+        if (state.mode === 'fail-next') {
+          state.mode = 'normal'; queueMicrotask(() => this.onerror?.call(this, new ErrorEvent('error', { message: 'Authored worker failure' })));
+          return;
+        }
+        if (state.mode === 'hold-next') { state.mode = 'normal'; this.delayed = true; }
+        if (Array.isArray(transfer)) super.postMessage(message, transfer);
+        else super.postMessage(message, transfer);
+      }
+      override terminate() { if (this.alive) { this.alive = false; state.live--; } super.terminate(); }
+    };
+  });
+  const state = () => page.evaluate(() => {
+    const value = (window as typeof window & { architectureLayoutWorkers: WorkerObservation }).architectureLayoutWorkers;
+    return { live: value.live, created: value.created, held: value.held };
+  });
+  await page.goto(harness);
+  await expect(page.getByRole('alert')).toContainText(/Layout|layout/);
+  await expect.poll(async () => (await state()).live).toBe(0);
+  await page.getByRole('button', { name: 'Retry layout', exact: true }).click(); await ready(page);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.evaluate(() => { (window as typeof window & { architectureLayoutWorkers: WorkerObservation }).architectureLayoutWorkers.mode = 'hold-next'; });
+  await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('connections');
+  await expect.poll(async () => (await state()).held).toBe(1);
+  await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('visual-stacks'); await ready(page);
+  await expect(graph(page)).toHaveAttribute('data-graph-id', makeProjectionFixture({ count: 3, secondStack: 2 }).graph_id);
+  const before = await stableState(page);
+  await page.evaluate(() => { const state = (window as typeof window & { architectureLayoutWorkers: WorkerObservation }).architectureLayoutWorkers; state.release.splice(0).forEach((release) => release()); });
+  await expect.poll(async () => (await state()).held).toBe(0);
+  await unchanged(page, before);
+  await expect(page.getByRole('button', { name: 'Select Tokenizer capability', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click();
+  await expect.poll(async () => (await state()).live).toBe(0);
+});

@@ -9,11 +9,13 @@
 .architecture-flow { flex: 1; min-height: 0; min-width: 0; background: var(--ui-surface-soft); }
 .architecture-node { width: 100%; height: 100%; background: var(--ui-surface); border: 1px solid var(--ui-border-strong); border-radius: 6px; position: relative; }
 .architecture-node[data-kind="group"] { background: var(--ui-surface-soft); border-style: dashed; }
-.architecture-node[data-selected="true"] { border: 2px solid var(--ui-accent); }
-.architecture-node-heading { height: 34px; display: flex; gap: 4px; padding: 4px 6px; }
-.architecture-node-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; font-weight: 600; }
+.architecture-node[data-selected="true"] { border-color: var(--ui-accent); box-shadow: inset 0 0 0 1px var(--ui-accent); }
+.architecture-node-heading { height: 42px; display: flex; align-items: start; gap: 2px; padding: 4px; max-width: 300px; }
+.architecture-node-label { flex: 1; min-width: 0; overflow: hidden; text-align: left; font-weight: 600; line-height: 16px; max-height: 38px; }
+.architecture-node .architecture-node-label { border: none; background: transparent; padding: 2px; font-size: 13px; }
+.architecture-node .architecture-expand, .architecture-node .architecture-info { flex-shrink: 0; padding: 1px 3px; border-color: transparent; background: transparent; }
 .architecture-node-type { font-size: 11px; color: var(--ui-text-muted); padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.architecture-port-label { position: absolute; font: 10px/16px ui-monospace, monospace; max-width: 45%; white-space: nowrap; }
+.architecture-port-label { position: absolute; font: 10px/16px ui-monospace, monospace; max-width: 43%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
 .architecture-explorer .react-flow__edge-text { font: 11px ui-monospace, monospace; }
 .architecture-explorer .react-flow__edge-path { stroke: var(--ui-text-muted); }
 .working-surface:has(.architecture-explorer) { display: flex; overflow: hidden; }
@@ -32,3 +34,38 @@
 .architecture-inspection-details pre { white-space: pre-wrap; }
 .architecture-inspection-details select { max-width: 100%; }
 .architecture-inspection > .tensor-explorer { flex: 1; min-height: 0; min-width: 0; }
+.architecture-explorer { position: relative; }
+.architecture-flow { position: relative; }
+.architecture-explorer button:focus-visible, .architecture-explorer select:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.architecture-repetition, .architecture-focus-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.architecture-repetition { width: 100%; }
+.architecture-focus-controls { padding: 4px 6px; flex-shrink: 0; font-size: 11px; max-height: 80px; overflow: auto; }
+.architecture-focus-controls label { display: flex; align-items: center; gap: 3px; }
+.architecture-pattern { color: var(--ui-text-muted); font-size: 11px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.architecture-node[data-expanded="true"] > .architecture-node-type { max-width: 300px; }
+.architecture-explorer .react-flow__node:has(.architecture-node[data-expanded="true"]) { pointer-events: none; }
+.architecture-node[data-expanded="true"] { background: transparent; pointer-events: none; }
+.architecture-node[data-expanded="true"] .architecture-node-heading, .architecture-node[data-expanded="true"] .architecture-port { pointer-events: auto; }
+.architecture-explorer .architecture-port { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: transparent; border-radius: 50%; display: grid; place-items: center; z-index: 6; }
+.architecture-port-dot { width: 7px; height: 7px; border: 1px solid var(--ui-text-muted); border-radius: 50%; background: var(--ui-surface); box-sizing: border-box; pointer-events: none; }
+.architecture-explorer .architecture-port:hover { background: transparent; }
+.architecture-port[data-emphasized="true"] .architecture-port-dot, .architecture-port:focus-visible .architecture-port-dot { background: var(--ui-accent); border-color: var(--ui-accent); box-shadow: 0 0 0 2px var(--ui-surface), 0 0 0 3px var(--ui-accent); }
+.architecture-port-label[data-emphasized="true"] { color: var(--ui-text); font-weight: 700; text-decoration: underline; text-decoration-color: var(--ui-accent); text-underline-offset: 3px; }
+.architecture-explorer .architecture-handle { opacity: 0; pointer-events: none; width: 1px; height: 1px; min-width: 0; min-height: 0; border: 0; transform: translate(-50%, -50%); }
+.architecture-connection { outline: none; cursor: pointer; }
+.architecture-edge-line { stroke: var(--ui-text-muted); stroke-width: 1.3; fill: none; pointer-events: none; }
+.architecture-connection[data-kind="state"] .architecture-edge-line { stroke-dasharray: 6 4; }
+.architecture-connection[data-kind="context"] .architecture-edge-line { stroke-dasharray: 2 4; }
+.architecture-arrow, .architecture-junction { fill: var(--ui-text-muted); pointer-events: none; }
+.architecture-connection[data-emphasized="true"] .architecture-edge-line { stroke: var(--ui-accent); stroke-width: 2.5; }
+.architecture-connection[data-emphasized="true"] .architecture-arrow, .architecture-connection[data-emphasized="true"] .architecture-junction { fill: var(--ui-accent); }
+.architecture-edge-halo { stroke: var(--ui-surface); stroke-width: 5.5; fill: none; pointer-events: none; }
+.architecture-edge-hit { stroke: transparent; stroke-width: 12; fill: none; pointer-events: stroke; }
+.architecture-connection:focus-visible .architecture-edge-line { stroke-dasharray: 7 2; }
+.architecture-shape-label { font: 10px ui-monospace, monospace; fill: var(--ui-text); paint-order: stroke; stroke: var(--ui-surface-soft); stroke-width: 3px; pointer-events: none; }
+.architecture-connection-inspection { position: absolute; z-index: 1200; right: 12px; top: 12px; width: min(380px, calc(100% - 24px)); max-height: calc(100% - 24px); display: flex; flex-direction: column; background: var(--ui-surface); border: 1px solid var(--ui-border-strong); border-radius: 6px; box-shadow: var(--ui-shadow-float); color: var(--ui-text); }
+.architecture-connection-inspection > header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--ui-border); }
+.architecture-connection-details { overflow: auto; padding: 8px 10px; font-size: 12px; overflow-wrap: anywhere; }
+.architecture-connection-details p { margin: 6px 0; }
+.architecture-connection-details code { font-size: 10px; }
+.architecture-connection-details summary { cursor: pointer; }

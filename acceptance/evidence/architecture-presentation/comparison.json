@@ -1,0 +1,526 @@
+{
+  "passed": true,
+  "comparisons": [
+    {
+      "state": "tensor-1178",
+      "changed_pixels": 0,
+      "compared_pixels": 1060200,
+      "max_channel_delta": 0,
+      "geometry_equal": true,
+      "comparison": "full image"
+    },
+    {
+      "state": "tokenizer-1178",
+      "changed_pixels": 0,
+      "compared_pixels": 1060200,
+      "max_channel_delta": 0,
+      "geometry_equal": true,
+      "comparison": "full image"
+    },
+    {
+      "state": "architecture-1178",
+      "changed_pixels": 0,
+      "compared_pixels": 151932,
+      "max_channel_delta": 0,
+      "geometry_equal": true,
+      "comparison": "outside Architecture panel interior"
+    },
+    {
+      "state": "tensor-after-architecture-1178",
+      "changed_pixels": 0,
+      "compared_pixels": 1060200,
+      "max_channel_delta": 0,
+      "geometry_equal": true,
+      "comparison": "full image"
+    },
+    {
+      "state": "tokenizer-after-architecture-1178",
+      "changed_pixels": 0,
+      "compared_pixels": 1060200,
+      "max_channel_delta": 0,
+      "geometry_equal": true,
+      "comparison": "full image"
+    },
+    {
+      "state": "tensor-1440",
+      "changed_pixels": 0,
+      "compared_pixels": 1296000,
+      "max_channel_delta": 0,
+      "geometry_equal": true,
+      "comparison": "full image"
+    },
+    {
+      "state": "tokenizer-1440",
+      "changed_pixels": 0,
+      "compared_pixels": 1296000,
+      "max_channel_delta": 0,
+      "geometry_equal": true,
+      "comparison": "full image"
+    },
+    {
+      "state": "architecture-1440",
+      "changed_pixels": 0,
+      "compared_pixels": 179704,
+      "max_channel_delta": 0,
+      "geometry_equal": true,
+      "comparison": "outside Architecture panel interior"
+    },
+    {
+      "state": "tensor-after-architecture-1440",
+      "changed_pixels": 0,
+      "compared_pixels": 1296000,
+      "max_channel_delta": 0,
+      "geometry_equal": true,
+      "comparison": "full image"
+    },
+    {
+      "state": "tokenizer-after-architecture-1440",
+      "changed_pixels": 0,
+      "compared_pixels": 1296000,
+      "max_channel_delta": 0,
+      "geometry_equal": true,
+      "comparison": "full image"
+    }
+  ],
+  "graphStates": {
+    "passed": true,
+    "count": 42,
+    "results": [
+      {
+        "capture": "dimensions-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "dimensions-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "exhaustive-context-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "exhaustive-context-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "exhaustive-detail-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "exhaustive-detail-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "exhaustive-global-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "exhaustive-global-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "exhaustive-resized-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "exhaustive-resized-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "last-layer-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "last-layer-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "layer0-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "layer0-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "layer0-complete-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "layer0-complete-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "layer3-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "layer3-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "layer3-complete-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "layer3-complete-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "line-hover-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "line-hover-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "mlp-line-hover-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "mlp-line-hover-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "mlp-port-hover-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "mlp-port-hover-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "mlp0-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "mlp0-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "mlp3-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "mlp3-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "overview-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "overview-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "port-hover-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "port-hover-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "returned-overview-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "returned-overview-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "stack-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "stack-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "states0-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "states0-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "states3-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "states3-1440.png",
+        "outsidePanelChangedPixels": 0
+      }
+    ]
+  },
+  "imageDigests": {
+    "before": {
+      "architecture-1178.png": "11a5f1116647f27343df374465674ddbfcd9a666024511effdfd35c085c9e49f",
+      "architecture-1440.png": "cbfb2f3a70d6610f0d8d45f1be4b10db05d8348b8a15ced089814a111afffeda",
+      "tensor-1178.png": "2c82f9204485d77e7330449729cd6384a792fdf290d3948d03ccce60280b7032",
+      "tensor-1440.png": "55d8857190d15f7e463d8f28db0979161fabd4d58aa26e5fe5341237d9f98dbc",
+      "tensor-after-architecture-1178.png": "16ed2b718cdd08da5b7a037ebe0dbfe42700b55bd3d2d7be3791021c3977311d",
+      "tensor-after-architecture-1440.png": "fe44a4984bdbb7f808dabf2cba87b7f0c8b52190fdefc8ba7ed3d8bf35c317f4",
+      "tokenizer-1178.png": "c5c493ea8422f0475856c6e10dc4a3648515438b45d8dfe1cb3bb38d42f69e2d",
+      "tokenizer-1440.png": "30c7262173d220e672daf7b485b5eea3a9ba89527135875b0319b9c485b34276",
+      "tokenizer-after-architecture-1178.png": "2df80afe18cc6994fa77b95edbd47edcbef362a884d03982bf6aa7c6a62413c8",
+      "tokenizer-after-architecture-1440.png": "03c7704a7d3d7343427f400c3d774304878bdd53114bc6120abab8e0bbbe67c6"
+    },
+    "after-final": {
+      "architecture-1178.png": "c72a281f05cb5fb2562bf6a875453db49c4465e3228706870ca0e7a73036ce93",
+      "architecture-1440.png": "d7ef35d25acb2d82c07a12ba1a2997f5853c826ecf38209316acd9271430f768",
+      "diff-tensor-1178.png": "d7a183b19408491506035252cd66c1726404f15a28cbe15de507105d70285478",
+      "tensor-1178.png": "525ef5be68b9d66863a69fe2aa10083b2a54edeed0fe14e178c303ae0919251c",
+      "tensor-1440.png": "55d8857190d15f7e463d8f28db0979161fabd4d58aa26e5fe5341237d9f98dbc",
+      "tensor-after-architecture-1178.png": "16ed2b718cdd08da5b7a037ebe0dbfe42700b55bd3d2d7be3791021c3977311d",
+      "tensor-after-architecture-1440.png": "fe44a4984bdbb7f808dabf2cba87b7f0c8b52190fdefc8ba7ed3d8bf35c317f4",
+      "tokenizer-1178.png": "c5c493ea8422f0475856c6e10dc4a3648515438b45d8dfe1cb3bb38d42f69e2d",
+      "tokenizer-1440.png": "30c7262173d220e672daf7b485b5eea3a9ba89527135875b0319b9c485b34276",
+      "tokenizer-after-architecture-1178.png": "2df80afe18cc6994fa77b95edbd47edcbef362a884d03982bf6aa7c6a62413c8",
+      "tokenizer-after-architecture-1440.png": "03c7704a7d3d7343427f400c3d774304878bdd53114bc6120abab8e0bbbe67c6"
+    },
+    "states-final": {
+      "dimensions-1178.png": "2c5553161908a299eb65e0ce6cd9abd8f2d6b1cea5b27e17c29eb6a2b7898186",
+      "dimensions-1440.png": "1f072b04bb981c51556f6ebacb98585e2e573ba9891020f4a5bb71e1a5e4e0aa",
+      "exhaustive-context-1178.png": "042fdeb92c9c550ce77121466be14f4aa6eb8d6b8f9ba3d77189ac96dfd7c10a",
+      "exhaustive-context-1440.png": "fca10e066ff710e3aebca25283fe8cf59b0e855f3a766f122ae124d4325b684c",
+      "exhaustive-detail-1178.png": "fbf7783eef1e343dda475d89af7945cc283e5f0a6162d85b054a86200ef42015",
+      "exhaustive-detail-1440.png": "578b5f061c429e7f9b5045049b3a027cad92d96630d1cc25269476b5278adee5",
+      "exhaustive-global-1178.png": "535ed4c2c83810f4c4a0fc88c39e4fbdbb9861a3894b1860d0831db8b2eb2007",
+      "exhaustive-global-1440.png": "0789741dbef7d5c3d218c9973454b0a62e1d11ac23a69fb88608c4890ca64b02",
+      "exhaustive-resized-1178.png": "fbf7783eef1e343dda475d89af7945cc283e5f0a6162d85b054a86200ef42015",
+      "exhaustive-resized-1440.png": "578b5f061c429e7f9b5045049b3a027cad92d96630d1cc25269476b5278adee5",
+      "last-layer-1178.png": "0e9fbf31e668a507e8d1d06b8c04b548425421cb2fe2ab2103883ae7d969db2f",
+      "last-layer-1440.png": "5d02d9d7dc341d57c42609b426e785fb6c85d110ff78d1c6c04fe6eb3bff0281",
+      "layer0-1178.png": "30220003cbe4829ea7a2485f013fc07df955d8e3a09d42e82c8393ba576ff559",
+      "layer0-1440.png": "449a3be5a266acd6b1caf1cd9152dc4e5f78d6acd33d8c08f37693c2cb29a96f",
+      "layer0-complete-1178.png": "dba137e7b656fb855edcca92deff35654e05ed13a44a565646d617bc3243b01a",
+      "layer0-complete-1440.png": "668bb6d62f48986aeb87d344cbcc754b84ad4a83bee93d07d2cd2c78de378740",
+      "layer3-1178.png": "77cd35cbe9b7c7e47a22e621dd59a601053319236cb1f9df9214ea7dae490bc5",
+      "layer3-1440.png": "82dc3f4937f686c1f34723188cc9b01e63341b48cff6114899ab52503859e0d5",
+      "layer3-complete-1178.png": "f5617826bc52ae13ba365e19d16cc37309d232a04aae0b328322c707ccd0f76d",
+      "layer3-complete-1440.png": "4058d1d59596c3762fcfb9a07637272ce2414ff9233810758a7650a762342e7d",
+      "line-hover-1178.png": "3676e2c79dd3f70170d159025a369c72ad839009c2f7b04a001f3e4ebf39ea53",
+      "line-hover-1440.png": "7fc75c5940fe0ecbf2941ff66582215420a6e03b86c7c1d5978a7c4fcf12a330",
+      "mlp-line-hover-1178.png": "fc02231a73c7dd8614ab39a310b4a387265117cdc3cec1516464a5b44949273e",
+      "mlp-line-hover-1440.png": "1462870e3f50da0bdcb73821a22fa8ecad1e768ea707722252ddef8f6295cff1",
+      "mlp-port-hover-1178.png": "fc02231a73c7dd8614ab39a310b4a387265117cdc3cec1516464a5b44949273e",
+      "mlp-port-hover-1440.png": "1462870e3f50da0bdcb73821a22fa8ecad1e768ea707722252ddef8f6295cff1",
+      "mlp0-1178.png": "a56f6190cba3f94428278441b4d16c8702835d0580a3e3b4e9f1d05dab51f58d",
+      "mlp0-1440.png": "5cbf14acbdf64dd99a40bbd1d4b929c15804c0c30ef994263769fcc7ab5727f6",
+      "mlp3-1178.png": "9c17218fd5385bb0d0d36d3d11f60840a600ad4674816b6f7b5bae0eaaa2487f",
+      "mlp3-1440.png": "2c6c686e5cc23637ba4e285a09cdc688052ce8e5157cd03e4b1dcf369346c4dc",
+      "overview-1178.png": "c72a281f05cb5fb2562bf6a875453db49c4465e3228706870ca0e7a73036ce93",
+      "overview-1440.png": "d7ef35d25acb2d82c07a12ba1a2997f5853c826ecf38209316acd9271430f768",
+      "port-hover-1178.png": "3676e2c79dd3f70170d159025a369c72ad839009c2f7b04a001f3e4ebf39ea53",
+      "port-hover-1440.png": "7fc75c5940fe0ecbf2941ff66582215420a6e03b86c7c1d5978a7c4fcf12a330",
+      "returned-overview-1178.png": "229f0d15b478613b6835acb8b7fda6ff3decc19929ba87e9bbf24ea213d6975d",
+      "returned-overview-1440.png": "92e64d2793486d2dfbd4fbb39a4d40ce23905bdd917985267e9872e7bfba4ef2",
+      "stack-1178.png": "7d9bd1cb7059b8746bb5fb06cc29b8f07d03bda65c76cd9b307beb27290ae52f",
+      "stack-1440.png": "f898f64555ab930d0f9fac291cfb09f085e34c95439f05ff7c4673ef84b7c9b4",
+      "states0-1178.png": "5e7a6a74505d6ee449f2a13d20dfe5044f641748a6149ce51ac0d0e3a6a7d6a3",
+      "states0-1440.png": "7c409d3b3eb7632d4cd65c2f1aec5fff1c37fea7163dec2cbe157b53300a3f6b",
+      "states3-1178.png": "96085a411e21f88eed6c3393f092f05bee8948886951be6de45387ac26d3f74c",
+      "states3-1440.png": "2df288985d109f7ac97a64155dd9f4f0095ff9a097ca82608a2edc9911641caf"
+    },
+    "details-final": {
+      "attention-detail-1178.png": "061dafeda1cfcbc9be08c35c7919e425249c75285be57490c6029e6fa2b46240",
+      "attention-detail-1440.png": "c272b935e0c1d5d874fd5f8ceb4d3da6f719ab456f96a1179c0c9a22aee77fcb",
+      "dimensions-readable-1178.png": "02a9a681854db1b55c178c9dfa9aaaaf129fc8b44b23182033feed939f455385",
+      "dimensions-readable-1440.png": "81b0f0d3c6246148465e02340c531bf578c0acaf12a6f5abf50f22d80db721b8",
+      "nested-attention-1178.png": "ff282f7b78723d2ff1914ba225325f0017f0769bf275f4339f38d7c670ce5e01",
+      "nested-attention-1440.png": "bd182bd345cb9cff71637c16202ed31d36ddf1382d5d1f673c7f9d316ca4dc1f",
+      "overview-1178.png": "c72a281f05cb5fb2562bf6a875453db49c4465e3228706870ca0e7a73036ce93",
+      "overview-1440.png": "d7ef35d25acb2d82c07a12ba1a2997f5853c826ecf38209316acd9271430f768"
+    },
+    "before-stable-raster": {
+      "architecture-1178.png": "02087eb7d592ab43ed23b9ef7dd750371e635e9d7f698287d0da938733366d23",
+      "architecture-1440.png": "51b1cba315cf456f6250085f0c9231166f289ebd15798fe50953af5cfa280fb2",
+      "tensor-1178.png": "87c9cd97f5901fe3d83962353fd476a979d0ccb6b1944525efcc296684897bc4",
+      "tensor-1440.png": "f02facbe138c15a0306dca5fc0eabb6daacbfb802d6ac017e26ef8e547edbb86",
+      "tensor-after-architecture-1178.png": "8834d83757f0e3ee6ef4fbd6db8fa59730b3dd4793f453caf1c3f08ccd604207",
+      "tensor-after-architecture-1440.png": "93b76bf22b867fd5f4d5be07e73c38812640ac3c9029e9a549311a882c05860e",
+      "tokenizer-1178.png": "47e2620722f0bdc5381d025618626040623bb52b6bbba62a31b86d41a2fa8a39",
+      "tokenizer-1440.png": "5f904b2ce7b7f57d55d692d1295804938c1d2be67f8ea542a3d9698be43c5280",
+      "tokenizer-after-architecture-1178.png": "c19ac1707f45e4dfae9907fe490fb1bf484ac58e6179eee00749368a56f21d55",
+      "tokenizer-after-architecture-1440.png": "46093cfa6c587d7169effaa336740beff0220993ac4b7ad0873d735635742402"
+    },
+    "after-stable-raster": {
+      "architecture-1178.png": "d27ff7e6c3a56d7e8580a4b7750b36097060c27fb36cabd7368d14e907fc6b8b",
+      "architecture-1440.png": "5485d633206ba475ea4109b53888dbd089cf5bd39ad31adeb6ae9e5e1714260a",
+      "tensor-1178.png": "87c9cd97f5901fe3d83962353fd476a979d0ccb6b1944525efcc296684897bc4",
+      "tensor-1440.png": "f02facbe138c15a0306dca5fc0eabb6daacbfb802d6ac017e26ef8e547edbb86",
+      "tensor-after-architecture-1178.png": "8834d83757f0e3ee6ef4fbd6db8fa59730b3dd4793f453caf1c3f08ccd604207",
+      "tensor-after-architecture-1440.png": "93b76bf22b867fd5f4d5be07e73c38812640ac3c9029e9a549311a882c05860e",
+      "tokenizer-1178.png": "47e2620722f0bdc5381d025618626040623bb52b6bbba62a31b86d41a2fa8a39",
+      "tokenizer-1440.png": "5f904b2ce7b7f57d55d692d1295804938c1d2be67f8ea542a3d9698be43c5280",
+      "tokenizer-after-architecture-1178.png": "c19ac1707f45e4dfae9907fe490fb1bf484ac58e6179eee00749368a56f21d55",
+      "tokenizer-after-architecture-1440.png": "46093cfa6c587d7169effaa336740beff0220993ac4b7ad0873d735635742402"
+    }
+  },
+  "additionalDetails": {
+    "count": 8,
+    "passed": true,
+    "results": [
+      {
+        "capture": "attention-detail-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "attention-detail-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "dimensions-readable-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "dimensions-readable-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "nested-attention-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "nested-attention-1440.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "overview-1178.png",
+        "outsidePanelChangedPixels": 0
+      },
+      {
+        "capture": "overview-1440.png",
+        "outsidePanelChangedPixels": 0
+      }
+    ]
+  },
+  "initialShellComparison": {
+    "passed": false,
+    "rasterObservation": {
+      "pixels": [
+        [
+          21,
+          84
+        ],
+        [
+          21,
+          85
+        ]
+      ],
+      "bothStatesReproducedOnBothBuilds": true,
+      "domStylesAndScrollEqual": true,
+      "tensor1178Sha256": {
+        "before": "2c82f9204485d77e7330449729cd6384a792fdf290d3948d03ccce60280b7032",
+        "after-final": "525ef5be68b9d66863a69fe2aa10083b2a54edeed0fe14e178c303ae0919251c",
+        "fringe-repaint-baseline": "525ef5be68b9d66863a69fe2aa10083b2a54edeed0fe14e178c303ae0919251c",
+        "fringe-repaint-final": "2c82f9204485d77e7330449729cd6384a792fdf290d3948d03ccce60280b7032"
+      }
+    },
+    "exactComparisons": 9,
+    "differences": [
+      {
+        "state": "tensor-1178",
+        "changed_pixels": 2,
+        "compared_pixels": 1060200,
+        "max_channel_delta": 27,
+        "geometry_equal": true,
+        "comparison": "full image"
+      }
+    ]
+  },
+  "shellCaptureProtocol": {
+    "captureScript": "capture-shell-stable-raster.mjs",
+    "originalCaptureScript": "capture-shell.mjs",
+    "originalCaptureSha256": "6220a2948f0a1ea235cf753f25d9941b56966df04b0e8888be2d49838cfb9e95",
+    "captureScriptSha256": "cd0b0a15915169916db7e1b9549372f2136df5f5d3b6032e2228e4606b6a7d9d",
+    "rasterFlag": "--disable-lcd-text",
+    "serverPort": "ephemeral loopback port for independent concurrent capture",
+    "comparison": "Original compare-shell.py algorithm and original rounded Architecture interior mask; full-image comparison for all Tensor/Tokenizer states",
+    "replaySha256": "34796463f2d787207023717383914d468435e4ba4c44de4bb1e0fd1962fb1a55"
+  },
+  "shellGeometry": {
+    "1178": {
+      "viewport": [
+        1178,
+        900
+      ],
+      "document": [
+        1178,
+        900
+      ],
+      "body": [
+        1178,
+        900
+      ],
+      "scroll": [
+        0,
+        0
+      ],
+      "dpr": 1,
+      "panelBounds": {
+        "tensor-1178": {
+          "x": 312,
+          "y": 64,
+          "width": 850,
+          "height": 796
+        },
+        "tokenizer-1178": {
+          "x": 16,
+          "y": 64,
+          "width": 1146,
+          "height": 796
+        },
+        "architecture-1178": {
+          "x": 16,
+          "y": 64,
+          "width": 1146,
+          "height": 796
+        }
+      }
+    },
+    "1440": {
+      "viewport": [
+        1440,
+        900
+      ],
+      "document": [
+        1440,
+        900
+      ],
+      "body": [
+        1440,
+        900
+      ],
+      "scroll": [
+        0,
+        0
+      ],
+      "dpr": 1,
+      "panelBounds": {
+        "tensor-1440": {
+          "x": 312,
+          "y": 64,
+          "width": 1112,
+          "height": 796
+        },
+        "tokenizer-1440": {
+          "x": 16,
+          "y": 64,
+          "width": 1408,
+          "height": 796
+        },
+        "architecture-1440": {
+          "x": 16,
+          "y": 64,
+          "width": 1408,
+          "height": 796
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1467 @@
+{
+  "environment": {
+    "browser": "Chromium 153.0.8010.12",
+    "node": "24.14.0",
+    "os": "Linux x86-64",
+    "cpu": "Intel Core i7-11700K, 16 logical CPUs",
+    "ramGiB": 62.7,
+    "dpr": 1,
+    "height": 900
+  },
+  "method": "Built UI, local immutable HTTP replay, actual outer-worker layout result, CDP Performance.getMetrics after HeapProfiler.collectGarbage; worker/native/GPU heap and peak allocation are not included. Runs share the host with acceptance tests. Coordinates are output, never supplied to layout.",
+  "errors": [],
+  "results": [
+    {
+      "name": "overview",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 131.30000001192093,
+      "layoutCount": 1,
+      "bounds": {
+        "width": 1276,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(12.0489px, 49.3974px) scale(0.872964)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 10415512,
+      "heapTotal": 11595776,
+      "dom": {
+        "documents": 1,
+        "nodes": 8393,
+        "jsEventListeners": 308
+      }
+    },
+    {
+      "name": "stack",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 17,
+      "visibleEdges": 17,
+      "layoutMs": 166.40000000596046,
+      "layoutCount": 2,
+      "bounds": {
+        "width": 2100,
+        "height": 636
+      },
+      "represented": 44,
+      "hidden": 1243,
+      "filtered": 42,
+      "camera": "translate(-137.978px, 40.5835px) scale(0.725105)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 11157844,
+      "heapTotal": 11857920,
+      "dom": {
+        "documents": 1,
+        "nodes": 8553,
+        "jsEventListeners": 353
+      }
+    },
+    {
+      "name": "layer0",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 20,
+      "visibleEdges": 17,
+      "layoutMs": 231.59999999403954,
+      "layoutCount": 4,
+      "bounds": {
+        "width": 2520,
+        "height": 652
+      },
+      "represented": 52,
+      "hidden": 1235,
+      "filtered": 42,
+      "camera": "translate(-100.8px, -13.3px) scale(0.8)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 11863128,
+      "heapTotal": 12644352,
+      "dom": {
+        "documents": 1,
+        "nodes": 8566,
+        "jsEventListeners": 353
+      }
+    },
+    {
+      "name": "layer0-complete",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 20,
+      "visibleEdges": 17,
+      "layoutMs": 231.59999999403954,
+      "layoutCount": 4,
+      "bounds": {
+        "width": 2520,
+        "height": 652
+      },
+      "represented": 52,
+      "hidden": 1235,
+      "filtered": 42,
+      "camera": "translate(-366.105px, -43.8847px) scale(0.876271)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 11810308,
+      "heapTotal": 12120064,
+      "dom": {
+        "documents": 1,
+        "nodes": 8485,
+        "jsEventListeners": 326
+      }
+    },
+    {
+      "name": "mlp0",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 25,
+      "visibleEdges": 22,
+      "layoutMs": 190,
+      "layoutCount": 5,
+      "bounds": {
+        "width": 3170,
+        "height": 768
+      },
+      "represented": 56,
+      "hidden": 1231,
+      "filtered": 42,
+      "camera": "translate(-886.61px, -156.924px) scale(0.876271)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 12050344,
+      "heapTotal": 13168640,
+      "dom": {
+        "documents": 1,
+        "nodes": 8508,
+        "jsEventListeners": 333
+      }
+    },
+    {
+      "name": "mlp-port-hover",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 25,
+      "visibleEdges": 22,
+      "layoutMs": 190,
+      "layoutCount": 5,
+      "bounds": {
+        "width": 3170,
+        "height": 768
+      },
+      "represented": 56,
+      "hidden": 1231,
+      "filtered": 42,
+      "camera": "translate(-886.61px, -156.924px) scale(0.876271)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 12200200,
+      "heapTotal": 13168640,
+      "dom": {
+        "documents": 1,
+        "nodes": 8515,
+        "jsEventListeners": 333
+      }
+    },
+    {
+      "name": "mlp-line-hover",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 25,
+      "visibleEdges": 22,
+      "layoutMs": 190,
+      "layoutCount": 5,
+      "bounds": {
+        "width": 3170,
+        "height": 768
+      },
+      "represented": 56,
+      "hidden": 1231,
+      "filtered": 42,
+      "camera": "translate(-886.61px, -156.924px) scale(0.876271)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 12672816,
+      "heapTotal": 13754368,
+      "dom": {
+        "documents": 1,
+        "nodes": 8527,
+        "jsEventListeners": 346
+      }
+    },
+    {
+      "name": "states0",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 9,
+      "visibleEdges": 4,
+      "layoutMs": 170.59999999403954,
+      "layoutCount": 6,
+      "bounds": {
+        "width": 722,
+        "height": 732
+      },
+      "represented": 4,
+      "hidden": 1196,
+      "filtered": 129,
+      "camera": "translate(231.274px, -70.0069px) scale(0.932759)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 12664664,
+      "heapTotal": 13492224,
+      "dom": {
+        "documents": 1,
+        "nodes": 8346,
+        "jsEventListeners": 309
+      }
+    },
+    {
+      "name": "layer3",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 21,
+      "visibleEdges": 20,
+      "layoutMs": 161.09999999403954,
+      "layoutCount": 9,
+      "bounds": {
+        "width": 2718,
+        "height": 781
+      },
+      "represented": 54,
+      "hidden": 1233,
+      "filtered": 42,
+      "camera": "translate(-396.472px, -119.237px) scale(0.932759)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 13546596,
+      "heapTotal": 14540800,
+      "dom": {
+        "documents": 1,
+        "nodes": 8466,
+        "jsEventListeners": 330
+      }
+    },
+    {
+      "name": "layer3-complete",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 21,
+      "visibleEdges": 20,
+      "layoutMs": 161.09999999403954,
+      "layoutCount": 9,
+      "bounds": {
+        "width": 2718,
+        "height": 781
+      },
+      "represented": 54,
+      "hidden": 1233,
+      "filtered": 42,
+      "camera": "translate(-539.607px, -93.3941px) scale(0.876271)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 13595020,
+      "heapTotal": 14540800,
+      "dom": {
+        "documents": 1,
+        "nodes": 8507,
+        "jsEventListeners": 344
+      }
+    },
+    {
+      "name": "mlp3",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 26,
+      "visibleEdges": 25,
+      "layoutMs": 189.7000000178814,
+      "layoutCount": 10,
+      "bounds": {
+        "width": 3368,
+        "height": 858
+      },
+      "represented": 58,
+      "hidden": 1229,
+      "filtered": 42,
+      "camera": "translate(-1060.11px, -186.717px) scale(0.876271)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 13850428,
+      "heapTotal": 14802944,
+      "dom": {
+        "documents": 1,
+        "nodes": 8509,
+        "jsEventListeners": 346
+      }
+    },
+    {
+      "name": "states3",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 8,
+      "visibleEdges": 6,
+      "layoutMs": 141.59999999403954,
+      "layoutCount": 11,
+      "bounds": {
+        "width": 746,
+        "height": 740
+      },
+      "represented": 6,
+      "hidden": 1191,
+      "filtered": 132,
+      "camera": "translate(224.815px, -67.6871px) scale(0.920068)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 13814420,
+      "heapTotal": 14802944,
+      "dom": {
+        "documents": 1,
+        "nodes": 8347,
+        "jsEventListeners": 304
+      }
+    },
+    {
+      "name": "port-hover",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 151.2000000178814,
+      "layoutCount": 13,
+      "bounds": {
+        "width": 1276,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(31.7915px, 39.7378px) scale(0.84202)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 14515604,
+      "heapTotal": 15327232,
+      "dom": {
+        "documents": 1,
+        "nodes": 8445,
+        "jsEventListeners": 326
+      }
+    },
+    {
+      "name": "line-hover",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 151.2000000178814,
+      "layoutCount": 13,
+      "bounds": {
+        "width": 1276,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(31.7915px, 39.7378px) scale(0.84202)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 14491312,
+      "heapTotal": 15327232,
+      "dom": {
+        "documents": 1,
+        "nodes": 8445,
+        "jsEventListeners": 326
+      }
+    },
+    {
+      "name": "dimensions",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 171,
+      "layoutCount": 14,
+      "bounds": {
+        "width": 2019,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(38.4094px, 140.675px) scale(0.524607)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 14628864,
+      "heapTotal": 15589376,
+      "dom": {
+        "documents": 1,
+        "nodes": 8483,
+        "jsEventListeners": 326
+      }
+    },
+    {
+      "name": "last-layer",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 20,
+      "visibleEdges": 18,
+      "layoutMs": 182.09999999403954,
+      "layoutCount": 17,
+      "bounds": {
+        "width": 2504,
+        "height": 673
+      },
+      "represented": 53,
+      "hidden": 1234,
+      "filtered": 42,
+      "camera": "translate(-272px, 12.7px) scale(0.8)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 15450316,
+      "heapTotal": 16375808,
+      "dom": {
+        "documents": 1,
+        "nodes": 8565,
+        "jsEventListeners": 365
+      }
+    },
+    {
+      "name": "exhaustive-context",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 948,
+      "visibleEdges": 1168,
+      "layoutMs": 1196.699999988079,
+      "layoutCount": 18,
+      "bounds": {
+        "width": 114902,
+        "height": 8661
+      },
+      "represented": 1329,
+      "hidden": 0,
+      "filtered": 0,
+      "camera": "translate(-272px, 12.7px) scale(0.8)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 21887872,
+      "heapTotal": 24240128,
+      "dom": {
+        "documents": 1,
+        "nodes": 8179,
+        "jsEventListeners": 241
+      }
+    },
+    {
+      "name": "exhaustive-global",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 948,
+      "visibleEdges": 1168,
+      "layoutMs": 1196.699999988079,
+      "layoutCount": 18,
+      "bounds": {
+        "width": 114902,
+        "height": 8661
+      },
+      "represented": 1329,
+      "hidden": 0,
+      "filtered": 0,
+      "camera": "translate(51.7839px, 268.514px) scale(0.00900273)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 60857884,
+      "heapTotal": 62156800,
+      "dom": {
+        "documents": 1,
+        "nodes": 44562,
+        "jsEventListeners": 11785
+      }
+    },
+    {
+      "name": "exhaustive-detail",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 948,
+      "visibleEdges": 1168,
+      "layoutMs": 1164.0999999940395,
+      "layoutCount": 19,
+      "bounds": {
+        "width": 114902,
+        "height": 8661
+      },
+      "represented": 1329,
+      "hidden": 0,
+      "filtered": 0,
+      "camera": "translate(-14400.8px, -1511.7px) scale(0.8)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 27659532,
+      "heapTotal": 30576640,
+      "dom": {
+        "documents": 1,
+        "nodes": 9222,
+        "jsEventListeners": 464
+      }
+    },
+    {
+      "name": "exhaustive-resized",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 948,
+      "visibleEdges": 1168,
+      "layoutMs": 1164.0999999940395,
+      "layoutCount": 19,
+      "bounds": {
+        "width": 114902,
+        "height": 8661
+      },
+      "represented": 1329,
+      "hidden": 0,
+      "filtered": 0,
+      "camera": "translate(-14400.8px, -1511.7px) scale(0.8)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 27530056,
+      "heapTotal": 28217344,
+      "dom": {
+        "documents": 1,
+        "nodes": 9222,
+        "jsEventListeners": 607
+      }
+    },
+    {
+      "name": "returned-overview",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 143.69999998807907,
+      "layoutCount": 20,
+      "bounds": {
+        "width": 1276,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(31.7915px, 45.7378px) scale(0.84202)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 24140780,
+      "heapTotal": 26382336,
+      "dom": {
+        "documents": 1,
+        "nodes": 8416,
+        "jsEventListeners": 468
+      }
+    },
+    {
+      "name": "overview",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 168.5,
+      "layoutCount": 1,
+      "bounds": {
+        "width": 1276,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(61px, 9px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 10241092,
+      "heapTotal": 11333632,
+      "dom": {
+        "documents": 1,
+        "nodes": 8393,
+        "jsEventListeners": 308
+      }
+    },
+    {
+      "name": "stack",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 18,
+      "visibleEdges": 19,
+      "layoutMs": 179,
+      "layoutCount": 2,
+      "bounds": {
+        "width": 2298,
+        "height": 636
+      },
+      "represented": 45,
+      "hidden": 1242,
+      "filtered": 42,
+      "camera": "translate(-141.212px, 27.0148px) scale(0.783251)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 11191784,
+      "heapTotal": 12120064,
+      "dom": {
+        "documents": 1,
+        "nodes": 8608,
+        "jsEventListeners": 370
+      }
+    },
+    {
+      "name": "layer0",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 20,
+      "visibleEdges": 17,
+      "layoutMs": 180.10000002384186,
+      "layoutCount": 4,
+      "bounds": {
+        "width": 2520,
+        "height": 652
+      },
+      "represented": 52,
+      "hidden": 1235,
+      "filtered": 42,
+      "camera": "translate(30.2px, 2.7px) scale(0.8)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 11843188,
+      "heapTotal": 12906496,
+      "dom": {
+        "documents": 1,
+        "nodes": 8558,
+        "jsEventListeners": 353
+      }
+    },
+    {
+      "name": "layer0-complete",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 20,
+      "visibleEdges": 17,
+      "layoutMs": 180.10000002384186,
+      "layoutCount": 4,
+      "bounds": {
+        "width": 2520,
+        "height": 652
+      },
+      "represented": 52,
+      "hidden": 1235,
+      "filtered": 42,
+      "camera": "translate(-367px, -77.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 11832112,
+      "heapTotal": 12644352,
+      "dom": {
+        "documents": 1,
+        "nodes": 8534,
+        "jsEventListeners": 347
+      }
+    },
+    {
+      "name": "mlp0",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 25,
+      "visibleEdges": 22,
+      "layoutMs": 173.69999998807907,
+      "layoutCount": 5,
+      "bounds": {
+        "width": 3170,
+        "height": 768
+      },
+      "represented": 56,
+      "hidden": 1231,
+      "filtered": 42,
+      "camera": "translate(-961px, -206.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 12053200,
+      "heapTotal": 13168640,
+      "dom": {
+        "documents": 1,
+        "nodes": 8508,
+        "jsEventListeners": 333
+      }
+    },
+    {
+      "name": "mlp-port-hover",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 25,
+      "visibleEdges": 22,
+      "layoutMs": 173.69999998807907,
+      "layoutCount": 5,
+      "bounds": {
+        "width": 3170,
+        "height": 768
+      },
+      "represented": 56,
+      "hidden": 1231,
+      "filtered": 42,
+      "camera": "translate(-961px, -206.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 12208480,
+      "heapTotal": 13168640,
+      "dom": {
+        "documents": 1,
+        "nodes": 8515,
+        "jsEventListeners": 333
+      }
+    },
+    {
+      "name": "mlp-line-hover",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 25,
+      "visibleEdges": 22,
+      "layoutMs": 173.69999998807907,
+      "layoutCount": 5,
+      "bounds": {
+        "width": 3170,
+        "height": 768
+      },
+      "represented": 56,
+      "hidden": 1231,
+      "filtered": 42,
+      "camera": "translate(-961px, -206.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 12676208,
+      "heapTotal": 13754368,
+      "dom": {
+        "documents": 1,
+        "nodes": 8527,
+        "jsEventListeners": 346
+      }
+    },
+    {
+      "name": "states0",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 9,
+      "visibleEdges": 4,
+      "layoutMs": 118.69999998807907,
+      "layoutCount": 6,
+      "bounds": {
+        "width": 722,
+        "height": 732
+      },
+      "represented": 4,
+      "hidden": 1196,
+      "filtered": 129,
+      "camera": "translate(338px, -70.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 12575468,
+      "heapTotal": 13492224,
+      "dom": {
+        "documents": 1,
+        "nodes": 8346,
+        "jsEventListeners": 309
+      }
+    },
+    {
+      "name": "layer3",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 21,
+      "visibleEdges": 20,
+      "layoutMs": 201.80000001192093,
+      "layoutCount": 9,
+      "bounds": {
+        "width": 2718,
+        "height": 781
+      },
+      "represented": 54,
+      "hidden": 1233,
+      "filtered": 42,
+      "camera": "translate(-335px, -134px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 13659028,
+      "heapTotal": 14540800,
+      "dom": {
+        "documents": 1,
+        "nodes": 8541,
+        "jsEventListeners": 355
+      }
+    },
+    {
+      "name": "layer3-complete",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 21,
+      "visibleEdges": 20,
+      "layoutMs": 201.80000001192093,
+      "layoutCount": 9,
+      "bounds": {
+        "width": 2718,
+        "height": 781
+      },
+      "represented": 54,
+      "hidden": 1233,
+      "filtered": 42,
+      "camera": "translate(-565px, -134px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 13607144,
+      "heapTotal": 14278656,
+      "dom": {
+        "documents": 1,
+        "nodes": 8564,
+        "jsEventListeners": 365
+      }
+    },
+    {
+      "name": "mlp3",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 26,
+      "visibleEdges": 25,
+      "layoutMs": 159.59999999403954,
+      "layoutCount": 10,
+      "bounds": {
+        "width": 3368,
+        "height": 858
+      },
+      "represented": 58,
+      "hidden": 1229,
+      "filtered": 42,
+      "camera": "translate(-1159px, -240.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 13856008,
+      "heapTotal": 14802944,
+      "dom": {
+        "documents": 1,
+        "nodes": 8509,
+        "jsEventListeners": 346
+      }
+    },
+    {
+      "name": "states3",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 8,
+      "visibleEdges": 6,
+      "layoutMs": 146.90000000596046,
+      "layoutCount": 11,
+      "bounds": {
+        "width": 746,
+        "height": 740
+      },
+      "represented": 6,
+      "hidden": 1191,
+      "filtered": 132,
+      "camera": "translate(326px, -74.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 13740772,
+      "heapTotal": 14802944,
+      "dom": {
+        "documents": 1,
+        "nodes": 8347,
+        "jsEventListeners": 304
+      }
+    },
+    {
+      "name": "port-hover",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 179.5,
+      "layoutCount": 13,
+      "bounds": {
+        "width": 1276,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(61px, 5.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 14498896,
+      "heapTotal": 15851520,
+      "dom": {
+        "documents": 1,
+        "nodes": 8445,
+        "jsEventListeners": 326
+      }
+    },
+    {
+      "name": "line-hover",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 179.5,
+      "layoutCount": 13,
+      "bounds": {
+        "width": 1276,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(61px, 5.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 14501004,
+      "heapTotal": 15327232,
+      "dom": {
+        "documents": 1,
+        "nodes": 8445,
+        "jsEventListeners": 326
+      }
+    },
+    {
+      "name": "dimensions",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 170.40000000596046,
+      "layoutCount": 14,
+      "bounds": {
+        "width": 2019,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(47.5114px, 118.276px) scale(0.645358)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 14635384,
+      "heapTotal": 15589376,
+      "dom": {
+        "documents": 1,
+        "nodes": 8483,
+        "jsEventListeners": 326
+      }
+    },
+    {
+      "name": "last-layer",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 20,
+      "visibleEdges": 18,
+      "layoutMs": 158.19999998807907,
+      "layoutCount": 17,
+      "bounds": {
+        "width": 2504,
+        "height": 673
+      },
+      "represented": 53,
+      "hidden": 1234,
+      "filtered": 42,
+      "camera": "translate(-141px, 28.7px) scale(0.8)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 15510388,
+      "heapTotal": 16900096,
+      "dom": {
+        "documents": 1,
+        "nodes": 8610,
+        "jsEventListeners": 379
+      }
+    },
+    {
+      "name": "exhaustive-context",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 948,
+      "visibleEdges": 1168,
+      "layoutMs": 1144.699999988079,
+      "layoutCount": 18,
+      "bounds": {
+        "width": 114902,
+        "height": 8661
+      },
+      "represented": 1329,
+      "hidden": 0,
+      "filtered": 0,
+      "camera": "translate(-141px, 28.7px) scale(0.8)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 22184328,
+      "heapTotal": 24240128,
+      "dom": {
+        "documents": 1,
+        "nodes": 8462,
+        "jsEventListeners": 290
+      }
+    },
+    {
+      "name": "exhaustive-global",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 948,
+      "visibleEdges": 1168,
+      "layoutMs": 1144.699999988079,
+      "layoutCount": 18,
+      "bounds": {
+        "width": 114902,
+        "height": 8661
+      },
+      "represented": 1329,
+      "hidden": 0,
+      "filtered": 0,
+      "camera": "translate(63.7342px, 275.54px) scale(0.0110749)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 60837452,
+      "heapTotal": 62156800,
+      "dom": {
+        "documents": 1,
+        "nodes": 44562,
+        "jsEventListeners": 11785
+      }
+    },
+    {
+      "name": "exhaustive-detail",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 948,
+      "visibleEdges": 1168,
+      "layoutMs": 1200.0999999940395,
+      "layoutCount": 19,
+      "bounds": {
+        "width": 114902,
+        "height": 8661
+      },
+      "represented": 1329,
+      "hidden": 0,
+      "filtered": 0,
+      "camera": "translate(-14269.8px, -1511.7px) scale(0.8)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 27786656,
+      "heapTotal": 30576640,
+      "dom": {
+        "documents": 1,
+        "nodes": 9326,
+        "jsEventListeners": 500
+      }
+    },
+    {
+      "name": "exhaustive-resized",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 948,
+      "visibleEdges": 1168,
+      "layoutMs": 1200.0999999940395,
+      "layoutCount": 19,
+      "bounds": {
+        "width": 114902,
+        "height": 8661
+      },
+      "represented": 1329,
+      "hidden": 0,
+      "filtered": 0,
+      "camera": "translate(-14269.8px, -1511.7px) scale(0.8)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 27631948,
+      "heapTotal": 28741632,
+      "dom": {
+        "documents": 1,
+        "nodes": 9326,
+        "jsEventListeners": 643
+      }
+    },
+    {
+      "name": "returned-overview",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 128.09999999403954,
+      "layoutCount": 20,
+      "bounds": {
+        "width": 1276,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(61px, 5.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 24182304,
+      "heapTotal": 26120192,
+      "dom": {
+        "documents": 1,
+        "nodes": 8424,
+        "jsEventListeners": 468
+      }
+    }
+  ],
+  "additionalDetails": [
+    {
+      "name": "overview",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 393.90000000596046,
+      "layoutCount": 1,
+      "bounds": {
+        "width": 1276,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(12.0489px, 49.3974px) scale(0.872964)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 10395288,
+      "heapTotal": 11595776,
+      "dom": {
+        "documents": 1,
+        "nodes": 8393,
+        "jsEventListeners": 308
+      }
+    },
+    {
+      "name": "dimensions-readable",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 187.19999998807907,
+      "layoutCount": 2,
+      "bounds": {
+        "width": 2019,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(12.0489px, 49.3974px) scale(0.872964)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 10769368,
+      "heapTotal": 11857920,
+      "dom": {
+        "documents": 1,
+        "nodes": 8380,
+        "jsEventListeners": 291
+      }
+    },
+    {
+      "name": "nested-attention",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 49,
+      "visibleEdges": 54,
+      "layoutMs": 292.80000001192093,
+      "layoutCount": 7,
+      "bounds": {
+        "width": 5562,
+        "height": 1325
+      },
+      "represented": 92,
+      "hidden": 1195,
+      "filtered": 42,
+      "camera": "translate(-549.394px, -229.77px) scale(0.872964)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 12901120,
+      "heapTotal": 13692928,
+      "dom": {
+        "documents": 1,
+        "nodes": 8586,
+        "jsEventListeners": 345
+      }
+    },
+    {
+      "name": "attention-detail",
+      "width": 1178,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 49,
+      "visibleEdges": 54,
+      "layoutMs": 272.5,
+      "layoutCount": 8,
+      "bounds": {
+        "width": 5562,
+        "height": 1325
+      },
+      "represented": 92,
+      "hidden": 1195,
+      "filtered": 42,
+      "camera": "translate(-653.277px, -562.083px) scale(0.872964)",
+      "body": [
+        1178,
+        900
+      ],
+      "heapUsed": 13574808,
+      "heapTotal": 14741504,
+      "dom": {
+        "documents": 1,
+        "nodes": 8793,
+        "jsEventListeners": 412
+      }
+    },
+    {
+      "name": "overview",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 175.5,
+      "layoutCount": 1,
+      "bounds": {
+        "width": 1276,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(61px, 9px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 10321124,
+      "heapTotal": 11333632,
+      "dom": {
+        "documents": 1,
+        "nodes": 8393,
+        "jsEventListeners": 308
+      }
+    },
+    {
+      "name": "dimensions-readable",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 13,
+      "visibleEdges": 8,
+      "layoutMs": 190.59999999403954,
+      "layoutCount": 2,
+      "bounds": {
+        "width": 2019,
+        "height": 636
+      },
+      "represented": 40,
+      "hidden": 1247,
+      "filtered": 42,
+      "camera": "translate(61px, 9px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 10756008,
+      "heapTotal": 11857920,
+      "dom": {
+        "documents": 1,
+        "nodes": 8380,
+        "jsEventListeners": 291
+      }
+    },
+    {
+      "name": "nested-attention",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 49,
+      "visibleEdges": 54,
+      "layoutMs": 306.89999997615814,
+      "layoutCount": 7,
+      "bounds": {
+        "width": 5562,
+        "height": 1325
+      },
+      "represented": 92,
+      "hidden": 1195,
+      "filtered": 42,
+      "camera": "translate(-581px, -280.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 13008632,
+      "heapTotal": 14741504,
+      "dom": {
+        "documents": 1,
+        "nodes": 8717,
+        "jsEventListeners": 385
+      }
+    },
+    {
+      "name": "attention-detail",
+      "width": 1440,
+      "sourceNodes": 948,
+      "sourceEdges": 1329,
+      "visibleNodes": 49,
+      "visibleEdges": 54,
+      "layoutMs": 333.09999999403954,
+      "layoutCount": 8,
+      "bounds": {
+        "width": 5562,
+        "height": 1325
+      },
+      "represented": 92,
+      "hidden": 1195,
+      "filtered": 42,
+      "camera": "translate(-700px, -679.5px) scale(1)",
+      "body": [
+        1440,
+        900
+      ],
+      "heapUsed": 13512176,
+      "heapTotal": 14479360,
+      "dom": {
+        "documents": 1,
+        "nodes": 8793,
+        "jsEventListeners": 412
+      }
+    }
+  ]
+}
