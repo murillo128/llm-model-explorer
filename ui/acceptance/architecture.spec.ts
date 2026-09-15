@@ -528,7 +528,12 @@ test.describe('Extended mounted lifetime without persistent element handles', ()
   test('deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts', async ({ page }, info) => {
     const graph = await selectGraph(page);
     const canvas = page.getByLabel('Architecture graph', { exact: true });
-    const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
+    const ready = async () => {
+      await expect(canvas).toHaveAttribute('aria-busy', 'false');
+      // Layout arrival precedes the camera's animation-frame commit. Match the
+      // component harness before capturing the context that Back must restore.
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    };
     const layer = graph.repetitions[0]!.instances.at(-1)!.node_id;
     const attention = graph.nodes.find((node) => node.parent_id === layer && node.attributes.some(
       (attribute) => attribute.name === 'semantic_role' && attribute.value === 'attention'))!;
