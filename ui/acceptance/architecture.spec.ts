@@ -85,6 +85,7 @@ async function inspectComponents(page: Page, graph: Graph, info: TestInfo, famil
   };
   const nodeBox = (id: string) => page.locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`);
   const horizontal = async (before: string, after: string) => {
+    await expect(nodeBox(before)).toBeAttached(); await expect(nodeBox(after)).toBeAttached();
     const a = await nodeBox(before).boundingBox(), b = await nodeBox(after).boundingBox();
     expect(a).toBeTruthy(); expect(b).toBeTruthy();
     expect(b!.x).toBeGreaterThanOrEqual(a!.x + a!.width - 1);

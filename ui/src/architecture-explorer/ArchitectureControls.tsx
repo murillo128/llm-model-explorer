@@ -53,8 +53,9 @@ export function ArchitectureControls(props: Props) {
       const instance = instances.get(node.id);
       if (instance) parents.push(instance.r.label, instance.i.variant.replaceAll('_', ' '));
       const context = parents.join(' / ');
+      const sources = node.provenance.filter((p) => p.kind === 'description').map((p) => p.source).join(' ');
       return { id: node.id, label: labels.get(node.id)!, context, fullLabel: node.label,
-        search: `${labels.get(node.id)} ${context} ${node.label} ${node.id} ${node.references.filter((r) => r.kind === 'module').map((r) => r.name).join(' ')}`.toLocaleLowerCase() };
+        search: `${labels.get(node.id)} ${context} ${node.label} ${node.id} ${sources} ${node.references.filter((r) => r.kind === 'module').map((r) => r.name).join(' ')}`.toLocaleLowerCase() };
     });
   }, [graph]);
   const matches = useMemo(() => {

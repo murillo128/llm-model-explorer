@@ -89,6 +89,8 @@ identity for expansion, inspection, search and component focus. Do not add a
 derived MLP container inside an explicit MLP group. The existing bounded fallback
 remains reversible for valid legacy graphs without explicit MLP ownership; it
 does not recognize additional attention patterns or reconstruct missing math.
+Search includes description source keys so concise labels retain access by the
+original operation path.
 
 Declared interfaces remain inspectable when unconsumed branches are filtered. Determine consumption from source connectivity, with an explicit reversible filter. State focus shows existing prior/next dependencies owned by the selected instance, keeps K/V distinct and identifies excluded flows. Exhaustive expansion restores original operations and interfaces without a representative or layer-count limit.
 

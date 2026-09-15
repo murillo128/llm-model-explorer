@@ -23,6 +23,10 @@ export function makeExplicitFixture(options: ProjectionFixtureOptions = {}): Gra
     });
     layer.children = layer.children.flatMap((child) => child === children[0] ? [id] : children.includes(child) ? [] : [child]);
     for (const child of graph.nodes) if (children.includes(child.id)) child.parent_id = id;
+    const activation = graph.nodes.find((node) => node.id === `${layer.id}.silu`)!;
+    activation.provenance = [...activation.provenance, { kind: 'description',
+      source: `${layer.references.find((ref) => ref.kind === 'module')!.name}.mlp.activation`,
+      rule: 'Semantic source key in the reviewed packaged description' }];
     for (const edge of graph.edges) {
       if (edge.target.node_id === children[0] || edge.target.node_id === children[1]) edge.source = { node_id: id, port_id: 'x' };
     }

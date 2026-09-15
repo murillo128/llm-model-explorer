@@ -27,6 +27,16 @@ test('authored components retain labels, focus, raw inspection and reversible de
   await expect(page.locator('.react-flow__node[data-id="layer-3.gate"]')).toHaveCount(0);
   await graphAction(page, 'Show all operations');
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  // The complete projection includes offscreen nodes; React Flow may unmount
+  // their DOM until they are brought into the camera viewport.
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toContain('layer-3.gate');
+  await findComponent(page, 'layer-3.gate');
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
   await expect(page.locator('.react-flow__node[data-id="layer-3.gate"]')).toHaveCount(1);
   await expect(page.locator('.react-flow__node[data-id^="mlp:"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Find component', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Search components', exact: true }).fill('model.layers.3.mlp.activation');
+  const results = page.getByRole('listbox', { name: 'Components', exact: true }).getByRole('option');
+  await expect(results).toHaveCount(1);
+  await expect(results).toHaveAttribute('data-node-id', 'layer-3.silu');
 });
