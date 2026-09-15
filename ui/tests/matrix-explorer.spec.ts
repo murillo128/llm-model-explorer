@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { nativeCamera } from './native-camera';
 import type {} from './matrix-explorer-harness';
 
-const url = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4100) + 1}/tests/matrix-explorer.html`;
+const url = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`;
 async function open(page: Page, strict = false) {
   await page.goto(url + (strict ? '?strict' : ''));
   await expect(page.getByRole('region', { name: 'Synthetic result matrix' })).toBeVisible();
@@ -56,6 +56,10 @@ for (const dpr of [1, 2]) test.describe(`standalone matrix at DPR ${dpr}`, () =>
     await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('status', { name: 'Linked annotation' })).toHaveText('Row 1, cell 1:1');
     await page.keyboard.press('Escape');
+    expect(await page.evaluate(() => window.matrixFixture.renderers[0]!.view!.scaleX)).toBeGreaterThan(1);
+    expect(await page.evaluate(() => [window.matrixFixture.cells.at(-1), window.matrixFixture.rows.at(-1), window.matrixFixture.columns.at(-1)]))
+      .toEqual([{ row: 1, column: 1 }, 1, 1]);
+    await page.locator('.matrix-scroll').evaluate((host) => (host as HTMLElement).blur());
     expect(await page.evaluate(() => [window.matrixFixture.cells.at(-1), window.matrixFixture.rows.at(-1), window.matrixFixture.columns.at(-1)])).toEqual([null, null, null]);
   });
   test('matrix-only scrolling keeps exact native indices', async ({ page }) => {

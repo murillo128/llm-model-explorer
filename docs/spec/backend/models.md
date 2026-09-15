@@ -40,8 +40,41 @@ The accepted architecture increment extends *admission and structural interpreta
 
 Keep a complete physical inventory internally, separate from logical parameters and their numeric availability. A logical parameter can use packed data, scales, an alias, or a fused region; physical byte counts must be checked against physical storage geometry, never against guessed dequantized dimensions. Graph bindings and provenance are governed by [architecture-analysis.md](architecture-analysis.md#parameter-binding-and-provenance).
 
-For the newly admitted quantized variants, expose in the existing logical tensor inventory only complete native mathematical tensors with a verified supported data path. Mark this inventory partial through the [API extension](../api/architecture-explorer.md#quantized-checkpoint-capability-separation); describe excluded packed/unresolved parameters in the graph. Do not expose auxiliary scales or packed arrays as substitute logical weight matrices. A parameter without an existing actionable numeric tensor identity receives metadata and an unavailable reason, not a fabricated ID. Baseline unquantized inventories are not filtered or renamed.
+For the two admitted quantized variants, expose one complete logical tensor per validated packed weight group, alongside native mathematical tensors. GPTQ `…qweight` groups use logical name `…weight`; NVFP4 retains `…weight`. Both expose `[output, input]` geometry, stable logical-name IDs and canonical float32 values. Keep encoding auxiliaries internal. Inventory coverage is complete when every physical record belongs to an actionable logical tensor or its validated encoding group. Unknown or orphan records remain non-actionable and produce precise partial-coverage diagnostics. Missing or inconsistent required group companions still fail admission. Baseline unquantized inventories are not filtered or renamed.
 
-Architecture completeness is independent from numeric inspection. Native 1D/2D weights remain inspectable where verified. Higher-rank native weights retain exact metadata and existing generic tensor-data behavior, but the architecture modal does not flatten or slice them. Decoder-dependent or region-dependent views remain unavailable in this increment. No new quantization decoder, decompressed checkpoint copy, raw-storage explorer, or volume viewer is required.
+Architecture completeness is independent from numeric inspection. Complete native or admitted decoded 1D/2D weights are inspectable where verified. Higher-rank native weights retain exact metadata and existing generic tensor-data behavior, but the architecture modal does not flatten or slice them. Unreviewed encodings and region-dependent views remain unavailable. Do not create a second decompressed checkpoint, raw-storage explorer, or volume viewer.
+
+### Admitted packed weight decoding
+
+GPTQ Int4 retains the admitted `bits=4`, `checkpoint_format=gptq`, group size 128, `desc_act=false`, `pack_dtype=int32`, `sym=true` configuration. I32 `qweight` has shape `[input/8, output]`, I32 `qzeros` `[input/128, output/8]`, F16 `scales` `[input/128, output]`, and I32 `g_idx` `[input]`. Extract low-to-high four-bit fields on the packed axis. Each logical value is `(q - (stored_zero_nibble + 1)) * scale` in float32, with no modulo wrapping of the restored zero point. Select zero and scale groups using stored `g_idx`, including repeated/nontrivial mappings; reject out-of-range mappings.
+
+ModelOpt NVFP4 retains the admitted E2M1 layout and group size 16. U8 `weight` has shape `[output, input/2]`, E4M3 `weight_scale` `[output, input/16]`, and F32 `weight_scale_2` and `input_scale` are scalar. Decode low nibble first using signed E2M1 values (including signed zero). Multiply block scale by the global weight scale in float32, then multiply the E2M1 value by that combined scale. `input_scale` belongs to activation quantization and is not part of the stored weight matrix.
+
+Decode requested ranges and ordered rows lazily with memory proportional to the requested chunk and its companion metadata. Strided packed reads must retain source-mutation semantics, including concurrent shard truncation, without exposing live mapped storage to computation. All source checks, safe-integer bounds, cancellation and shared artifact publication rules remain in force. Statistics and distributions consume the same logical float32 materialization as tensor streaming; existing per-tensor artifacts may be reused without introducing a checkpoint-wide decompression product.
 
 Where a logical representation is supported, numeric materialization remains backend-owned and may be persisted as a derived artifact. The architecture view must never feed its descriptive graph into embedding lookup as if that were an executable or numerically supported model.
+
+## Input embedding table resolution
+
+Resolve input embeddings from an explicit architecture/configuration mapping and
+exactly one matching actionable logical tensor descriptor:
+
+| Model type / architecture | Input table | Dimension configuration |
+| --- | --- | --- |
+| `llama` / `LlamaForCausalLM` (including SmolLM2) | `model.embed_tokens.weight` | Top-level `vocab_size`, `hidden_size` |
+| `qwen3` / `Qwen3ForCausalLM` | `model.embed_tokens.weight` | Top-level `vocab_size`, `hidden_size` |
+| `qwen3_5` / `Qwen3_5ForConditionalGeneration` | `model.language_model.embed_tokens.weight` | `text_config.vocab_size`, `text_config.hidden_size` |
+
+Require one unambiguous architecture, positive integer dimensions, and an exact
+`[vocab_size, hidden_size]` logical float32 table. Custom code mappings and
+ambiguous candidates remain unsupported. Qwen3.5 top-level and vision dimensions
+do not replace its text configuration. Non-text families such as V-JEPA have no
+accepted input-table mapping. Shape coincidence, an output head, or
+`tie_word_embeddings` alone never establishes an input-table storage alias.
+
+Checkpoint admission and the shared logical tensor path own numeric availability.
+A checkpoint's quantization metadata does not disable an actionable native
+F32/F16/BF16 input table. Reuse logical ordered row access without tokenizer-specific
+physical decoders; actionable packed tables use that same seam.
+Only missing/unaccepted mappings or unavailable representations are unsupported;
+source mutation, I/O, and delivery faults retain their existing failure codes.

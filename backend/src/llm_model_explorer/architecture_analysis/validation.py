@@ -102,6 +102,7 @@ class NumericTensor:
     name: str
     shape: tuple[int, ...]
     dtype: str
+    storage_format: str = "safetensors"
 
 
 @dataclass(frozen=True)
@@ -161,6 +162,46 @@ def mismatch(left: r.ArchitectureShape, right: r.ArchitectureShape) -> bool:
                 for a, b in zip(left, right, strict=False)
             )
         )
+    )
+
+
+def validate_packed_binding(
+    parameter: r.ArchitectureParameter, tensor: NumericTensor, geometry: tuple[int, ...]
+) -> None:
+    """Verify complete supported logical geometry against observed companion storage."""
+    require(
+        parameter.name.endswith(".weight") and len(geometry) == 2 and min(geometry) > 0,
+        "Unsupported packed logical parameter geometry.",
+    )
+    output, inputs = geometry
+    prefix = parameter.name.removesuffix(".weight")
+    expected: dict[str, tuple[str, tuple[int, ...]]]
+    if tensor.storage_format == "gptq-int4":
+        require(
+            tensor.dtype == "I32" and inputs % 128 == 0 and output % 8 == 0,
+            "Unsupported GPTQ logical representation.",
+        )
+        expected = {
+            "qweight": ("I32", (inputs // 8, output)),
+            "qzeros": ("I32", (inputs // 128, output // 8)),
+            "scales": ("F16", (inputs // 128, output)),
+            "g_idx": ("I32", (inputs,)),
+        }
+    elif tensor.storage_format == "nvfp4":
+        require(tensor.dtype == "U8" and inputs % 16 == 0, "Unsupported NVFP4 representation.")
+        expected = {
+            "weight": ("U8", (output, inputs // 2)),
+            "weight_scale": ("F8_E4M3", (output, inputs // 16)),
+            "weight_scale_2": ("F32", ()),
+            "input_scale": ("F32", ()),
+        }
+    else:
+        raise GraphError("invalid_graph", "Unsupported packed numeric representation.")
+    actual = {storage.name: (storage.dtype, tuple(storage.shape)) for storage in parameter.storage}
+    require(
+        len(parameter.storage) == len(expected)
+        and actual == {prefix + "." + suffix: value for suffix, value in expected.items()},
+        "Packed storage companions disagree with the complete logical tensor.",
     )
 
 
@@ -294,16 +335,20 @@ def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
         if parameter.inspection.status != "available":
             continue
         inspection = parameter.inspection
-        require(parameter.binding in ("native", "alias"), "Non-native inspection is forbidden.")
+        require(
+            parameter.binding in ("native", "quantized", "alias"),
+            "Inspection requires a complete logical parameter.",
+        )
         native = params[aliases[parameter.id]]
         geometry = constants(parameter.logical_shape)
         require(geometry is not None and len(geometry) in (1, 2), "Unsupported inspection rank.")
+        assert geometry is not None
         require(
-            native.binding == "native"
+            native.binding in ("native", "quantized")
             and native.logical_shape == parameter.logical_shape
             and native.inspection.status == "available"
             and native.inspection.tensor_id == inspection.tensor_id,
-            "Alias inspection must resolve to the same native tensor.",
+            "Alias inspection must resolve to the same complete logical tensor.",
         )
         tensor = context.numeric.get(inspection.tensor_id)
         require(
@@ -311,6 +356,9 @@ def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
             "Inspection tensor is outside the admitted numeric inventory or geometry.",
         )
         assert tensor is not None
+        if native.binding == "quantized":
+            validate_packed_binding(native, tensor, geometry)
+            continue
         require(
             any(
                 s.name == tensor.name

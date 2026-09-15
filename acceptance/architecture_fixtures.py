@@ -19,6 +19,79 @@ def value(index):
     return (index % 29 - 14) / 8
 
 
+def packed_value(family, row, column, inputs):
+    """Scalar reference for our synthetic packed bytes, never production decoding.
+
+    GPTQ v1 uses mask-then-+1 zeros and the stored g_idx. ModelOpt NVFP4 uses
+    low-first E2M1 and block E4M3 times global weight scale, never input_scale.
+    Exact pinned upstream provenance is in backend/tests/quantized_oracles.py.
+    """
+    if family == "qwen3":
+        group = (column // 3 + column // 128) % (inputs // 128)
+        integer = (3 * column + 5 * row) % 16
+        zero = (group + row) % 14 + 1
+        scale = (group + row % 7 + 1) / 8
+        return (integer - zero) * scale
+    assert family == "qwen35"
+    code = (column + row * 3) % 16
+    exponent, mantissa = (code >> 1) & 3, code & 1
+    magnitude = mantissa / 2 if exponent == 0 else (1 + mantissa / 2) * 2 ** (exponent - 1)
+    scalar = math.copysign(magnitude, -1 if code & 8 else 1)
+    scale = (0.5, 1.0, 2.0, 3.0)[(row + column // 16) % 4]
+    return scalar * scale * 0.5
+
+
+def packed_storage(name, dtype, shape):
+    """Produce deterministic physical words with nonzero, asymmetric values."""
+    leaf = name.rsplit(".", 1)[-1]
+    if leaf == "qweight" and dtype == "I32":
+        return b"".join(
+            struct.pack(
+                "<I",
+                sum(
+                    ((3 * (word * 8 + nibble) + 5 * row) % 16) << (4 * nibble)
+                    for nibble in range(8)
+                ),
+            )
+            for word in range(shape[0])
+            for row in range(shape[1])
+        )
+    if leaf == "qzeros" and dtype == "I32":
+        return b"".join(
+            struct.pack(
+                "<I", sum(((group + word * 8 + nibble) % 14) << (4 * nibble) for nibble in range(8))
+            )
+            for group in range(shape[0])
+            for word in range(shape[1])
+        )
+    if leaf == "g_idx" and dtype == "I32":
+        return b"".join(
+            struct.pack("<i", (column // 3 + column // 128) % (shape[0] // 128))
+            for column in range(shape[0])
+        )
+    if leaf == "scales" and dtype == "F16":
+        return b"".join(
+            struct.pack("<e", (group + row % 7 + 1) / 8)
+            for group in range(shape[0])
+            for row in range(shape[1])
+        )
+    if leaf == "weight" and dtype == "U8":
+        return bytes(
+            ((column * 2 + row * 3) % 16) | (((column * 2 + 1 + row * 3) % 16) << 4)
+            for row in range(shape[0])
+            for column in range(shape[1])
+        )
+    if leaf == "weight_scale" and dtype == "F8_E4M3":
+        return bytes(
+            (0x30, 0x38, 0x40, 0x44)[(row + block) % 4]
+            for row in range(shape[0])
+            for block in range(shape[1])
+        )
+    if leaf in {"weight_scale_2", "input_scale"} and dtype == "F32":
+        return struct.pack("<f", 0.5 if leaf == "weight_scale_2" else 19.0)
+    return None
+
+
 def write_checkpoint(directory, config, storage):
     directory.mkdir(parents=True)
     (directory / "config.json").write_text(json.dumps(config))
@@ -27,7 +100,11 @@ def write_checkpoint(directory, config, storage):
         dtype, shape = descriptor["dtype"], descriptor["shape"]
         count = math.prod(shape)
         start = len(payload)
-        if dtype in {"F32", "F16", "BF16"}:
+        encoded = packed_storage(name, dtype, shape)
+        if encoded is not None:
+            assert len(encoded) == count * WIDTHS[dtype]
+            payload.extend(encoded)
+        elif dtype in {"F32", "F16", "BF16"}:
             for i in range(count):
                 scalar = struct.pack("<f", value(i))
                 payload.extend(

@@ -26,7 +26,7 @@ from .validation import (
 if TYPE_CHECKING:
     from ..tensor_source import PhysicalTensor, TensorDescriptor
 
-ANALYZER_REVISION = "static-graph-core-1"
+ANALYZER_REVISION = "static-graph-core-2"
 Scope = Literal["language_model", "visual_encoder_predictor"]
 
 
@@ -58,7 +58,9 @@ class AnalysisInput:
             for tensor in source.physical_tensors()
         }
         numeric = {
-            tensor.id: NumericTensor(tensor.id, tensor.name, tensor.shape, tensor.storage_dtype)
+            tensor.id: NumericTensor(
+                tensor.id, tensor.name, tensor.shape, tensor.storage_dtype, tensor.storage_format
+            )
             for tensor in source.tensors()
         }
         source.check_unchanged()

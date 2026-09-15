@@ -391,6 +391,14 @@ native CPU source conversion in blocks of at most 65,536 elements (256 KiB of
 logical output); configuring CUDA does not route this disk/conversion path
 through a GPU. Shape remains generic, including scalars and zero dimensions.
 
+The admitted Qwen3 GPTQ Int4 and Qwen3.5 ModelOpt NVFP4 groups also expose
+complete logical `…weight` matrices in `[output, input]` order. Backend-owned
+decoders gather bounded physical spans into owned bytes and convert with PyTorch;
+the UI receives the same canonical float32 stream. Encoding companions remain
+internal, and inventory coverage is complete when all physical records are
+accounted for. Unknown/orphan storage retains a precise partial diagnostic.
+Other quantization variants remain unsupported.
+
 `Services.logical_tensors` is a `LogicalTensorService`. Its blocking
 `resolve(source, tensor_id)` returns a small `LogicalTensor` with `descriptor`,
 `spec`, and `metadata()`. HTTP callers use `subscribe(sessions, session_id,
@@ -406,13 +414,15 @@ async with service.dependency(context, logical) as consumer:
 
 Dependencies have no public operation ID and inherit parent cancellation.
 Exhaust readers to validated EOF before declaring a numerical result complete.
-F16/BF16 production shares the runtime's singleflight and complete-artifact
+F16/BF16 and admitted packed-weight production share the runtime's singleflight and complete-artifact
 store, keyed by fingerprint, tensor ID, physical dtype and exact float32
 little-endian C-order producer recipe. Warm reads replay disk bytes; independent
 read guards also reject changed session snapshots on cache hits. F32 dependencies
 own direct source cursors and use the same cancellation/session teardown.
 The service does not compute statistics, distributions, or rendering transforms.
 See [tensor data evidence](evidence/tensor-data.md) for validation and limits.
+Packed decoding, independent oracles and exact local checkpoint comparisons are
+recorded in [quantized decoding evidence](evidence/quantized-decoding.md).
 
 ## Tensor statistics and distributions
 

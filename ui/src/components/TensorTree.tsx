@@ -85,6 +85,7 @@ export function TensorTree({ tensors, selectedId, onSelect }: {
         return <li key={`branch:${segment}`}>
           <details open={open} data-branch-key={key}><summary style={{ paddingInlineStart }} title={childPath.join(' › ')}
             onClick={(event) => { event.preventDefault(); toggle(event.currentTarget.parentElement as HTMLDetailsElement); }}>
+            <svg className="tensor-folder-icon" aria-hidden="true" viewBox="0 0 16 16"><path d="M2 4V2h5l2 2h5v10H2Z" /></svg>
             <span>{segment || '(unnamed segment)'}</span>
           </summary>{renderBranch(child, childPath)}</details>
         </li>;

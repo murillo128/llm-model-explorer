@@ -8,7 +8,7 @@ The API is a first-class, contract-first project boundary. It is not generated c
 
 The proof of concept does not expose public API versions such as `/v1` and does not require backwards compatibility with older contract revisions. Backend and UI evolve together against the current accepted contract. The `version: current` field required by OpenAPI is document metadata, not a public protocol version.
 
-The Architecture Explorer endpoint/records and inventory capability extension are published in OpenAPI, conformance fixtures, and generated UI bindings together. [architecture-explorer.md](architecture-explorer.md) owns the graph semantics. The runtime architecture route remains pending implementation.
+The Architecture Explorer endpoint/records and inventory capability extension are published in OpenAPI, conformance fixtures, and generated UI bindings together. [architecture-explorer.md](architecture-explorer.md) owns the graph semantics. The runtime implements prepared architecture retrieval; observed acceptance is recorded separately in [architecture evidence](../../../acceptance/architecture-evidence.md).
 
 ## Design rules
 
@@ -58,7 +58,7 @@ The UI builds its hierarchical inventory from the returned logical path segments
 
 The current canonical logical visualization dtype is always `float32`. Physical representations such as FP16, BF16, INT8, NF4, or another quantized format remain backend concerns.
 
-For the accepted quantized-architecture extension, [capability separation](architecture-explorer.md#quantized-checkpoint-capability-separation) defines explicit inventory coverage and exclusion of packed/unresolved storage from the existing logical data path. Existing native inventories/IDs/bytes remain unchanged. Parameter/storage references that cannot be served numerically remain descriptive graph records, never falsely materializable tensor identities.
+For the accepted quantized-architecture extension, [capability separation](architecture-explorer.md#quantized-checkpoint-capability-separation) defines explicit inventory coverage and distinguishes actionable native/admitted decoded logical tensors from unresolved storage. Existing native inventories/IDs/bytes remain unchanged. Parameter/storage references that cannot be served numerically remain descriptive graph records, never falsely materializable tensor identities.
 
 ## Logical tensor data
 
@@ -134,7 +134,7 @@ The UI prevents an older asynchronous result replacing newer editor state. Echoi
 
 For IDs `[t0, ..., tN-1]`, the complete logical result has shape `[N, hidden_size]`. Row `i` is the input embedding for `ti` in canonical little-endian float32 C-order. Preserve order and duplicates; equal IDs yield equal row bytes. Do not sort/deduplicate the output, normalize, or substitute output weights. Empty IDs are valid with a known positive hidden size and yield `[0, hidden_size]` with zero payload bytes. Return only requested rows, never the full vocabulary table as a shortcut.
 
-Resolve a trustworthy input-embedding source from supported architecture/configuration and checkpoint metadata, not a tensor-name guess alone. If source, vocabulary range, hidden size, or logical representation cannot be established, use `unsupported_representation` (HTTP 422 before streaming, terminal `ERROR_JSON` afterward), including for empty input with unknown hidden size. Preserve lazy access; do not load/materialize the full table or model. Architecture support for a hybrid or visual model does not independently extend this numeric capability.
+Resolve a trustworthy input-embedding source from supported architecture/configuration and checkpoint metadata, not a tensor-name guess alone. If source, vocabulary range, hidden size, or logical representation cannot be established, use `unsupported_representation` (HTTP 422 before streaming, terminal `ERROR_JSON` afterward), including for empty input with unknown hidden size. Preserve lazy access; do not load/materialize the full table or model. The accepted input-table mappings are owned by [backend model resolution](../backend/models.md#input-embedding-table-resolution). Architecture support for a hybrid or visual model does not independently extend this numeric capability. I/O, source-mutation, protocol, and rendering failures must not be reclassified as unsupported capability.
 
 Validate the entire request before emitting META/DATA: each ID is a nonnegative safe integer below vocabulary size and addresses a row in the resolved table. Invalid fields, strings, booleans, negative/fractional or out-of-range IDs yield `validation_error`. An added token without a corresponding row is invalid. Never deliver a valid prefix of an invalid request. Malformed JSON, unknown sessions/models, and pinned content changes use existing errors.
 

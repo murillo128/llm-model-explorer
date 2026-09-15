@@ -53,6 +53,8 @@ class TensorLocation:
     descriptor: TensorDescriptor
     file: str
     offset: int
+    # A complete validated packed group; native locations need no companions.
+    storage: tuple[PhysicalTensor, ...] = ()
 
 
 def native_location(storage: PhysicalTensor) -> TensorLocation:
@@ -155,19 +157,31 @@ class ModelSource:
 
     def inventory(self) -> dict[str, object]:
         tensors = self.tensors()
-        partial = len(self._physical) > len(tensors)
+        accounted = {
+            name
+            for location in self._locations
+            for name in (
+                tuple(item.name for item in location.storage)
+                if location.storage
+                else (location.descriptor.name,)
+            )
+        }
+        unresolved = [item.name for item in self._physical if item.name not in accounted]
+        # Safetensors names can exceed the API's diagnostic-text bound. Retain
+        # both the module prefix and storage suffix for a useful bounded message.
+        diagnostic_names = [
+            name if len(name) <= 1024 else name[:512] + "…" + name[-512:] for name in unresolved
+        ]
         return {
             "tensors": [tensor.model_dump(mode="json") for tensor in tensors],
-            "coverage": "partial" if partial else "complete",
+            "coverage": "partial" if unresolved else "complete",
             "diagnostics": [
                 {
                     "code": "unsupported_representation",
-                    "message": "Packed, auxiliary, or unresolved storage is excluded from "
-                    "numeric inspection; only verified complete native tensors are listed.",
+                    "message": f"No verified logical tensor or encoding group owns storage {name}.",
                 }
-            ]
-            if partial
-            else [],
+                for name in diagnostic_names
+            ],
         }
 
     def check_unchanged(self, *, rehash: bool = False) -> None:
@@ -203,7 +217,7 @@ class ModelSource:
     def iter_tensor(
         self, tensor_id: str, *, chunk_elements: int = DEFAULT_CHUNK_ELEMENTS
     ) -> Generator[torch.Tensor, None, None]:
-        """Yield owned flat CPU float32 chunks, in native C order, with bounded reads.
+        """Yield owned flat CPU float32 chunks, in logical C order, with bounded reads.
 
         The caller selects any later compute device. Advancing after the final chunk
         performs the final snapshot check; consume to exhaustion before publication.
@@ -251,6 +265,25 @@ class ModelSource:
     def _iter_ranges(
         self, location: TensorLocation, ranges: Iterable[tuple[int, int]], chunk_elements: int
     ) -> Generator[torch.Tensor, None, None]:
+        if location.storage:
+            # Import at the source seam to keep storage records usable by the
+            # independent decoder without a module initialization cycle.
+            from .quantized_decoding import decode_range
+
+            for start, remaining in ranges:
+                while remaining:
+                    count = min(remaining, chunk_elements)
+                    yield decode_range(
+                        self._snapshot,
+                        location.storage,
+                        location.descriptor.storage_format,
+                        start,
+                        count,
+                    )
+                    start += count
+                    remaining -= count
+            self.check_unchanged()
+            return
         dtype, width = DTYPES[location.descriptor.storage_dtype]
         previous: tuple[int, int] | None = None
         values: torch.Tensor | None = None

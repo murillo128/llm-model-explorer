@@ -91,6 +91,29 @@ def generate(root: Path, *, extended: bool = False) -> Path:
     )
     tokenizer.save_pretrained(directory)
     if extended:
+        for family, architecture, key in (
+            ("qwen3", "Qwen3ForCausalLM", "model.embed_tokens.weight"),
+            (
+                "qwen3_5",
+                "Qwen3_5ForConditionalGeneration",
+                "model.language_model.embed_tokens.weight",
+            ),
+        ):
+            qwen = root / family
+            qwen.mkdir()
+            for asset in directory.glob("*.json"):
+                shutil.copyfile(asset, qwen / asset.name)
+            config = json.loads((qwen / "config.json").read_text())
+            config.update(
+                _name_or_path=f"acceptance/{family}",
+                model_type=family,
+                architectures=[architecture],
+            )
+            if family == "qwen3_5":
+                config["text_config"] = {"vocab_size": 1025, "hidden_size": 576}
+                config.update(vocab_size=9, hidden_size=8, vision_config={"hidden_size": 7})
+            (qwen / "config.json").write_text(json.dumps(config))
+            save_file({key: tensors["model.embed_tokens.weight"]}, qwen / "model.safetensors")
         unsupported = root / "unsupported"
         unsupported.mkdir()
         for asset in directory.glob("*.json"):

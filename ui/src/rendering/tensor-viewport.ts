@@ -1,9 +1,10 @@
 import { TensorRenderer } from './tensor-renderer';
 import type { RendererOptions } from './tensor-renderer';
 import type { TensorDescriptor, ViewGeometry } from './geometry';
-import { fitWidthScale, focalScroll } from './geometry';
+import { centeredOffset, fitWidthScale, focalScroll } from './geometry';
 import { selectionCamera } from './zoom-selection-geometry';
 import type { ZoomBounds } from './zoom-selection-geometry';
+import { CameraHistory } from './camera-history';
 
 export interface ViewportOptions extends RendererOptions {
   readonly zoom?: boolean;
@@ -22,6 +23,8 @@ export class TensorViewport {
   private fitting = true;
   private requestedScroll: [number, number] | null = null;
   private pinch: { distance: number; scale: number; x: number; y: number } | null = null;
+  private readonly history = new CameraHistory();
+  private wheelGesture: { token: object; time: number } | null = null;
   private media: MediaQueryList | null = null;
   private frame = 0;
   private disposed = false;
@@ -109,6 +112,9 @@ export class TensorViewport {
   /** Reset this camera to fit width; native scale is the lower bound. */
   fitWidth() {
     if (!this.options.zoom || this.disposed) return;
+    this.history.clear();
+    this.wheelGesture = null;
+    this.pinch = null;
     this.fitting = true;
     this.requestedScroll = [0, 0];
     this.refresh();
@@ -129,11 +135,30 @@ export class TensorViewport {
   }
 
   zoomAt(scale: number, cssX: number, cssY: number) {
+    this.wheelGesture = null;
+    this.zoom(scale, cssX, cssY);
+  }
+
+  private cameraState() {
+    const view = this.renderer.view;
+    return view ? { scale: this.scale, x: view.x, y: view.y } : null;
+  }
+
+  private zoom(scale: number, cssX: number, cssY: number, gesture?: object) {
+    this.refresh();
+    const before = this.cameraState();
+    this.applyZoom(scale, cssX, cssY);
+    const after = this.cameraState();
+    if (before && after) this.history.record(before, after, gesture);
+  }
+
+  private applyZoom(scale: number, cssX: number, cssY: number) {
     if (!this.options.zoom || this.disposed || !Number.isFinite(scale)) return;
     this.refresh(); // Reconcile any native scrolling before resolving the focal point.
     const view = this.renderer.view;
     if (!view) return;
     // Accommodate both 64x fit width and direct selection of a single row/column.
+    const oldRect = this.canvas.getBoundingClientRect();
     const next = Math.max(1, Math.min(scale, Math.max(this.host.clientWidth * view.dpr,
       this.host.clientHeight * view.dpr, 64 * fitWidthScale(this.renderer.geometry.columns, this.host.clientWidth, view.dpr))));
     this.requestedScroll = [focalScroll(view.x, cssX, this.scale, next, view.dpr),
@@ -141,14 +166,26 @@ export class TensorViewport {
     this.fitting = false;
     this.scale = next;
     this.refresh();
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.left !== oldRect.left || rect.top !== oldRect.top) {
+      // Centering can move the canvas as an axis starts/stops overflowing. Keep
+      // the focal point in screen space, using the original logical coordinate.
+      this.requestedScroll = [
+        (view.x + cssX * view.dpr / view.scaleX) * next / view.dpr - cssX + rect.left - oldRect.left,
+        (view.y + cssY * view.dpr / view.scaleY) * next / view.dpr - cssY + rect.top - oldRect.top,
+      ];
+      this.refresh();
+    }
   }
 
   /** Fit exact logical bounds using this same square-cell/native-scroll camera. */
   zoomToBounds(bounds: ZoomBounds) {
     if (!this.options.zoom || this.disposed) return;
+    this.wheelGesture = null;
     this.refresh();
     const view = this.renderer.view;
     if (!view) return;
+    const before = this.cameraState()!;
     // Scrollbar appearance can change the available height after scaling. Resolve
     // that layout with the original orthogonal center, then fit once more.
     for (let pass = 0; pass < 2; pass++) {
@@ -160,6 +197,22 @@ export class TensorViewport {
       this.requestedScroll = [camera.x * camera.scale / view.dpr, camera.y * camera.scale / view.dpr];
       this.refresh();
     }
+    this.history.record(before, this.cameraState()!);
+  }
+
+  /** Restore the previous committed logical camera without adding a new entry. */
+  zoomBack() {
+    if (!this.options.zoom || this.disposed || this.renderer.state !== 'ready') return false;
+    this.wheelGesture = null;
+    this.pinch = null;
+    const camera = this.history.pop();
+    if (!camera) return false;
+    this.fitting = false;
+    this.scale = camera.scale;
+    this.requestedScroll = [camera.x * camera.scale / window.devicePixelRatio,
+      camera.y * camera.scale / window.devicePixelRatio];
+    this.refresh();
+    return true;
   }
 
   private focal(clientX: number, clientY: number) {
@@ -171,7 +224,10 @@ export class TensorViewport {
     event.preventDefault();
     const focal = this.focal(event.clientX, event.clientY);
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? this.host.clientHeight : 1);
-    this.zoomAt(this.scale * Math.exp(-Math.max(-500, Math.min(500, delta)) * 0.002), focal.x, focal.y);
+    const time = performance.now();
+    if (!this.wheelGesture || time - this.wheelGesture.time > 180) this.wheelGesture = { token: {}, time };
+    this.wheelGesture.time = time;
+    this.zoom(this.scale * Math.exp(-Math.max(-500, Math.min(500, delta)) * 0.002), focal.x, focal.y, this.wheelGesture.token);
   };
 
   private gesture(event: TouchEvent) {
@@ -184,6 +240,7 @@ export class TensorViewport {
     const gesture = this.gesture(event);
     if (!gesture || gesture.distance === 0) return;
     event.preventDefault();
+    this.wheelGesture = null;
     this.refresh();
     const view = this.renderer.view;
     if (view) this.pinch = { distance: gesture.distance, scale: this.scale,
@@ -193,11 +250,16 @@ export class TensorViewport {
     const gesture = this.gesture(event), start = this.pinch;
     if (!gesture || !start) return;
     event.preventDefault();
-    this.zoomAt(start.scale * gesture.distance / start.distance, gesture.x, gesture.y);
+    this.refresh();
+    const before = this.cameraState();
+    this.applyZoom(start.scale * gesture.distance / start.distance, gesture.x, gesture.y);
     // Moving the gesture midpoint follows the same original logical focal point.
     const dpr = window.devicePixelRatio;
-    this.requestedScroll = [start.x * this.scale / dpr - gesture.x, start.y * this.scale / dpr - gesture.y];
+    const current = this.gesture(event)!; // Centering may have moved the canvas.
+    this.requestedScroll = [start.x * this.scale / dpr - current.x, start.y * this.scale / dpr - current.y];
     this.refresh();
+    const after = this.cameraState();
+    if (before && after) this.history.record(before, after, start);
   };
   private touchEnd = () => { this.pinch = null; };
 
@@ -237,8 +299,10 @@ export class TensorViewport {
     // Align the canvas on the physical screen too, including fractional host placement.
     this.surface.style.width = `${view.cssWidth}px`;
     this.surface.style.height = `${view.cssHeight}px`;
-    this.surface.style.left = `${this.host.scrollLeft + Math.round(left * dpr) / dpr - left}px`;
-    this.surface.style.top = `${this.host.scrollTop + Math.round(top * dpr) / dpr - top}px`;
+    const offsetX = this.options.zoom ? centeredOffset(this.host.clientWidth, view.width, dpr) : 0;
+    const offsetY = this.options.zoom ? centeredOffset(this.host.clientHeight, view.height, dpr) : 0;
+    this.surface.style.left = `${this.host.scrollLeft + offsetX + Math.round(left * dpr) / dpr - left}px`;
+    this.surface.style.top = `${this.host.scrollTop + offsetY + Math.round(top * dpr) / dpr - top}px`;
     this.canvas.dataset.origin = `${view.x},${view.y}`;
     this.renderer.draw();
     this.options.onViewChange?.(view);
@@ -247,6 +311,9 @@ export class TensorViewport {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this.history.clear();
+    this.wheelGesture = null;
+    this.pinch = null;
     cancelAnimationFrame(this.frame);
     this.observer.disconnect();
     this.media?.removeEventListener('change', this.dprChanged);

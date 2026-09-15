@@ -44,7 +44,7 @@ test('compact deep navigator and contextual metadata remain accessible in narrow
   await page.keyboard.press('Escape');
   await expect(info).toBeFocused();
   await info.click();
-  await tree.getByRole('heading', { name: 'Tensors' }).click();
+  await tree.getByRole('heading', { name: 'Inventory' }).click();
   await expect(dialog).toHaveCount(0);
   await leaf.focus(); await page.keyboard.press('ArrowLeft');
   await expect(tree.locator('summary').filter({ hasText: 'long_module_name' })).toBeFocused();

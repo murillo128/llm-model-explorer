@@ -159,6 +159,7 @@ hf download HuggingFaceTB/SmolLM2-135M \
 ```
 
 Navigable matrix and stale-tokenizer coverage is documented in [usability.md](usability.md).
+Integrated explorer polish and expanded numeric coverage are documented in [polish.md](polish.md).
 The earlier compact explorer and embedding evidence is in [improvements.md](improvements.md).
 The earlier [evidence.md](evidence.md) remains the historical PoC report.
 

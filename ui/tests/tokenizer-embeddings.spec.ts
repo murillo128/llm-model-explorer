@@ -176,18 +176,22 @@ test('overlapping Unicode IDs and inserted specials link individual sequence row
 
 test('oversized embeddings use native internal scroll and release scalar resources on edit', async ({ page }) => {
   const editor = await start(page);
+  // Reserve a deliberately small viewport: automatic allocation can now show
+  // most of this fixture without vertical scrolling.
+  await page.getByRole('separator', { name: 'Resize prompt and embeddings' }).press('End');
   const ids = Array.from({ length: 400 }, (_, i) => i % 4);
   const text = 'A'.repeat(400);
   await editor.fill(text); await count(page, 2); await tokenize(page, 1, tokens(text, ids)); await embeddingCount(page, 1);
   await page.evaluate(() => window.embeddingHarness.headers(0)); await send(page, 0, meta(ids, 2048));
   const matrix = page.locator('.matrix-scroll'); await matrix.scrollIntoViewIfNeeded(); await matrix.focus();
+  const promptHeight = (await page.locator('.tokenizer-editor').boundingBox())!.height;
   await matrix.evaluate(node => { node.scrollLeft = 100; node.scrollTop = 100; });
   await expect.poll(() => page.evaluate(() => window.embeddingHarness.renderers.at(-1)!.view!.y)).toBe(100);
   expect(await page.evaluate(() => {
     const r = window.embeddingHarness.renderers.at(-1)!;
     return { rows: r.geometry.rows, columns: r.geometry.columns, x: r.view!.x };
   })).toEqual({ rows: 400, columns: 2048, x: 100 });
-  expect((await page.locator('.tokenizer-editor').boundingBox())!.height).toBe(260);
+  expect((await page.locator('.tokenizer-editor').boundingBox())!.height).toBe(promptHeight);
   expect(await page.evaluate(() => [document.body.scrollHeight, document.documentElement.scrollHeight, scrollY])).toEqual([page.viewportSize()!.height, page.viewportSize()!.height, 0]);
   await editor.fill('new');
   await expect(page.locator('.matrix-scroll')).toHaveCount(0);
@@ -253,6 +257,9 @@ for (const dpr of [1, 2]) test(`panel cameras and offscreen token reveal stay in
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: page.viewportSize()!.width, height: page.viewportSize()!.height, deviceScaleFactor: dpr, mobile: false });
   const editor = await start(page);
+  // Keep the final row offscreen at native scale even at DPR 2 with the new
+  // remaining-space allocation, so this still exercises explicit row reveal.
+  await page.getByRole('separator', { name: 'Resize prompt and embeddings' }).press('End');
   const text = 'A'.repeat(400);
   const ids = Array.from({ length: 400 }, (_, i) => i % 4);
   await editor.fill(text); await count(page, 2); await tokenize(page, 1, tokens(text, ids));

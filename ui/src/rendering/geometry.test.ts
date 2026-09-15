@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { fitWidthScale, focalScroll, hitTest, viewGeometry } from './geometry';
+import { centeredOffset, fitWidthScale, focalScroll, hitTest, viewGeometry } from './geometry';
 
 const matrix = { rows: 900, columns: 100, count: 90000 };
 describe('square-cell camera', () => {
+  it.each([1, 1.25, 2, 3])('centers only underfilled axes on device pixels at DPR %s', (dpr) => {
+    for (const available of [101, 300.5, 600]) {
+      const offset = centeredOffset(available, 25, dpr);
+      expect(Number.isInteger(offset * dpr)).toBe(true);
+      expect(Math.abs(offset * 2 + 25 / dpr - available)).toBeLessThan(2 / dpr);
+      expect(centeredOffset(available, Math.ceil(available * dpr), dpr)).toBe(0);
+      expect(centeredOffset(available, 2000, dpr)).toBe(0);
+    }
+  });
   it.each([1, 1.25, 2, 3])('fits width without minification at DPR %s', (dpr) => {
     expect(fitWidthScale(100, 500, dpr)).toBe(5 * dpr);
     expect(fitWidthScale(2000, 500, dpr)).toBe(1);

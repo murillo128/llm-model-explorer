@@ -2,7 +2,6 @@ import { useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
 import { MatrixViewport } from '../rendering/matrix-viewport';
 import type { Inspection } from '../rendering/matrix-inspection';
 import type { RendererState } from '../rendering/tensor-renderer';
-import { compactValue } from '../rendering/distribution-scale';
 import type { DistributionDomain } from '../rendering/distribution-scale';
 import { PanelHeader } from './PanelHeader';
 import { InspectionCard } from './InspectionCard';
@@ -103,18 +102,11 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
     ? <button type="button" className="matrix-fit-width" disabled={failed}
       title="Fit width (minimum 1:1). Wheel or pinch to zoom; scrollbars to navigate."
       onClick={() => currentViewport.current?.fitWidth()}>Fit width</button> : null;
-  const toolbar = typeof header === 'function' ? header(controls)
+  const toolbar = typeof header === 'function' ? header(controls, domain)
     : controls ? <PanelHeader identity={header} actions={controls} /> : header;
   return <div className="matrix-explorer">
     {toolbar && <div className="matrix-explorer-header">{toolbar}</div>}
     {failed && <p role="alert">Exact rendering is unavailable. WebGL2 resources could not be allocated or were lost. Reopen this view to retry.</p>}
-    {source.distributions && <div className="distribution-range" role="region" aria-label="Distribution range" tabIndex={0}>
-      {!domain ? 'Bin domain unavailable' : domain.minimum === null || domain.maximum === null
-        ? 'No finite values · bin domain and true min/max unavailable'
-        : <><span>Full-range bins</span><span title={`True finite minimum: ${domain.minimum}`}>min {compactValue(domain.minimum)}</span>
-          <span title={`True finite maximum: ${domain.maximum}`}>max {compactValue(domain.maximum)}</span>
-          {domain.minimum === domain.maximum && <span>Constant · samples in bin 50; no value span</span>}</>}
-    </div>}
     <div ref={host} />
     {inspection && <InspectionCard inspection={inspection} host={host} />}
   </div>;

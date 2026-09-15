@@ -1,0 +1,146 @@
+{
+  "kind": "Actual local checkpoints over production TCP; separate from synthetic fixture results",
+  "environment": {
+    "python": "3.12.14",
+    "torch": "2.14.0+cpu",
+    "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39"
+  },
+  "checkpoints": {
+    "smollm2": {
+      "repository": "HuggingFaceTB/SmolLM2-135M",
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "fingerprint": "aeda1cbf6516239fa4d305117c5a70ca5f4a3af06ef7575544dc97914c61e57e",
+      "total_bytes": 272437465,
+      "physical_tensors": 272,
+      "tokenizer_available": true,
+      "scope": "language_model",
+      "coverage": "complete",
+      "nodes": 971,
+      "edges": 1386,
+      "parameters": 273,
+      "graph_id": "72626383f9dc6b6f7b48f6977674648be952ee66b74a96a3499fca5a9a04fc12",
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 9.802477024990367,
+          "peak_rss_kib": 394420
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 5.358204950985964,
+          "peak_rss_kib": 380932
+        }
+      ],
+      "status": "PASS"
+    },
+    "qwen3": {
+      "repository": "JunHowie/Qwen3-0.6B-GPTQ-Int4",
+      "revision": "b9d87006067b0c0c2dea836370d6288e14f112ab",
+      "fingerprint": "31bd7a3f28c9ef9a65b5c6039eec5d4defe5a0e75148af472bde6c3ca4864be2",
+      "total_bytes": 557224424,
+      "physical_tensors": 898,
+      "tokenizer_available": true,
+      "scope": "language_model",
+      "coverage": "complete",
+      "nodes": 963,
+      "edges": 1350,
+      "parameters": 311,
+      "graph_id": "a0a49fd30af5da1ce90e732fe64397a3939d521034c436534ae7a9baedf91920",
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 9.752191430976382,
+          "peak_rss_kib": 394000
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 5.37682874200982,
+          "peak_rss_kib": 384308
+        }
+      ],
+      "status": "PASS",
+      "ordered_input_rows": {
+        "shape": [
+          5,
+          1024
+        ],
+        "token_ids": [
+          151935,
+          0,
+          1,
+          151935,
+          1
+        ],
+        "exact_bytes": 20480
+      }
+    },
+    "qwen35": {
+      "repository": "AxionML/Qwen3.5-0.8B-NVFP4",
+      "revision": "2ac1e750cda67cc8538d731f6216f77b9c3a6f72",
+      "fingerprint": "907c94e9c7953070c91e7e94d0a09dff0dc1e6f2b230530bd7eecc6e984909e0",
+      "total_bytes": 1051242308,
+      "physical_tensors": 1046,
+      "tokenizer_available": true,
+      "scope": "language_model",
+      "coverage": "complete",
+      "nodes": 948,
+      "edges": 1329,
+      "parameters": 333,
+      "graph_id": "2f617a8a083ded8f24561af87de456b0a8527958911b0e8205dcb995640fc9c4",
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 9.752697578980587,
+          "peak_rss_kib": 394520
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 5.376813330978621,
+          "peak_rss_kib": 378492
+        }
+      ],
+      "status": "PASS",
+      "ordered_input_rows": {
+        "shape": [
+          5,
+          1024
+        ],
+        "token_ids": [
+          248319,
+          0,
+          1,
+          248319,
+          1
+        ],
+        "exact_bytes": 20480
+      }
+    },
+    "vjepa2": {
+      "repository": "facebook/vjepa2-vitl-fpc64-256",
+      "revision": "b3c1679b7c34d3255ef3547f27c7b226aefab26f",
+      "fingerprint": "062f2bf6be583704b8285ceec1359f066eebf7af344924f8ac4568d8b8b2e8fa",
+      "total_bytes": 1303949947,
+      "physical_tensors": 587,
+      "tokenizer_available": false,
+      "scope": "visual_encoder_predictor",
+      "coverage": "complete",
+      "nodes": 782,
+      "edges": 1079,
+      "parameters": 587,
+      "graph_id": "96a1c0e8c0ab9a0165dc9d4051be9914938936d918b4a67bce5476d04f2ddb2f",
+      "runs": [
+        {
+          "mode": "cold",
+          "readiness_seconds": 9.752767638012301,
+          "peak_rss_kib": 394384
+        },
+        {
+          "mode": "warm",
+          "readiness_seconds": 5.376645837008255,
+          "peak_rss_kib": 378664
+        }
+      ],
+      "status": "PASS"
+    }
+  }
+}
