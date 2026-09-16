@@ -34,19 +34,21 @@ export function useLayoutCamera<N extends Node>(layout: Layout | undefined, gene
       const state = store.getState(), element = container.current;
       // ELK supplies the complete fixed box geometry, including culled nodes.
       // Waiting for culled cards to mount would deadlock a scope outside the old camera.
+      // Use authored width/height; supplying `measured` would retain stale handle
+      // bounds when a projection changes ports without changing the card size.
       const usable = element && flow.viewportInitialized && state.width > 0 && state.height > 0 &&
         state.width === element.offsetWidth && state.height === element.offsetHeight &&
         state.nodes.length === nodes.length && state.nodes.every((node, i) => node === nodes[i] &&
-          state.nodeLookup.get(node.id)?.measured.width === node.width && state.nodeLookup.get(node.id)?.measured.height === node.height);
+          state.nodeLookup.get(node.id)?.width === node.width && state.nodeLookup.get(node.id)?.height === node.height);
       if (!usable) { frame = requestAnimationFrame(attempt); return; }
       // fitView queues work inside React Flow's next node update. Compute the same
-      // measured-node bounds/transform here so an obsolete queued fit cannot act
+      // fixed-node bounds/transform here so an obsolete queued fit cannot act
       // on a replacement layout. setViewport applies a zero-duration transform.
       const fit = (options: FitViewOptions<N>) => {
         const ids = options.nodes && new Set(options.nodes.map((node) => node.id));
         const targets = state.nodes.filter((node) => {
           const internal = state.nodeLookup.get(node.id)!;
-          return internal.measured.width && internal.measured.height && !node.hidden && (!ids || ids.has(node.id));
+          return internal.width && internal.height && !node.hidden && (!ids || ids.has(node.id));
         });
         return flow.setViewport(getViewportForBounds(flow.getNodesBounds(targets), state.width, state.height,
           options.minZoom ?? state.minZoom, options.maxZoom ?? state.maxZoom, options.padding ?? 0.1));

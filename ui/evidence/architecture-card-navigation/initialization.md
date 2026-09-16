@@ -38,11 +38,12 @@ and 390 × 844 project viewports (no forced desktop override).
 The loading label overlays the Architecture canvas rather than taking flex
 space. A local lifecycle helper waits for the current layout's fixed boxes and
 current nonzero DOM/renderer viewport dimensions to agree. The existing layout
-box dimensions are supplied to React Flow even for culled nodes, avoiding a
-wait for offscreen cards to mount when changing scope. No layout coordinates,
+box dimensions are read from React Flow's existing authored width/height even
+for culled nodes, avoiding a wait for offscreen cards to mount when changing
+scope. No layout coordinates,
 routes, projection algorithms or ELK inputs change.
 
-Lifecycle fits use React Flow's existing measured-node bounds and
+Lifecycle fits use React Flow's existing fixed-node bounds and
 `getViewportForBounds` with the same padding/zoom limits, followed by its
 zero-duration `setViewport`. This avoids React Flow's deferred `fitView` node
 queue applying an obsolete generation. Readiness awaits completion, and cleanup
@@ -58,13 +59,24 @@ exhaustive expansion and isolation. It neither adds a Fit to the first two
 states nor removes or relaxes camera equality. Its readiness now observes the
 layout/camera lifecycle; animation frames only flush temporary pointer emphasis.
 
+The first corrected CI head (`c694368c6a75f8142186dc5cfed1eaecd76df35b`)
+passed the exact camera equivalence check but exposed a separate regression in
+the existing nested-expansion browser test: the `linear0:out → layer1:in`
+connection was absent after exhaustive expansion. The retained trace reported
+React Flow's missing `target:in` handle while the card's input port was present.
+Supplying `measured` box dimensions had preserved a stale internal handle list
+when ports changed without changing a card's size. Readiness now uses the
+already-authored width/height and leaves `measured` to React Flow, preserving its
+normal handle invalidation. The existing connection assertion remains intact
+and is included in repeated desktop/narrow validation.
+
 Reproduce from `ui/`:
 
 ```sh
 UI_TEST_PORT=46860 PLAYWRIGHT_WORKERS=2 npm run test:browser -- \
   --project=desktop --project=narrow architecture-camera.spec.ts \
-  architecture-connections.spec.ts \
-  --grep 'current viewport|cold fit|pending scope|late camera|optional template metadata' \
+  architecture-connections.spec.ts architecture.spec.ts \
+  --grep 'current viewport|cold fit|pending scope|late camera|optional template metadata|nested expansion' \
   --repeat-each=3
 npm run check
 ```

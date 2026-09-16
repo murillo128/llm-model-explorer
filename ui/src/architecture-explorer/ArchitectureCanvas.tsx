@@ -383,7 +383,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const nodes = useMemo<CanvasNode[]>(() => (result.layout?.boxes ?? []).map((box) => {
     const record = projected.get(box.id)!;
     return { id: box.id, type: 'architecture', position: { x: box.x, y: box.y },
-      ...(box.parentId ? { parentId: box.parentId } : {}), width: box.width, height: box.height, measured: { width: box.width, height: box.height },
+      ...(box.parentId ? { parentId: box.parentId } : {}), width: box.width, height: box.height,
       style: { width: box.width, height: box.height, pointerEvents: record.expanded ? 'none' : 'auto' }, zIndex: 200,
       selected: selected === cardSelection(record) || Boolean(selected && !projected.has(selected) && record.sourceIds.includes(selected)),
       data: { record, label: displayLabel(record, graph), subtitle: record.summary?.replaceAll('linear attention', 'linear').replaceAll('full attention', 'full') ?? variants.get(record.id)?.replace(/^Instance \d+ · /, '') ?? record.record?.operation?.replaceAll('_', ' ') ?? record.kind,
