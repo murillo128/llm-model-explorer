@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { findComponent, graphAction } from './architecture-controls';
+import { makeProjectionFixture } from './architecture-projection-fixture';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
 const panel = (page: Page) => page.getByLabel('Architecture graph', { exact: true });
@@ -57,7 +58,7 @@ test('label and body select only for source, expanded, repetition and derived ca
   await selectOnly(page, 'mlp:layer-3.gate'); await selectOnly(page, 'layer-3.gate');
 });
 
-test('real double-clicks expand once or inspect, preserve zoom and never collapse', async ({ page }) => {
+test('real double-clicks toggle once, preserve zoom and leave leaf inspection explicit', async ({ page }) => {
   const before = await state(page);
   await card(page, 'repeat:layers:0:1').locator('.architecture-node-label').dblclick(); await ready(page);
   expect(Number((await state(page)).count)).toBe(Number(before.count) + 1);
@@ -70,12 +71,83 @@ test('real double-clicks expand once or inspect, preserve zoom and never collaps
   expect(Number(expanded.count)).toBe(Number(collapsed.count) + 1);
   expect(expanded.camera?.match(/scale\(([^)]+)\)/)?.[1]).toBe(collapsed.camera?.match(/scale\(([^)]+)\)/)?.[1]);
   await expect(page.locator('output')).toBeEmpty();
-  await card(page, 'layer1').locator('.architecture-node-label').dblclick(); await ready(page);
-  expect(await state(page)).toEqual({ ...expanded, inspection: 'graph_synthetic: layer1' });
   await card(page, 'linear1').locator('.architecture-node-type').dblclick(); await ready(page);
-  await expect(page.locator('output')).toContainText(': linear1');
-  expect((await state(page)).count).toBe(expanded.count);
-  expect((await state(page)).camera).toBe(expanded.camera);
+  expect(await state(page)).toEqual(expanded);
+  await card(page, 'layer1').locator('.architecture-node-label').dblclick(); await ready(page);
+  await expect(card(page, 'layer1').locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'false');
+  const contracted = await state(page);
+  expect(Number(contracted.count)).toBe(Number(expanded.count) + 1);
+  expect(contracted.camera?.match(/scale\(([^)]+)\)/)?.[1]).toBe(expanded.camera?.match(/scale\(([^)]+)\)/)?.[1]);
+  await expect(page.locator('output')).toBeEmpty();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('nested expansion and exact hidden selection survive parent controls, explorer switching and Back', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('components'); await ready(page);
+  await findComponent(page, 'layer-3'); await ready(page);
+  await card(page, 'layer-3').locator('.architecture-navigate').click(); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  await card(page, 'layer-3.attention').locator('.architecture-node-label').dblclick(); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  await card(page, 'layer-3.attention.Q').locator('.architecture-node-label').click();
+  const before = await state(page);
+  const position = (await card(page, 'layer-3').boundingBox())!;
+  await card(page, 'layer-3').locator('.architecture-expand').dblclick(); await ready(page);
+  await expect(card(page, 'layer-3.attention')).toHaveCount(0);
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-3.attention.Q');
+  await expect(card(page, 'layer-3').locator('.architecture-node')).toHaveAttribute('data-selected', 'false');
+  const contracted = await state(page), at = (await card(page, 'layer-3').boundingBox())!;
+  expect(Number(contracted.count)).toBe(Number(before.count) + 1);
+  expect(Math.abs(position.x - at.x)).toBeLessThan(1);
+  expect(Math.abs(position.y - at.y)).toBeLessThan(1);
+  expect(contracted.camera?.match(/scale\(([^)]+)\)/)?.[1]).toBe(before.camera?.match(/scale\(([^)]+)\)/)?.[1]);
+  await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click();
+  await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click(); await ready(page);
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-3.attention.Q');
+  await card(page, 'layer-3').locator('.architecture-expand').dblclick(); await ready(page);
+  await expect(card(page, 'layer-3.attention').locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
+  await expect(card(page, 'layer-3.attention.Q').locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
+  const restored = await state(page);
+  await card(page, 'layer-3.attention').locator('.architecture-navigate').click(); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  await card(page, 'layer-3.attention').locator('.architecture-node-label').dblclick(); await ready(page);
+  await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
+  const back = await state(page);
+  expect(back).toEqual({ ...restored, count: back.count });
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-3.attention.Q');
+  await expect(page.locator('output')).toBeEmpty();
+});
+
+test('empty groups have no toggle, remain selectable and inspect only explicitly by keyboard', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('empty-group'); await ready(page);
+  const empty = card(page, 'empty'), before = await state(page);
+  await expect(empty.locator('.architecture-expand')).toHaveCount(0);
+  await selectOnly(page, 'empty');
+  await empty.locator('.architecture-node-label').dblclick();
+  await empty.locator('.architecture-node-type').dblclick();
+  await empty.locator('.architecture-node-label').focus();
+  await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowLeft');
+  expect(await state(page)).toEqual(before);
+  await empty.locator('.architecture-info').focus(); await page.keyboard.press('Enter');
+  await expect(page.locator('output')).toHaveText('empty-group: empty');
+});
+
+test('contracting after Show all operations leaves sibling detail visible and reopens completely', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('connections'); await ready(page);
+  await graphAction(page, 'Show all operations'); await ready(page);
+  await findComponent(page, 'layer-3.attention'); await ready(page);
+  const graph = makeProjectionFixture({ count: 4 });
+  const children = graph.nodes.filter((n) => n.parent_id === 'layer-3.attention');
+  const before = await state(page);
+  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await graphAction(page, 'Toggle selected group'); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length - children.length));
+  expect(Number((await state(page)).count)).toBe(Number(before.count) + 1);
+  await graphAction(page, 'Toggle selected group'); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  expect(Number((await state(page)).count)).toBe(Number(before.count) + 2);
+  await expect(page.locator('output')).toBeEmpty();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
 test('header navigation targets the pressed card and explores its nested operation; controls stay ordered and focused', async ({ page }, info) => {
@@ -145,9 +217,13 @@ test('independent controls and ports do not bubble; keyboard expansion and disab
   await group.locator('.architecture-expand').dblclick(); await ready(page);
   await expect(group.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'false');
   expect(Number((await state(page)).count)).toBe(Number(expanded.count) + 1);
+  await label.focus(); await page.keyboard.press('ArrowRight'); await ready(page);
+  await expect(group.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('ArrowLeft'); await ready(page);
+  await expect(group.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'false');
 });
 
-test('nested derived double-click inspects after expansion and shared structure navigation requires a concrete instance', async ({ page }) => {
+test('nested derived double-click contracts after expansion and shared structure navigation requires a concrete instance', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('connections'); await ready(page);
   await findComponent(page, 'layer-3'); await ready(page);
   await card(page, 'layer-3').locator('.architecture-node-label').dblclick(); await ready(page);
@@ -156,9 +232,12 @@ test('nested derived double-click inspects after expansion and shared structure 
   await derived.locator('.architecture-node-label').dblclick(); await ready(page);
   await expect(derived.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
   const expanded = await state(page);
-  await derived.locator('.architecture-node-label').dblclick();
+  await derived.locator('.architecture-node-label').dblclick(); await ready(page);
+  await expect(derived.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'false');
+  expect(Number((await state(page)).count)).toBe(Number(expanded.count) + 1);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await derived.locator('.architecture-info').click();
   await expect(page.getByRole('dialog', { name: 'Group inspection' })).toBeVisible();
-  expect(await state(page)).toEqual(expanded);
   await page.keyboard.press('Escape');
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('templates'); await ready(page);
   await page.getByLabel('Shared structures', { exact: true }).selectOption('shared-full-attention'); await ready(page);

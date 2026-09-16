@@ -6,6 +6,8 @@ import './architecture.css';
 import type { Graph, GraphNode, GraphView, Layout, PortPosition } from './graph';
 import { requestLayout } from './layout';
 import { useCanvasCallback } from './useCanvasCallback';
+import { useGraphView } from './useGraphView';
+import { selectComponent, toggleComponent } from './component-actions';
 import { useLayoutCamera } from './useLayoutCamera';
 import type { ProjectedNode, ProjectionOptions } from './projection';
 import { connectionSet, endpointKey } from './projection';
@@ -18,7 +20,7 @@ import { Connection, ConnectionInspection } from './Connection';
 import { ConnectionContext } from './connection-context';
 import { connectionHitResolver } from './connection-hit';
 import { componentScope } from './scope';
-import { cardDoubleClick, cardNavigation, cardSelection } from './card-actions';
+import { cardDoubleClick, cardExpandable, cardNavigation, cardSelection } from './card-actions';
 import { backFromComponent, enterComponent, expandComponent, projectionOptions, returnToModel, snapshotView } from './scope-navigation';
 import { bindTemplateLayout, commonNode, enterSharedStructure, remapNode, templateGraph } from './shared-structure';
 import type { ConnectionEdge } from './Connection';
@@ -36,7 +38,7 @@ interface CanvasProps {
   onDismissInspection?: (() => void) | undefined;
 }
 type Data = { record: ProjectedNode; label: string; subtitle: string; ports: PortPosition[]; diagnostic: boolean;
-  toggle: (id: string) => void; select: (id: string) => void; activate: (node: ProjectedNode, trigger: HTMLElement) => void;
+  toggle: (id: string) => void; select: (id: string) => void; activate: (node: ProjectedNode) => void;
   navigation: ReturnType<typeof cardNavigation>; navigate: (navigation: ReturnType<typeof cardNavigation>) => void;
   inspect: (node: ProjectedNode, trigger: HTMLElement) => void };
 type CanvasNode = Node<Data, 'architecture'>;
@@ -48,13 +50,13 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
     <div className="architecture-node-heading" onKeyDown={(event) => event.stopPropagation()}>
       <button className="nodrag nopan architecture-node-label" title={node.label} aria-label={`Select ${node.record?.label ?? node.label}`}
         aria-pressed={selected} onClick={(event) => { event.stopPropagation(); data.select(cardSelection(node)); }}
-        onDoubleClick={(event) => { event.stopPropagation(); data.activate(node, event.currentTarget); }}
+        onDoubleClick={(event) => { event.stopPropagation(); data.activate(node); }}
         onKeyDown={(event) => {
-          if (event.key === 'ArrowRight' && node.kind === 'group' && !node.expanded || event.key === 'ArrowLeft' && node.kind === 'group' && node.expanded) {
+          if (cardExpandable(node) && (event.key === 'ArrowRight' && !node.expanded || event.key === 'ArrowLeft' && node.expanded)) {
             event.preventDefault(); event.stopPropagation(); data.toggle(node.id);
           }
         }}>{data.label}</button>
-      {node.kind === 'group' && <button className="nodrag nopan architecture-expand" aria-label={`${node.expanded ? 'Collapse' : 'Expand'} ${node.label}`}
+      {cardExpandable(node) && <button className="nodrag nopan architecture-expand" aria-label={`${node.expanded ? 'Collapse' : 'Expand'} ${node.label}`}
         title={`${node.expanded ? 'Collapse' : 'Expand'} ${node.label}`}
         aria-expanded={node.expanded} onDoubleClick={(event) => event.stopPropagation()}
         onClick={(event) => { event.stopPropagation(); if (event.detail < 2) data.toggle(node.id); }}>{node.expanded ? '−' : '+'}</button>}
@@ -101,14 +103,11 @@ const nodeTypes = { architecture: OperationNode }, edgeTypes = { connection: Con
 export function ArchitectureCanvas(props: CanvasProps) { return <ReactFlowProvider><Canvas {...props} /></ReactFlowProvider>; }
 function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspection }: CanvasProps) {
   const flow = useReactFlow<CanvasNode>();
-  const [options, setOptions] = useState<ProjectionOptions>(() => projectionOptions(view));
-  const [selected, setSelected] = useState(view.selected), [dimensions, setDimensions] = useState(view.dimensions);
-  const [focusId, setFocusId] = useState(view.focus), [pinned, setPinned] = useState(view.edge);
-  const [activeStack, setActiveStack] = useState(view.activeStack);
+  const options = useGraphView(view);
+  const { selected, dimensions, focus: focusId, edge: pinned, activeStack, shared } = view;
   const [temporary, setTemporary] = useState<EmphasisTarget | null>(null), [focused, setFocused] = useState<EmphasisTarget | null>(null);
   const [inspection, setInspection] = useState<{ edgeId?: string; nodeId?: string; trigger: HTMLElement } | null>(null);
   const [layoutResult, setResult] = useState<{ layout?: Layout; error?: string; options?: ProjectionOptions; invocation?: number; input?: Graph }>({});
-  const [shared, setShared] = useState(view.shared);
   const [notice, setNotice] = useState(view.notice);
   const template = graph.templates?.find((t) => t.id === shared?.templateId);
   const anchorInstance = template?.instances.find((i) => i.node_id === shared?.anchorId);
@@ -152,27 +151,18 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const windowSize = Math.max(2, Math.min(8, Math.floor((panelWidth - 140) / 240)));
   // Event proxies share only the committed render. Independently memoized
   // closures can chain older render contexts together and retain their layouts.
-  const select = useCanvasCallback((id: string) => { view.update({ selected: id, edge: null }); setSelected(id); setPinned(null); setInspection(null); });
+  const select = useCanvasCallback((id: string) => { selectComponent(view, id); setInspection(null); });
   const focusContext = useCanvasCallback((id: string | null, stackId?: string) => {
     // A stack overview focuses its parent; all other navigation derives the
     // repetition from the source instance, including a derived MLP's owner.
     const repetitionId = stackId ?? instanceOf(graph, mlps.find((g) => g.id === id)?.parentId ?? id)?.repetition.id ?? null;
     view.update({ focus: id, activeStack: repetitionId });
-    setFocusId(id); setActiveStack(repetitionId);
   });
   const change = useCanvasCallback((patch: Partial<ProjectionOptions>) => {
-    setOptions((previous) => {
-      const next = { ...previous, ...patch };
-      view.update({ expanded: next.expanded, repetitions: next.repetitions ?? {}, exhaustive: next.exhaustive ?? false,
-        showUnused: next.showUnused ?? false, showContext: next.showContext !== false, deriveMlp: next.deriveMlp !== false,
-        stateScope: next.stateScope, scope: next.scope });
-      return next;
-    });
+    view.update(patch);
   });
   const syncView = useCanvasCallback((initial: boolean = false) => {
-    onDismissInspection?.(); setShared(view.shared);
-    setOptions(projectionOptions(view)); setSelected(view.selected); setPinned(view.edge);
-    setDimensions(view.dimensions); setFocusId(view.focus); setActiveStack(view.activeStack);
+    onDismissInspection?.();
     setInspection(null); setTemporary(null); setFocused(null);
     cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current);
     anchor.current = null; centerPending.current = null; fitPending.current = false;
@@ -200,7 +190,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     const nextSelected = remapNode(selected, concreteInstance ?? anchorInstance, target);
     if (selected && !nextSelected) setNotice('The previous operation has no verified correspondence; its selection was cleared.');
     const next = { ...shared, instanceId: id };
-    view.update({ shared: next, selected: nextSelected }); setShared(next); setSelected(nextSelected);
+    view.update({ shared: next, selected: nextSelected });
     setInspection(null); setTemporary(null); setFocused(null);
   });
   const rememberAnchor = useCanvasCallback((id: string) => {
@@ -248,11 +238,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   });
   const toggle = useCanvasCallback((id: string) => {
     const node = projected.get(id);
-    if (node?.repetitionId) { exploreStack(node.repetitionId, node.instances ? graph.repetitions.find((r) => r.id === node.repetitionId)!.instances.findIndex((i) => i.node_id === node.instances![0]!.node_id) : 0); return; }
-    rememberAnchor(id);
-    const expanded = new Set(options.expanded);
-    if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
-    change({ expanded: [...expanded], exhaustive: false });
+    if (node) toggleComponent(view, graph, node, windowSize);
   });
   const reveal = useCanvasCallback((id: string) => {
     const base = shared || scope && !scope.members.has(id) && scope.id !== id ? leaveIsolation() : options;
@@ -311,9 +297,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     if (node.record) nativeInspect(records.get(node.record.id)!, trigger);
     else setInspection({ nodeId: node.id, trigger });
   });
-  const activate = useCanvasCallback((node: ProjectedNode, trigger: HTMLElement) => {
-    if (cardDoubleClick(node) === 'expand') toggle(node.id);
-    else inspect(node, trigger);
+  const activate = useCanvasCallback((node: ProjectedNode) => {
+    if (cardDoubleClick(node)) toggle(node.id);
   });
   const overview = useCanvasCallback(() => {
     if (options.scope) leaveIsolation();
@@ -340,6 +325,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     observer.observe(element); return () => observer.disconnect();
   }, []);
   useEffect(() => {
+    const expansionAnchor = view.takeExpansionAnchor();
+    if (expansionAnchor) rememberAnchor(expansionAnchor);
     const controller = new AbortController(); layoutCount.current++;
     if (!layoutInput.graph) {
       // Failure is local to this optional view; ordinary model navigation stays available.
@@ -349,13 +336,13 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     void requestLayout(layoutInput.graph, options, controller.signal).then((layout) => {
       if (!controller.signal.aborted) {
         setResult({ layout, options, invocation: layoutCount.current, input: layoutInput.graph });
-        if (view.edge && !layout.projection.edges.some((e) => e.id === view.edge)) { view.update({ edge: null }); setPinned(null); setInspection(null); }
+        if (view.edge && !layout.projection.edges.some((e) => e.id === view.edge)) { view.update({ edge: null }); setInspection(null); }
       }
     }, () => {
       if (!controller.signal.aborted) setResult({ options, input: layoutInput.graph, invocation: layoutCount.current, error: 'Layout failed or exceeded 10 seconds. Retry or collapse groups.' });
     });
     return () => controller.abort();
-  }, [layoutInput, options, retry, view]);
+  }, [layoutInput, options, retry, view, rememberAnchor]);
   useEffect(() => () => { cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current); }, []);
   const hover = useCanvasCallback((target: EmphasisTarget | null) => {
     cancelAnimationFrame(hoverFrame.current);
@@ -370,7 +357,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     cancelAnimationFrame(focusFrame.current);
     if (target) setFocused(target); else focusFrame.current = requestAnimationFrame(() => setFocused(null));
   });
-  const pin = useCanvasCallback((id: string, trigger: HTMLElement) => { view.update({ edge: id }); setPinned(id); setInspection({ edgeId: id, trigger }); });
+  const pin = useCanvasCallback((id: string, trigger: HTMLElement) => { view.update({ edge: id }); setInspection({ edgeId: id, trigger }); });
   const lineHit = useMemo(() => connectionHitResolver(result.layout?.projection.edges ?? [], result.layout?.routes ?? []), [result.layout]);
   const emphasis = useMemo(() => {
     const projection = result.layout?.projection;
@@ -385,7 +372,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     return { id: box.id, type: 'architecture', position: { x: box.x, y: box.y },
       ...(box.parentId ? { parentId: box.parentId } : {}), width: box.width, height: box.height,
       style: { width: box.width, height: box.height, pointerEvents: record.expanded ? 'none' : 'auto' }, zIndex: 200,
-      selected: selected === cardSelection(record) || Boolean(selected && !projected.has(selected) && record.sourceIds.includes(selected)),
+      selected: selected === cardSelection(record),
       data: { record, label: displayLabel(record, graph), subtitle: record.summary?.replaceAll('linear attention', 'linear').replaceAll('full attention', 'full') ?? variants.get(record.id)?.replace(/^Instance \d+ · /, '') ?? record.record?.operation?.replaceAll('_', ' ') ?? record.kind,
         ports: result.layout!.ports.filter((p) => p.nodeId === box.id), diagnostic: diagnosed.has(box.id), toggle, select, activate, inspect,
         navigation: cardNavigation(record, concreteInstance?.node_id ?? options.scope, sharedActive && !concreteInstance), navigate: navigateCard } };
@@ -451,6 +438,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   if (stack && !breadcrumbs.some((item) => item.kind === 'stack')) breadcrumbs.push({ id: stack.id, kind: 'stack', label: stack.label });
   if (focusedMlp) breadcrumbs.push({ id: focusedMlp.id, kind: 'node', label: records.has(focusedMlp.id) ? focusedMlp.label : 'MLP (derived)' });
   const selectedRecord = selected ? records.get(selected) : undefined;
+  const selectedCard = selected ? [...projected.values()].find((node) => cardSelection(node) === selected) : undefined;
   const selectedEdge = result.layout?.projection.edges.find((e) => e.id === pinned);
   const eligibleTemplate = !shared && selectedRecord ? graph.templates?.find((t) => t.instances.some((i) => i.nodes.some((m) => m.node_id === selectedRecord.id))) : undefined;
   const eligibleInstance = eligibleTemplate?.instances.find((i) => i.nodes.some((m) => m.node_id === selectedRecord?.id));
@@ -479,7 +467,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       cameraState.cancel();
       void flow.fitView({ nodes: flow.getNodes().filter((n) => n.id === selectedEdge.source.node_id || n.id === selectedEdge.target.node_id), padding: 0.2, minZoom: 0.00001, maxZoom: 1 });
     },
-    clear: () => { setPinned(null); view.update({ edge: null }); setInspection(null); },
+    clear: () => { view.update({ edge: null }); setInspection(null); },
   } : selectedRecord ? {
     edge: false, nodeId: selectedRecord.id,
     label: shared && !concreteInstance ? [...projected.values()].find((n) => n.record?.id === selectedRecord.id)?.label ?? template?.label ?? 'Shared operation' :
@@ -488,11 +476,11 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     shared: eligibleTemplate && eligibleInstance ? () => openShared(eligibleTemplate.id, eligibleInstance.node_id) : undefined,
     inspect: onInspect ? (trigger) => nativeInspect(selectedRecord, trigger) : undefined,
     center: centerSelected,
-    clear: () => { setSelected(null); view.update({ selected: null }); },
+    clear: () => { selectComponent(view, null); },
     explore: !shared && ['group', 'operation'].includes(selectedRecord.kind) && selectedRecord.id !== options.scope ? () => isolate(selectedRecord.id) : undefined,
   } : selected && mlps.some((group) => group.id === selected) ? {
     edge: false, nodeId: selected, label: 'MLP (derived)', detail: selected,
-    center: () => centerInLayout(selected), clear: () => { setSelected(null); view.update({ selected: null }); },
+    center: () => centerInLayout(selected), clear: () => { selectComponent(view, null); },
     explore: selected !== options.scope ? () => isolate(selected) : undefined,
   } : undefined;
   return <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
@@ -516,11 +504,11 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       expandAll={() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id), exhaustive: true, stateScope: undefined }); }}
       collapseAll={() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: [], repetitions: {}, exhaustive: false, stateScope: undefined }); }}
       focusLayer={!scope && instance ? focusLayer : undefined} focusMlp={!scope && instance && mlps.some((g) => g.parentId === instance.instance.node_id) ? focusMlp : undefined}
-      stateFocus={!scope && instance ? stateFocus : undefined} toggleSelected={selected && projected.get(selected)?.kind === 'group' ? () => toggle(selected) : undefined}
+      stateFocus={!scope && instance ? stateFocus : undefined} toggleSelected={selectedCard && cardExpandable(selectedCard) ? () => toggle(selectedCard.id) : undefined}
       preferences={(patch) => {
         if (patch.dimensions !== undefined) {
           if (selected) rememberAnchor(selected);
-          view.update({ dimensions: patch.dimensions }); setDimensions(patch.dimensions);
+          view.update({ dimensions: patch.dimensions });
         }
         change(patch);
       }} zoomIn={() => { cameraState.cancel(); void flow.zoomIn(); }} zoomOut={() => { cameraState.cancel(); void flow.zoomOut(); }}
@@ -536,7 +524,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
           onMoveStart={(event) => { if (event) cameraState.cancel(); }}
           onViewportChange={(viewport) => setZoom(viewport.zoom)} onMoveEnd={(_, viewport) => view.update({ viewport })}
           onNodeClick={(event, node) => { event.stopPropagation(); select(cardSelection(node.data.record)); }}
-          onNodeDoubleClick={(event, node) => { event.stopPropagation(); activate(node.data.record, event.currentTarget as HTMLElement); }}
+          onNodeDoubleClick={(event, node) => { event.stopPropagation(); activate(node.data.record); }}
           onNodesChange={(changes) => { for (const value of changes) if (value.type === 'select' && value.selected) { const node = projected.get(value.id); if (node) select(cardSelection(node)); } }}
           aria-label="Architecture canvas" />
       </ConnectionContext.Provider>

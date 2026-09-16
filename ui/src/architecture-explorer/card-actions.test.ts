@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { makeProjectionFixture } from '../../tests/architecture-projection-fixture';
 import { projectGraph } from './projection';
-import { cardDoubleClick, cardNavigation, cardSelection } from './card-actions';
+import { cardDoubleClick, cardExpandable, cardNavigation, cardSelection } from './card-actions';
 
 describe('card actions preserve presentation and concrete target identity', () => {
   const graph = makeProjectionFixture({ count: 4 });
@@ -17,12 +17,21 @@ describe('card actions preserve presentation and concrete target identity', () =
     expect(cardNavigation(range, undefined, false)).toMatchObject({ action: 'Explore component', target: undefined, reason: expect.any(String) });
   });
 
-  it('expands only collapsed groups and inspects expanded groups and operations', () => {
+  it('toggles actual expandable content and does nothing extra for leaves', () => {
     const mlp = detail.nodes.find((node) => node.id === 'mlp:layer-3.gate')!;
     expect(cardDoubleClick(mlp)).toBe('expand');
-    expect(cardDoubleClick(expanded.nodes.find((node) => node.id === mlp.id)!)).toBe('inspect');
-    expect(cardDoubleClick(detail.nodes.find((node) => node.id === 'layer-3.attention.Q')!)).toBe('inspect');
-    expect(cardDoubleClick(detail.nodes.find((node) => node.id === 'layer-3')!)).toBe('inspect');
+    expect(cardDoubleClick(expanded.nodes.find((node) => node.id === mlp.id)!)).toBe('collapse');
+    expect(cardDoubleClick(detail.nodes.find((node) => node.id === 'layer-3.attention.Q')!)).toBeUndefined();
+    expect(cardDoubleClick(detail.nodes.find((node) => node.id === 'layer-3')!)).toBe('collapse');
+  });
+
+  it('does not advertise expansion for empty source groups or aliases', () => {
+    const node = detail.nodes.find((node) => node.id === 'layer-3')!;
+    const empty = { ...node, record: { ...node.record!, kind: 'group' as const, children: [] } };
+    expect(cardExpandable(empty)).toBe(false);
+    expect(cardDoubleClick(empty)).toBeUndefined();
+    const isolated = projectGraph(graph, { expanded: ['layer-3.attention'], scope: 'layer-3.attention' });
+    expect(cardExpandable(isolated.nodes.find((node) => node.presentation === 'external')!)).toBe(false);
   });
 
   it('resolves source operations and supported derived groups independently of selection', () => {

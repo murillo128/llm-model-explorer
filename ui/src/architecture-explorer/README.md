@@ -20,6 +20,16 @@ formulas, storage and localized limitations, and composes the existing
 `TensorExplorer` consumer for available native vectors/matrices. Parameter choice
 never infers a layer or tensor ID from its name.
 
+`useGraphView(view)` subscribes the canvas and future component consumers to the
+same retained view. `component-actions.ts` owns their selection/toggle commands;
+pass a projected target to preserve source versus presentation identity, including
+rebound shared instances. The view keeps projection options referentially stable
+for selection/camera updates. A toggle carries a transient anchor ID that the
+canvas consumes before requesting layout. Scope history still uses the small
+snapshots in `scope-navigation.ts`; it contains neither subscriptions nor graph
+copies. Consumers should use the shared commands and `view.update`, rather than
+maintaining their own expansion maps.
+
 Every modal and weight choice has a child `Lifetime`. Closing, replacing a weight,
 or disposing the session cancels only its own numeric handles; Matrix Explorer
 unsubscription releases the viewport's retained CPU/GPU resources. Existing
