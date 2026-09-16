@@ -1,6 +1,8 @@
 import type { components } from '../api/generated/types';
 import type { Projection, ProjectionOptions } from './projection';
+import { projectGraph } from './projection';
 import { componentScope } from './scope';
+import { projectionOptions } from './scope-navigation';
 import { sharedContext, type SharedStructure } from './shared-structure';
 
 export type Graph = components['schemas']['ArchitectureGraph'];
@@ -59,7 +61,6 @@ export class GraphViews {
     if (view.activeStack && !graph.repetitions.some((r) => r.id === view.activeStack)) view.activeStack = null;
     if (view.focus && !ids.has(view.focus) && !(view.focus.startsWith('mlp:') && ids.has(view.focus.slice(4)))) view.focus = null;
     if (view.stateScope && !ids.has(view.stateScope)) view.stateScope = undefined;
-    if (view.selected && !ids.has(view.selected) && !(view.selected.startsWith('mlp:') && ids.has(view.selected.slice(4)))) view.selected = null;
     if (view.shared) {
       try { sharedContext(graph, view.shared); }
       catch {
@@ -75,6 +76,10 @@ export class GraphViews {
         this.views.set(key, reset); return reset;
       }
     }
+    // A card selection may name a local repetition/context presentation. Retain
+    // it across remounts only while that exact presentation still exists.
+    if (view.selected && !ids.has(view.selected) && !(view.selected.startsWith('mlp:') && ids.has(view.selected.slice(4))) &&
+      !projectGraph(graph, projectionOptions(view)).nodes.some((node) => node.id === view.selected)) view.selected = null;
     return view;
   }
 }

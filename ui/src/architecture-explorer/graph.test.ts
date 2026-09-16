@@ -52,6 +52,19 @@ it('renders dimensions as text, distinguishing scalar, unknown, symbol and expre
     { kind: 'expression', text: 'window.alert(1)', symbols: [] }, { kind: 'unknown', reason: 'unresolved' }]))
     .toBe('[3 × B × (window.alert(1)) × ? (unresolved)]');
 });
+it('retains an exact repetition presentation across remounts, but clears obsolete ranges and replacement graphs', () => {
+  const views = new GraphViews(), view = views.get('a', graph);
+  view.update({ selected: 'repeat:layers:0:1' });
+  expect(views.get('a', graph).selected).toBe('repeat:layers:0:1');
+  expect(views.get('b', graph).selected).toBeNull();
+  expect(views.get('a', graph).selected).toBe('repeat:layers:0:1');
+  view.update({ expanded: ['root', 'layer1'] });
+  expect(views.get('a', graph).selected).toBeNull();
+  view.update({ selected: 'repeat:layers:0:99' });
+  expect(views.get('a', graph).selected).toBeNull();
+  view.update({ expanded: ['root'], selected: 'repeat:layers:0:1' });
+  expect(views.get('a', { ...graph, graph_id: 'replacement' }).selected).toBeNull();
+});
 function layoutWorker() {
   return { postMessage: vi.fn(), terminate: vi.fn(),
     onmessage: null as ((event: MessageEvent) => void) | null, onerror: null as (() => void) | null };

@@ -35,6 +35,9 @@ test.beforeEach(async ({ page }) => { await page.goto(harness); await ready(page
 
 test('label and body select only for source, expanded, repetition and derived cards in both modes', async ({ page }) => {
   await selectOnly(page, 'repeat:layers:0:1');
+  await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click();
+  await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click(); await ready(page);
+  await expect(card(page, 'repeat:layers:0:1').locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
   await findComponent(page, 'layer1'); await ready(page);
   await selectOnly(page, 'layer1');
   await card(page, 'layer1').locator('.architecture-expand').click(); await ready(page);
