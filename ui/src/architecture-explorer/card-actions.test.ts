@@ -14,7 +14,7 @@ describe('card actions preserve presentation and concrete target identity', () =
     expect(cardSelection(range)).toBe(range.id);
     expect(graph.nodes.some((node) => node.id === cardSelection(range))).toBe(false);
     expect(cardDoubleClick(range)).toBe('expand');
-    expect(cardNavigation(range, false, false)).toMatchObject({ action: 'Explore component', target: undefined, reason: expect.any(String) });
+    expect(cardNavigation(range, undefined, false)).toMatchObject({ action: 'Explore component', target: undefined, reason: expect.any(String) });
   });
 
   it('expands only collapsed groups and inspects expanded groups and operations', () => {
@@ -29,8 +29,9 @@ describe('card actions preserve presentation and concrete target identity', () =
     for (const id of ['layer-3', 'layer-3.attention.Q', 'mlp:layer-3.gate']) {
       const node = detail.nodes.find((node) => node.id === id)!;
       expect(cardSelection(node)).toBe(id);
-      expect(cardNavigation(node, false, false)).toEqual({ action: 'Explore component', target: id, reason: undefined });
-      expect(cardNavigation(node, true, false)).toEqual({ action: 'View in model', target: id, reason: undefined });
+      expect(cardNavigation(node, undefined, false)).toEqual({ action: 'Explore component', target: id, reason: undefined });
+      expect(cardNavigation(node, 'another-root', false)).toEqual({ action: 'Explore component', target: id, reason: undefined });
+      expect(cardNavigation(node, id, false)).toEqual({ action: 'View in model', target: id, reason: undefined });
     }
   });
 
@@ -38,15 +39,17 @@ describe('card actions preserve presentation and concrete target identity', () =
     const node = detail.nodes.find((node) => node.id === 'layer-3.attention.Q')!;
     const rebound = { ...node, id: 'layer-0.attention.Q' };
     expect(cardSelection(rebound)).toBe('layer-3.attention.Q');
-    expect(cardNavigation(rebound, true, false).target).toBe('layer-3.attention.Q');
-    expect(cardNavigation(rebound, true, true)).toMatchObject({ target: undefined, reason: 'Choose a concrete instance to view in model.' });
+    expect(cardNavigation(rebound, 'layer-3.attention', false)).toEqual({ action: 'Explore component', target: 'layer-3.attention.Q', reason: undefined });
+    expect(cardNavigation(rebound, 'layer-3.attention.Q', false).action).toBe('View in model');
+    expect(cardNavigation(rebound, rebound.id, false).action).toBe('Explore component');
+    expect(cardNavigation(rebound, 'layer-3.attention', true)).toMatchObject({ target: undefined, reason: 'Choose a concrete instance to view in model.' });
   });
 
   it('does not navigate external aliases or source context', () => {
     const isolated = projectGraph(graph, { expanded: ['layer-3.attention'], scope: 'layer-3.attention' });
     const external = isolated.nodes.find((node) => node.presentation === 'external')!;
-    expect(cardNavigation(external, true, false).target).toBeUndefined();
+    expect(cardNavigation(external, 'layer-3.attention', false).target).toBeUndefined();
     const context = overview.nodes.find((node) => node.kind === 'context')!;
-    expect(cardNavigation(context, false, false).target).toBeUndefined();
+    expect(cardNavigation(context, undefined, false).target).toBeUndefined();
   });
 });

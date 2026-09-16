@@ -218,14 +218,18 @@ must not zoom the canvas. Background pan/zoom remains unchanged.
 
 Independent header controls are ordered `+/-` (when expandable), navigation,
 then `(i)`. The navigation control shows four outward diagonal arrows for
-**Explore component** in Model view and four inward diagonal arrows for
-**View in model** during isolation. It uses the existing navigation path with
-the pressed card's exact source or supported derived-MLP target, independently
-of prior selection. Returning a nested concrete child reveals, selects and
-centers that child. Synthetic repetition ranges, context/boundary aliases and
-other cards without an existing target show an unavailable control with an
+**Explore component** for valid components in Model view and descendants during
+isolation. Only the active isolated root shows four inward diagonal arrows for
+**View in model**. Resolve the action and target together from the pressed card's
+exact source or supported derived-MLP identity, independently of prior selection.
+Exploring a descendant pushes the preceding scope snapshot and makes that child
+the new isolated root; its descendants remain explorable. **Back** restores each
+preceding scope without collapsing it. The root's **View in model** reveals,
+selects and centers that exact root in the global model. Synthetic repetition
+ranges, context/boundary aliases and other cards without an existing target show an unavailable control with an
 accessible explanation. Structure-only shared views require a concrete instance
-before returning to the model. Controls have English target-specific names and
+before navigating; concrete shared cards use the current verified source mapping,
+not the template representative. Controls have English target-specific names and
 tooltips, visible focus and independent click/double-click hit behavior. Ports,
 connections and expanded-group children retain their own targets.
 

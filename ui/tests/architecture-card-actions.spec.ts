@@ -78,7 +78,7 @@ test('real double-clicks expand once or inspect, preserve zoom and never collaps
   expect((await state(page)).camera).toBe(expanded.camera);
 });
 
-test('header navigation targets the pressed card and returns its nested operation; controls stay ordered and focused', async ({ page }, info) => {
+test('header navigation targets the pressed card and explores its nested operation; controls stay ordered and focused', async ({ page }, info) => {
   await findComponent(page, 'linear1'); await ready(page);
   await card(page, 'layer1').locator('.architecture-node-label').click();
   const operation = card(page, 'linear1'), nav = operation.locator('.architecture-navigate');
@@ -112,6 +112,9 @@ test('header navigation targets the pressed card and returns its nested operatio
     .toEqual(['architecture-node-label', 'architecture-expand', 'architecture-navigate', 'architecture-info']);
   await card(page, 'layer1').locator('.architecture-node-label').click();
   await nav.dblclick(); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-scope-id', 'linear1');
+  await expect(nav).toHaveAccessibleName('View in model: linear1 (linear1)');
+  await nav.click(); await ready(page);
   await expect(panel(page)).toHaveAttribute('data-scope-id', '');
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'linear1');
   await expect(page.locator('.architecture-node[data-selected="true"]')).toHaveCount(1);
@@ -169,10 +172,21 @@ test('nested derived double-click inspects after expansion and shared structure 
   await page.getByLabel('Shared structure instance', { exact: true }).selectOption('layer-2.attention'); await ready(page);
   // Geometry still uses the anchor instance's ID, while navigation uses the bound source.
   const rebound = card(page, 'layer-0.attention.Q').locator('.architecture-navigate');
-  await expect(rebound).toHaveAccessibleName('View in model: Q projection (layer-2.attention.Q)');
+  await expect(rebound).toHaveAccessibleName('Explore component: Q projection (layer-2.attention.Q)');
+  await expect(card(page, 'layer-0.attention').locator('.architecture-navigate')).toHaveAccessibleName(/^View in model:.*layer-2.attention\)/);
   await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  const shared = await state(page);
+  await rebound.click(); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-2.attention.Q');
+  await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
+  const restored = await state(page);
+  expect(restored).toEqual({ ...shared, count: restored.count });
+  await expect(rebound).toHaveAccessibleName('Explore component: Q projection (layer-2.attention.Q)');
   await rebound.click(); await ready(page);
   await expect(panel(page)).toHaveAttribute('data-template-id', '');
+  await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-2.attention.Q');
+  await card(page, 'layer-2.attention.Q').locator('.architecture-navigate').click(); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-scope-id', '');
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention.Q');
   await expect(card(page, 'layer-2.attention.Q').locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
 });

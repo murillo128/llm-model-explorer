@@ -36,7 +36,7 @@ interface CanvasProps {
 }
 type Data = { record: ProjectedNode; label: string; subtitle: string; ports: PortPosition[]; diagnostic: boolean;
   toggle: (id: string) => void; select: (id: string) => void; activate: (node: ProjectedNode, trigger: HTMLElement) => void;
-  navigation: ReturnType<typeof cardNavigation>; navigate: (id: string) => void;
+  navigation: ReturnType<typeof cardNavigation>; navigate: (navigation: ReturnType<typeof cardNavigation>) => void;
   inspect: (node: ProjectedNode, trigger: HTMLElement) => void };
 type CanvasNode = Node<Data, 'architecture'>;
 const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<CanvasNode>) {
@@ -44,7 +44,7 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
   const navigationName = `${data.navigation.action}: ${node.label} (${cardSelection(node)})`;
   return <div className="architecture-node nopan" data-kind={node.kind} data-selected={selected} data-expanded={node.expanded}
     data-source-ids={JSON.stringify(node.sourceIds)} data-presentation={node.presentation ?? 'source'}>
-    <div className="architecture-node-heading">
+    <div className="architecture-node-heading" onKeyDown={(event) => event.stopPropagation()}>
       <button className="nodrag nopan architecture-node-label" title={node.label} aria-label={`Select ${node.record?.label ?? node.label}`}
         aria-pressed={selected} onClick={(event) => { event.stopPropagation(); data.select(cardSelection(node)); }}
         onDoubleClick={(event) => { event.stopPropagation(); data.activate(node, event.currentTarget); }}
@@ -54,12 +54,13 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
           }
         }}>{data.label}</button>
       {node.kind === 'group' && <button className="nodrag nopan architecture-expand" aria-label={`${node.expanded ? 'Collapse' : 'Expand'} ${node.label}`}
+        title={`${node.expanded ? 'Collapse' : 'Expand'} ${node.label}`}
         aria-expanded={node.expanded} onDoubleClick={(event) => event.stopPropagation()}
         onClick={(event) => { event.stopPropagation(); if (event.detail < 2) data.toggle(node.id); }}>{node.expanded ? '−' : '+'}</button>}
       <button className="nodrag nopan architecture-navigate" aria-label={navigationName}
         title={`${navigationName}${data.navigation.reason ? ` — ${data.navigation.reason}` : ''}`}
         aria-disabled={!data.navigation.target} onDoubleClick={(event) => event.stopPropagation()}
-        onClick={(event) => { event.stopPropagation(); if (event.detail < 2 && data.navigation.target) data.navigate(data.navigation.target); }}>
+        onClick={(event) => { event.stopPropagation(); if (event.detail < 2) data.navigate(data.navigation); }}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
           <path d="M4 4l6 6m4 4 6 6M4 20l6-6m4-4 6-6" />
           <path d={data.navigation.action === 'Explore component'
@@ -67,7 +68,7 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
             : 'M5 10h5V5m4 0v5h5M5 14h5v5m4 0v-5h5'} />
         </svg>
       </button>
-      <button className="nodrag nopan architecture-info" aria-label={`Inspect ${node.label}`} onDoubleClick={(event) => event.stopPropagation()}
+      <button className="nodrag nopan architecture-info" aria-label={`Inspect ${node.label}`} title={`Inspect ${node.label}`} onDoubleClick={(event) => event.stopPropagation()}
         onClick={(event) => { event.stopPropagation(); if (event.detail < 2) data.inspect(node, event.currentTarget); }}>ⓘ</button>
     </div>
     <div className="architecture-node-type" title={data.subtitle}>{data.subtitle}{data.diagnostic ? ' · diagnostic' : ''}</div>
@@ -289,8 +290,9 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     change({ ...base, expanded: [...expanded], repetitions, scope: undefined, stateScope: undefined,
       ...(derived ? { deriveMlp: true, exhaustive: false } : {}) });
   });
-  const navigateCard = useCanvasCallback((id: string) => {
-    if (options.scope) viewInModel(id); else isolate(id);
+  const navigateCard = useCanvasCallback((navigation: ReturnType<typeof cardNavigation>) => {
+    if (!navigation.target) return;
+    if (navigation.action === 'View in model') viewInModel(navigation.target); else isolate(navigation.target);
   });
   const nativeInspect = useCanvasCallback((record: GraphNode, trigger: HTMLElement) => {
     select(record.id); setInspection(null);
@@ -411,7 +413,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       selected: selected === cardSelection(record) || Boolean(selected && !projected.has(selected) && record.sourceIds.includes(selected)),
       data: { record, label: displayLabel(record, graph), subtitle: record.summary?.replaceAll('linear attention', 'linear').replaceAll('full attention', 'full') ?? variants.get(record.id)?.replace(/^Instance \d+ · /, '') ?? record.record?.operation?.replaceAll('_', ' ') ?? record.kind,
         ports: result.layout!.ports.filter((p) => p.nodeId === box.id), diagnostic: diagnosed.has(box.id), toggle, select, activate, inspect,
-        navigation: cardNavigation(record, Boolean(options.scope), sharedActive && !concreteInstance), navigate: navigateCard } };
+        navigation: cardNavigation(record, concreteInstance?.node_id ?? options.scope, sharedActive && !concreteInstance), navigate: navigateCard } };
   }), [activate, diagnosed, graph, inspect, projected, result.layout, selected, toggle, variants, select, options.scope, sharedActive, concreteInstance, navigateCard]);
   const edges = useMemo<ConnectionEdge[]>(() => (result.layout?.projection.edges ?? []).map((edge) => ({
     id: edge.id, source: edge.source.node_id, target: edge.target.node_id, sourceHandle: `source:${edge.source.port_id}`,

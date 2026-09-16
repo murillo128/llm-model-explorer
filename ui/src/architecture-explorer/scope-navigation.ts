@@ -27,7 +27,8 @@ export function enterComponent(view: GraphView, graph: Graph, id: string, viewpo
   view.history = [...view.history, previous].slice(-16);
   const expanded = view.expanded.filter((id) => scope.members.has(id) || id.startsWith('mlp:') && scope.members.has(id.slice(4)));
   const instance = instanceOf(graph, scope.derived?.parentId ?? id);
-  view.update({ scope: id, selected: id, edge: null, focus: id, activeStack: instance?.repetition.id ?? null,
+  // A concrete child leaves shared geometry; Back retains the verified shared snapshot.
+  view.update({ scope: id, shared: undefined, selected: id, edge: null, focus: id, activeStack: instance?.repetition.id ?? null,
     expanded: [...new Set([...expanded, id])], exhaustive: false, stateScope: undefined,
     deriveMlp: scope.derived ? true : view.deriveMlp, viewport: undefined });
 }
