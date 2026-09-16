@@ -97,6 +97,65 @@ test('pending scope camera cannot replace Back, a newer model, or a user camera'
   expect((await sample(page)).camera).toEqual(user.camera);
 });
 
+for (const target of ['selected', 'connection'] as const) {
+  test(`explicit Center ${target} supersedes pending shared-scope initialization`, async ({ page }, info) => {
+    await page.goto(`${harness}?fixture=templates`); await ready(page);
+    await findComponent(page, 'layer-2.attention.Q'); await ready(page);
+    const previous = await sample(page);
+    await pending(page);
+    await page.getByRole('button', { name: 'Shared structure', exact: true }).click();
+    await resizeWhilePending(page);
+    await expect(panel(page)).not.toHaveAttribute('data-layout-count', previous.layout!);
+    if (target === 'connection') {
+      const edge = page.locator('.architecture-connection[data-source-node="layer-2.attention"][data-source-port="x"][data-target-node="layer-2.attention.Q"][data-target-port="x"]');
+      await edge.focus(); await page.keyboard.press('Enter');
+      await expect(page.getByRole('dialog', { name: 'Connection inspection', exact: true })).toBeVisible();
+      await page.keyboard.press('Escape');
+    }
+    await expect(panel(page)).toHaveAttribute('aria-busy', 'true');
+    await page.evaluate(() => { window.cameraProbe.events = []; });
+    const pendingState = await sample(page), method = target === 'selected' ? 'setCenter' : 'fitView';
+    await page.getByRole('button', { name: `Center ${target}`, exact: true }).click();
+    await expect.poll(() => page.evaluate((name) => window.cameraProbe.events.filter((event) => event.event === `${name} completed`).length, method)).toBe(1);
+    const commanded = await sample(page);
+    expect(commanded.camera).not.toEqual(pendingState.camera);
+    await releaseSizes(page);
+    await expect.poll(async () => { const state = await sample(page); return state.actual.every((size, i) => size === state.consumed[i]); }).toBe(true);
+    await ready(page);
+    const settled = await sample(page), events = await page.evaluate(() => window.cameraProbe.events);
+    await info.attach('explicit-center-precedence', { body: JSON.stringify({ pendingState, commanded, settled, events }, null, 2), contentType: 'application/json' });
+    expect(settled.camera).toEqual(commanded.camera);
+    expect(settled.layout).toBe(commanded.layout);
+    expect(events.filter((event) => event.event.endsWith('requested')).map((event) => event.event)).toEqual([`${method} requested`]);
+    // Cancelling this generation must leave the prior scope's Back snapshot usable.
+    await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
+    expect((await sample(page)).camera).toEqual(previous.camera);
+  });
+}
+
+for (const derived of [false, true]) test(`explicit Center ${derived ? 'derived component' : 'selected'} replaces the pending ordinary-scope fit`, async ({ page }, info) => {
+  await page.goto(`${harness}?fixture=${derived ? 'connections' : 'templates'}`); await ready(page);
+  await findComponent(page, derived ? 'layer-3.gate' : 'layer-2.attention.Q'); await ready(page);
+  if (derived) {
+    await graphAction(page, 'Focus MLP'); await ready(page);
+    await page.locator('[data-id="mlp:layer-3.gate"] .architecture-node-label').click();
+  }
+  const previous = await sample(page);
+  await pending(page);
+  await page.getByRole('button', { name: 'Explore component', exact: true }).click();
+  await resizeWhilePending(page);
+  await expect(panel(page)).not.toHaveAttribute('data-layout-count', previous.layout!);
+  await expect(panel(page)).toHaveAttribute('aria-busy', 'true');
+  await page.evaluate(() => { window.cameraProbe.events = []; });
+  await page.getByRole('button', { name: 'Center selected', exact: true }).click();
+  await releaseSizes(page); await ready(page);
+  const events = await page.evaluate(() => window.cameraProbe.events);
+  await info.attach('deferred-center-precedence', { body: JSON.stringify(events, null, 2), contentType: 'application/json' });
+  expect(events.filter((event) => event.event.endsWith('requested')).map((event) => event.event)).toEqual(['setCenter requested']);
+  await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
+  expect((await sample(page)).camera).toEqual(previous.camera);
+});
+
 test('late camera completion cannot commit after Back or model replacement', async ({ page }) => {
   await page.goto(`${harness}?fixture=templates`); await ready(page);
   await findComponent(page, 'layer-2.attention'); await ready(page);

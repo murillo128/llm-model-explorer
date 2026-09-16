@@ -70,13 +70,36 @@ already-authored width/height and leaves `measured` to React Flow, preserving it
 normal handle invalidation. The existing connection assertion remains intact
 and is included in repeated desktop/narrow validation.
 
+## Explicit Center precedence
+
+The audit of `a8069b20512be0411cc3aa59ff50a9fbcb176535` found that the shared-view
+**Center selected** command did not cancel pending scope initialization.
+The same omission affected **Center connection**. The committed probe reproduces
+both by entering shared structure from `layer-2.attention.Q`, holding viewport
+notification delivery after a real 40-pixel container-height change, completing
+the explicit Center command, then releasing the notification. Both commands'
+completed cameras were overwritten by the scope fit at desktop and actual narrow
+widths. All four exact-camera assertions fail on the audited implementation.
+
+The ordinary-isolation Center paths for source and derived components defer
+their command until a new layout is usable. Their desktop/narrow regressions
+also fail before correcting each path: the old scope-fit request takes precedence
+and calls `setViewport` instead of the requested `setCenter`.
+
+Direct Center handlers now cancel pending initialization using the existing
+generation guard. Ordinary Center clears older fit requests before scheduling
+its existing reveal/center operation. The regressions assert the exact completed
+camera, absence of later initialization commands, and successful restoration of
+the prior Back snapshot. Existing camera math, fit limits, layout and routing
+remain unchanged.
+
 Reproduce from `ui/`:
 
 ```sh
 UI_TEST_PORT=46860 PLAYWRIGHT_WORKERS=2 npm run test:browser -- \
   --project=desktop --project=narrow architecture-camera.spec.ts \
   architecture-connections.spec.ts architecture.spec.ts \
-  --grep 'current viewport|cold fit|pending scope|late camera|optional template metadata|nested expansion' \
+  --grep 'current viewport|cold fit|pending scope|late camera|explicit Center|optional template metadata|nested expansion' \
   --repeat-each=3
 npm run check
 ```

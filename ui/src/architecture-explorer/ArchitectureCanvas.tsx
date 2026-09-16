@@ -454,19 +454,31 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const selectedEdge = result.layout?.projection.edges.find((e) => e.id === pinned);
   const eligibleTemplate = !shared && selectedRecord ? graph.templates?.find((t) => t.instances.some((i) => i.nodes.some((m) => m.node_id === selectedRecord.id))) : undefined;
   const eligibleInstance = eligibleTemplate?.instances.find((i) => i.nodes.some((m) => m.node_id === selectedRecord?.id));
+  const centerInLayout = (id: string) => {
+    // The requested reveal/center owns the next layout's camera, even while
+    // the current scope is still awaiting its initial fit.
+    scopeCameraPending.current = false; fitPending.current = false;
+    reveal(id);
+  };
   const centerSelected = () => {
     if (!selectedRecord) return;
-    if (!shared) { reveal(selectedRecord.id); return; }
+    if (!shared) { centerInLayout(selectedRecord.id); return; }
     const presentation = [...projected.values()].find((n) => n.record?.id === selectedRecord.id);
     const box = presentation && boxes.get(presentation.id);
-    if (box) void flow.setCenter(box.absoluteX + box.width / 2, box.absoluteY + box.height / 2, { zoom: flow.getZoom() });
+    if (box) {
+      cameraState.cancel();
+      void flow.setCenter(box.absoluteX + box.width / 2, box.absoluteY + box.height / 2, { zoom: flow.getZoom() });
+    }
   };
   const controlSelection: ControlSelection | undefined = selectedEdge ? {
     edge: true,
     label: `${projected.get(selectedEdge.source.node_id)?.label ?? 'Source'} → ${projected.get(selectedEdge.target.node_id)?.label ?? 'Destination'}`,
     detail: `${selectedEdge.source.port_id} → ${selectedEdge.target.port_id} · ${selectedEdge.originalEdgeIds.join(', ')}`,
     inspect: (trigger) => setInspection({ edgeId: selectedEdge.id, trigger }),
-    center: () => { void flow.fitView({ nodes: flow.getNodes().filter((n) => n.id === selectedEdge.source.node_id || n.id === selectedEdge.target.node_id), padding: 0.2, minZoom: 0.00001, maxZoom: 1 }); },
+    center: () => {
+      cameraState.cancel();
+      void flow.fitView({ nodes: flow.getNodes().filter((n) => n.id === selectedEdge.source.node_id || n.id === selectedEdge.target.node_id), padding: 0.2, minZoom: 0.00001, maxZoom: 1 });
+    },
     clear: () => { setPinned(null); view.update({ edge: null }); setInspection(null); },
   } : selectedRecord ? {
     edge: false, nodeId: selectedRecord.id,
@@ -480,7 +492,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     explore: !shared && ['group', 'operation'].includes(selectedRecord.kind) && selectedRecord.id !== options.scope ? () => isolate(selectedRecord.id) : undefined,
   } : selected && mlps.some((group) => group.id === selected) ? {
     edge: false, nodeId: selected, label: 'MLP (derived)', detail: selected,
-    center: () => reveal(selected), clear: () => { setSelected(null); view.update({ selected: null }); },
+    center: () => centerInLayout(selected), clear: () => { setSelected(null); view.update({ selected: null }); },
     explore: selected !== options.scope ? () => isolate(selected) : undefined,
   } : undefined;
   return <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
