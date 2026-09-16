@@ -1,4 +1,5 @@
 import type { Graph } from './graph';
+import { semanticRole } from './semantic-role';
 
 export interface DerivedGroup { id: string; parentId: string; label: string; sourceIds: string[] }
 
@@ -16,6 +17,7 @@ export function deriveMlpGroups(graph: Graph): DerivedGroup[] {
   const families = new Map<string, Map<string, string>>();
   for (const node of graph.nodes) {
     if (node.kind !== 'operation' || node.operation !== 'linear' || !node.parent_id) continue;
+    if (semanticRole(nodes.get(node.parent_id)) === 'mlp') continue;
     for (const id of node.parameter_ids) {
       const name = parameters.get(id)?.name;
       const match = name?.match(/^(.*\.mlp)\.(gate_proj|up_proj|down_proj)\.weight$/);

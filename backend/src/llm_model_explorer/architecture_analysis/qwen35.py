@@ -14,10 +14,11 @@ from ..model_files import ModelError
 from ..quantized_inventory import encoding, nvfp4_storage_names
 from . import records as r
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
+from .semantic import operation_role, role_attribute, source_key
 from .validation import require
 
 PRODUCER = Producer(
-    "transformers-qwen35-nvfp4", "1", "transformers/2cba19507be799b7bef247ca6c1c4708bf881b5b"
+    "transformers-qwen35-nvfp4", "2", "transformers/2cba19507be799b7bef247ca6c1c4708bf881b5b"
 )
 PREFIX = "model.language_model"
 # Require explicit structural dimensions; do not transplant another size's defaults.
@@ -383,11 +384,12 @@ class Graph:
         if formula is not None:
             args["formula"] = formula
         ids = [self.parameters[p] for p in parameters]
+        role = "query_gate_projection" if key.endswith(".q_proj") else operation_role(key, op)
         self.b.add_node(
             r.ArchitectureLeafNode(
                 id=self.nid(key),
                 kind=kind,
-                label=op.replace("_", " "),
+                label=role.replace("_", " "),
                 operation=op,
                 ports=[
                     r.ArchitecturePort(id=k, direction="input", label=k, shape=v.shape)
@@ -404,8 +406,9 @@ class Graph:
                 attributes=[
                     r.ArchitectureAttribute(name=k, value=v, provenance=PRODUCER.provenance())
                     for k, v in (attributes or {}).items()
-                ],
-                provenance=PRODUCER.provenance(),
+                ]
+                + [role_attribute(PRODUCER, role)],
+                provenance=PRODUCER.provenance() + [source_key(PRODUCER, key)],
                 **args,
             )
         )
@@ -428,7 +431,13 @@ class Graph:
         return {k: Value(key, k, v.shape, v.kind) for k, v in inputs.items()}
 
     def end(
-        self, key: str, inputs: dict[str, Value], out: Value, parent: str | None = None
+        self,
+        key: str,
+        inputs: dict[str, Value],
+        out: Value,
+        parent: str | None = None,
+        *,
+        role: str | None = None,
     ) -> Value:
         self.link(out, key, "out")
         args: dict[str, Any] = {}
@@ -439,7 +448,7 @@ class Graph:
             r.ArchitectureGroupNode(
                 id=self.nid(key),
                 kind="group",
-                label=key,
+                label=role.upper() if role == "mlp" else role.title() if role else key,
                 children=self.children[key],
                 ports=[
                     r.ArchitecturePort(id=k, direction="input", label=k, shape=v.shape)
@@ -448,8 +457,8 @@ class Graph:
                 + [r.ArchitecturePort(id="out", direction="output", label="out", shape=out.shape)],
                 parameter_ids=[],
                 references=[r.ArchitectureModuleReference(kind="module", name=key)],
-                attributes=[],
-                provenance=PRODUCER.provenance(),
+                attributes=[] if role is None else [role_attribute(PRODUCER, role)],
+                provenance=PRODUCER.provenance() + [source_key(PRODUCER, key)],
                 **args,
             )
         )
@@ -646,7 +655,9 @@ def full_attention(g: Graph, p: str, x: Value, positions: Value, mask: Value) ->
     gated = g.op(
         p + ".output_gate", "multiply", {"attention": merged, "gate": gate}, merged.shape, parent=p
     )
-    return g.end(p, inputs, g.linear(p + ".o_proj", gated, h, p), p.rsplit(".", 1)[0])
+    return g.end(
+        p, inputs, g.linear(p + ".o_proj", gated, h, p), p.rsplit(".", 1)[0], role="attention"
+    )
 
 
 def linear_attention(g: Graph, p: str, x: Value, mask: Value) -> Value:
@@ -779,7 +790,9 @@ def linear_attention(g: Graph, p: str, x: Value, mask: Value) -> Value:
         p + ".output_gate", "multiply", {"normalized": norm, "gate": gate}, norm.shape, parent=p
     )
     merged = g.op(p + ".merge_heads", "reshape", {"x": gated}, shape("B", "T", vd), parent=p)
-    return g.end(p, inputs, g.linear(p + ".out_proj", merged, h, p), p.rsplit(".", 1)[0])
+    return g.end(
+        p, inputs, g.linear(p + ".out_proj", merged, h, p), p.rsplit(".", 1)[0], role="attention"
+    )
 
 
 def build(inputs: AnalysisInput, b: GraphBuilder) -> None:
@@ -861,13 +874,17 @@ def build(inputs: AnalysisInput, b: GraphBuilder) -> None:
             parent=p,
         )
         norm = g.norm(p + ".post_attention_layernorm", post, p)
-        gate = g.linear(p + ".mlp.gate_proj", norm, c["intermediate_size"], p)
-        up = g.linear(p + ".mlp.up_proj", norm, c["intermediate_size"], p)
-        activated = g.op(p + ".mlp.silu", "silu", {"x": gate}, gate.shape, parent=p)
+        mlp = p + ".mlp"
+        mlp_inputs = {"x": norm}
+        mv = g.group(mlp, mlp_inputs)
+        gate = g.linear(p + ".mlp.gate_proj", mv["x"], c["intermediate_size"], mlp)
+        up = g.linear(p + ".mlp.up_proj", mv["x"], c["intermediate_size"], mlp)
+        activated = g.op(p + ".mlp.silu", "silu", {"x": gate}, gate.shape, parent=mlp)
         multiplied = g.op(
-            p + ".mlp.multiply", "multiply", {"gate": activated, "up": up}, up.shape, parent=p
+            p + ".mlp.multiply", "multiply", {"gate": activated, "up": up}, up.shape, parent=mlp
         )
-        down = g.linear(p + ".mlp.down_proj", multiplied, h, p)
+        down = g.linear(p + ".mlp.down_proj", multiplied, h, mlp)
+        down = g.end(mlp, mlp_inputs, down, p, role="mlp")
         out = g.op(p + ".mlp_residual", "add", {"skip": post, "branch": down}, post.shape, parent=p)
         x = g.end(p, layer_inputs, out, PREFIX)
         instances.append(

@@ -1,0 +1,89 @@
+{
+  "baseline": "a82a1033b18eb575b41f13c6782cee496bd5b1a6",
+  "cases": {
+    "llama": {
+      "scope": "8f1d50b7b02f17a8a49d2c21f595cc9f07adffe6a2ddcaeff424be3a5f542319",
+      "coverage": "575951db5c63b1e721c1f8f9aefb547ca834245433e7561dc8204a3a18427aae",
+      "symbols": "5930162100d3c2b35d6fa71975ff7c6cad7d2db659e029a5103c55558db4fe63",
+      "diagnostics": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "nodes": "03babccb6897b497d7fb570a57e2d2193b1f9b79e4a8902bc02ec2476b9978dd",
+      "groupBindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "interfaces": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "wires": "b70c9c1c0fdb3ede18eb5d7045808c0590f2f7abda431bfba8885854089c9ca6",
+      "repetitions": "456cd5074aadd111a0a0682b3b49a5a239bd535e280ff4f47c9dd6c50db382a2",
+      "parameters": "b649f158106f13ebcd014a9627a9002eec14dfc18f408a3924d48a6f3e254feb"
+    },
+    "qwen3": {
+      "scope": "8f1d50b7b02f17a8a49d2c21f595cc9f07adffe6a2ddcaeff424be3a5f542319",
+      "coverage": "575951db5c63b1e721c1f8f9aefb547ca834245433e7561dc8204a3a18427aae",
+      "symbols": "5930162100d3c2b35d6fa71975ff7c6cad7d2db659e029a5103c55558db4fe63",
+      "diagnostics": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "nodes": "14bdf971bad107fe87fb6c931d87a790a7b85b0e24aee8befc4ca463086e6135",
+      "groupBindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "interfaces": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "wires": "6f9ab3400b84a772b4dc0ce2ebdc36fe794764d2c24e7613ed2b2bda0ab0c44a",
+      "repetitions": "ed47f7e0641689004f6f0add485f949261f638e093d720b2b7b63a33ddf46f9b",
+      "parameters": "01e1f9d84fef106adab75c73c0c8d610151feb346fd2952a734195cb02f427e1"
+    },
+    "llama-bias": {
+      "scope": "8f1d50b7b02f17a8a49d2c21f595cc9f07adffe6a2ddcaeff424be3a5f542319",
+      "coverage": "575951db5c63b1e721c1f8f9aefb547ca834245433e7561dc8204a3a18427aae",
+      "symbols": "5930162100d3c2b35d6fa71975ff7c6cad7d2db659e029a5103c55558db4fe63",
+      "diagnostics": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "nodes": "9e01878892cf5f2815241d47d153828a14c0f54d50e66af34b1bc97a26480368",
+      "groupBindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "interfaces": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "wires": "b70c9c1c0fdb3ede18eb5d7045808c0590f2f7abda431bfba8885854089c9ca6",
+      "repetitions": "456cd5074aadd111a0a0682b3b49a5a239bd535e280ff4f47c9dd6c50db382a2",
+      "parameters": "0fc2cef7b0c9c5f75ddcb1c0d57412566952152460d274c8ebd223132a20a76f"
+    },
+    "llama-partial": {
+      "scope": "8f1d50b7b02f17a8a49d2c21f595cc9f07adffe6a2ddcaeff424be3a5f542319",
+      "coverage": "8ac24611cfe47c129e37108bc6adc6843c4fe8fb9c37c27fac8a1835ba660307",
+      "symbols": "5930162100d3c2b35d6fa71975ff7c6cad7d2db659e029a5103c55558db4fe63",
+      "diagnostics": "91ede523ed060a69d77aff5632575164d49365830c128f5169a8a9edf7757e16",
+      "nodes": "02cdf74f141acf9dbeb8e79cb42bf86e0e7c27bd7636b222fddbde0c834e1401",
+      "groupBindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "interfaces": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "wires": "b70c9c1c0fdb3ede18eb5d7045808c0590f2f7abda431bfba8885854089c9ca6",
+      "repetitions": "456cd5074aadd111a0a0682b3b49a5a239bd535e280ff4f47c9dd6c50db382a2",
+      "parameters": "2af1ef7f25640805951280d841da31d68b2c1b28c6e35e4e0fc72495c7a693a0"
+    },
+    "hybrid": {
+      "scope": "8f1d50b7b02f17a8a49d2c21f595cc9f07adffe6a2ddcaeff424be3a5f542319",
+      "coverage": "575951db5c63b1e721c1f8f9aefb547ca834245433e7561dc8204a3a18427aae",
+      "symbols": "49452dea871493cc58b657c29467173718dcda3475a7ce0ec1530afb9369835b",
+      "diagnostics": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "nodes": "bfc6ecca98f1894760447e304980b718c7928fd5812eac17e3a8d14eb29427ea",
+      "groupBindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "interfaces": "5e1345589cbf23c1f4975eb6197c8918a100479d4acf64521e84c722c7e682ad",
+      "wires": "afaeb3da4b1ee193cecfdb8e2aa4f9df1c156341ed9b5c25b1ddcfb86e11f336",
+      "repetitions": "b5e3c2a5f64d9419758020c83825257b46bb821ecc6fd302b1c08c650a324b1d",
+      "parameters": "aeadf86f7827ae52678ba9b64cb4241a10ca4246ac99ffbb2d43fe68ecbaec83"
+    },
+    "visual": {
+      "scope": "a0f77fdfd3f13c7fe7e10774ccfcb4e02c7f3cab3b83be1cacf3c5ca3fb37ed7",
+      "coverage": "575951db5c63b1e721c1f8f9aefb547ca834245433e7561dc8204a3a18427aae",
+      "symbols": "4da3a55dd69e373190f171b05111c98cffeb22bc2155ffe42186e1440505a5b9",
+      "diagnostics": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "nodes": "1ab7af7e78ca9e555aab588f648b2664c0d7747d5cf6c0b9c535cf752939bfcb",
+      "groupBindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "interfaces": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "wires": "cca6db71e0290e0a43a2a4bf21417dfc1bd36894e8cf562f62bf858e3716638e",
+      "repetitions": "4c480017325bc4a8ca1d6f35a7055561929ac6a10ea43d52134326342aefab27",
+      "parameters": "d7038d943e4e70621f16e8e8610afd832b7f75299e1807b4ee5bafb61c4a870d"
+    },
+    "visual-no-qkv-bias": {
+      "scope": "a0f77fdfd3f13c7fe7e10774ccfcb4e02c7f3cab3b83be1cacf3c5ca3fb37ed7",
+      "coverage": "575951db5c63b1e721c1f8f9aefb547ca834245433e7561dc8204a3a18427aae",
+      "symbols": "4da3a55dd69e373190f171b05111c98cffeb22bc2155ffe42186e1440505a5b9",
+      "diagnostics": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "nodes": "33ae1e2f995db412f7e979a8b7c92190adecadf90eb8790ec1baa1582639c424",
+      "groupBindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "interfaces": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "wires": "cca6db71e0290e0a43a2a4bf21417dfc1bd36894e8cf562f62bf858e3716638e",
+      "repetitions": "4c480017325bc4a8ca1d6f35a7055561929ac6a10ea43d52134326342aefab27",
+      "parameters": "bfd3e213a22c378708041a7a6b1a966b981391a5736ab4b4eab43d632325d991"
+    }
+  }
+}

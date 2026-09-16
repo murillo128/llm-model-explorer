@@ -1,0 +1,84 @@
+{
+  "activation_base": "7a8d1f2bf6375a9d90be385ea6282e8d8f050945",
+  "unchanged_sha256": {
+    "ui/src/architecture-explorer/projection.ts": "c433ca252591c0702181c694b98d3026981128e5463de2e23a1ca320deefab59",
+    "ui/src/architecture-explorer/presentation.ts": "5b82b8a3bc5a20446f9092ac09d9a97446db07df0754544aec94d793df89c090",
+    "ui/src/architecture-explorer/derived-groups.ts": "e850501d58278b0dc6ad8bdfc69201acbd051e104b33deb347967396e405261c",
+    "ui/src/architecture-explorer/auto-layout.ts": "67fdda1ac979e246d49c4b7f5f4800a933f7ed96777162b25d2ee34f3e35aaf8",
+    "ui/src/architecture-explorer/layout.ts": "cb0b081781f2eec4edcace1777334c1b1af81f0c82e09965e2b028cca02fd9a2",
+    "ui/src/architecture-explorer/layout.worker.ts": "428033c775aa6a508a2c5d1fad635ed4e3b826c9250773520ec34779137b5e80",
+    "ui/src/architecture-explorer/connection-hit.ts": "161e058d173dc7c76ca43836c3959c764f26f37d857f817fa084b0544a8cbaf7",
+    "ui/src/architecture-explorer/Connection.tsx": "01536a541f37643eca21e762ef2c060ea244a4822ba6456722e471e9948dedbe",
+    "ui/src/architecture-explorer/connection-context.ts": "50ed571d02562ef461e0c0bb2aac858195a40e353b83de919797eb9710eb4e35",
+    "ui/src/architecture-explorer/ArchitectureExplorer.tsx": "33684658e6c01262c4340a4f2bdd6e5809031c1e2cb0b5eb1d5a854a06347efb",
+    "ui/src/architecture-explorer/ArchitectureInspection.tsx": "9b524578408e9932ef4b66b1a29b2b44819c31a65157996d4cd2d335eebc7dfb"
+  },
+  "validated_source_sha256": {
+    "ui/acceptance/architecture.spec.ts": "915e1919a55216e268fb629e1e630c887a10e234eee1170c6da5d66197d16c56",
+    "ui/acceptance/product.spec.ts": "c14e7303e98ff0b8333709823cd2a5def4e178522f2234168e5dc132cbb640a3",
+    "ui/src/architecture-explorer/ArchitectureCanvas.tsx": "967f283245248c80bb67adb106000a2e766e6e223c979982ff604d4612e2f9a1",
+    "ui/src/architecture-explorer/architecture.css": "4e43703391ee79e933c6c0e8f8c2cef135d4cbc05e33f2f4cb087920eb0f801d",
+    "ui/src/architecture-explorer/graph.ts": "6541aa582cca100037ab411ea8625e799dd56d9d2a03beb27efa3b4a650ed811",
+    "ui/tests/architecture-connections.spec.ts": "8708f079b233ee1af84e11eec6384375d7e335e45ef45bab0b19eb0953a18dae",
+    "ui/tests/architecture-harness.tsx": "34d033396943e76ebe203a993c94ce08588222beaa536d76786e6a983e536ff6",
+    "ui/tests/architecture-inspection.spec.ts": "0a74e07aa44f9314511e574a7b70b0a181359b5da9bd8cd08836b0cce4ff23a8",
+    "ui/tests/architecture-shell.spec.ts": "761e25f0cb710394dc906c067556b267d2ae3fa0387247f359914be8b9eac4d2",
+    "ui/tests/architecture.spec.ts": "48f5665d9201d0737c614aa3b3d1295d78f0f2c4b86da6e71759ebed12d71be6",
+    "ui/src/architecture-explorer/ArchitectureControls.tsx": "7b363135f658d97c37ce37526e25b4453aa423aa726be0bbc6280966c0863e90",
+    "ui/tests/architecture-controls.spec.ts": "68ee5e4ddf32fcf3ac58d3408ed7d877e8e50847b7f6462182816f612361801b",
+    "ui/tests/architecture-controls.ts": "0e66e9e46068b2b2b17962c1eb31abb1b7a05a1930287b7c69982c38ff755e4e"
+  },
+  "local_checks": [
+    {
+      "command": "npm run check",
+      "result": "PASS: binding generation, typecheck, lint, 710 unit tests, production build",
+      "note": "Final narrow CSS and capture-only test adjustments subsequently passed typecheck, lint, build and all three production visual tests."
+    },
+    {
+      "command": "npm run test:browser -- architecture-controls.spec.ts architecture.spec.ts architecture-connections.spec.ts architecture-inspection.spec.ts architecture-shell.spec.ts",
+      "result": "PASS: 58 desktop/narrow browser tests",
+      "note": "Final narrow breadcrumb scrollbar CSS subsequently verified in production captures."
+    },
+    {
+      "command": "xvfb-run -a npm run test:acceptance -- product.spec.ts --grep 'architecture safety baseline' --project=dpr1",
+      "result": "PASS: 3 tests; 12 Architecture captures inspected at widths 390, 1178 and 1440"
+    },
+    {
+      "command": "npm run typecheck; npm run lint; npm run build",
+      "result": "PASS on final UI source/test snapshot"
+    }
+  ],
+  "environment": {
+    "node": "24.14.0",
+    "browser": "153.0.8010.12",
+    "isolation": "Separate source/dependency snapshot and unique browser ports; correct backend source selected with PYTHONPATH"
+  },
+  "limitations": [
+    "Authored graph fixture and live fixture numeric/tokenizer service; does not establish real-checkpoint acceptance.",
+    "Exact-head CI results are recorded on the PR."
+  ],
+  "navigation_follow_up": {
+    "reproduced_on": "db9edc66905f1a91f4901df2c60b94ce2c1b8faa",
+    "regression": "Cross-stack derived MLP canvas activation must align focus, active stack and concrete instance while preserving independent windows and selected source.",
+    "baseline_result": "FAIL: encoder MLP breadcrumb with no Encoder instance picker after keyboard activation.",
+    "validated_source_sha256": {
+      "ui/src/architecture-explorer/ArchitectureCanvas.tsx": "2a244a3394d4ee262839a2a2cce2546ba00d005dbe1d428061f8bc8ab38dad76",
+      "ui/tests/architecture-controls.spec.ts": "6c87c7b210ff250d2792f1c4ca8c8066e213cfac651c3e05e72cf8a1690c450e"
+    },
+    "checks": [
+      {
+        "command": "npm run check",
+        "result": "PASS: generated bindings, typecheck, lint, 710 unit tests and production build."
+      },
+      {
+        "command": "npm run typecheck && npm run lint",
+        "result": "PASS after final browser-test camera setup adjustment."
+      },
+      {
+        "command": "npm run test:browser -- architecture-controls.spec.ts --grep 'cross-stack canvas MLP'",
+        "result": "PASS: 4 cross-stack pointer/keyboard regressions across desktop and narrow viewports. Existing 12 control cases also passed on the same production source."
+      }
+    ],
+    "visual_evidence": "Original captures/source hashes remain those of the initial controls implementation; navigation-only follow-up does not change control styling or graph engine."
+  }
+}

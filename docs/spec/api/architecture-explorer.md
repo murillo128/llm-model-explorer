@@ -2,7 +2,7 @@
 
 ## Status and ownership
 
-The static Architecture Explorer contract is published in `openapi.yaml` with shared conformance fixtures and generated UI types/runtime schemas. [contract.md](contract.md) retains shared API/error/session semantics. Architecture analysis and the runtime retrieval route remain pending their implementation children; contract publication does not mean that the endpoint exists.
+The static Architecture Explorer contract is published in `openapi.yaml` with shared conformance fixtures and generated UI types/runtime schemas. [contract.md](contract.md) retains shared API/error/session semantics. Architecture analysis and the runtime retrieval route are implemented; observed checkpoint coverage is recorded separately in [integrated acceptance evidence](../../../acceptance/architecture-evidence.md).
 
 The graph describes architecture, not execution. [Backend analysis](../backend/architecture-analysis.md) owns semantic truth and [UI behavior](../ui/architecture-explorer.md) owns layout and interaction. JSON contains bounded structural metadata only. Weights continue to use the existing progressive binary endpoints.
 
@@ -48,6 +48,27 @@ The first implementation sends the full instance graph. Repetition records group
 `ArchitectureRepetition` requires `id`, `parent_id`, `label`, and ordered `instances`. Each instance names its existing group `node_id`, integer `index`, and `variant` identifier. All instances retain their actual children, edges, and parameter bindings. Different variants are not asserted equivalent. Repetition ordering must agree with parent ordering; it does not authorize reordering hybrid layer patterns.
 
 `attributes` is an array of records with `name`, a scalar or scalar-array `value` (string, finite number, boolean, or null), and `provenance`. It contains architectural facts, not arbitrary nested library objects or numeric tensor payloads. Explanatory text fields are limited to 16,384 characters, and labels/names to 1,024 characters; never interpret checkpoint strings as HTML or script.
+
+### Semantic roles within attributes
+
+Packaged descriptions may add one string-valued `semantic_role` attribute.
+Groups use `attention` or `mlp` for their reviewed component boundaries.
+Operations may use their existing mathematical operation identifier or a more
+specific role such as `query_projection`, `query_gate_projection`,
+`key_projection`, `value_projection`, `output_projection`, `gate_projection`,
+`up_projection`, `down_projection`, `query_normalization`, `key_normalization`,
+`key_transpose`, `input_normalization`, `post_attention_normalization`,
+`attention_residual` or `mlp_residual`. Each annotation has description provenance.
+These are reusable architectural roles, never instance IDs, renderer hints or
+coordinates. The operation, exact ports, parameter references and provenance
+remain authoritative; a role neither introduces computation nor implies that
+two instances share weights. Missing or unfamiliar roles do not invalidate an
+otherwise understood graph. Clients retain raw detail and may use the existing
+bounded derived-MLP fallback when no explicit MLP component owns those operations.
+
+Labels are concise display text. Original module references and semantic source
+keys in description provenance retain full identity for inspection. Conceptual
+description-derived groups must not claim an original module that does not exist.
 
 ## Parameters and explorer resource references
 

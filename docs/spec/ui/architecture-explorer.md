@@ -14,6 +14,9 @@ Architecture-specific navigation, layout, routing, legends, repetition controls,
 
 Use a single pannable, zoomable canvas with fit-to-window and centering on a selected component. Hierarchy organizes nested groups on the same canvas; it must not require separate level pages, drill-down routes, or stacked dialogs to understand structure.
 
+An optional isolated component may be the visible root of this same canvas, as
+defined below. The complete model remains the global fallback.
+
 Start compact, using declared repetition records to represent repeated layers as a stack with multiplicity and truthful variant information instead of immediately materializing every instance. Allow expansion of a representative interior, selection of a concrete instance without expanding its siblings, focused exploration of a bounded contiguous set of instances when useful, expansion of chosen instances, and an Expand all action that reveals every instance and required mathematical operation. Compressed before/after ranges must remain explicit when only part of a stack is shown. A representative display must clearly identify its selected instance; inspecting a weight must never silently use layer zero for every repetition.
 
 Keep actual layer order and variant differences visible when grouped. Repetition means repeated structure, not shared weights, states, parameters, or guaranteed equivalence between variants. Preserve external dependencies across collapsed boundaries through meaningful ports/connections, including bypasses that cross hidden ranges. Collapsing must not erase a skip connection, create a false serial path, or treat distinct hybrid blocks as identical. Expanded topology must be recoverable from the same graph without new analysis.
@@ -24,13 +27,121 @@ Viewport culling and asynchronous layout are allowed optimizations; discarding g
 
 React Flow and ELK are implementation candidates, not mandatory backend dependencies or reasons to change the graph contract. The layout implementation may be replaced without changing model semantics. Do not add a second matrix renderer, graph editor, export suite, or complex navigation framework in this increment.
 
+## Contextual navigation controls
+
+Keep navigation within the Architecture panel in at most two compact rows at
+reference desktop widths. The primary row contains a navigable Model breadcrumb,
+short containment/repetition breadcrumbs for the current focus, **Find component**,
+**Fit view**, and **View options**. Breadcrumbs represent the current expansion
+context on the same global canvas. Connection hover, pinning and inspection do
+not change that navigation context.
+
+At model level the contextual row offers compact entry choices for available
+stacks and components. Within a stack it shows its name/count, concrete instance
+index and actual variant, previous/next instance actions with correct endpoints,
+and the currently visible instances. Range navigation uses the existing
+viewport-dependent window size; long ranges scroll within the control. Preserve
+source ordering, including nonperiodic variants. Only the currently focused stack
+needs controls; other stacks retain their own expansion/window state. Returning
+to Model restores the compact overview. Retain active stack/focus state with the
+existing model/graph-keyed browser-session view state.
+
+Find component searches all already received source graph nodes, including
+collapsed interiors. Results show concise readable labels with containment and
+stack/instance context that distinguishes repeated names. Name, path and exact
+identity queries are local filters; they do not fetch graphs, execute operations
+or load tensor data. Arrow keys choose a result and Enter invokes the existing
+reveal/selection behavior, opening its ancestors and selecting the exact concrete
+instance when needed. Inspection remains a separate explicit action.
+
+View options provides exhaustive **Show all operations**, collapse, center
+selection, zoom, dimensions (initially off), context, unused-interface and derived
+MLP preferences, plus the existing applicable group/layer/MLP/state navigation.
+Fit view changes the camera; Show all operations changes visible detail.
+Unused interfaces refers specifically to unconsumed interface branches, not every
+auxiliary signal. A state-focused view identifies its filtered context. Partial
+coverage remains visible; full scope, paths, IDs and diagnostics are available
+on demand in details/inspection.
+
+Show a concise selected node or pinned connection with applicable inspect, center
+and clear actions. Selection and navigation focus are separate. Opening a menu,
+typing a query, changing emphasis or inspecting selection must preserve the
+mounted canvas, graph retrieval and existing numeric lifetimes, source/projection
+records, generated coordinates/routes, layout invocation count and camera.
+Explicit reveal, expansion, presentation-preference and camera commands retain
+their intended effects.
+
+Controls use the shared neutral/graphite/amber language, visible keyboard focus,
+English labels and explicit accessible names. Search and options popovers stay
+inside the panel, dismiss on Escape and restore focus to their trigger. Moving
+focus outside dismisses them. Text-entry keys retain their editing meaning.
+At constrained widths use bounded horizontal control overflow and bounded
+popover scrolling, without body scrolling or shrinking graph labels. Toolbar
+height may reclaim graph work area; shared shell and scientific geometry remain
+unchanged.
+
 ## Source-preserving visible projection
 
 Keep the received graph unchanged. Visible presentation records retain source node IDs, repetition/instance identity, and exact original edge/port references. Compose boundary forwarding without traversing computational operations. Model, stack, layer, MLP and state focus are expansion/filter states of the same canvas, with an explicit return to global context. Stack window size depends on the view/context rather than a globally fixed layer count.
 
 A reversible derived MLP group requires matching parameter/module ownership and exact gate/up/SiLU/multiply/down topology. Mark it as derived; unmatched operations remain explicit. A presentation boundary alias is not a new mathematical operation or backend identity.
 
+Prefer received Attention/MLP groups identified by the API's optional
+`semantic_role` attribute. Keep their source-backed labels and original node
+identity for expansion, inspection, search and component focus. Do not add a
+derived MLP container inside an explicit MLP group. The existing bounded fallback
+remains reversible for valid legacy graphs without explicit MLP ownership; it
+does not recognize additional attention patterns or reconstruct missing math.
+Search includes description source keys so concise labels retain access by the
+original operation path.
+
 Declared interfaces remain inspectable when unconsumed branches are filtered. Determine consumption from source connectivity, with an explicit reversible filter. State focus shows existing prior/next dependencies owned by the selected instance, keeps K/V distinct and identifies excluded flows. Exhaustive expansion restores original operations and interfaces without a representative or layer-count limit.
+
+## Optional isolated component exploration
+
+**Explore component** is an explicit action on a selected source group,
+operation, or supported derived MLP. Selection, inspection and expansion in
+place retain their existing actions. Isolation shows only that component and
+its chosen internal detail; hidden ancestors, siblings and unrelated connections
+contribute no layout boxes or bounds. It is a view over the same immutable
+received graph, not a new analysis, route, page or modal stack.
+
+Every real scope-crossing connection retains compact input/output context with
+exact original node, port and edge provenance. These are presentation aliases,
+not additional operations or backend ports. Genuine fan-out shares only its real
+source signal; equal labels or shapes cannot merge externally distinct signals.
+Mask, position, residual and state roles remain exact. A wholly external bypass
+is excluded. A dependency that exits and re-enters remains visibly external;
+never splice it into a fabricated internal path. Existing boundary forwarding
+and port/branch/shared-trunk hit semantics remain in use and stop at operations.
+Hover, focus and pinning do not expand hidden nodes or invoke layout.
+
+Identify isolation visibly and show breadcrumbs for the concrete component's
+real model/stack/instance location. Nested isolation is bounded navigation history
+on one canvas. **Back** restores the preceding scope's camera, expansion,
+repetition window, filters and valid node/connection selection. **View in model**
+returns to the global graph and intentionally reveals and centers the selected
+concrete component. Search still covers all received records; choosing a result
+outside the current scope explicitly returns to model context to reveal it.
+Breadcrumb navigation outside a scope likewise restores global context. Keep
+view snapshots local, bounded and keyed by backend/model/graph identity without
+copying the semantic graph per entry. Reject obsolete layout/retrieval results
+on session/model/graph replacement.
+
+Entering a new scope may compute layout and establish a readable initial camera;
+subsequent selection, menus and emphasis may not. **Fit view** in isolation
+measures the visible component and its context only. **Expand component** expands
+only the current scope. The exhaustive command is explicitly labelled
+**Show all operations in model** and exits isolation before revealing every
+source instance/operation. Existing unused-interface and context filters remain
+explicit and reversible; complete interfaces and excluded source context remain
+inspectable. On preparation/layout failure keep the source and a recoverable
+previous/global view, with retry. Invalid graphs retain normal validation errors.
+
+With isolation inactive, unchanged graph/view inputs retain the prior projection,
+layout inputs, route identities and interaction results. Keep scope membership and
+reversible navigation at small testable seams; use the existing cancellable
+layout worker and connection algorithms.
 
 ## Automatic layout and directional routing
 

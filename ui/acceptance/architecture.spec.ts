@@ -1,6 +1,7 @@
+import { findComponent, graphAction, graphPreference, viewOptions } from '../tests/architecture-controls';
 /* eslint-disable @typescript-eslint/no-explicit-any -- Native test-only observations and evidence. */
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Page, TestInfo } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -8,8 +9,12 @@ import { dirname, join } from 'node:path';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import type { Graph } from '../src/architecture-explorer/graph';
+import { projectGraph } from '../src/architecture-explorer/projection';
+import { assertTraceability } from '../tests/architecture-invariants';
 import { installProbe } from './probe';
+import { installArchitectureProbe } from './architecture-probe';
 import { nativeCamera } from '../tests/native-camera';
+import { fanoutPoint } from '../tests/architecture-pointer';
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
 const python = `${repo}backend/.venv/bin/python`;
@@ -36,16 +41,43 @@ function packedValue(family: string, row: number, column: number, inputs: number
 }
 
 async function metrics(page: Page) { return page.evaluate(() => (window as any).__acceptance.metrics()); }
+async function graphObservation(page: Page, collect = false) {
+  const client = await page.context().newCDPSession(page);
+  if (collect) await client.send('HeapProfiler.collectGarbage');
+  const heap = await client.send('Runtime.getHeapUsage');
+  await client.detach();
+  return { heap, collected: collect, ...await page.evaluate(() => window.__architectureProbe()) };
+}
+async function recordGraph(page: Page, info: TestInfo, label: string, graph: Graph) {
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  await info.attach(label, { body: JSON.stringify({ sourceNodes: graph.nodes.length, sourceEdges: graph.edges.length,
+    viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), ...await graphObservation(page) }), contentType: 'application/json' });
+  const viewport = page.viewportSize()!;
+  const widths = info.title.startsWith('complete local reference') && info.project.name === 'dpr1' ? [1178, viewport.width] : [viewport.width];
+  for (const width of widths) {
+    await page.setViewportSize({ ...viewport, width });
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const path = info.outputPath(`${label}-${width}.png`);
+    await page.screenshot({ path }); await info.attach(`${label}-${width}-capture`, { path, contentType: 'image/png' });
+  }
+}
 async function control(path: string, body?: object) {
   const response = await fetch(`${backend}/__test/${path}`, body ? {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   } : undefined);
   expect(response.ok).toBeTruthy(); return response.json();
 }
-async function openParameter(page: Page, graph: Graph, parameter: Graph['parameters'][number]) {
+async function openParameter(page: Page, graph: Graph, parameter: Graph['parameters'][number], isolated = false) {
   const node = graph.nodes.find((n) => n.parameter_ids.includes(parameter.id))!;
-  await page.getByLabel('Select graph component', { exact: true }).selectOption(node.id);
+  await findComponent(page, node.id);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  if (isolated && await page.getByLabel('Architecture graph', { exact: true }).getAttribute('data-scope-id') !== node.id) {
+    const requests = observed.length;
+    await page.getByRole('button', { name: 'Explore component', exact: true }).click();
+    await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-scope-id', node.id);
+    await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+    expect(observed.slice(requests)).toEqual([]);
+  }
   await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
   await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
 }
@@ -66,6 +98,138 @@ async function selectGraph(page: Page): Promise<Graph> {
   expect(body.model_id).toBe(modelId);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-graph-id', body.graph.graph_id);
   return body.graph;
+}
+
+async function inspectComponents(page: Page, graph: Graph, info: TestInfo, family: string, reference: boolean) {
+  const role = (node: Graph['nodes'][number], value: string) => node.attributes.some((a) => a.name === 'semantic_role' && a.value === value);
+  const components = graph.nodes.filter((node) => node.kind === 'group' && (role(node, 'attention') || role(node, 'mlp')));
+  expect(components).toHaveLength(2 * graph.repetitions.reduce((n, r) => n + r.instances.length, 0));
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
+  const capture = async (name: string) => {
+    if (info.project.name !== 'dpr1') return;
+    const viewport = page.viewportSize()!;
+    for (const width of reference && family === 'qwen35' ? [1178, viewport.width] : [viewport.width]) {
+      await page.setViewportSize({ ...viewport, width });
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const path = info.outputPath(`${reference ? 'reference' : 'fixture'}-${family}-${name}-${width}.png`);
+      await page.screenshot({ path });
+      await info.attach(`components-${name}-${width}`, { path, contentType: 'image/png' });
+    }
+  };
+  const nodeBox = (id: string) => page.locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`);
+  const horizontal = async (before: string, after: string) => {
+    // Expanded source groups can be wider than the viewport. Fit the current
+    // focus before comparing both ends; React Flow culls offscreen node DOM.
+    await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await expect(nodeBox(before)).toBeAttached(); await expect(nodeBox(after)).toBeAttached();
+    const a = await nodeBox(before).boundingBox(), b = await nodeBox(after).boundingBox();
+    expect(a).toBeTruthy(); expect(b).toBeTruthy();
+    expect(b!.x).toBeGreaterThanOrEqual(a!.x + a!.width - 1);
+  };
+  for (const repetition of graph.repetitions) {
+    const instances = family === 'qwen35'
+      ? repetition.instances.filter((instance, index, all) => all.findIndex((other) => other.variant === instance.variant) === index)
+      : repetition.instances.slice(0, 1);
+    for (const instance of instances) {
+      const attention = components.find((n) => n.parent_id === instance.node_id && role(n, 'attention'))!;
+      const mlp = components.find((n) => n.parent_id === instance.node_id && role(n, 'mlp'))!;
+      await findComponent(page, instance.node_id);
+      await graphAction(page, 'Focus layer'); await ready();
+      await horizontal(attention.id, mlp.id);
+      await expect(page.locator('.architecture-node[data-presentation="mlp"]')).toHaveCount(0);
+      const label = `${graph.repetitions.indexOf(repetition)}-${instance.index}`;
+      await capture(`${label}-compact`);
+      await findComponent(page, attention.id);
+      await graphAction(page, 'Toggle selected group'); await ready();
+      await page.getByRole('button', { name: 'Center selected', exact: true }).click(); await ready();
+      const projections = graph.nodes.filter((n) => n.parent_id === attention.id &&
+        (role(n, 'query_projection') || role(n, 'query_gate_projection') || role(n, 'mask_padding_states')));
+      const output = graph.nodes.find((n) => n.parent_id === attention.id && role(n, 'output_projection'));
+      if (projections.length && output) await horizontal(projections[0]!.id, output.id);
+      await capture(`${label}-attention`);
+      await graphAction(page, 'Focus MLP'); await ready();
+      await expect(page.getByRole('button', { name: 'MLP', exact: true })).toBeVisible();
+      await expect(page.getByText('MLP (derived)', { exact: true })).toHaveCount(0);
+      const up = graph.nodes.find((n) => n.parent_id === mlp.id && role(n, 'up_projection'))!;
+      const down = graph.nodes.find((n) => n.parent_id === mlp.id && role(n, 'down_projection'))!;
+      await horizontal(up.id, down.id);
+      await capture(`${label}-mlp`);
+    }
+  }
+}
+
+async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family: string, reference: boolean) {
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const ready = async () => {
+    await expect(canvas).toHaveAttribute('aria-busy', 'false');
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  };
+  const role = (node: Graph['nodes'][number], name: string) => node.attributes.some((a) => a.name === 'semantic_role' && a.value === name);
+  const owner = graph.repetitions[0]!.instances[0]!.node_id;
+  const components = graph.nodes.filter((node) => node.parent_id === owner && (role(node, 'attention') || role(node, 'mlp')));
+  const widths = reference && ['qwen3', 'vjepa2'].includes(family) && info.project.name === 'dpr1' ? [1178, 1440] : [1440];
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (const component of components) {
+      const name = role(component, 'attention') ? 'attention' : 'mlp';
+      await findComponent(page, component.id); await ready();
+      const requests = observed.length;
+      await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+      await expect(canvas).toHaveAttribute('data-scope-id', component.id);
+      const root = page.locator(`.react-flow__node[data-id=${JSON.stringify(component.id)}]`);
+      await expect(root).toBeAttached();
+      const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+      const count = await canvas.getAttribute('data-layout-count');
+      if (reference && info.project.name === 'dpr1' && ['qwen3', 'vjepa2'].includes(family)) {
+        const path = info.outputPath(`isolated-${family}-${name}-${width}-initial.png`);
+        await page.screenshot({ path }); await info.attach(`isolated-${name}-${width}-initial`, { path, contentType: 'image/png' });
+      }
+      // Explicit Fit includes every context endpoint. Sample real pointer hits
+      // only after culling has exposed the complete generated scope geometry.
+      await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready();
+      const connections = page.locator('.architecture-connection[data-source-node^="external:"]');
+      const targets = await connections.evaluateAll((elements) => elements.map((element) => ({
+        source: element.getAttribute('data-source-node')!, port: element.getAttribute('data-source-port')!,
+        id: element.getAttribute('data-edge-id')!,
+      })));
+      const fanout = targets.find((item) => targets.filter((other) => item.source === other.source && item.port === other.port).length > 1);
+      if (family === 'qwen3') expect(fanout, 'Dense Attention/MLP inputs retain their genuine shared fan-out').toBeTruthy();
+      if (fanout) {
+        const branches = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(fanout.source)}][data-source-port=${JSON.stringify(fanout.port)}]`);
+        const branchList = await branches.all();
+        const expected = (await branches.evaluateAll((elements) => elements.map((element) => element.getAttribute('data-edge-id')!))).sort();
+        const port = page.locator(`.architecture-port[data-node-id=${JSON.stringify(fanout.source)}][data-port-id=${JSON.stringify(fanout.port)}]`);
+        await port.locator('.architecture-port-dot').hover();
+        await expect.poll(() => page.locator('.architecture-connection[data-emphasized="true"]').evaluateAll((elements) => elements.map((e) => e.getAttribute('data-edge-id')!).sort())).toEqual(expected);
+        if (reference && info.project.name === 'dpr1' && ['qwen3', 'vjepa2'].includes(family)) {
+          const path = info.outputPath(`isolated-${family}-${name}-${width}-boundary.png`);
+          await page.screenshot({ path }); await info.attach(`isolated-${name}-${width}-boundary`, { path, contentType: 'image/png' });
+        }
+        const trunk = await fanoutPoint(page, branchList, branchList);
+        await page.mouse.move(trunk.x, trunk.y);
+        await expect.poll(() => page.locator('.architecture-connection[data-emphasized="true"]').evaluateAll((elements) => elements.map((e) => e.getAttribute('data-edge-id')!).sort())).toEqual(expected);
+      }
+      if (reference && info.project.name === 'dpr1' && ['qwen3', 'vjepa2'].includes(family)) {
+        const path = info.outputPath(`isolated-${family}-${name}-${width}.png`);
+        await page.screenshot({ path }); await info.attach(`isolated-${name}-${width}`, { path, contentType: 'image/png' });
+      }
+      expect(await canvas.getAttribute('data-layout-count')).toBe(count);
+      expect(observed.slice(requests)).toEqual([]);
+      await info.attach(`isolated-${family}-${name}-${width}-geometry`, { body: JSON.stringify({
+        width, graph: graph.graph_id, scope: component.id, sourceNodes: graph.nodes.length,
+        visibleNodes: Number(await canvas.getAttribute('data-visible-nodes')), visibleEdges: Number(await canvas.getAttribute('data-visible-edges')),
+        layoutMs: Number(await canvas.getAttribute('data-layout-ms')), initialCamera: camera,
+        component: await root.boundingBox(), boundaryFanout: fanout ? targets.filter((item) => item.source === fanout.source).length : 0,
+        resources: await graphObservation(page),
+      }), contentType: 'application/json' });
+      await page.mouse.move(0, 0);
+      await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
 }
 
 test.beforeEach(async ({ page }, info) => {
@@ -100,6 +264,7 @@ test.beforeEach(async ({ page }, info) => {
   }, { timeout: reference ? 300_000 : 30_000 }).toBe(200);
   page.on('request', (r) => { if (r.url().startsWith(backend)) observed.push(new URL(r.url()).pathname); });
   await page.addInitScript(installProbe);
+  await page.addInitScript(installArchitectureProbe);
   await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
   await page.goto('/');
 });
@@ -120,12 +285,29 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     test.setTimeout(reference ? 600_000 : 90_000);
     const graph = await selectGraph(page);
     expect(graph.coverage).toBe('complete');
+    // Apply the common source oracle to actual backend graphs, including dense
+    // Qwen/Llama differences and both visual stacks (not UI stress templates).
+    assertTraceability(graph, projectGraph(graph, { expanded: [], exhaustive: true }), true);
+    for (const repetition of graph.repetitions) for (const instance of [repetition.instances[0]!, repetition.instances.at(-1)!]) {
+      const expanded = [instance.node_id];
+      for (let node = graph.nodes.find((item) => item.id === instance.node_id); node?.parent_id;
+        node = graph.nodes.find((item) => item.id === node!.parent_id)) expanded.push(node.parent_id);
+      assertTraceability(graph, projectGraph(graph, { expanded }));
+    }
     const canvas = page.getByLabel('Architecture graph', { exact: true });
+    await recordGraph(page, info, 'compact-graph', graph);
+    await inspectComponents(page, graph, info, family, reference);
+    await inspectIsolation(page, graph, info, family, reference);
+    await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).not.toBeChecked();
-    const ids = await page.getByLabel('Select graph component', { exact: true }).locator('option').evaluateAll((options) => options.map((o) => (o as HTMLOptionElement).value).filter(Boolean));
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Find component', exact: true }).click();
+    const ids = await page.getByRole('listbox', { name: 'Components', exact: true }).getByRole('option').evaluateAll((options) => options.map((o) => (o as HTMLElement).dataset.nodeId));
     expect(ids).toEqual(graph.nodes.map((n) => n.id));
-    await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await graphAction(page, 'Show all operations');
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await recordGraph(page, info, 'exhaustive-graph', graph);
     // Visible routes compose boundary forwarding. Every original edge remains
     // traceable even though one route may represent several source segments.
     expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((n) => n.id));
@@ -133,11 +315,13 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     const roots = new Set(graph.nodes.filter((n) => !n.parent_id).map((n) => n.id));
     for (const repetition of graph.repetitions) {
       const last = repetition.instances.at(-1)!;
-      await page.getByLabel('Select graph component', { exact: true }).selectOption(last.node_id);
-      await expect(page.locator('.architecture-coverage')).toContainText(new RegExp(`instance ${last.index}`, 'i'));
+      await findComponent(page, last.node_id);
+      await expect(page.getByRole('combobox', { name: /Expand instance of/ }).locator('option:checked')).toContainText(new RegExp(`instance ${last.index}`, 'i'));
     }
-    await page.getByLabel('Show dimensions').check();
+    await graphPreference(page, 'Show dimensions', true);
+    await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).toBeChecked();
+    await page.keyboard.press('Escape');
     const client = await page.context().newCDPSession(page);
     await info.attach('production-architecture-layout', { body: JSON.stringify({ kind: reference ? 'actual checkpoint' : 'synthetic checkpoint', family,
       nodes: graph.nodes.length, edges: graph.edges.length, layoutMs: Number(await canvas.getAttribute('data-layout-ms')),
@@ -146,7 +330,7 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     const parameter = graph.parameters.find((p) => p.binding === 'native' && p.inspection.status === 'available' && p.logical_shape?.length === 1 && p.name.includes('.1.'))!;
     expect(parameter).toBeTruthy();
     await page.evaluate(() => { (window as any).__acceptance.captureScalars = true; });
-    await openParameter(page, graph, parameter);
+    await openParameter(page, graph, parameter, true);
     await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
     await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
     expect(observed.some((p) => p.includes(`/tensors/${parameter.inspection.status === 'available' ? parameter.inspection.tensor_id : ''}/data`))).toBe(true);
@@ -161,6 +345,8 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     await page.keyboard.press('Escape'); await released(page);
     await expect(page.getByRole('button', { name: 'Inspect selected', exact: true })).toBeFocused();
     expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(canvas).toHaveAttribute('aria-busy', 'false');
     // Inspect a native matrix too. Observe progressive first-cell values without
     // retaining a second copy of a potentially large reference embedding table.
     const matrices = graph.parameters.filter((p) => p.binding === 'native' && p.inspection.status === 'available' && p.logical_shape?.length === 2);
@@ -196,11 +382,12 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
       }).toBe(expectedValue);
     }
     await page.keyboard.press('Escape'); await released(page);
-    if (!reference && ['qwen3', 'qwen35'].includes(family)) {
-      const packed = graph.parameters.filter((p) => p.binding === 'quantized' && p.inspection.status === 'available')
+    if (['qwen3', 'qwen35'].includes(family)) {
+      const packed = graph.parameters.filter((p) => p.binding === 'quantized' && p.inspection.status === 'available' && p.name.includes('.1.'))
         .sort((a, b) => size(a) - size(b))[0]!;
       expect(packed).toBeTruthy();
-      await openParameter(page, graph, packed);
+      const packedRequests = observed.length;
+      await openParameter(page, graph, packed, true);
       await expect(matrixCanvas).toBeVisible();
       await nativeCamera(page);
       await page.mouse.move(0, 0);
@@ -209,14 +396,28 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
       const packedMatch = /^row (\d+) · column (\d+)$/.exec((await coordinate.textContent())!)!;
       const packedRow = Number(packedMatch[1]), packedColumn = Number(packedMatch[2]);
       const packedColumns = (packed.logical_shape![1] as { value: number }).value;
+      const packedSamples = [];
       for (const selectedColumn of [packedColumn, Math.min(packedColumn + 1, packedColumns - 1)]) {
         if (selectedColumn !== packedColumn) await scroller.press('ArrowRight');
         await expect(coordinate).toHaveText(`row ${packedRow} · column ${selectedColumn}`);
-        await expect.poll(async () => Number(await scalar.textContent())).toBe(
-          packedValue(family, packedRow, selectedColumn, packedColumns));
+        const expected = reference ? JSON.parse(execFileSync(python,
+          ['-m', 'acceptance.architecture_reference', family, '--tensor', packed.name, '--packed',
+            '--row', String(packedRow), '--column', String(selectedColumn)],
+          { cwd: repo, encoding: 'utf8' })).samples[0].value : packedValue(family, packedRow, selectedColumn, packedColumns);
+        await expect.poll(async () => Number(await scalar.textContent())).toBe(expected);
+        packedSamples.push({ row: packedRow, column: selectedColumn, value: expected });
       }
-      expect(observed.some((path) => path.includes(`/tensors/${packed.inspection.status === 'available' ? packed.inspection.tensor_id : ''}/data`))).toBe(true);
+      const tensor = packed.inspection.status === 'available' ? packed.inspection.tensor_id : '';
+      expect(observed.slice(packedRequests).filter((path) => path.endsWith('/data'))).toEqual([
+        expect.stringMatching(new RegExp(`/tensors/${tensor}/data$`)),
+      ]);
+      await info.attach('decoded-concrete-binding', { body: JSON.stringify({ kind: reference ? 'actual checkpoint' : 'synthetic checkpoint',
+        parameter: packed.name, tensor, shape: packed.logical_shape, samples: packedSamples,
+        oracle: reference ? 'Independent scalar_reference from check_quantized_reference.py; bounded physical reads' : 'Authored fixture scalar formula' }),
+      contentType: 'application/json' });
       await page.keyboard.press('Escape'); await released(page);
+      await page.getByRole('button', { name: 'Back', exact: true }).click();
+      await expect(canvas).toHaveAttribute('aria-busy', 'false');
     }
     const unavailable = graph.parameters.find((p) => p.inspection.status === 'unavailable');
     if (unavailable) {
@@ -230,9 +431,11 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
     await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).toBeChecked();
+    await page.keyboard.press('Escape');
     if (family === 'vjepa2') expect(observed.some((p) => p.endsWith('/tokenize'))).toBe(false);
-    await page.getByRole('button', { name: 'Collapse all', exact: true }).click();
+    await graphAction(page, 'Collapse all');
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(roots.size));
     expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(
       graph.edges.filter((edge) => roots.has(edge.source.node_id) && roots.has(edge.target.node_id)).map((edge) => edge.id));
@@ -241,13 +444,31 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
   });
 }
 
+test('complete local reference [qwen3] exhaustive global detail remains reachable at readable scale', async ({ page }, info) => {
+  const graph = await selectGraph(page);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  await graphAction(page, 'Show all operations');
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  const mlp = graph.nodes.find((node) => node.kind === 'group' && node.attributes.some((a) => a.name === 'semantic_role' && a.value === 'mlp'))!;
+  const operation = graph.nodes.find((node) => node.parent_id === mlp.id && node.kind === 'operation')!;
+  const requests = observed.length;
+  await findComponent(page, operation.id);
+  await page.getByRole('button', { name: 'Center selected', exact: true }).click();
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator(`.react-flow__node[data-id=${JSON.stringify(operation.id)}]`)).toBeInViewport();
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
+  expect(observed.slice(requests)).toEqual([]);
+  await recordGraph(page, info, 'exhaustive-global-detail', graph);
+});
+
 test('deterministic production [smollm2] close during progressive data cancels and releases modal resources', async ({ page }) => {
   const graph = await selectGraph(page);
   const parameter = graph.parameters.find((p) => p.binding === 'native' && p.inspection.status === 'available' && p.logical_shape?.length === 2)!;
   for (let cycle = 0; cycle < 3; cycle++) {
     await page.evaluate(() => { const p = (window as any).__acceptance; p.captureScalars = true; p.scalarValues.length = 0; });
     await control('arm', { kind: 'logical_tensor' });
-    await openParameter(page, graph, parameter);
+    await openParameter(page, graph, parameter, true);
     await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
     await expect.poll(async () => (await metrics(page)).firstRender).toBeGreaterThan(0);
     const values = await page.evaluate(() => (window as any).__acceptance.scalarValues as number[]);
@@ -259,4 +480,155 @@ test('deterministic production [smollm2] close during progressive data cancels a
     await control('release', {});
     await expect(page.getByRole('dialog')).toHaveCount(0);
   }
+});
+
+// Lifetime and delayed-session regressions preserved from issue #123 at 78a7d3a6d427f28dd42420da6ef2b41fb5d5a2f2.
+test('deterministic production [smollm2] repeated nested return releases obsolete layouts', async ({ page }, info) => {
+  const graph = await selectGraph(page);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
+  const layer = graph.repetitions[0]!.instances.at(-1)!.node_id;
+  const attention = graph.nodes.find((node) => node.parent_id === layer && node.attributes.some(
+    (attribute) => attribute.name === 'semantic_role' && attribute.value === 'attention'))!;
+  await findComponent(page, layer); await ready();
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const records = await canvas.getAttribute('data-source-node-ids');
+  await page.evaluate(() => { (window as any).__returnCanvas = new WeakRef(document.querySelector('.react-flow')!); });
+  const requests = observed.length;
+  const samples = [];
+  for (let cycle = 0; cycle < 8; cycle++) {
+    await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+    await expect(canvas).toHaveAttribute('data-scope-id', layer);
+    await findComponent(page, attention.id); await ready();
+    const layerCamera = await page.locator('.react-flow__viewport').getAttribute('style');
+    await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+    await expect(canvas).toHaveAttribute('data-scope-id', attention.id);
+    await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(layerCamera);
+    await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+    await expect(canvas).toHaveAttribute('data-scope-id', '');
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+    expect(await canvas.getAttribute('data-source-node-ids')).toBe(records);
+    await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', layer);
+    expect(await page.evaluate(() => (window as any).__returnCanvas.deref() === document.querySelector('.react-flow'))).toBe(true);
+    await expect.poll(() => page.evaluate(() => window.__architectureProbe().active)).toBe(0);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const observation = await graphObservation(page, true);
+    expect(observation.observedGraphs).toBe(1);
+    expect(observation.retainedGraphs).toBe(1);
+    expect(observation.peak).toBeLessThanOrEqual(2);
+    samples.push({ cycle, ...observation });
+    await released(page);
+  }
+  expect(observed.slice(requests)).toEqual([]);
+  await info.attach('repeated-return-resources', { body: JSON.stringify({ sourceNodes: graph.nodes.length,
+    sourceEdges: graph.edges.length, samples, memory: 'Main-thread CDP JS heap after explicit GC; not browser RSS or GPU memory.' }), contentType: 'application/json' });
+  const path = info.outputPath('nested-return.png');
+  await page.screenshot({ path }); await info.attach('nested-return', { path, contentType: 'image/png' });
+
+  // Compare identical returned views after two complete warm-up cycles. This
+  // checks retained object growth, not a machine-dependent heap-byte limit.
+  expect(samples.at(-1)!.retainedLayouts).toBeLessThanOrEqual(samples[1]!.retainedLayouts);
+});
+
+test('deterministic production [smollm2] isolated session replacement rejects a late actual response', async ({ page }) => {
+  let release!: () => void, arrived!: () => void;
+  const waiting = new Promise<void>((resolve) => { arrived = resolve; });
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  let holdNext = false;
+  // Register interception before layout workers start; enabling CDP network
+  // interception after terminated workers can stall this Chromium harness.
+  await page.route('**/architecture', async (route) => {
+    if (!holdNext || route.request().method() !== 'GET') { await route.continue(); return; }
+    holdNext = false;
+    const response = await route.fetch();
+    arrived(); await held;
+    await route.fulfill({ response });
+  });
+  const graph = await selectGraph(page);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await findComponent(page, graph.repetitions[0]!.instances.at(-1)!.node_id); await ready();
+  await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+  holdNext = true;
+  try {
+    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('qwen3');
+    await waiting;
+    await expect(canvas).toHaveCount(0);
+    const replacement = page.waitForResponse((response) => response.request().method() === 'GET' &&
+      response.url().endsWith('/architecture') && response.status() === 200);
+    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('vjepa2');
+    const current = await (await fetch((await replacement).url())).json();
+    await expect(canvas).toHaveAttribute('data-graph-id', current.graph.graph_id); await ready();
+    release();
+    await page.unrouteAll({ behavior: 'wait' });
+    await expect(canvas).toHaveAttribute('data-graph-id', current.graph.graph_id);
+    await expect(canvas).toHaveAttribute('data-scope-id', '');
+    await expect(page.getByLabel('Graph selection', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!).every(
+      (id: string) => current.graph.nodes.some((node: { id: string }) => node.id === id))).toBe(true);
+    expect(observed.some((request) => request.endsWith('/tokenize'))).toBe(false);
+  } finally { release(); }
+});
+
+test.describe('Extended mounted lifetime without persistent element handles', () => {
+  test('deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts', async ({ page }, info) => {
+    const graph = await selectGraph(page);
+    const canvas = page.getByLabel('Architecture graph', { exact: true });
+    const ready = async () => {
+      await expect(canvas).toHaveAttribute('aria-busy', 'false');
+      // Layout arrival precedes the camera's animation-frame commit. Match the
+      // component harness before capturing the context that Back must restore.
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    };
+    const layer = graph.repetitions[0]!.instances.at(-1)!.node_id;
+    const attention = graph.nodes.find((node) => node.parent_id === layer && node.attributes.some(
+      (attribute) => attribute.name === 'semantic_role' && attribute.value === 'attention'))!;
+    await findComponent(page, layer); await ready();
+    const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+    const records = await canvas.getAttribute('data-source-node-ids');
+    await page.evaluate(() => { (window as any).__returnCanvas = new WeakRef(document.querySelector('.react-flow')!); });
+    const requests = observed.length;
+    const samples = [];
+    for (let cycle = 0; cycle < 16; cycle++) {
+      await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+      await expect(canvas).toHaveAttribute('data-scope-id', layer);
+      await findComponent(page, attention.id); await ready();
+      const layerCamera = await page.locator('.react-flow__viewport').getAttribute('style');
+      await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
+      await expect(canvas).toHaveAttribute('data-scope-id', attention.id);
+      await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+      expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(layerCamera);
+      await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready();
+      await expect(canvas).toHaveAttribute('data-scope-id', '');
+      expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+      expect(await canvas.getAttribute('data-source-node-ids')).toBe(records);
+      await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', layer);
+      expect(await page.evaluate(() => (window as any).__returnCanvas.deref() === document.querySelector('.react-flow'))).toBe(true);
+      await expect.poll(() => page.evaluate(() => window.__architectureProbe().active)).toBe(0);
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const observation = await graphObservation(page, true);
+      expect(observation.observedGraphs).toBe(1);
+      expect(observation.retainedGraphs).toBe(1);
+      expect(observation.peak).toBeLessThanOrEqual(2);
+      samples.push({ cycle, ...observation });
+      await released(page);
+    }
+    expect(observed.slice(requests)).toEqual([]);
+    await info.attach('repeated-return-resources', { body: JSON.stringify({ sourceNodes: graph.nodes.length,
+      sourceEdges: graph.edges.length, samples, memory: 'Main-thread CDP JS heap after explicit GC; not browser RSS or GPU memory.' }), contentType: 'application/json' });
+    // A second warmed window must not merely defer the original linear growth.
+    await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
+    await expect(canvas).toHaveCount(0);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const teardown = await graphObservation(page, true);
+    await info.attach('explorer-teardown', { body: JSON.stringify(teardown), contentType: 'application/json' });
+    expect(teardown.active).toBe(0);
+    expect(teardown.retainedLayouts).toBe(0);
+    expect(teardown.retainedGraphs).toBe(0);
+    expect(await page.evaluate(() => (window as any).__returnCanvas.deref())).toBeUndefined();
+    expect(samples[7]!.retainedLayouts).toBeLessThanOrEqual(samples[1]!.retainedLayouts);
+    expect(samples.at(-1)!.retainedLayouts).toBeLessThanOrEqual(samples[7]!.retainedLayouts);
+  });
 });

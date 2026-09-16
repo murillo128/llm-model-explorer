@@ -1,3 +1,4 @@
+import { graphAction } from './architecture-controls';
 import { expect, test } from '@playwright/test';
 import type { BrowserContext, Route } from '@playwright/test';
 import { contractInventory, contractResponse, referenceFixture } from './architecture-fixtures';
@@ -32,7 +33,16 @@ test('built shell retrieves on demand, supports V-JEPA without tokenization and 
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
   const graph = page.getByLabel('Architecture graph', { exact: true });
   await expect(graph).toHaveAttribute('data-visible-nodes', '3');
-  await page.getByRole('button', { name: 'Expand all', exact: true }).click();
+  const received = [...requests];
+  const canvasElement = await page.locator('.react-flow').elementHandle();
+  await page.getByRole('button', { name: 'Find component', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Search components', exact: true }).fill('linear');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'View options', exact: true }).click();
+  await page.keyboard.press('Escape');
+  expect(requests).toEqual(received);
+  expect(await canvasElement!.evaluate((element) => element === document.querySelector('.react-flow'))).toBe(true);
+  await graphAction(page, 'Show all operations');
   await expect(graph).toHaveAttribute('data-visible-nodes', '6');
   await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
   await expect(page.getByRole('button', { name: /linear.weight/ })).toBeVisible();
@@ -40,7 +50,7 @@ test('built shell retrieves on demand, supports V-JEPA without tokenization and 
   await expect(graph).toHaveAttribute('data-visible-nodes', '6');
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(referenceFixture('vjepa2').model_id);
   await expect(graph).toHaveAttribute('data-graph-id', 'fixture-vjepa2');
-  await expect(page.getByRole('combobox', { name: 'Select graph component' })).toHaveValue('');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveCount(0);
   expect(requests.some((p) => p.endsWith('/tokenize'))).toBe(false);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
 });
@@ -71,7 +81,7 @@ test('a delayed architecture response cannot replace a newer model/session', asy
   await expect(canvas).toHaveAttribute('data-graph-id', 'fixture-vjepa2');
   await old!.fulfill({ json: contractResponse });
   await expect(canvas).toHaveAttribute('data-graph-id', 'fixture-vjepa2');
-  await expect(page.getByRole('combobox', { name: 'Select graph component', exact: true })).toHaveValue('');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveCount(0);
   expect(requests.some((request) => request.endsWith('/tokenize'))).toBe(false);
 });
 

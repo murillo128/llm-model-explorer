@@ -13,6 +13,7 @@ from unittest.mock import Mock
 
 import pytest
 import torch
+from architecture_assertions import semantic_key, transparent_edges
 from dense_fixtures import local_fixture, small_config, small_storage
 from test_quantized_models import Storage
 
@@ -64,11 +65,8 @@ def graph_for(data: AnalysisInput, status: str = "complete") -> r.ArchitectureGr
 
 
 def endpoints(graph: r.ArchitectureGraph) -> set[tuple[str, str, str, str]]:
-    names = {node.id: node.label for node in graph.nodes}
-    return {
-        (names[e.source.node_id], e.source.port_id, names[e.target.node_id], e.target.port_id)
-        for e in graph.edges
-    }
+    names = {node.id: semantic_key(node) for node in graph.nodes}
+    return {(names[sn], sp, names[tn], tp) for sn, sp, tn, tp in transparent_edges(graph)}
 
 
 def dimensions(shape: r.ArchitectureShape) -> list[int | str]:
@@ -100,8 +98,12 @@ def test_reference_metadata_full_instance_graph(
     assert len(storage) == reference["physical_count"]
     data = metadata(reference["config"], storage)
     graph = graph_for(data)
-    assert (len(graph.nodes), len(graph.edges), len(graph.parameters)) == (nodes, edges, parameters)
-    assert len(serialize_graph(graph)) < 3_000_000
+    assert (len(graph.nodes), len(graph.edges), len(graph.parameters)) == (
+        nodes + 2 * layers,
+        edges + 7 * layers,
+        parameters,
+    )
+    assert len(serialize_graph(graph)) < 4_000_000
     repetition = graph.repetitions[0]
     assert [i.index for i in repetition.instances] == list(range(layers))
     by_id = {n.id: n for n in graph.nodes}
@@ -111,13 +113,15 @@ def test_reference_metadata_full_instance_graph(
     for instance in repetition.instances:
         layer_node = by_id[instance.node_id]
         assert isinstance(layer_node, r.ArchitectureGroupNode)
-        assert len(layer_node.children) == (33 if family == "qwen3" else 31)
+        assert len(layer_node.children) == 6  # two norms, two residuals, Attention and MLP
     params = {p.name: p for p in graph.parameters}
     assert params["lm_head.weight"].binding == "alias"
     assert params["lm_head.weight"].inspection == params["model.embed_tokens.weight"].inspection
     assert {s.name for p in graph.parameters for s in p.storage} == set(data.bindings.physical)
     for i in range(layers):
-        norm = next(n for n in graph.nodes if n.label == f"model.layers.{i}.input_layernorm")
+        norm = next(
+            n for n in graph.nodes if semantic_key(n) == f"model.layers.{i}.input_layernorm"
+        )
         assert {a.name: a.value for a in norm.attributes}["epsilon"] == (
             1e-6 if family == "qwen3" else 1e-5
         )
@@ -162,14 +166,14 @@ def test_independent_attention_mlp_and_residual_dependencies(qwen: bool) -> None
                 assert (base + "_heads", "out", base + "_norm", "x") in edges
                 assert (base + "_norm", "out", base + "_transpose", "x") in edges
             else:
-                assert not any(n.label == base + "_norm" for n in graph.nodes)
+                assert not any(semantic_key(n) == base + "_norm" for n in graph.nodes)
                 assert (base + "_heads", "out", base + "_transpose", "x") in edges
             assert (base + "_transpose", "out", base + "_rotary", "x") in edges
     assert ("model.layers.0", "out", "model.layers.1", "x") in edges
     assert ("model.layers.1", "out", "model.norm", "x") in edges
     assert ("model.norm", "out", "lm_head", "x") in edges
     assert ("lm_head", "out", "logits", "x") in edges
-    nodes = {n.label: n for n in graph.nodes}
+    nodes = {semantic_key(n): n for n in graph.nodes}
     assert dimensions(nodes["model.layers.0.self_attn.q_proj"].ports[-1].shape) == [
         "B",
         "S",
@@ -198,7 +202,7 @@ def test_checked_native_and_quantized_bindings(qwen: bool) -> None:
     by_id = {p.id: p for p in graph.parameters}
     for node in graph.nodes:
         for pid in node.parameter_ids:
-            assert by_id[pid].name.startswith(node.label + ".")
+            assert by_id[pid].name.startswith(semantic_key(node) + ".")
     quantized = [p for p in graph.parameters if p.binding == "quantized"]
     assert len(quantized) == (14 if qwen else 0)
     for p in quantized:
@@ -414,7 +418,7 @@ def test_description_no_execution_guards(
     monkeypatch.setattr(builtins, "__import__", guarded)
     data = AnalysisInput.from_source(source, tokenizer_available=True)
     graph = graph_for(data)
-    assert any(n.kind == "context" and n.label == "Tokenizer" for n in graph.nodes)
+    assert any(n.kind == "context" and semantic_key(n) == "Tokenizer" for n in graph.nodes)
     assert str(directory) not in str(graph.document())
     denied.assert_not_called()
 
