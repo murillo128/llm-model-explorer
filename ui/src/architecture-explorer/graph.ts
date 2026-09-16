@@ -13,7 +13,7 @@ export interface Point { x: number; y: number }
 export interface PortPosition extends Point { nodeId: string; portId: string; absoluteX: number; absoluteY: number; side: 'left' | 'right' }
 export interface Route { id: string; sections: Point[][]; junctions: Point[]; labels?: { x: number; y: number; width: number; height: number; lines: string[] }[] }
 export interface Layout { boxes: Box[]; ports: PortPosition[]; routes: Route[]; projection: Projection; edgeIds: string[]; width: number; height: number; milliseconds: number }
-export type GraphSnapshot = Pick<GraphView, 'selected' | 'dimensions' | 'edge' | 'focus' | 'activeStack' | 'repetitions' |
+export type GraphSnapshot = Pick<GraphView, 'selected' | 'selectionMode' | 'dimensions' | 'edge' | 'focus' | 'activeStack' | 'repetitions' |
   'exhaustive' | 'showUnused' | 'showContext' | 'deriveMlp' | 'stateScope' | 'expanded' | 'viewport' | 'scope' | 'shared'>;
 export class GraphView {
   private revision = 0;
@@ -31,12 +31,15 @@ export class GraphView {
       (Object.keys(next) as (keyof ProjectionOptions)[]).some((key) => next[key] !== previous[key])) this.projection = next;
     return this.projection!;
   }
+  // Navigation presentation only; lifetime follows this backend/model/graph view.
+  browser = { query: '', treeScroll: 0, searchScroll: 0, families: [] as string[], selectedFamily: null as string | null };
   shared: SharedStructure | undefined;
   notice: string | undefined;
   scope: string | undefined;
   history: GraphSnapshot[] = [];
   globalView: GraphSnapshot | undefined;
   selected: string | null = null;
+  selectionMode: 'source' | 'structure' = 'source';
   dimensions = false;
   edge: string | null = null;
   focus: string | null = null;
@@ -75,6 +78,8 @@ export class GraphViews {
     this.views.delete(key); this.views.set(key, view);
     while (this.views.size > 8) this.views.delete(this.views.keys().next().value!);
     const ids = new Set(graph.nodes.map((n) => n.id));
+    view.browser.families = view.browser.families.filter((id) => graph.templates?.some((t) => t.id === id));
+    if (!graph.templates?.some((t) => t.id === view.browser.selectedFamily)) view.browser.selectedFamily = null;
     const expanded = view.expanded.filter((id) => ids.has(id) || id.startsWith('mlp:') && ids.has(id.slice(4)));
     if (expanded.length !== view.expanded.length) view.expanded = expanded;
     const repetitions = Object.entries(view.repetitions).filter(([id]) => graph.repetitions.some((r) => r.id === id));

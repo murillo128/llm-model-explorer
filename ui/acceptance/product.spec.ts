@@ -1125,7 +1125,7 @@ for (const width of [390, 1178, 1440]) test(`architecture safety baseline preser
   await polishCapture(page, info, `safety-architecture-${width}`);
   // Measurements are evidence, not a golden toolbar placement requirement.
   observations.architecture = await page.evaluate(() => Object.fromEntries(
-    ['.architecture-toolbar', '.architecture-context-row', '.architecture-flow'].map((selector) => {
+    ['.architecture-workspace', '#architecture-browser', '.architecture-toolbar', '.architecture-flow'].map((selector) => {
       const { x, y, width, height } = document.querySelector(selector)!.getBoundingClientRect();
       return [selector, { x, y, width, height }];
     })));
@@ -1139,12 +1139,16 @@ for (const width of [390, 1178, 1440]) test(`architecture safety baseline preser
     // Native horizontal scrollbars add their own height at constrained widths.
     // Bound each content row independently of that platform chrome.
     expect(await page.locator('.architecture-toolbar').evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(50);
-    expect(await page.locator('.architecture-context-row').evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(45);
+    for (const row of await page.locator('.architecture-context-row').all()) {
+      expect(await row.evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(45);
+    }
     await expect(page.getByRole('button', { name: 'Show all operations', exact: true })).toHaveCount(0);
   };
   await expect(page.getByRole('combobox', { name: /Expand instance of/ })).toHaveCount(0);
+  await expect(page.locator('.architecture-context-row')).toHaveCount(0);
   await boundedControls();
   await page.getByRole('button', { name: 'Explore stack Decoder layers', exact: true }).click();
+  await expect(page.locator('.architecture-context-row')).toHaveCount(1);
   await boundedControls(); await polishCapture(page, info, `controls-stack-${width}`);
   await findComponent(page, 'layer-3.attention.Q');
   await page.getByRole('button', { name: 'Fit view', exact: true }).click();

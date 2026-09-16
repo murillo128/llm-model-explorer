@@ -1,4 +1,4 @@
-import { findComponent, graphAction, graphPreference, viewOptions } from '../tests/architecture-controls';
+import { openShared, findComponent, graphAction, graphPreference, viewOptions } from '../tests/architecture-controls';
 /* eslint-disable @typescript-eslint/no-explicit-any -- Native test-only observations and evidence. */
 import { test, expect } from '@playwright/test';
 import type { Page, TestInfo } from '@playwright/test';
@@ -327,9 +327,10 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).not.toBeChecked();
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Find component', exact: true }).click();
-    const ids = await page.getByRole('listbox', { name: 'Components', exact: true }).getByRole('option').evaluateAll((options) => options.map((o) => (o as HTMLElement).dataset.nodeId));
-    expect(ids).toEqual(graph.nodes.map((n) => n.id));
+    await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill(' ');
+    await graphAction(page, 'Show all operations');
+    const ids = await page.getByRole('tree', { name: 'Model components', exact: true }).locator('[data-node-id]').evaluateAll((options) => options.map((o) => (o as HTMLElement).dataset.nodeId));
+    expect(new Set(ids)).toEqual(new Set(graph.nodes.map((n) => n.id)));
     await page.keyboard.press('Escape');
     await graphAction(page, 'Show all operations');
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
@@ -669,7 +670,7 @@ test('shared structure production [templates] neutral mode, distinct instance we
   const q0 = query(first!), q1 = query(second!);
   const p0 = graph.parameters.find((p) => p.id === q0.parameter_ids[0])!, p1 = graph.parameters.find((p) => p.id === q1.parameter_ids[0])!;
   expect(p0.name).toBe('model.layers.0.self_attn.q_proj.weight'); expect(p1.name).toBe('model.layers.1.self_attn.q_proj.weight');
-  await page.getByLabel('Shared structures', { exact: true }).selectOption(template.id);
+  await openShared(page, template.id);
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
   const before = observed.length;
   await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
@@ -728,9 +729,9 @@ test('shared structure production [templates] neutral mode, distinct instance we
     samples.push(await graphObservation(page, true));
   }
   expect(observed.slice(requests)).toEqual([]);
+  await info.attach('shared-instance-resources', { body: JSON.stringify(samples), contentType: 'application/json' });
   expect(samples.every((sample) => sample.active === 0 && sample.retainedLayouts <= 1 && sample.retainedGraphs <= 2)).toBe(true);
   expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
-  await info.attach('shared-instance-resources', { body: JSON.stringify(samples), contentType: 'application/json' });
   await recordGraph(page, info, 'shared-instance-weight-cancelled', graph);
 });

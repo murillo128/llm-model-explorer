@@ -3,8 +3,9 @@ import { Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow } from '@x
 import type { Node, NodeProps } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './architecture.css';
-import type { Graph, GraphNode, GraphView, Layout, PortPosition } from './graph';
-import { requestLayout } from './layout';
+import type { Graph, GraphNode, GraphView, PortPosition } from './graph';
+import { useLayoutRequest } from './useLayoutRequest';
+import type { LayoutResult } from './useLayoutRequest';
 import { cardMetrics, cardSummary, ownParameters } from './card-summary';
 import type { CardSummary as Summary } from './card-summary';
 import { CardParameters, SummaryText } from './CardSummary';
@@ -18,6 +19,9 @@ import { connectionSet, endpointKey } from './projection';
 import { deriveMlpGroups } from './derived-groups';
 import { semanticRole } from './semantic-role';
 import { displayLabel, instanceOf } from './presentation';
+import { ArchitectureBrowser } from './ArchitectureBrowser';
+import { ArchitectureWorkspace } from './ArchitectureWorkspace';
+import { browserExpansionId } from './browser-model';
 import { ArchitectureControls } from './ArchitectureControls';
 import type { NavigationItem, ControlSelection } from './ArchitectureControls';
 import { Connection, ConnectionInspection } from './Connection';
@@ -115,15 +119,16 @@ export function ArchitectureCanvas(props: CanvasProps) { return <ReactFlowProvid
 function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspection }: CanvasProps) {
   const flow = useReactFlow<CanvasNode>();
   const options = useGraphView(view);
-  const { selected, focus: focusId, edge: pinned, activeStack, shared } = view;
+  const { selected, selectionMode, focus: focusId, edge: pinned, activeStack, shared } = view;
   const [temporary, setTemporary] = useState<EmphasisTarget | null>(null), [focused, setFocused] = useState<EmphasisTarget | null>(null);
   const [inspection, setInspection] = useState<{ edgeId?: string; nodeId?: string; trigger: HTMLElement } | null>(null);
-  const [layoutResult, setResult] = useState<{ layout?: Layout; error?: string; options?: ProjectionOptions; invocation?: number; input?: Graph }>({});
+  const [layoutResult, setResult] = useState<LayoutResult>({});
   const [notice, setNotice] = useState(view.notice);
   const template = graph.templates?.find((t) => t.id === shared?.templateId);
   const anchorInstance = template?.instances.find((i) => i.node_id === shared?.anchorId);
   const concreteInstance = template?.instances.find((i) => i.node_id === shared?.instanceId) ?? null;
   const sharedActive = Boolean(shared);
+  const commonSelection = sharedActive && !concreteInstance && selectionMode === 'structure';
   const layoutInput = useMemo(() => {
     if (!sharedActive) return { graph };
     try {
@@ -139,10 +144,10 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   }, [layoutResult, layoutInput, graph, template, anchorInstance, concreteInstance, sharedActive]);
   const [retry, setRetry] = useState(0), [zoom, setZoom] = useState(view.viewport?.zoom ?? 1);
   const [panelWidth, setPanelWidth] = useState(1178);
-  const panel = useRef<HTMLDivElement>(null), picker = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null), picker = useRef<HTMLButtonElement>(null), browserSearch = useRef<HTMLInputElement>(null);
   const flowContainer = useRef<HTMLDivElement>(null);
   const savedViewport = useRef(view.viewport);
-  const layoutCount = useRef(0), hoverFrame = useRef(0), focusFrame = useRef(0);
+  const hoverFrame = useRef(0), focusFrame = useRef(0);
   const anchor = useRef<{ id: string; sourceId?: string | undefined; x: number; y: number } | null>(null);
   const centerPending = useRef<string | null>(null), fitPending = useRef(false), initialized = useRef(false);
   const restorePending = useRef<GraphView['viewport']>(undefined), scopeCameraPending = useRef(false);
@@ -163,7 +168,11 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const windowSize = Math.max(2, Math.min(8, Math.floor((panelWidth - 140) / 240)));
   // Event proxies share only the committed render. Independently memoized
   // closures can chain older render contexts together and retain their layouts.
-  const select = useCanvasCallback((id: string) => { selectComponent(view, id); setInspection(null); });
+  const select = useCanvasCallback((id: string) => { selectComponent(view, id, view.shared && !view.shared.instanceId ? 'structure' : 'source'); setInspection(null); });
+  const selectSource = useCanvasCallback((id: string) => { selectComponent(view, id); setInspection(null); });
+  const selectFamily = useCanvasCallback((id: string) => {
+    view.update({ selected: null, edge: null, browser: { ...view.browser, selectedFamily: id } }); setInspection(null);
+  });
   const focusContext = useCanvasCallback((id: string | null, stackId?: string) => {
     // A stack overview focuses its parent; all other navigation derives the
     // repetition from the source instance, including a derived MLP's owner.
@@ -174,14 +183,18 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     view.update(patch);
   });
   const syncView = useCanvasCallback((initial: boolean = false) => {
+    if (view.browser.selectedFamily) view.update({ browser: { ...view.browser, selectedFamily: null } });
     onDismissInspection?.();
     setInspection(null); setTemporary(null); setFocused(null);
     cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current);
     anchor.current = null; centerPending.current = null; fitPending.current = false;
     restorePending.current = initial ? undefined : view.viewport; scopeCameraPending.current = initial;
   });
-  const leaveIsolation = () => {
-    returnToModel(view); syncView(); return projectionOptions(view);
+  const leaveIsolation = (retain = false) => {
+    const previous = retain ? [...view.history, snapshotView(view, flow.getViewport())].slice(-16) : [];
+    returnToModel(view);
+    if (retain) view.update({ history: previous, globalView: snapshotView(view) });
+    syncView(); return projectionOptions(view);
   };
   const isolate = useCanvasCallback((id: string) => {
     enterComponent(view, graph, id, flow.getViewport()); syncView(true);
@@ -191,6 +204,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const openShared = useCanvasCallback((id: string, instanceId: string | null = null) => {
     const target = graph.templates?.find((t) => t.id === id);
     if (!target) { setNotice('Shared structure is no longer available. Choose an ordinary component.'); return; }
+    view.update({ browser: { ...view.browser, selectedFamily: null } });
     enterSharedStructure(view, target, instanceId, flow.getViewport()); syncView(true);
     picker.current?.focus();
   });
@@ -202,7 +216,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     const nextSelected = remapNode(selected, concreteInstance ?? anchorInstance, target);
     if (selected && !nextSelected) setNotice('The previous operation has no verified correspondence; its selection was cleared.');
     const next = { ...shared, instanceId: id };
-    view.update({ shared: next, selected: nextSelected });
+    view.update({ shared: next, selected: nextSelected, selectionMode: id ? 'source' : 'structure' });
     setInspection(null); setTemporary(null); setFocused(null);
   });
   const rememberAnchor = useCanvasCallback((id: string) => {
@@ -253,7 +267,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     if (node) toggleComponent(view, graph, node, windowSize);
   });
   const reveal = useCanvasCallback((id: string) => {
-    const base = shared || scope && !scope.members.has(id) && scope.id !== id ? leaveIsolation() : options;
+    const base = shared || scope && !scope.members.has(id) && scope.id !== id ? leaveIsolation(true) : options;
     select(id);
     const derived = mlps.find((group) => group.id === id && !records.has(id));
     const sourceId = derived?.sourceIds[0] ?? id;
@@ -270,13 +284,11 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       ...(derived ? { deriveMlp: true, exhaustive: false } : {}) });
   });
   const viewInModel = useCanvasCallback((target?: string) => {
-    const sharedReturn = shared ? snapshotView(view, flow.getViewport()) : undefined;
-    if (shared && !concreteInstance) return;
+    if (shared && !concreteInstance && !target) return;
     const id = target ?? concreteInstance?.node_id ?? (selected && (records.has(selected) || mlps.some((group) => group.id === selected)) ? selected : options.scope);
     // reveal performs the same exact-instance action after restoring global state.
     if (!id) return;
-    const base = leaveIsolation();
-    if (sharedReturn) view.update({ history: [sharedReturn], globalView: snapshotView(view) });
+    const base = leaveIsolation(true);
     const derived = mlps.find((group) => group.id === id && !records.has(id));
     const source = derived?.sourceIds[0] ?? id;
     const expanded = withAncestors(source, new Set(base.expanded));
@@ -344,25 +356,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     const observer = new ResizeObserver(([entry]) => { if (entry) setPanelWidth(entry.contentRect.width); });
     observer.observe(element); return () => observer.disconnect();
   }, []);
-  useEffect(() => {
-    const expansionAnchor = view.takeExpansionAnchor();
-    if (expansionAnchor) rememberAnchor(expansionAnchor);
-    const controller = new AbortController(); layoutCount.current++;
-    if (!layoutInput.graph) {
-      // Failure is local to this optional view; ordinary model navigation stays available.
-      void Promise.resolve().then(() => { if (!controller.signal.aborted) setResult({ error: layoutInput.error, options }); });
-      return () => controller.abort();
-    }
-    void requestLayout(layoutInput.graph, options, controller.signal).then((layout) => {
-      if (!controller.signal.aborted) {
-        setResult({ layout, options, invocation: layoutCount.current, input: layoutInput.graph });
-        if (view.edge && !layout.projection.edges.some((e) => e.id === view.edge)) { view.update({ edge: null }); setInspection(null); }
-      }
-    }, () => {
-      if (!controller.signal.aborted) setResult({ options, input: layoutInput.graph, invocation: layoutCount.current, error: 'Layout failed or exceeded 10 seconds. Retry or collapse groups.' });
-    });
-    return () => controller.abort();
-  }, [layoutInput, options, retry, view, rememberAnchor]);
+  const clearInspection = useCanvasCallback(() => setInspection(null));
+  useLayoutRequest(layoutInput, options, retry, view, rememberAnchor, setResult, clearInspection);
   useEffect(() => () => { cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current); }, []);
   const hover = useCanvasCallback((target: EmphasisTarget | null) => {
     cancelAnimationFrame(hoverFrame.current);
@@ -377,7 +372,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     cancelAnimationFrame(focusFrame.current);
     if (target) setFocused(target); else focusFrame.current = requestAnimationFrame(() => setFocused(null));
   });
-  const pin = useCanvasCallback((id: string, trigger: HTMLElement) => { view.update({ edge: id }); setInspection({ edgeId: id, trigger }); });
+  const pin = useCanvasCallback((id: string, trigger: HTMLElement) => { view.update({ edge: id, browser: { ...view.browser, selectedFamily: null } }); setInspection({ edgeId: id, trigger }); });
   const lineHit = useMemo(() => connectionHitResolver(result.layout?.projection.edges ?? [], result.layout?.routes ?? []), [result.layout]);
   const emphasis = useMemo(() => {
     const projection = result.layout?.projection;
@@ -397,12 +392,12 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     return { id: box.id, type: 'architecture', position: { x: box.x, y: box.y },
       ...(box.parentId ? { parentId: box.parentId } : {}), width: box.width, height: box.height,
       style: { width: box.width, height: box.height, pointerEvents: record.expanded ? 'none' : 'auto' }, zIndex: 200,
-      selected: selected === cardSelection(record),
+      selected: selected === cardSelection(record) && (!sharedActive || concreteInstance !== null || selectionMode === 'structure'),
       data: { record, label: displayLabel(record, graph), subtitle,
         summary, metrics: cardMetrics(record, summary, cardDimensions, Boolean(subtitle || diagnosed.has(box.id))), dimensions: cardDimensions, matrix,
         ports: result.layout!.ports.filter((p) => p.nodeId === box.id), diagnostic: diagnosed.has(box.id), toggle, select, activate, inspect,
         navigation: cardNavigation(record, concreteInstance?.node_id ?? options.scope, sharedActive && !concreteInstance), navigate: navigateCard } };
-  }), [activate, diagnosed, graph, inspect, projected, result.layout, selected, toggle, variants, select, options.scope, sharedActive, concreteInstance, navigateCard, parameters, cardDimensions, matrix]);
+  }), [activate, diagnosed, graph, inspect, projected, result.layout, selected, toggle, variants, select, options.scope, sharedActive, concreteInstance, navigateCard, parameters, cardDimensions, matrix, selectionMode]);
   const cameraState = useLayoutCamera(layoutResult.layout, options,
     result.options === options && result.input === layoutInput.graph && !result.error, nodes, flowContainer, flow, async (fitLayout) => {
       const camera = flow.getViewport();
@@ -474,70 +469,125 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     scopeCameraPending.current = false; fitPending.current = false;
     reveal(id);
   };
-  const centerSelected = () => {
+  const centerSelected = useCanvasCallback(() => {
     if (!selectedRecord) return;
-    if (!shared) { centerInLayout(selectedRecord.id); return; }
+    if (!shared || !commonSelection && !insideBrowserScope(selectedRecord.id)) { centerInLayout(selectedRecord.id); return; }
     const presentation = [...projected.values()].find((n) => n.record?.id === selectedRecord.id);
     const box = presentation && boxes.get(presentation.id);
     if (box) {
       cameraState.cancel();
       void flow.setCenter(box.absoluteX + box.width / 2, box.absoluteY + box.height / 2, { zoom: flow.getZoom() });
+    } else {
+      const mapped = browserExpansionId(graph, view, selectedRecord.id);
+      centerPending.current = mapped; restorePending.current = undefined;
+      scopeCameraPending.current = false; fitPending.current = false;
+      change({ expanded: [...withAncestors(mapped, new Set(view.expanded))] });
     }
-  };
+  });
+  function insideBrowserScope(id: string) {
+    if (!scope) return true;
+    if (shared) return concreteInstance?.nodes.some((node) => node.node_id === id) ?? false;
+    return scope.members.has(id) || scope.id === id;
+  }
+  const toggleBrowser = useCanvasCallback((id: string) => {
+    const record = records.get(id);
+    if (!record || record.kind !== 'group' || !record.children.length) return;
+    const outside = !insideBrowserScope(id);
+    if (outside) { const selection = view.selectionMode === 'source' ? view.selected : null; leaveIsolation(true); selectComponent(view, selection); }
+    const mapped = browserExpansionId(graph, view, id), source = records.get(mapped)!;
+    const base = projectionOptions(view);
+    const expanded = withAncestors(mapped, new Set(base.expanded));
+    // Exact expanded instances are already visible alongside repetition windows.
+    // Preserve those windows and let the shared toggle change only this component.
+    view.update({ expanded: [...expanded], stateScope: undefined });
+    toggleComponent(view, graph, { id: mapped, kind: source.kind, label: source.label, record: source,
+      sourceIds: [mapped], ports: [], expanded: base.exhaustive || base.expanded.includes(mapped) }, windowSize);
+    if (outside) { centerPending.current = id; restorePending.current = undefined; }
+  });
+  const viewSelectionInModel = useCanvasCallback(() => { if (selected) viewInModel(selected); });
+  const viewScopeInModel = useCanvasCallback(() => viewInModel());
+  const expandCurrentComponent = useCanvasCallback(() => change(expandComponent(view, graph)));
+  const selectedFamily = graph.templates?.find((family) => family.id === view.browser.selectedFamily);
+  // Conditional controls can remain in a detached React tree after navigation.
+  // Give every control a proxy so that tree cannot retain a Canvas layout.
+  const exploreFamily = useCanvasCallback(() => { if (selectedFamily) openShared(selectedFamily.id); });
+  const clearFamily = useCanvasCallback(() => view.update({ browser: { ...view.browser, selectedFamily: null } }));
+  const inspectSelected = useCanvasCallback((trigger: HTMLElement) => {
+    if (selectedEdge) setInspection({ edgeId: selectedEdge.id, trigger });
+    else if (selectedRecord) nativeInspect(selectedRecord, trigger);
+  });
+  const centerEdge = useCanvasCallback(() => {
+    if (!selectedEdge) return;
+    cameraState.cancel();
+    void flow.fitView({ nodes: flow.getNodes().filter((n) => n.id === selectedEdge.source.node_id || n.id === selectedEdge.target.node_id), padding: 0.2, minZoom: 0.00001, maxZoom: 1 });
+  });
+  const centerDerived = useCanvasCallback(() => { if (selected) centerInLayout(selected); });
+  const clearSelection = useCanvasCallback(() => {
+    if (selectedEdge) { view.update({ edge: null }); setInspection(null); }
+    else selectComponent(view, null);
+  });
+  const exploreSelected = useCanvasCallback(() => { if (selected) isolate(selected); });
+  const shareSelected = useCanvasCallback(() => { if (eligibleTemplate && eligibleInstance) openShared(eligibleTemplate.id, eligibleInstance.node_id); });
+  const navigate = useCanvasCallback((item: NavigationItem) => {
+    if (shared && item.id === template?.id) return;
+    if (item.kind === 'stack') exploreStack(item.id);
+    else if (!scope && mlps.some((g) => g.id === item.id)) focusMlp();
+    else { const info = instanceOf(graph, item.id); if (info?.instance.node_id === item.id) chooseInstance(item.id); else reveal(item.id); }
+  });
+  const expandAll = useCanvasCallback(() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id), exhaustive: true, stateScope: undefined }); });
+  const collapseAll = useCanvasCallback(() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: [], repetitions: {}, exhaustive: false, stateScope: undefined }); });
+  const toggleSelected = useCanvasCallback(() => { if (selectedCard) toggle(selectedCard.id); });
+  const preferences = useCanvasCallback((patch: Partial<ProjectionOptions>) => {
+    if (patch.dimensions !== undefined) {
+      if (selected) rememberAnchor(selected);
+      view.update({ dimensions: patch.dimensions });
+    }
+    change(patch);
+  });
+  const zoomIn = useCanvasCallback(() => { cameraState.cancel(); void flow.zoomIn(); });
+  const zoomOut = useCanvasCallback(() => { cameraState.cancel(); void flow.zoomOut(); });
   const controlSelection: ControlSelection | undefined = selectedEdge ? {
     edge: true,
     label: `${projected.get(selectedEdge.source.node_id)?.label ?? 'Source'} → ${projected.get(selectedEdge.target.node_id)?.label ?? 'Destination'}`,
     detail: `${selectedEdge.source.port_id} → ${selectedEdge.target.port_id} · ${selectedEdge.originalEdgeIds.join(', ')}`,
-    inspect: (trigger) => setInspection({ edgeId: selectedEdge.id, trigger }),
-    center: () => {
-      cameraState.cancel();
-      void flow.fitView({ nodes: flow.getNodes().filter((n) => n.id === selectedEdge.source.node_id || n.id === selectedEdge.target.node_id), padding: 0.2, minZoom: 0.00001, maxZoom: 1 });
-    },
-    clear: () => { view.update({ edge: null }); setInspection(null); },
+    inspect: inspectSelected, center: centerEdge, clear: clearSelection,
   } : selectedRecord ? {
     edge: false, nodeId: selectedRecord.id,
-    label: shared && !concreteInstance ? [...projected.values()].find((n) => n.record?.id === selectedRecord.id)?.label ?? template?.label ?? 'Shared operation' :
+    label: commonSelection ? [...projected.values()].find((n) => n.record?.id === selectedRecord.id)?.label ?? template?.label ?? 'Shared operation' :
       displayLabel({ id: selectedRecord.id, kind: selectedRecord.kind, label: selectedRecord.label, record: selectedRecord, sourceIds: [selectedRecord.id], ports: [], expanded: false }, graph),
-    detail: shared && !concreteInstance ? 'Verified common operation; choose an instance for weights.' : `${selectedRecord.label} · ${selectedRecord.id}`,
-    shared: eligibleTemplate && eligibleInstance ? () => openShared(eligibleTemplate.id, eligibleInstance.node_id) : undefined,
-    inspect: onInspect ? (trigger) => nativeInspect(selectedRecord, trigger) : undefined,
+    detail: commonSelection ? 'Verified common operation; choose an instance for weights.' : `${selectedRecord.label} · ${selectedRecord.id}`,
+    shared: eligibleTemplate && eligibleInstance ? shareSelected : undefined,
+    inspect: onInspect && (!shared || commonSelection || insideBrowserScope(selectedRecord.id)) ? inspectSelected : undefined,
     center: centerSelected,
-    clear: () => { selectComponent(view, null); },
-    explore: !shared && ['group', 'operation'].includes(selectedRecord.kind) && selectedRecord.id !== options.scope ? () => isolate(selectedRecord.id) : undefined,
+    viewInModel: options.scope && !commonSelection ? viewSelectionInModel : undefined,
+    clear: clearSelection,
+    explore: !shared && ['group', 'operation'].includes(selectedRecord.kind) && selectedRecord.id !== options.scope ? exploreSelected : undefined,
   } : selected && mlps.some((group) => group.id === selected) ? {
     edge: false, nodeId: selected, label: 'MLP (derived)', detail: selected,
-    center: () => centerInLayout(selected), clear: () => { selectComponent(view, null); },
-    explore: selected !== options.scope ? () => isolate(selected) : undefined,
+    center: centerDerived, clear: clearSelection,
+    explore: selected !== options.scope ? exploreSelected : undefined,
   } : undefined;
-  return <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
+  return <ArchitectureWorkspace browser={<ArchitectureBrowser graph={graph} view={view} searchRef={browserSearch}
+    select={selectSource} selectFamily={selectFamily} toggle={toggleBrowser} exploreStack={exploreStack} />}>
+    <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
     data-template-id={shared?.templateId ?? ''} data-template-instance-id={shared?.instanceId ?? ''}
     data-scope-id={concreteInstance?.node_id ?? options.scope ?? ''} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
     data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options || !result.error && !cameraState.ready}
     data-source-node-ids={JSON.stringify(sourceNodeIds)} data-represented-edge-ids={JSON.stringify(result.layout?.edgeIds ?? [])}>
     {notice && <p role="status">{notice}</p>}
     <ArchitectureControls shared={shared && template ? { template, instanceId: shared.instanceId, choose: chooseSharedInstance } : undefined}
-      openShared={openShared} returnContext={!scope && view.history.length ? back : undefined} graph={graph} focus={focusId} stack={stack} options={options} picker={picker}
-      isolation={scope ? { back, viewInModel: shared && !concreteInstance ? undefined : () => viewInModel(), expand: () => change(expandComponent(view, graph)),
+      family={selectedFamily ? { label: selectedFamily.label, explore: exploreFamily, clear: clearFamily } : undefined}
+      returnContext={!scope && view.history.length ? back : undefined} graph={graph} focus={focusId} stack={stack} options={options} picker={picker}
+      isolation={scope ? { back, viewInModel: shared && !concreteInstance ? undefined : viewScopeInModel, expand: expandCurrentComponent,
         nodeIds: scope.members, excludedEdges: result.layout?.projection.scope?.excludedEdgeIds ?? [] } : undefined}
       instanceId={instance?.instance.node_id ?? (stack ? stack.instances[options.repetitions?.[stack.id]?.start ?? 0]?.node_id : undefined)}
       visibleInstances={stack?.instances.filter((i) => projected.has(i.node_id)).map((i) => i.node_id) ?? []}
-      breadcrumbs={shared && template ? [{ id: template.id, kind: 'node', label: template.label }] : breadcrumbs} selection={controlSelection} reveal={reveal} navigate={(item) => {
-        if (shared && item.id === template?.id) return;
-        if (item.kind === 'stack') exploreStack(item.id);
-        else if (!scope && mlps.some((g) => g.id === item.id)) focusMlp();
-        else { const info = instanceOf(graph, item.id); if (info?.instance.node_id === item.id) chooseInstance(item.id); else reveal(item.id); }
-      }} overview={overview} fit={fit} chooseInstance={chooseInstance} exploreStack={exploreStack} windowSize={windowSize}
-      expandAll={() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id), exhaustive: true, stateScope: undefined }); }}
-      collapseAll={() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: [], repetitions: {}, exhaustive: false, stateScope: undefined }); }}
+      breadcrumbs={shared && template ? [{ id: template.id, kind: 'node', label: template.label }] : breadcrumbs}
+      selection={controlSelection} reveal={reveal} navigate={navigate} overview={overview} fit={fit}
+      chooseInstance={chooseInstance} exploreStack={exploreStack} windowSize={windowSize} expandAll={expandAll} collapseAll={collapseAll}
       focusLayer={!scope && instance ? focusLayer : undefined} focusMlp={!scope && instance && mlps.some((g) => g.parentId === instance.instance.node_id) ? focusMlp : undefined}
-      stateFocus={!scope && instance ? stateFocus : undefined} toggleSelected={selectedCard && cardExpandable(selectedCard) ? () => toggle(selectedCard.id) : undefined}
-      preferences={(patch) => {
-        if (patch.dimensions !== undefined) {
-          if (selected) rememberAnchor(selected);
-          view.update({ dimensions: patch.dimensions });
-        }
-        change(patch);
-      }} zoomIn={() => { cameraState.cancel(); void flow.zoomIn(); }} zoomOut={() => { cameraState.cancel(); void flow.zoomOut(); }}
+      stateFocus={!scope && instance ? stateFocus : undefined} toggleSelected={selectedCard && cardExpandable(selectedCard) ? toggleSelected : undefined}
+      preferences={preferences} zoomIn={zoomIn} zoomOut={zoomOut}
       filtered={!options.exhaustive && !options.showUnused && !!result.layout?.projection.filteredEdgeIds.length} />
     {result.error && <div role="alert">{result.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button>{shared && <button onClick={back}>Return to ordinary view</button>}</div>}
     {cameraState.error && <div role="alert">{cameraState.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button></div>}
@@ -561,5 +611,5 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
           if (picker.current) nativeInspect(records.get(id)!, picker.current);
         }} />}
     </div>
-  </div>;
+  </div></ArchitectureWorkspace>;
 }

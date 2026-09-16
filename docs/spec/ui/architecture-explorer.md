@@ -35,58 +35,95 @@ Viewport culling and asynchronous layout are allowed optimizations; discarding g
 
 React Flow and ELK are implementation candidates, not mandatory backend dependencies or reasons to change the graph contract. The layout implementation may be replaced without changing model semantics. Do not add a second matrix renderer, graph editor, export suite, or complex navigation framework in this increment.
 
-## Contextual navigation controls
+## Browser and contextual navigation
 
-Keep navigation within the Architecture panel in at most two compact rows at
-reference desktop widths. The primary row contains a navigable Model breadcrumb,
-short containment/repetition breadcrumbs for the current focus, **Find component**,
-**Fit view**, and **View options**. Breadcrumbs represent the current expansion
-context on the same global canvas. Connection hover, pinning and inspection do
-not change that navigation context.
+A separate left browser card provides navigation beside the canvas card. It uses
+ordered source containment, declared repetitions and optional verified template
+families from the received graph. Never infer structure from tensor filenames,
+sort away source order, or create a second semantic graph. Components with
+children use folder/component icons, terminal components use block icons, and
+Shared families use overlapping blocks (repeated structure, not weight tying).
 
-At model level the contextual row offers compact entry choices for available
-stacks and components. Within a stack it shows its name/count, concrete instance
-index and actual variant, previous/next instance actions with correct endpoints,
-and the currently visible instances. Range navigation uses the existing
-viewport-dependent window size; long ranges scroll within the control. Preserve
-source ordering, including nonperiodic variants. Only the currently focused stack
-needs controls; other stacks retain their own expansion/window state. Returning
-to Model restores the compact overview. Retain active stack/focus state with the
-existing model/graph-keyed browser-session view state.
+The browser header contains a collapse arrow, followed by local search, a
+**Model** hierarchy and a **Shared** family list. Disclosure and selectable names
+are separate controls. Indentation is capped at four levels; full public names,
+paths, exact IDs and concrete instance context remain available on hover/focus.
+The browser owns its vertical scrolling; its header and search stay reachable.
 
-Find component searches all already received source graph nodes, including
-collapsed interiors. Results show concise readable labels with containment and
-stack/instance context that distinguishes repeated names. Name, path and exact
-identity queries are local filters; they do not fetch graphs, execute operations
-or load tensor data. Arrow keys choose a result and Enter invokes the existing
-reveal/selection behavior, opening its ancestors and selecting the exact concrete
-instance when needed. Inspection remains a separate explicit action.
+Use the Tensor inventory's pane conventions without changing that explorer:
+280 CSS-pixel preferred width, bounded to 200–480 and available width minus the
+16-pixel divider and 360-pixel canvas minimum. The accessible vertical divider
+supports pointer capture, Left/Right in 16-pixel steps, and Home/End. Temporary
+viewport constraints do not overwrite preferred width. At 760 pixels or narrower,
+the expanded browser occupies a bounded upper row (28%, at least 130 pixels),
+with the canvas below and no width divider. Explicit collapse removes the pane,
+divider and gap in both layouts, leaving a 40-pixel icon-only restore rail beside
+a full-height canvas. Neither layout causes document scrolling or scales graph
+labels down. Restore retains width, query, scroll, selection and expansion.
+Store only pane preferences in optional local storage with an in-memory fallback;
+graph-specific navigation remains scoped to backend/model/graph view lifetime.
+Collapse and resize never remount the canvas, refetch, restart numeric consumers
+or invoke Fit view.
+
+Component names select the exact source component on both surfaces, including
+nonzero repeated instances. Selection does not expand, inspect, reveal, change
+scope or camera. A component's **+ / −** and name double-click use the same
+expansion controller as its canvas card. Leaves have no disclosure or double-click
+action. Keyboard disclosure uses that controller too. Contracting a parent
+retains hidden descendants' expansion and selection; unrelated siblings remain
+unchanged. No toggle implicitly Fits view. Only explicit **Center** reveals a
+hidden selection by opening required ancestors and its exact repetition window,
+without opening its own children or every sibling.
+
+Search filters the full received graph by real label, public containment/module
+path, exact identity and supported description source key. It includes collapsed
+interiors and verified families/instances, grouped under Model and Shared with
+paths and stack/instance context to distinguish equal names. Results are a flat
+filtered list, not automatically opened real tree branches. Typing changes no
+selection, expansion, scope, camera, layout, retrieval or numeric work. Clicking
+or Enter selects only; Center and navigation remain explicit. Clearing search
+restores the ordinary tree and its scroll, retaining expansion changes made
+while filtering. Clearing selection does not clear search. Canvas selection never
+clears a hiding filter or opens the collapsed browser. Arrow keys navigate rows;
+Escape from a row returns focus to search, and Escape in search clears the query.
+
+A Shared family shows its supplied label and actual count. Its disclosure opens
+only an ordered presentation list, including nonconsecutive declared indices.
+Concrete rows share source selection and expansion with their Model occurrence.
+Selecting a family offers **Explore structure**, which enters the existing
+structure-only view without choosing instance zero or permitting weights. A common
+canvas selection in that mode is not a selected concrete Model/Shared instance;
+explicit browser source selection retains its own exact identity without choosing
+a weight-bearing instance or silently changing scope.
+Absent templates show an honest empty state and preserve ordinary navigation.
+Verified instance switching, correspondence, cancellation and exact parameter
+binding retain their established rules. Stale source/family IDs are invalidated
+with their graph. Shared scope expansion maps concrete IDs through verified roles
+to the existing anchor state, never through independent browser flags.
+
+The minimal canvas header has current Model/component context on the left,
+selected node/connection with applicable **Inspect**, **Explore component** or
+**View in model**, **Center** and clear controls toward the right, and **Fit view**
+and **View options** at the far right. Omit inapplicable selected-item controls.
+No global horizontal component strip, Find component trigger or Shared structures
+dropdown remains. Preserve explicit isolation/shared context, Back and compact
+concrete instance/previous/next/window controls. Repetition entry controls live in
+the browser. Navigation focus and selection remain distinct.
 
 View options provides exhaustive **Show all operations**, collapse, center
 selection, zoom, dimensions (initially off), context, unused-interface and derived
-MLP preferences, plus the existing applicable group/layer/MLP/state navigation.
-Fit view changes the camera; Show all operations changes visible detail.
-Unused interfaces refers specifically to unconsumed interface branches, not every
-auxiliary signal. A state-focused view identifies its filtered context. Partial
-coverage remains visible; full scope, paths, IDs and diagnostics are available
-on demand in details/inspection.
+MLP preferences, plus applicable group/layer/MLP/state navigation. Fit view changes
+the camera; Show all operations changes visible detail. Unused interfaces refers
+to unconsumed interface branches, not every auxiliary signal. State focus identifies
+its filtered context; partial coverage stays visible and full diagnostics remain
+available on demand. Options dismiss on Escape with focus restored to the trigger
+or when focus moves outside. Controls use neutral/graphite/amber styling, English
+accessible names and visible focus, with bounded overflow at narrow widths.
 
-Show a concise selected node or pinned connection with applicable inspect, center
-and clear actions. Selection and navigation focus are separate. Opening a menu,
-typing a query, changing emphasis or inspecting selection must preserve the
-mounted canvas, graph retrieval and existing numeric lifetimes, source/projection
-records, generated coordinates/routes, layout invocation count and camera.
-Explicit reveal, expansion, presentation-preference and camera commands retain
-their intended effects.
-
-Controls use the shared neutral/graphite/amber language, visible keyboard focus,
-English labels and explicit accessible names. Search and options popovers stay
-inside the panel, dismiss on Escape and restore focus to their trigger. Moving
-focus outside dismisses them. Text-entry keys retain their editing meaning.
-At constrained widths use bounded horizontal control overflow and bounded
-popover scrolling, without body scrolling or shrinking graph labels. Toolbar
-height may reclaim graph work area; shared shell and scientific geometry remain
-unchanged.
+Selection, typing, menus, emphasis and inspection preserve the mounted canvas,
+graph retrieval and numeric lifetimes, source/projection records, generated
+coordinates/routes, layout invocation count and camera. Explicit reveal,
+expansion, presentation preferences and camera commands retain their effects.
 
 ## Source-preserving visible projection
 
@@ -129,9 +166,14 @@ real model/stack/instance location. Nested isolation is bounded navigation histo
 on one canvas. **Back** restores the preceding scope's camera, expansion,
 repetition window, filters and valid node/connection selection. **View in model**
 returns to the global graph and intentionally reveals and centers the selected
-concrete component. Search still covers all received records; choosing a result
-outside the current scope explicitly returns to model context to reveal it.
-Breadcrumb navigation outside a scope likewise restores global context. Keep
+concrete component. Search and the browser cover all received records. Selecting outside the current
+scope records exact identity without leaving isolation; explicit View in model
+or Explore component remains available. Center or expansion of an outside-scope
+component deliberately returns to Model before acting and retains the isolated
+snapshot for Back. Context ancestors may appear in the browser as Model context;
+they are not represented as computational nodes inside the isolated canvas.
+Within scope, both surfaces use that scope's common expansion. Back restores its
+prior state. Breadcrumb navigation outside a scope restores global context. Keep
 view snapshots local, bounded and keyed by backend/model/graph identity without
 copying the semantic graph per entry. Reject obsolete layout/retrieval results
 on session/model/graph replacement.
@@ -153,15 +195,14 @@ layout worker and connection algorithms.
 
 ## Optional verified shared structures
 
-A received template annotation offers **Shared structure** from any of its
-concrete component members and a compact **Shared structures** selector in the
-existing navigation. This remains an optional isolated view on the same canvas.
+A received template annotation offers **Explore structure** from its selected
+concrete component members and from families in the browser’s **Shared** list. This remains an optional isolated view on the same canvas.
 Ordinary overview, exhaustive access, isolation, routing and numerical inspection
 remain independent of template metadata. No frontend pattern matching establishes
 equivalence; the API's validated exact role mappings are authoritative.
 
 Entry from a selected component retains its concrete instance and selected
-operation. Entry from the template selector is explicitly **structure only**:
+operation. Entry from a selected browser family is explicitly **structure only**:
 show the common verified topology, shapes and attributes with no weight-bearing
 instance selected and no parameter action. The shared canvas covers the declared
 interior and explicit boundary forwarding; external producers/consumers remain
@@ -275,7 +316,7 @@ not the template representative. Controls have English target-specific names and
 tooltips, visible focus and independent click/double-click hit behavior. Ports,
 connections and expanded-group children retain their own targets.
 
-The canvas and a future navigator consume one authoritative component selection
+The canvas and browser consume one authoritative component selection
 and expansion state per current model/graph/scope view, with changes from either
 representation immediately reflected by both. Contracting a parent hides its
 descendants but retains their nested expansion choices and unrelated sibling
