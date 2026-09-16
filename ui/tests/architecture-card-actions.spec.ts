@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { findComponent, graphAction } from './architecture-controls';
+import { openShared, findComponent, graphAction } from './architecture-controls';
 import { makeProjectionFixture } from './architecture-projection-fixture';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
@@ -240,7 +240,7 @@ test('nested derived double-click contracts after expansion and shared structure
   await expect(page.getByRole('dialog', { name: 'Group inspection' })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('templates'); await ready(page);
-  await page.getByLabel('Shared structures', { exact: true }).selectOption('shared-full-attention'); await ready(page);
+  await openShared(page, 'shared-full-attention'); await ready(page);
   await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   const controls = page.locator('.architecture-navigate');
   for (const control of await controls.all()) {

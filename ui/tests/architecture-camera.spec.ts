@@ -58,8 +58,18 @@ test('cold fit waits for current geometry, then selection, menus, hover and resi
   await releaseSizes(page); await ready(page);
   const before = await sample(page), count = await page.evaluate(() => window.cameraProbe.events.length);
   await page.locator('.architecture-node-label').first().click();
-  await page.locator('.architecture-port').first().hover();
-  await page.getByRole('button', { name: 'Find component', exact: true }).click(); await page.keyboard.press('Escape');
+  // The compact narrow canvas can clip the first source port. Hover an on-screen
+  // port without revealing or centering it, which would invalidate this oracle.
+  const visiblePort = await page.locator('.architecture-port').evaluateAll((ports) => {
+    const flow = document.querySelector('.architecture-flow')!.getBoundingClientRect();
+    return ports.find((port) => {
+      const r = port.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+      return x > flow.left && x < flow.right && y > flow.top && y < flow.bottom;
+    })?.getAttribute('aria-label');
+  });
+  expect(visiblePort).toBeTruthy();
+  await page.getByRole('button', { name: visiblePort!, exact: true }).hover();
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).focus(); await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'View options', exact: true }).click(); await page.keyboard.press('Escape');
   await page.setViewportSize({ width: info.project.use.viewport!.width, height: info.project.use.viewport!.height! - 30 });
   await expect.poll(async () => (await sample(page)).actual[1]).not.toBe(before.actual[1]);
@@ -103,7 +113,7 @@ for (const target of ['selected', 'connection'] as const) {
     await findComponent(page, 'layer-2.attention.Q'); await ready(page);
     const previous = await sample(page);
     await pending(page);
-    await page.getByRole('button', { name: 'Shared structure', exact: true }).click();
+    await page.getByRole('button', { name: 'Explore structure', exact: true }).click();
     await resizeWhilePending(page);
     await expect(panel(page)).not.toHaveAttribute('data-layout-count', previous.layout!);
     if (target === 'connection') {

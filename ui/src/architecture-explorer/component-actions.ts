@@ -3,8 +3,8 @@ import type { ProjectedNode } from './projection';
 import { cardExpandable } from './card-actions';
 
 /** Shared canvas/navigator actions. Neither selection nor hiding a descendant reveals it. */
-export function selectComponent(view: GraphView, id: string | null) {
-  view.update({ selected: id, edge: null });
+export function selectComponent(view: GraphView, id: string | null, selectionMode: GraphView['selectionMode'] = 'source') {
+  view.update({ selected: id, selectionMode, edge: null, ...(view.browser.selectedFamily ? { browser: { ...view.browser, selectedFamily: null } } : {}) });
 }
 
 export function toggleComponent(view: GraphView, graph: Graph, node: ProjectedNode, windowSize: number) {

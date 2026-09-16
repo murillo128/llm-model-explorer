@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Graph, Layout } from '../src/architecture-explorer/graph';
 import type { ProjectionOptions } from '../src/architecture-explorer/projection';
-import { findComponent, graphAction, graphPreference } from './architecture-controls';
+import { openShared, findComponent, graphAction, graphPreference } from './architecture-controls';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
 interface IsolationProbe {
@@ -132,6 +132,10 @@ test('the existing derived MLP exposes explicit isolation without changing its s
 
 test('unrelated model growth leaves a small isolated component readable and its bounds unchanged', async ({ page }) => {
   await isolate(page, 'layer-3.mlp');
+  // Center the operation without shrinking the isolated component to fit a
+  // narrow viewport; viewport culling may otherwise omit this particular label.
+  await findComponent(page, 'layer-3.gate'); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-3.mlp');
   const before = await state(page);
   const label = page.locator('[data-id="layer-3.gate"] .architecture-node-label');
   await expect(label).toBeVisible();
@@ -139,6 +143,8 @@ test('unrelated model growth leaves a small isolated component readable and its 
   expect(labelBox.height).toBeGreaterThanOrEqual(12);
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('components-large'); await ready(page);
   await isolate(page, 'layer-3.mlp');
+  await findComponent(page, 'layer-3.gate'); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-3.mlp');
   const after = await state(page);
   expect([after.layout.width, after.layout.height]).toEqual([before.layout.width, before.layout.height]);
   expect(after.layout.boxes).toEqual(before.layout.boxes); expect(after.layout.ports).toEqual(before.layout.ports);
@@ -192,12 +198,12 @@ test('layout failure allows retry and Back; queued late results cannot replace a
 test('optional shared-view failures recover to ordinary exploration and reject cancelled layout callbacks', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('templates'); await ready(page);
   await page.evaluate(() => { window.isolationProbe.reject = true; });
-  await page.getByLabel('Shared structures', { exact: true }).selectOption('shared-full-attention');
+  await openShared(page, 'shared-full-attention');
   await expect(page.getByRole('alert')).toContainText('Layout failed');
   await page.getByRole('button', { name: 'Return to ordinary view', exact: true }).click(); await ready(page);
   await expect(panel(page)).toHaveAttribute('data-template-id', '');
   await page.evaluate(() => { window.isolationProbe.hold = true; });
-  await page.getByLabel('Shared structures', { exact: true }).selectOption('shared-full-attention');
+  await openShared(page, 'shared-full-attention');
   await expect.poll(() => page.evaluate(() => Boolean(window.isolationProbe.release))).toBe(true);
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
   const ordinary = await state(page);
@@ -211,6 +217,7 @@ test('optional shared-view failures recover to ordinary exploration and reject c
 
 test('card navigation resolves the active root, nests exact children, and restores each scope without collapse', async ({ page }, info) => {
   await findComponent(page, 'layer-3'); await ready(page);
+  await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
   await graphAction(page, 'Toggle selected group'); await ready(page);
   await graphPreference(page, 'Unused interfaces', true); await ready(page);
   await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
@@ -227,19 +234,19 @@ test('card navigation resolves the active root, nests exact children, and restor
   await capture('navigation-model');
   const model = await state(page);
   await nav('layer-3').click(); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   await expect(nav('layer-3')).toHaveAccessibleName(/^View in model:/);
   await expect(nav('layer-3.attention')).toHaveAccessibleName(/^Explore component:/);
   await expect(nav('layer-3.mlp')).toHaveAccessibleName(/^Explore component:/);
-  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   await capture('navigation-isolated-root');
   // Select A, activate B. B's action must neither return to A nor collapse A.
   await layerCard.locator('.architecture-node-label').click();
   const layer = await state(page);
   await nav('layer-3.attention').dblclick(); await ready(page);
   await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-3.attention');
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   await expect(nav('layer-3.attention')).toHaveAccessibleName(/^View in model:/);
   await expect(nav('layer-3.attention.Q')).toHaveAccessibleName(/^Explore component:/);
-  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   await capture('navigation-nested-isolation');
   await attention.locator('.architecture-node-label').click();
   const component = await state(page);

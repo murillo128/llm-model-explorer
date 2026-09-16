@@ -61,16 +61,16 @@ test('search and overflow preserve the canvas, projection, generated routes, cam
   const canvas = await page.locator('.react-flow').elementHandle();
   const before = await snapshot(page);
   assertTransportProjection(before.requests.at(-1)!.graph, before.layouts.at(-1)!);
-  await page.getByRole('button', { name: 'Find component', exact: true }).click();
-  const search = page.getByRole('combobox', { name: 'Search components', exact: true });
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).focus();
+  const search = page.getByRole('searchbox', { name: 'Search components', exact: true });
   await expect(search).toBeFocused();
   await search.fill('linear');
   await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowUp');
   await search.press('Home'); await search.type('absent ');
-  await expect(page.getByRole('dialog', { name: 'Find component', exact: true }).getByRole('status')).toContainText('No matching components');
+  await expect(page.getByRole('group', { name: 'Model search results', exact: true })).toContainText('No matching components');
   expect(await snapshot(page)).toEqual(before);
   await search.press('Escape');
-  await expect(page.getByRole('button', { name: 'Find component', exact: true })).toBeFocused();
+  await expect(page.getByRole('searchbox', { name: 'Search components', exact: true })).toBeFocused();
   const options = await viewOptions(page);
   await expect(options.getByRole('button', { name: 'Show all operations' })).toBeFocused();
   await expect(options.getByLabel('Show dimensions')).not.toBeChecked();
@@ -84,13 +84,13 @@ test('search and overflow preserve the canvas, projection, generated routes, cam
   expect(await snapshot(page)).toEqual(before);
 });
 
-test('keyboard search reveals collapsed repeated names with parent context and exact source bindings', async ({ page }) => {
+test('keyboard search selects before explicit Center reveals collapsed repeated names with parent context and exact source bindings', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('mixed-stacks'); await ready(page);
   await expect(page.getByRole('combobox', { name: /Expand instance of/ })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Find component', exact: true }).click();
-  const search = page.getByRole('combobox', { name: 'Search components', exact: true });
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).focus();
+  const search = page.getByRole('searchbox', { name: 'Search components', exact: true });
   await search.fill('Q projection');
-  const options = page.getByRole('listbox', { name: 'Components', exact: true }).getByRole('option');
+  const options = page.getByRole('group', { name: 'Model search results', exact: true }).locator('[data-node-id]');
   await expect(options).toHaveCount(5); // Encoder full instances 0/2/3; predictor 0/1.
   const contexts = await options.allTextContents();
   expect(new Set(contexts).size).toBe(5);
@@ -99,7 +99,10 @@ test('keyboard search reveals collapsed repeated names with parent context and e
   await search.fill('Q projection encoder layer 3');
   await expect(options).toHaveCount(1);
   const id = await options.first().getAttribute('data-node-id');
+  const compact = await snapshot(page);
   await search.press('Enter'); await ready(page);
+  expect(await snapshot(page)).toEqual(compact);
+  await page.getByRole('button', { name: 'Center selected', exact: true }).click(); await ready(page);
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', id!);
   await expect(page.getByRole('combobox', { name: /Expand instance of Encoder/ })).toHaveValue('encoder.layer-3');
   const before = await snapshot(page);
@@ -176,6 +179,14 @@ for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack can
   for (let i = 0; i < 16 && !await inView(); i++) { await graphAction(page, 'Zoom graph out'); await ready(page); }
   expect(await inView()).toBe(true);
   const navigation = page.locator('[data-id="mlp:encoder.layer-3.gate"] .architecture-navigate');
+  // The bounded narrow canvas can expose a distant stack at subpixel scale.
+  // Focal camera zoom makes its native control actionable without changing focus.
+  for (let i = 0; i < 16 && (await navigation.boundingBox())!.width < 12; i++) {
+    const box = (await navigation.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.wheel(0, -400);
+    await expect.poll(async () => (await navigation.boundingBox())!.width).toBeGreaterThan(box.width);
+  }
   if (activation === 'pointer') await navigation.click();
   else { await navigation.focus(); await page.keyboard.press('Enter'); }
   await ready(page);
@@ -246,7 +257,7 @@ test('all operations and camera fit remain distinct; popovers stay in the panel 
   await graphAction(page, 'Show all operations'); await ready(page);
   const after = await snapshot(page);
   assertTransportProjection(after.requests.at(-1)!.graph, after.layouts.at(-1)!, true);
-  for (const label of ['Find component', 'View options']) {
+  for (const label of ['View options']) {
     await page.getByRole('button', { name: label, exact: true }).click();
     const panel = (await page.getByLabel('Architecture graph', { exact: true }).boundingBox())!;
     const popover = (await page.getByRole('dialog', { name: label, exact: true }).boundingBox())!;

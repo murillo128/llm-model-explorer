@@ -20,8 +20,13 @@ formulas, storage and localized limitations, and composes the existing
 `TensorExplorer` consumer for available native vectors/matrices. Parameter choice
 never infers a layer or tensor ID from its name.
 
-`useGraphView(view)` subscribes the canvas and future component consumers to the
-same retained view. `component-actions.ts` owns their selection/toggle commands;
+`useGraphView(view)` subscribes the canvas and browser to the
+same retained view. `ArchitectureBrowser` derives ordered rows/search from the
+received graph and uses this controller; `ArchitectureWorkspace` keeps both pane
+and canvas mounted through collapse/resize. Only pane width/visibility use optional
+local storage. Query, scroll and family-list disclosure follow the graph view
+lifetime. A single selection ID distinguishes source selection from a neutral
+common-structure selection so no concrete instance is implied. `component-actions.ts` owns their selection/toggle commands;
 pass a projected target to preserve source versus presentation identity, including
 rebound shared instances. The view keeps projection options referentially stable
 for selection/camera updates. A toggle carries a transient anchor ID that the
@@ -62,13 +67,13 @@ unresolved bindings and high ranks have no numeric action.
 iterative walks rather than recursive containment. Its ten-second deadline,
 termination on replacement/unmount, and explicit retry/collapse failure preserve
 recoverability. A stale layout cannot update a later graph generation. Expanding a
-group anchors its upper-left location in screen coordinates; component selection
-can reveal and center any concrete instance without fitting the whole diagram.
+group anchors its upper-left location in screen coordinates; explicit Center
+can reveal any concrete instance without fitting the whole diagram.
 
 Collapsed interiors retain semantic records in the original graph. Only edges
 whose endpoints are visible are sent to React Flow; the contract requires explicit
 group-boundary ports, so external crossings remain present unchanged. Viewport
-culling affects DOM elements, not the graph, component picker or expanded layout.
+culling affects DOM elements, not the graph, component browser or expanded layout.
 Every instance remains separately labelled with its index and variant. No
 representative is substituted for a different instance's parameter bindings.
 

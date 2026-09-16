@@ -1,4 +1,4 @@
-import { graphAction } from './architecture-controls';
+import { selectComponent, graphAction } from './architecture-controls';
 import { expect, test } from '@playwright/test';
 import type { BrowserContext, Route } from '@playwright/test';
 import { contractInventory, contractResponse, referenceFixture } from './architecture-fixtures';
@@ -35,8 +35,11 @@ test('built shell retrieves on demand, supports V-JEPA without tokenization and 
   await expect(graph).toHaveAttribute('data-visible-nodes', '3');
   const received = [...requests];
   const canvasElement = await page.locator('.react-flow').elementHandle();
-  await page.getByRole('button', { name: 'Find component', exact: true }).click();
-  await page.getByRole('combobox', { name: 'Search components', exact: true }).fill('linear');
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).focus();
+  await selectComponent(page, 'linear1');
+  await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
+  await page.getByRole('button', { name: 'Expand browser', exact: true }).click();
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).focus();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'View options', exact: true }).click();
   await page.keyboard.press('Escape');
