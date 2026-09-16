@@ -286,7 +286,8 @@ class _Graph:
                 + [role_attribute(PRODUCER, operation_role(key, operation))],
                 provenance=PRODUCER.provenance() + [source_key(PRODUCER, key)],
                 **args,
-            )
+            ),
+            semantic_key=key,
         )
         for port, value in inputs.items():
             self.link(value, key, port)
@@ -370,7 +371,8 @@ class _Graph:
                 + ([] if role is None else [role_attribute(PRODUCER, role)]),
                 provenance=PRODUCER.provenance() + [source_key(PRODUCER, key)],
                 **args,
-            )
+            ),
+            semantic_key=key,
         )
         return _Value(key, "out", output.shape)
 
@@ -410,6 +412,7 @@ class _Graph:
             residual = ins["x"]
             norm = self.affine(key + ".norm1", residual, hidden, key, norm=True)
             attention = key + ".attention"
+            self.b.begin_template(attention, key, stack + "_attention", "attention")
             attention_inputs = {"x": norm, "positions": ins["positions"]}
             av = self.group(attention, attention_inputs)
             qkv = {}
@@ -482,6 +485,7 @@ class _Graph:
             )
             norm = self.affine(key + ".norm2", residual, hidden, key, norm=True)
             mlp_group = key + ".mlp"
+            self.b.begin_template(mlp_group, key, stack + "_mlp", "mlp")
             mlp_inputs = {"x": norm}
             mv = self.group(mlp_group, mlp_inputs)
             up = self.affine(key + ".mlp.fc1", mv["x"], [batch, sequence, *shape(mlp)], mlp_group)

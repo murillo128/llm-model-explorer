@@ -144,7 +144,7 @@ GRAPH_CASES = [
 
 @pytest.mark.parametrize("case", GRAPH_CASES, ids=lambda case: case["name"])
 def test_independently_reviewed_graph_cases(case: dict[str, Any]) -> None:
-    response = edits(ORACLE["response"], case["edits"])
+    response = edits(ORACLE[case.get("base", "response")], case["edits"])
     binding = context(edits(ORACLE["context"], case["context_edits"]))
     if case["name"] == "rank1-native":
         # This core also verifies physical descriptors, which the API fixture context omits.

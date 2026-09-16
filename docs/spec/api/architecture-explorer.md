@@ -70,6 +70,55 @@ Labels are concise display text. Original module references and semantic source
 keys in description provenance retain full identity for inspection. Conceptual
 description-derived groups must not claim an original module that does not exist.
 
+## Optional verified shared structures
+
+`ArchitectureGraph.templates` is optional; absence and `[]` mean no verified
+families. It annotates the complete ordinary graph without replacing any source
+record, requiring expansion, or adding an endpoint. Each closed record has an
+opaque graph-scoped `id`, `label`, `component_role` (`attention` or `mlp`),
+definition `revision`, reviewed description `provenance`, and at least two ordered
+`instances`. Template IDs share the graph's record-identity namespace.
+
+Each instance names its source group `node_id` and four role-mapping arrays:
+`nodes` entries `{role, node_id}`, `ports` entries `{role, node_id, port_id}`,
+`edges` entries `{role, edge_id}`, and `parameters` entries
+`{role, parameter_id}`. Roles are bounded local identifiers, unique per category;
+targets are also unique per category. Members of a family have identical role
+sets. A source component occurs in at most one family. Roles are neither tensor
+IDs nor expressions, routes or instructions.
+
+Node mappings cover the group itself and its complete descendant closure; port
+mappings cover every port of those nodes, including unused interface ports.
+Edges cover exactly those with both endpoints in that closure, including group
+forwarding. External producers and consumers remain concrete instance context
+connected through the real interface ports. Parameter mappings cover exactly the
+logical parameters referenced by the mapped nodes, including parameter resource
+references. They never substitute the first member's storage or numeric identity.
+
+Under that correspondence require identical ordered containment, operation kinds,
+operation identifiers, formulas, descriptions, complete attribute values, port
+identifiers/directions/shapes, directed edge kinds/endpoints, ordered node parameter
+roles and logical shapes. Preserve internal alias relationships. Symbolic names
+and meanings are graph-local and must agree; unknown ranks, dimensions, operation
+metadata, or diagnosed component nodes cannot establish equivalence. Physical
+bindings, availability, tensor values, source IDs/module paths, and external
+neighbors may differ. No numeric values are read or compared. Malformed published
+annotations fail normal document validation.
+
+Instances follow their enclosing declared repetition order (including
+nonconsecutive hybrid indices), or sibling order in the same declared scope when
+no repetition applies. A family never imposes ordering between independent
+stacks. Description-owned variants may conservatively remain separate even when
+a structural comparison would pass. Broad algebraic equivalence, optional-node
+rewrites, dimension polymorphism and cross-model templates are deferred.
+
+Annotations consume the existing decoded response budget. If optional construction
+or serialization cannot fit, omit affected annotations and retain the ordinary
+graph and coverage. Emit a safe diagnostic when it fits, or a safe producer log
+when even diagnostic bytes cannot fit. Genuine base-graph limits still fail.
+Producer/schema revision changes use normal startup cache invalidation; old
+artifacts are immutable and GET never regenerates them.
+
 ## Parameters and explorer resource references
 
 `ArchitectureParameter` requires `id`, `name`, `logical_shape`, `binding`, `storage`, `inspection`, and `provenance`. `logical_shape` uses the dimension representation above. `binding` is `native`, `alias`, `fused_region`, `quantized`, or `unresolved`. An alias supplies `alias_of`; a fused region supplies a declarative `region` object with `storage_name` and plain-text `description` of its axes/ranges when known, never an executable slice expression. Storage records give physical tensor `name`, `dtype`, and integer `shape`; optional `role` distinguishes packed data, scales, or other verified encoding data. Storage names are checkpoint tensor names, not shard paths.

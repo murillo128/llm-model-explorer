@@ -10,6 +10,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from . import records as r
+from .templates import ComponentTemplates
 from .validation import (
     MAX_BYTES,
     BindingContext,
@@ -26,7 +27,7 @@ from .validation import (
 if TYPE_CHECKING:
     from ..tensor_source import PhysicalTensor, TensorDescriptor
 
-ANALYZER_REVISION = "static-graph-core-2"
+ANALYZER_REVISION = "static-graph-core-3"
 Scope = Literal["language_model", "visual_encoder_predictor"]
 
 
@@ -162,6 +163,8 @@ class GraphBuilder:
         self._symbols: list[r.ArchitectureSymbol] = []
         self._diagnostics: list[r.ArchitectureDiagnostic] = []
         self._partial = False
+        self.templates = ComponentTemplates()
+        self._parameter_by_id: dict[str, r.ArchitectureParameter] = {}
 
     def record_id(self, kind: str, key: str) -> str:
         return identity("architecture-record", self.graph_id, kind, key)
@@ -178,8 +181,14 @@ class GraphBuilder:
             self._ids.add(key)
         collection.append(copy)
 
-    def add_node(self, node: r.ArchitectureNode) -> str:
+    def begin_template(
+        self, key: str, base: str, family: str, role: Literal["attention", "mlp"]
+    ) -> None:
+        self.templates.begin(self.record_id("node", key), base, family, role)
+
+    def add_node(self, node: r.ArchitectureNode, *, semantic_key: str | None = None) -> str:
         self._append(self._nodes, node)
+        self.templates.observe(node, semantic_key, self._parameter_by_id)
         return node.id
 
     def add_edge(self, edge: r.ArchitectureEdge) -> str:
@@ -188,6 +197,7 @@ class GraphBuilder:
 
     def add_parameter(self, parameter: r.ArchitectureParameter) -> str:
         self._append(self._parameters, parameter)
+        self._parameter_by_id[parameter.id] = self._parameters[-1]
         return parameter.id
 
     def add_repetition(self, repetition: r.ArchitectureRepetition) -> str:
@@ -310,6 +320,9 @@ class GraphBuilder:
             parameters=self._parameters,
             diagnostics=self._diagnostics,
         )
+        serialized_size(graph.document(), self.byte_limit)
+        validate_graph(graph, self.inputs.bindings)
+        graph = self.templates.annotate(graph, self)
         serialized_size(graph.document(), self.byte_limit)
         validate_graph(graph, self.inputs.bindings)
         return graph

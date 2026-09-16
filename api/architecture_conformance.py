@@ -231,6 +231,208 @@ def validate_architecture(value, context=None):
             if native['binding'] == 'quantized':
                 validate_packed_storage(native, geometry, tensor)
 
+    validate_templates(graph)
+
+
+def validate_templates(graph):
+    """Independent role-labelled graph comparison; external neighbors remain context."""
+    templates = graph.get('templates', [])
+    if not templates:
+        return
+    nodes = {n['id']: n for n in graph['nodes']}
+    parameters = {p['id']: p for p in graph['parameters']}
+    edges = {e['id']: e for e in graph['edges']}
+    unique(graph['nodes'] + graph['parameters'] + graph['edges'] + graph['repetitions'] + templates)
+    adjacency = {n: set() for n in nodes}
+    for e in edges.values():
+        adjacency[e['source']['node_id']].add(e['id'])
+        adjacency[e['target']['node_id']].add(e['id'])
+    repeated = {i['node_id']: (rep['id'], position) for rep in graph['repetitions']
+                for position, i in enumerate(rep['instances'])}
+    order = {}
+    pending = [(n['id'], None) for n in nodes.values() if 'parent_id' not in n]
+    while pending:
+        ident, inherited = pending.pop()
+        owner = repeated.get(ident, inherited)
+        if owner is not None:
+            order[ident] = owner
+        for position, child in enumerate(nodes[ident].get('children', [])):
+            order[child] = owner or (ident, position)
+            pending.append((child, owner))
+    aliases = {}
+    for ident in parameters:
+        path, terminal = [], ident
+        while terminal not in aliases and parameters[terminal]['binding'] == 'alias':
+            path.append(terminal)
+            terminal = parameters[terminal]['alias_of']
+        terminal = aliases.get(terminal, terminal)
+        aliases[ident] = terminal
+        for member in path:
+            aliases[member] = terminal
+    diagnosed = {d.get('node_id') for d in graph['diagnostics']}
+    seen = set()
+    for template in templates:
+        require(any(p['kind'] == 'description' and p.get('revision') for p in template['provenance']),
+                'reviewed template provenance')
+        previous, scope, baseline = -1, None, None
+        for instance in template['instances']:
+            root = instance['node_id']
+            require(root in nodes and nodes[root]['kind'] == 'group' and root not in seen,
+                    'template component identity')
+            seen.add(root)
+            owner, position = order.get(root, (None, -1))
+            require(owner is not None and (scope is None or scope == owner) and position > previous,
+                    'template source order/scope')
+            scope, previous = owner, position
+            members, pending = set(), [root]
+            while pending:
+                ident = pending.pop()
+                require(ident not in members, 'template containment')
+                members.add(ident)
+                pending.extend(nodes[ident].get('children', []))
+            require(not members.intersection(diagnosed), 'unverified template node')
+            maps = {}
+            for category, field in [('nodes', 'node_id'), ('ports', 'port_id'),
+                                    ('edges', 'edge_id'), ('parameters', 'parameter_id')]:
+                unique(instance[category], 'role')
+                maps[category] = {
+                    (m['node_id'], m['port_id']) if category == 'ports' else m[field]: m['role']
+                    for m in instance[category]}
+                require(len(maps[category]) == len(instance[category]), 'duplicate template target')
+            nr, pr, er, wr = (maps[c] for c in ['nodes', 'ports', 'edges', 'parameters'])
+            require(set(nr) == members, 'template node closure')
+            require(set(pr) == {(ident, p['id']) for ident in members for p in nodes[ident]['ports']},
+                    'template port coverage')
+            require(set(er) == {eid for ident in members for eid in adjacency[ident]
+                    if edges[eid]['source']['node_id'] in members and edges[eid]['target']['node_id'] in members},
+                    'template edge coverage')
+            require(set(wr) == {pid for ident in members for pid in nodes[ident]['parameter_ids']} |
+                    {ref['parameter_id'] for ident in members for ref in nodes[ident]['references']
+                     if ref['kind'] == 'parameter'}, 'template parameter coverage')
+            def known_shape(shape):
+                require(shape is not None and all(d['kind'] != 'unknown' for d in shape),
+                        'unknown template shape')
+                return shape
+            normal = {'root': nr[root], 'nodes': {}, 'ports': {}, 'edges': {}, 'parameters': {}}
+            for ident in members:
+                n = nodes[ident]
+                attributes = unique(n['attributes'], 'name')
+                require(all(a['value'] is not None and not (isinstance(a['value'], list) and
+                        None in a['value']) for a in attributes.values()), 'unknown template attribute')
+                require(n['kind'] == 'group' or n.get('operation'), 'unknown template operation')
+                if ident == root:
+                    require(attributes.get('semantic_role', {}).get('value') == template['component_role'],
+                            'template component role')
+                normal['nodes'][nr[ident]] = [n['kind'], n.get('operation'), n.get('formula'), n.get('description'),
+                    nr.get(n.get('parent_id')), [nr[c] for c in n.get('children', [])],
+                    [pr[(ident, p['id'])] for p in n['ports']], [wr[p] for p in n['parameter_ids']],
+                    [wr[r['parameter_id']] for r in n['references'] if r['kind'] == 'parameter'],
+                    {name: a['value'] for name, a in attributes.items()}]
+                for p in n['ports']:
+                    normal['ports'][pr[(ident, p['id'])]] = [nr[ident], p['id'], p['direction'], known_shape(p['shape'])]
+            for eid, role in er.items():
+                e = edges[eid]
+                normal['edges'][role] = [pr[(e['source']['node_id'], e['source']['port_id'])],
+                    pr[(e['target']['node_id'], e['target']['port_id'])], e['kind']]
+            alias_roles = {}
+            for pid, role in wr.items():
+                alias_roles.setdefault(aliases[pid], []).append(role)
+            for pid, role in wr.items():
+                normal['parameters'][role] = [known_shape(parameters[pid]['logical_shape']), sorted(alias_roles[aliases[pid]])]
+            require(baseline is None or baseline == normal, 'incompatible template computation')
+            baseline = normal
+
+
+def template_cases():
+    """Authored two-instance oracle, independent of all packaged descriptions."""
+    provenance = [dict(kind='description', source='independent-attention-fixture', revision='1')]
+    dims = [dict(kind='constant', value=2), dict(kind='constant', value=2)]
+    def ports(*pairs):
+        return [dict(id=ident, label=ident, direction=direction, shape=deepcopy(dims)) for ident, direction in pairs]
+    def node(ident, kind, parent=None, **kwargs):
+        result = dict(id=ident, kind=kind, label=ident, ports=[], parameter_ids=[], references=[],
+                      attributes=[], provenance=provenance, **({'parent_id': parent} if parent else {}))
+        result.update(kwargs)
+        return result
+    def attr(name, value):
+        return dict(name=name, value=value, provenance=provenance)
+    nodes = [node('root', 'group', children=['layer0', 'layer2'])]
+    edges, parameters, instances = [], [], []
+    for i in (0, 2):
+        layer, component = f'layer{i}', f'attention{i}'
+        nodes.append(node(layer, 'group', 'root', children=[component], ports=ports(('x','input'),('out','output'))))
+        nodes.append(node(component, 'group', layer, children=[f'q{i}',f'k{i}',f'dot{i}'],
+                          ports=ports(('x','input'),('out','output')), attributes=[attr('semantic_role','attention')]))
+        for role in ('q', 'k'):
+            ident, pid = f'{role}{i}', f'{role}weight{i}'
+            nodes.append(node(ident, 'operation', component, operation='linear',
+                ports=ports(('x','input'),('out','output')), parameter_ids=[pid],
+                references=[dict(kind='parameter',parameter_id=pid)],
+                attributes=[attr('semantic_role', 'query_projection' if role == 'q' else 'key_projection'), attr('bias',False)]))
+            parameters.append(dict(id=pid,name=f'layer{i}.{role}.weight', logical_shape=deepcopy(dims),
+                binding='unresolved',storage=[],inspection=dict(status='unavailable',reason='unresolved_binding',
+                message='Independent fixture has no storage.'),provenance=provenance))
+        nodes.append(node(f'dot{i}','operation',component,operation='matmul',formula='Q K^T',
+            ports=ports(('q','input'),('k','input'),('out','output')),attributes=[attr('causal',True)]))
+        routes = [('input',layer,'x',component,'x'),('q_input',component,'x',f'q{i}','x'),
+                  ('k_input',component,'x',f'k{i}','x'),('q_dot',f'q{i}','out',f'dot{i}','q'),
+                  ('k_dot',f'k{i}','out',f'dot{i}','k'),('result',f'dot{i}','out',component,'out'),
+                  ('output',component,'out',layer,'out')]
+        for role, source, sp, target, tp in routes:
+            edges.append(dict(id=f'{role}{i}',source=dict(node_id=source,port_id=sp),
+                target=dict(node_id=target,port_id=tp),kind='data',provenance=provenance))
+        mapping = dict(component=component,q=f'q{i}',k=f'k{i}',dot=f'dot{i}')
+        instances.append(dict(node_id=component,nodes=[dict(role=role,node_id=ident) for role,ident in mapping.items()],
+            ports=[dict(role=role+'.'+p['id'],node_id=ident,port_id=p['id']) for role,ident in mapping.items()
+                   for n in nodes if n['id']==ident for p in n['ports']],
+            edges=[dict(role=role,edge_id=f'{role}{i}') for role in ('q_input','k_input','q_dot','k_dot','result')],
+            parameters=[dict(role=role+'.weight',parameter_id=f'{role}weight{i}') for role in ('q','k')]))
+    graph = dict(graph_id='independent-templates',scope='language_model',coverage='complete',symbols=[],nodes=nodes,
+        edges=edges,parameters=parameters,diagnostics=[],repetitions=[dict(id='layers',parent_id='root',label='layers',
+            instances=[dict(node_id=f'layer{i}',index=i,variant='full_attention') for i in (0,2)])],
+        templates=[dict(id='shared_attention',label='Attention',component_role='attention',revision='1',
+                        provenance=provenance,instances=instances)])
+    cases = []
+    def case(name, edits=(), valid=False):
+        cases.append(dict(name='template-'+name,base='template_response',edits=list(edits),valid=valid,context_edits=[],
+                          schema_valid=name not in {'null','singleton','missing-provenance'}))
+    def set_(path, value):
+        return dict(path=('graph/'+path).split('/'),value=value)
+    case('verified-nonconsecutive',valid=True)
+    case('absent', [dict(path=['graph','templates'],delete=True)],True)
+    case('empty', [set_('templates',[])],True)
+    case('null', [set_('templates',None)])
+    case('singleton',[set_('templates/0/instances',instances[:1])])
+    case('reversed-order',[set_('templates/0/instances',list(reversed(instances)))])
+    case('duplicate-instance',[set_('templates/0/instances/1',instances[0])])
+    case('missing-provenance',[set_('templates/0/provenance',[])])
+    case('wrong-component-role',[set_('templates/0/component_role','mlp')])
+    case('id-collision',[set_('templates/0/id','root')])
+    for category, field in [('nodes','node_id'),('ports','node_id'),('edges','edge_id'),('parameters','parameter_id')]:
+        first = instances[1][category][0]
+        case(category+'-missing',[set_(f'templates/0/instances/1/{category}',instances[1][category][1:])])
+        case(category+'-duplicate-role',[set_(f'templates/0/instances/1/{category}/1/role',first['role'])])
+        case(category+'-foreign-reference',[set_(f'templates/0/instances/1/{category}/0/{field}','foreign')])
+        case(category+'-wrong-subtree',[set_(f'templates/0/instances/1/{category}/0',instances[0][category][0])])
+    dot = next(i for i,n in enumerate(nodes) if n['id']=='dot2')
+    q = next(i for i,n in enumerate(nodes) if n['id']=='q2')
+    case('swapped-same-shape-qk',[set_('edges/10/target/port_id','k'),set_('edges/11/target/port_id','q')])
+    case('swapped-port-roles',[set_('templates/0/instances/1/ports/6/role','dot.k'),set_('templates/0/instances/1/ports/7/role','dot.q')])
+    case('wrong-instance-parameter',[set_(f'nodes/{q}/parameter_ids',['qweight0'])])
+    case('different-operation',[set_(f'nodes/{dot}/operation','linear_attention')])
+    case('different-formula',[set_(f'nodes/{dot}/formula','K Q^T')])
+    case('different-normalization',[set_(f'nodes/{q}/attributes/1',attr('epsilon',1e-6))])
+    case('different-bias',[set_(f'nodes/{q}/attributes/1/value',True)])
+    case('different-shape',[set_('parameters/2/logical_shape',[dict(kind='constant',value=3),dict(kind='constant',value=2)])])
+    case('different-state-rule',[set_(f'nodes/{dot}/attributes/0',attr('state_rule','recurrent'))])
+    case('different-edge-kind',[set_('edges/10/kind','state')])
+    case('unknown-attribute',[set_(f'nodes/{dot}/attributes/0/value',None)])
+    case('unknown-shape',[set_('parameters/2/logical_shape',None)])
+    case('parameter-alias',[set_('parameters/2/binding','alias'),set_('parameters/2/alias_of','qweight0')],True)
+    case('internal-alias-change',[set_('parameters/3/binding','alias'),set_('parameters/3/alias_of','qweight2')])
+    case('unavailable-storage-difference',[set_('parameters/2/inspection/reason','unsupported_representation')],True)
+    return graph, cases
+
 
 def fixtures():
     """Compact base documents plus mutation cases; never repeat a full graph per defect."""
@@ -471,6 +673,8 @@ def fixtures():
             ('wrong-inventory-shape', [set_('inventory/tensors/2/shape', list(reversed(dims)))]),
         ]:
             case(label+'-'+suffix, base_edits, context_edits=base_context + changes)
+    template_graph, additional_cases = template_cases()
+    cases.extend(additional_cases)
     # Large-size tests use repeated fixed chunks, never a 32 MiB fixture/object allocation.
     bounds = [dict(name='exact-limit', chunk_bytes=4096, repeat=8192, tail_bytes=0, valid=True),
               dict(name='one-byte-over', chunk_bytes=4096, repeat=8192, tail_bytes=1, valid=False)]
@@ -483,7 +687,8 @@ def fixtures():
         dict(name='diagnostics-not-graph-local', value=dict(tensors=[], coverage='partial', diagnostics=[
             dict(code='excluded', message='Descriptive only.', node_id='foreign')]), valid=False),
     ]
-    return dict(inventory_cases=inventory_cases, response=response, context=context, cases=cases, byte_cases=bounds,
+    return dict(inventory_cases=inventory_cases, response=response,
+                template_response={**response, 'graph': template_graph}, context=context, cases=cases, byte_cases=bounds,
                 http_cases=[dict(status=409, value=dict(code='model_content_changed',message='Pinned model content changed.'))])
 
 

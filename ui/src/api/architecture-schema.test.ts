@@ -18,7 +18,7 @@ function applyEdits(value: unknown, edits: Edit[]): unknown {
 
 describe('generated architecture structure (contextual semantics belong to conformance oracles)', () => {
   for (const test of fixture.cases) it(test.name, () => {
-    const value = applyEdits(fixture.response, test.edits);
+    const value = applyEdits(('base' in test ? fixture.template_response : fixture.response), test.edits);
     const validate = () => {
       validateSchema('ArchitectureResponse', value);
       validateResponse('getArchitecture', value);

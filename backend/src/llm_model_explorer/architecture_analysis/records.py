@@ -3,7 +3,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_REVISION = "bdc74dbecc91e6ae8c4b66acdbb25c8a87e8c11a9f35cab0f609fce86453e2cd"
+SCHEMA_REVISION = "845f3bc82e18dd37a23a044b9dc4b3ab356b406558816e63f3a988e471de4d38"
 
 
 class Record(BaseModel):
@@ -269,6 +269,46 @@ class ArchitectureDiagnostic(Record):
     parameter_id: ArchitectureId | None = None
 
 
+class ArchitectureTemplateNodeRole(Record):
+    role: ArchitectureId
+    node_id: ArchitectureId
+
+
+class ArchitectureTemplatePortRole(Record):
+    role: ArchitectureId
+    node_id: ArchitectureId
+    port_id: ArchitectureId
+
+
+class ArchitectureTemplateEdgeRole(Record):
+    role: ArchitectureId
+    edge_id: ArchitectureId
+
+
+class ArchitectureTemplateParameterRole(Record):
+    role: ArchitectureId
+    parameter_id: ArchitectureId
+
+
+class ArchitectureTemplateInstance(Record):
+    node_id: ArchitectureId
+    nodes: Annotated[list[ArchitectureTemplateNodeRole], Field(max_length=33554432)]
+    ports: Annotated[list[ArchitectureTemplatePortRole], Field(max_length=33554432)]
+    edges: Annotated[list[ArchitectureTemplateEdgeRole], Field(max_length=33554432)]
+    parameters: Annotated[list[ArchitectureTemplateParameterRole], Field(max_length=33554432)]
+
+
+class ArchitectureTemplate(Record):
+    id: ArchitectureId
+    label: ArchitectureName
+    component_role: Literal["attention", "mlp"]
+    revision: ArchitectureName
+    provenance: Annotated[list[ArchitectureProvenance], Field(min_length=1, max_length=33554432)]
+    instances: Annotated[
+        list[ArchitectureTemplateInstance], Field(min_length=2, max_length=33554432)
+    ]
+
+
 class ArchitectureGraph(Record):
     graph_id: ArchitectureId
     scope: Literal["language_model", "visual_encoder_predictor"]
@@ -279,3 +319,4 @@ class ArchitectureGraph(Record):
     repetitions: Annotated[list[ArchitectureRepetition], Field(max_length=33554432)]
     parameters: Annotated[list[ArchitectureParameter], Field(max_length=33554432)]
     diagnostics: Annotated[list[ArchitectureDiagnostic], Field(max_length=33554432)]
+    templates: Annotated[list[ArchitectureTemplate], Field(max_length=33554432)] | None = None

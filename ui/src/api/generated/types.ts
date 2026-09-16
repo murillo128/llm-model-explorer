@@ -801,6 +801,39 @@ export interface components {
             region: components["schemas"]["ArchitectureRegion"];
         };
         ArchitectureParameter: components["schemas"]["ArchitectureDirectParameter"] | components["schemas"]["ArchitectureAliasParameter"] | components["schemas"]["ArchitectureFusedParameter"];
+        ArchitectureTemplateNodeRole: {
+            role: components["schemas"]["ArchitectureId"];
+            node_id: components["schemas"]["ArchitectureId"];
+        };
+        ArchitectureTemplatePortRole: {
+            role: components["schemas"]["ArchitectureId"];
+            node_id: components["schemas"]["ArchitectureId"];
+            port_id: components["schemas"]["ArchitectureId"];
+        };
+        ArchitectureTemplateEdgeRole: {
+            role: components["schemas"]["ArchitectureId"];
+            edge_id: components["schemas"]["ArchitectureId"];
+        };
+        ArchitectureTemplateParameterRole: {
+            role: components["schemas"]["ArchitectureId"];
+            parameter_id: components["schemas"]["ArchitectureId"];
+        };
+        ArchitectureTemplateInstance: {
+            node_id: components["schemas"]["ArchitectureId"];
+            nodes: components["schemas"]["ArchitectureTemplateNodeRole"][];
+            ports: components["schemas"]["ArchitectureTemplatePortRole"][];
+            edges: components["schemas"]["ArchitectureTemplateEdgeRole"][];
+            parameters: components["schemas"]["ArchitectureTemplateParameterRole"][];
+        };
+        ArchitectureTemplate: {
+            id: components["schemas"]["ArchitectureId"];
+            label: components["schemas"]["ArchitectureName"];
+            /** @enum {string} */
+            component_role: "attention" | "mlp";
+            revision: components["schemas"]["ArchitectureName"];
+            provenance: components["schemas"]["ArchitectureProvenance"][];
+            instances: components["schemas"]["ArchitectureTemplateInstance"][];
+        };
         ArchitectureGraph: {
             graph_id: components["schemas"]["ArchitectureId"];
             /** @enum {string} */
@@ -813,6 +846,7 @@ export interface components {
             repetitions: components["schemas"]["ArchitectureRepetition"][];
             parameters: components["schemas"]["ArchitectureParameter"][];
             diagnostics: components["schemas"]["ArchitectureDiagnostic"][];
+            templates?: components["schemas"]["ArchitectureTemplate"][];
         };
         ArchitectureAvailableResponse: {
             /**

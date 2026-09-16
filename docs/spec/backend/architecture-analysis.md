@@ -47,6 +47,29 @@ provenance and no invented module reference. Semantic document changes bump the
 affected description revision and use ordinary startup/cache validation; all
 graph-local hashes may change while logical tensor identities remain unchanged.
 
+## Optional component equivalence annotations
+
+Packaged descriptions may opt into the API's verified shared structures. Open
+candidate collection explicitly while constructing a known Attention or MLP
+component, and assign relative roles from that description's authored construction
+keys. Do not discover candidates by scanning checkpoint prefixes, display labels,
+or frontend patterns. Dense Attention/MLP, hybrid full/linear Attention and MLP,
+and each V-JEPA stack are separately declared families within one loaded model
+and reviewed description. The complete semantic comparison required by the API
+must still pass; a common name never proves correspondence.
+
+Keep this metadata path removable. A singleton or unverified candidate remains an
+ordinary component, and optional budget exhaustion cannot consume source graph
+records or downgrade mathematical coverage. Construction and validation use one
+bounded graph index and component-local mappings, not another full checkpoint or
+graph. Never read weights, execute operations or infer weight equality to decide
+a family. Parameter bindings and logical tensor identities stay attached to the
+real instance, including verified aliases and unavailable inspections.
+
+The current annotation definition is `exact-component-roles-1`. The analyzer core
+revision and generated graph-schema revision invalidate structured startup cache
+entries; numeric artifact keys and logical tensor identities are unchanged.
+
 ## Dense language reference coverage
 
 Qwen3 must preserve its actual embedding/output relationships, decoder order, Q/K normalization, grouped-query attention, positional encoding, attention projection, gated MLP branches, and residual paths. SmolLM2 Base provides the corresponding small Llama-family regression path; do not apply Qwen-specific normalization or gate assumptions to it. Tied parameters must be represented as aliases where supported by configuration and inventory, not reported missing or duplicated as independent weights.
