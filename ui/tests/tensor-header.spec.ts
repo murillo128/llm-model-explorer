@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { integratedCard, unclippedPopover } from './viewer-panel';
 
 async function open(page: Page, name = 'A', longPath = false) {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);
@@ -19,27 +20,7 @@ async function compactHeader(page: Page) {
   await expect(page.getByText('Full-range bins', { exact: true })).toHaveCount(0);
   const bounds = await geometry(page);
   expect(bounds.height).toBe(40);
-  const composition = await page.locator('.viewer-panel').evaluate(panel => {
-    const title = panel.querySelector('.matrix-explorer-header')!;
-    const body = panel.querySelector('.viewer-panel-body')!;
-    const style = getComputedStyle(body), card = body.getBoundingClientRect();
-    const header = title.getBoundingClientRect();
-    const matrix = body.querySelector('.matrix-surfaces')!.getBoundingClientRect();
-    return { siblings: title.parentElement === body.parentElement, containsTitle: body.contains(title),
-      panelWidth: panel.getBoundingClientRect().width, titleWidth: header.width, cardWidth: card.width,
-      cardTop: card.top, titleBottom: header.bottom,
-      insetTop: matrix.top - card.top, insetLeft: matrix.left - card.left,
-      paddingTop: parseFloat(style.paddingTop) + parseFloat(style.borderTopWidth),
-      paddingLeft: parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth) };
-  });
-  expect(composition.siblings).toBe(true);
-  expect(composition.containsTitle).toBe(false);
-  expect(composition.titleWidth).toBe(composition.panelWidth);
-  expect(composition.cardWidth).toBe(composition.panelWidth);
-  expect(composition.cardTop).toBe(composition.titleBottom);
-  expect(composition.insetTop).toBe(composition.paddingTop);
-  expect(composition.insetLeft).toBe(composition.paddingLeft);
-  expect(composition.paddingTop).toBeGreaterThan(0);
+  await integratedCard(page.locator('.viewer-panel'));
   return bounds;
 }
 
@@ -117,7 +98,7 @@ test('metadata previews, pins, anchors below the icon, and leaves scientific wid
     allocations: window.explorerFixture.metrics.scalarAllocations }));
   const originalLifetime = await lifetime();
   await trigger.hover();
-  await expect(dialog).toBeVisible();
+  await unclippedPopover(dialog);
   await expect(close).toHaveCount(0);
   expect((await dialog.boundingBox())!.y).toBe((await trigger.boundingBox())!.y + (await trigger.boundingBox())!.height);
   await page.mouse.move(0, 0);
@@ -247,6 +228,7 @@ test('long tensor identity retains one row and reachable information, cancellati
   const dialog = page.getByRole('dialog', { name: 'Tensor information' });
   await expect(dialog).toContainText('A'.repeat(200));
   await expect(dialog).toContainText('Bin domain unavailable');
+  await unclippedPopover(dialog);
   const popover = (await dialog.boundingBox())!;
   const pane = (await page.getByRole('region', { name: 'Tensor Explorer workspace', exact: true }).boundingBox())!;
   expect(popover.x).toBeGreaterThanOrEqual(pane.x);
@@ -328,19 +310,22 @@ test('tensor and unavailable auxiliary errors remain in the compact row with hon
   expect(await geometry(page)).toEqual(initial);
 });
 
-for (const name of ['empty', 'unsupported']) test(`${name} tensors retain the full-width title and content card without operations`, async ({ page }) => {
+for (const name of ['empty', 'unsupported']) test(`${name} tensors retain an integrated card without operations or clipped information`, async ({ page }) => {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);
   await page.getByRole('combobox').selectOption('lab/alpha');
   await page.getByRole('button', { name: new RegExp(`^${name} \\[` ) }).click();
   await expect(page.getByText(name === 'empty' ? 'Empty tensor — no values to render.'
     : 'Direct viewing supports complete rank-1 and rank-2 tensors. This rank-3 tensor is available for metadata inspection only.')).toBeVisible();
-  const panel = (await page.locator('.viewer-panel').boundingBox())!;
-  const title = (await page.locator('.matrix-panel-header').boundingBox())!;
-  const body = (await page.locator('.viewer-panel-body').boundingBox())!;
-  expect(title).toEqual({ x: panel.x, y: panel.y, width: panel.width, height: 40 });
-  expect(body.x).toBe(panel.x); expect(body.width).toBe(panel.width);
-  expect(body.y).toBe(title.y + title.height);
+  await integratedCard(page.locator('.viewer-panel'));
   await expect(page.locator('.matrix-panel-header')).toHaveCount(1);
   await expect(page.locator('.matrix-scroll')).toHaveCount(0);
   expect(await page.evaluate(() => window.explorerFixture.requests.length)).toBe(0);
+  // A short card must still let metadata paint beyond its rounded boundary.
+  await page.locator('.viewer-panel').evaluate(node => { Object.assign((node as HTMLElement).style, { flex: 'none', height: '80px' }); });
+  await page.getByRole('button', { name: 'Tensor information', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Tensor information' });
+  const card = (await page.locator('.viewer-panel').boundingBox())!;
+  const popover = (await dialog.boundingBox())!;
+  expect(popover.y + popover.height).toBeGreaterThan(card.y + card.height);
+  await unclippedPopover(dialog);
 });

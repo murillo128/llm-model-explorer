@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Test-only browser observer and JSON evidence. */
 import { test, expect } from '@playwright/test';
+import { integratedCard } from '../tests/viewer-panel';
 import type { Page, TestInfo } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -1430,6 +1431,7 @@ test('integrated two-card embeddings have real scientific parity with the same c
   await expect(page.getByText('Waiting for current tokenization.')).toBeVisible();
   for (const width of [1178, 1440]) {
     await page.setViewportSize({ width, height: 1000 }); await settledPrompt(page);
+    await integratedCard(page.locator('.input-embeddings .viewer-panel'));
     await page.screenshot({ path: info.outputPath(`two-cards-empty-${width}.png`) });
   }
   release(); await embeddingDone(page, 1);
@@ -1461,18 +1463,17 @@ test('integrated two-card embeddings have real scientific parity with the same c
     await page.setViewportSize({ width, height: 1000 });
     await page.getByRole('button', { name: 'Fit width', exact: true }).click();
     await settledPrompt(page); await documentFits(page);
-    const cards = await page.locator('.tokenizer-workspace').evaluate(workspace => {
+    await expect(page.locator('.tokenizer-workspace .viewer-panel')).toHaveCount(2);
+    const promptCard = await page.locator('.prompt-panel .viewer-panel').evaluate(panel => {
       const rect = (node: Element) => node.getBoundingClientRect().toJSON();
-      return [...workspace.querySelectorAll('.prompt-panel .viewer-panel, .embedding-layer:not([data-staging]) .viewer-panel')].map(panel => ({
+      return {
         panel: rect(panel), title: rect(panel.querySelector('.matrix-panel-header')!), body: rect(panel.querySelector('.viewer-panel-body')!),
-      }));
+      };
     });
-    expect(cards).toHaveLength(2);
-    for (const card of cards) {
-      expect(card.title.width).toBe(card.panel.width);
-      expect(card.body.y).toBe(card.title.bottom);
-      expect(card.body.width).toBe(card.panel.width);
-    }
+    expect(promptCard.title.width).toBe(promptCard.panel.width);
+    expect(promptCard.body.y).toBe(promptCard.title.bottom);
+    expect(promptCard.body.width).toBe(promptCard.panel.width);
+    await integratedCard(page.locator('.embedding-layer:not([data-staging]) .viewer-panel'));
     await page.screenshot({ path: info.outputPath(`two-cards-populated-${width}.png`) });
   }
   await page.getByRole('separator', { name: 'Resize prompt and embeddings' }).press('ArrowDown');

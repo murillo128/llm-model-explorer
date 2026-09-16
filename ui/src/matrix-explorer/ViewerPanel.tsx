@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import './matrix-explorer.css';
 
-/** The title is a sibling of the padded scientific card, including empty states. */
+/** One card owns the title and padded scientific body, including empty states. */
 export function ViewerPanel({ header, children, className = '' }: {
   header?: ReactNode; children?: ReactNode; className?: string;
 }) {
