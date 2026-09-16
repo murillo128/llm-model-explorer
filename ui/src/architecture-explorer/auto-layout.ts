@@ -3,12 +3,10 @@ import elkWorkerUrl from 'elkjs/lib/elk-worker.min.js?url';
 import type { ELK as ElkEngine, ElkNode, ElkExtendedEdge, LayoutOptions } from 'elkjs/lib/elk-api';
 import type { Box, Graph, Layout, Point, PortPosition, Route } from './graph';
 import { formatShape } from './graph';
+import { cardMetrics, cardSummary } from './card-summary';
 import { endpointKey, projectGraph } from './projection';
 import type { ProjectionOptions } from './projection';
 
-export const nodeWidth = 150;
-export const portStartY = 64;
-export const portGap = 24;
 export const groupHeaderHeight = 64;
 export const layerGap = 40;
 export const nodeGap = 28;
@@ -42,7 +40,11 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
   const sourceIds = new Map<string, string>();
   const portIds = new Map<string, { nodeId: string; portId: string; side: 'left' | 'right' }>();
   const endpoints = new Map<string, string>();
+  const parameters = new Map(graph.parameters.map((p) => [p.id, p]));
+  const annotated = new Set([...graph.repetitions.flatMap((r) => r.instances.map((i) => i.node_id)),
+    ...graph.diagnostics.flatMap((d) => d.node_id ? [d.node_id] : [])]);
   for (const [index, node] of projection.nodes.entries()) {
+    const metrics = cardMetrics(node, cardSummary(node.record, parameters), Boolean(options.dimensions), annotated.has(node.id));
     const id = `node-${index}`;
     sourceIds.set(id, node.id);
     const rows = { input: 0, output: 0 };
@@ -52,17 +54,19 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
       const row = rows[port.direction]++;
       portIds.set(portId, { nodeId: node.id, portId: port.id, side });
       endpoints.set(endpointKey({ node_id: node.id, port_id: port.id }), portId);
-      return { id: portId, x: side === 'left' ? 0 : nodeWidth,
-        y: portStartY + row * portGap, width: 0, height: 0,
+      return { id: portId, x: side === 'left' ? 0 : metrics.width,
+        y: metrics.portStart + row * metrics.portGap, width: 0, height: 0,
         layoutOptions: { 'elk.port.side': side === 'left' ? 'WEST' : 'EAST', 'elk.port.index': String(p) } };
     });
-    const height = Math.max(100, portStartY + Math.max(rows.input, rows.output) * portGap + 12);
+    const height = metrics.height;
+    const gutter = (direction: 'input' | 'output') => Math.max(24, 20 + metrics.portLabelWidth[direction]);
     elkNodes.set(node.id, {
-      id, width: nodeWidth, height, ports,
+      id, width: metrics.width, height, ports,
       ...(node.expanded ? { children: [] } : {}),
       layoutOptions: { ...scopeOptions,
         'elk.portConstraints': node.expanded ? 'FIXED_SIDE' : 'FIXED_POS',
-        'elk.padding': `[top=${groupHeaderHeight + 16},left=24,bottom=24,right=24]`,
+        'elk.padding': `[top=${height + 16},left=${gutter('input')},bottom=24,right=${gutter('output')}]`,
+        'elk.spacing.portsSurrounding': `[top=${height},left=0,bottom=16,right=0]`,
       },
     });
   }
@@ -116,7 +120,8 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
   finally { signal?.removeEventListener('abort', abort); if (!nodeAdapter) engine.terminateWorker(); }
   if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
   if (contexts.length) {
-    const gap = nodeGap, contextWidth = nodeWidth + 60, contextHeight = groupHeaderHeight + 12;
+    const gap = nodeGap, contextWidth = Math.max(...contexts.map((n) => elkNodes.get(n.id)!.width!)),
+      contextHeight = Math.max(...contexts.map((n) => elkNodes.get(n.id)!.height!));
     const columns = Math.max(1, Math.floor(((laidOut.width ?? 0) - 48 + gap) / (contextWidth + gap)));
     const rows = Math.ceil(contexts.length / columns), offset = rows * (contextHeight + gap);
     for (const child of laidOut.children ?? []) child.y = (child.y ?? 0) + offset;
@@ -131,7 +136,6 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
       const elk = elkNodes.get(node.id)!;
       elk.x = 24 + index % columns * (contextWidth + gap);
       elk.y = 24 + Math.floor(index / columns) * (contextHeight + gap);
-      elk.width = contextWidth; elk.height = contextHeight;
       laidOut.children!.push(elk);
     });
     laidOut.width = Math.max(laidOut.width ?? 0, 48 + Math.min(columns, contexts.length) * (contextWidth + gap) - gap);

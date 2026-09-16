@@ -5,6 +5,10 @@ import '@xyflow/react/dist/style.css';
 import './architecture.css';
 import type { Graph, GraphNode, GraphView, Layout, PortPosition } from './graph';
 import { requestLayout } from './layout';
+import { cardMetrics, cardSummary, ownParameters } from './card-summary';
+import type { CardSummary as Summary } from './card-summary';
+import { CardParameters, SummaryText } from './CardSummary';
+import { formatShape } from './graph';
 import { useCanvasCallback } from './useCanvasCallback';
 import { useGraphView } from './useGraphView';
 import { selectComponent, toggleComponent } from './component-actions';
@@ -28,6 +32,7 @@ import type { EmphasisTarget } from './connection-context';
 
 export interface ArchitectureSelection {
   modelId: string; sessionId: string; graphId: string; node: GraphNode; trigger: HTMLElement;
+  parameterId?: string;
   filteredInputs?: string[];
   structureOnly?: { label: string; role: string };
   templateInstanceId?: string;
@@ -37,10 +42,11 @@ interface CanvasProps {
   onInspect?: ((selection: ArchitectureSelection) => void) | undefined;
   onDismissInspection?: (() => void) | undefined;
 }
-type Data = { record: ProjectedNode; label: string; subtitle: string; ports: PortPosition[]; diagnostic: boolean;
+type Data = { record: ProjectedNode; label: string; subtitle: string; summary: Summary; metrics: ReturnType<typeof cardMetrics>; dimensions: boolean; ports: PortPosition[]; diagnostic: boolean;
   toggle: (id: string) => void; select: (id: string) => void; activate: (node: ProjectedNode) => void;
   navigation: ReturnType<typeof cardNavigation>; navigate: (navigation: ReturnType<typeof cardNavigation>) => void;
-  inspect: (node: ProjectedNode, trigger: HTMLElement) => void };
+  inspect: (node: ProjectedNode, trigger: HTMLElement) => void;
+  matrix: (node: ProjectedNode, id: string, trigger: HTMLElement) => void };
 type CanvasNode = Node<Data, 'architecture'>;
 const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<CanvasNode>) {
   const interaction = useContext(ConnectionContext), node = data.record;
@@ -71,20 +77,25 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
             : 'M5 10h5V5m4 0v5h5M5 14h5v5m4 0v-5h5'} />
         </svg>
       </button>
-      <button className="nodrag nopan architecture-info" aria-label={`Inspect ${node.label}`} title={`Inspect ${node.label}`} onDoubleClick={(event) => event.stopPropagation()}
-        onClick={(event) => { event.stopPropagation(); if (event.detail < 2) data.inspect(node, event.currentTarget); }}>ⓘ</button>
+      <button className="nodrag nopan architecture-info" aria-label={`Inspect ${node.label}`} title={`Inspect ${node.label}${data.diagnostic ? ' · diagnostic available' : ''}`} aria-description={data.diagnostic ? 'Diagnostic available' : undefined} onDoubleClick={(event) => event.stopPropagation()}
+        onClick={(event) => { event.stopPropagation(); if (event.detail < 2) data.inspect(node, event.currentTarget); }}>{data.diagnostic ? 'ⓘ !' : 'ⓘ'}</button>
     </div>
-    <div className="architecture-node-type" title={data.subtitle}>{data.subtitle}{data.diagnostic ? ' · diagnostic' : ''}</div>
+    {(data.summary.formula || data.subtitle || data.diagnostic) && <div className="architecture-node-type">
+      <SummaryText text={data.summary.formula ?? (data.subtitle || 'diagnostic')} />
+    </div>}
+    {node.record && <CardParameters node={node.record} summary={data.summary} dimensions={data.dimensions} top={data.metrics.metadataTop}
+      inspect={(trigger) => data.inspect(node, trigger)} matrix={(id, trigger) => data.matrix(node, id, trigger)} />}
     {data.ports.map((position) => {
       const port = node.ports.find((p) => p.id === position.portId)!;
       const target = { node_id: node.id, port_id: port.id };
       const active = interaction.ports.has(endpointKey(target));
       const hit = Math.min(20 / interaction.zoom, 23);
       return <div key={port.id}>
-        <span className="architecture-port-label" data-emphasized={active} title={`${port.direction}: ${port.label}`}
-          style={{ top: position.y - 7, ...(position.side === 'left' ? { left: position.x + 9 } : { right: 9 }) }}>{port.label}</span>
+        <span className="architecture-port-label" data-emphasized={active} title={`${port.direction}: ${port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
+          style={{ maxWidth: node.expanded ? data.metrics.portLabelWidth[port.direction] : undefined, top: position.y - 7, ...(position.side === 'left' ? { left: position.x + 9 } : { right: 9 }) }}>{port.label}{data.dimensions && <span className="architecture-port-shape">{formatShape(port.shape)}</span>}</span>
         <button className="architecture-port nodrag nopan" data-node-id={node.id} data-port-id={port.id}
           data-emphasized={active} aria-label={`${port.direction} port ${node.label}: ${port.label}`}
+          aria-description={data.dimensions ? formatShape(port.shape) : undefined}
           style={{ left: position.x, top: position.y, width: hit, height: hit }}
           onPointerDown={(event) => event.stopPropagation()} onPointerEnter={() => interaction.hover({ port: target })}
           onPointerLeave={() => interaction.hover(null)} onFocus={() => interaction.focus({ port: target })} onBlur={() => interaction.focus(null)}
@@ -104,7 +115,7 @@ export function ArchitectureCanvas(props: CanvasProps) { return <ReactFlowProvid
 function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspection }: CanvasProps) {
   const flow = useReactFlow<CanvasNode>();
   const options = useGraphView(view);
-  const { selected, dimensions, focus: focusId, edge: pinned, activeStack, shared } = view;
+  const { selected, focus: focusId, edge: pinned, activeStack, shared } = view;
   const [temporary, setTemporary] = useState<EmphasisTarget | null>(null), [focused, setFocused] = useState<EmphasisTarget | null>(null);
   const [inspection, setInspection] = useState<{ edgeId?: string; nodeId?: string; trigger: HTMLElement } | null>(null);
   const [layoutResult, setResult] = useState<{ layout?: Layout; error?: string; options?: ProjectionOptions; invocation?: number; input?: Graph }>({});
@@ -136,6 +147,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const centerPending = useRef<string | null>(null), fitPending = useRef(false), initialized = useRef(false);
   const restorePending = useRef<GraphView['viewport']>(undefined), scopeCameraPending = useRef(false);
   const records = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph]);
+  const parameters = useMemo(() => new Map(graph.parameters.map((p) => [p.id, p])), [graph]);
   const boxes = useMemo(() => new Map(result.layout?.boxes.map((b) => [b.id, b])), [result.layout]);
   const projected = useMemo(() => new Map(result.layout?.projection.nodes.map((n) => [n.id, n])), [result.layout]);
   const variants = useMemo(() => new Map(graph.repetitions.flatMap((r) => r.instances.map((i) => [i.node_id, `Instance ${i.index} · ${i.variant.replaceAll('_', ' ')}`] as const))), [graph]);
@@ -297,6 +309,14 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     if (node.record) nativeInspect(records.get(node.record.id)!, trigger);
     else setInspection({ nodeId: node.id, trigger });
   });
+  const matrix = useCanvasCallback((node: ProjectedNode, parameterId: string, trigger: HTMLElement) => {
+    if (shared && !concreteInstance) return;
+    const record = node.record && records.get(node.record.id);
+    if (!record || !ownParameters(record, parameters).some((p) => p.id === parameterId && p.inspection.status === 'available')) return;
+    setInspection(null);
+    onInspect?.({ modelId, sessionId, graphId: graph.graph_id, node: record, trigger, parameterId,
+      ...(concreteInstance ? { templateInstanceId: concreteInstance.node_id } : {}) });
+  });
   const activate = useCanvasCallback((node: ProjectedNode) => {
     if (cardDoubleClick(node)) toggle(node.id);
   });
@@ -367,16 +387,22 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   }, [focused, pinned, result.layout, temporary]);
   const emphasizedPorts = useMemo(() => new Set(result.layout?.projection.edges.filter((e) => emphasis.has(e.id)).flatMap((e) => [endpointKey(e.source), endpointKey(e.target)])), [emphasis, result.layout]);
   const interaction = useMemo(() => ({ emphasized: emphasis, ports: emphasizedPorts, zoom, lineHit, hover, focus: keyboardFocus, pin }), [emphasis, emphasizedPorts, hover, keyboardFocus, lineHit, pin, zoom]);
+  // Keep shape annotations and row geometry on the same completed layout while
+  // a preference change is awaiting the worker.
+  const cardDimensions = Boolean(result.options?.dimensions);
   const nodes = useMemo<CanvasNode[]>(() => (result.layout?.boxes ?? []).map((box) => {
     const record = projected.get(box.id)!;
+    const summary = cardSummary(record.record, parameters);
+    const subtitle = record.summary?.replaceAll('linear attention', 'linear').replaceAll('full attention', 'full') ?? variants.get(record.id)?.replace(/^Instance \d+ · /, '') ?? '';
     return { id: box.id, type: 'architecture', position: { x: box.x, y: box.y },
       ...(box.parentId ? { parentId: box.parentId } : {}), width: box.width, height: box.height,
       style: { width: box.width, height: box.height, pointerEvents: record.expanded ? 'none' : 'auto' }, zIndex: 200,
       selected: selected === cardSelection(record),
-      data: { record, label: displayLabel(record, graph), subtitle: record.summary?.replaceAll('linear attention', 'linear').replaceAll('full attention', 'full') ?? variants.get(record.id)?.replace(/^Instance \d+ · /, '') ?? record.record?.operation?.replaceAll('_', ' ') ?? record.kind,
+      data: { record, label: displayLabel(record, graph), subtitle,
+        summary, metrics: cardMetrics(record, summary, cardDimensions, Boolean(subtitle || diagnosed.has(box.id))), dimensions: cardDimensions, matrix,
         ports: result.layout!.ports.filter((p) => p.nodeId === box.id), diagnostic: diagnosed.has(box.id), toggle, select, activate, inspect,
         navigation: cardNavigation(record, concreteInstance?.node_id ?? options.scope, sharedActive && !concreteInstance), navigate: navigateCard } };
-  }), [activate, diagnosed, graph, inspect, projected, result.layout, selected, toggle, variants, select, options.scope, sharedActive, concreteInstance, navigateCard]);
+  }), [activate, diagnosed, graph, inspect, projected, result.layout, selected, toggle, variants, select, options.scope, sharedActive, concreteInstance, navigateCard, parameters, cardDimensions, matrix]);
   const cameraState = useLayoutCamera(layoutResult.layout, options,
     result.options === options && result.input === layoutInput.graph && !result.error, nodes, flowContainer, flow, async (fitLayout) => {
       const camera = flow.getViewport();
@@ -407,8 +433,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     id: edge.id, source: edge.source.node_id, target: edge.target.node_id, sourceHandle: `source:${edge.source.port_id}`,
     targetHandle: `target:${edge.target.port_id}`, type: 'connection', focusable: false, selectable: false,
     zIndex: emphasis.has(edge.id) ? 100 : 2,
-    data: { connection: edge, route: result.layout!.routes.find((r) => r.id === edge.id)!, projection: result.layout!.projection, dimensions },
-  })), [dimensions, emphasis, result.layout]);
+    data: { connection: edge, route: result.layout!.routes.find((r) => r.id === edge.id)!, projection: result.layout!.projection, dimensions: cardDimensions },
+  })), [cardDimensions, emphasis, result.layout]);
   const activeInspectionEdge = result.layout?.projection.edges.find((e) => e.id === inspection?.edgeId);
   const activeInspectionNode = inspection?.nodeId ? projected.get(inspection.nodeId) : undefined;
   const sourceNodeIds = useMemo(() => {

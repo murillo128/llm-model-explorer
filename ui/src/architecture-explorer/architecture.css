@@ -14,6 +14,24 @@
 .architecture-node .architecture-navigate { display: inline-flex; align-items: center; min-height: 20px; }
 .architecture-node .architecture-navigate[aria-disabled="true"] { opacity: 0.45; cursor: default; }
 .architecture-node-type { font-size: 11px; color: var(--ui-text-muted); padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.architecture-node-type { height: 24px; overflow: visible; max-width: 300px; box-sizing: border-box; }
+.architecture-summary-text { display: block; min-width: 0; position: relative; }
+.architecture-summary-text > span:first-child { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.architecture-summary-tooltip { display: none; position: absolute; z-index: 20; top: 100%; left: 0; width: max-content; max-width: 280px; padding: 6px 8px; border: 1px solid var(--ui-border-strong); border-radius: 4px; background: var(--ui-surface); color: var(--ui-text); box-shadow: var(--ui-shadow-float); white-space: normal; overflow-wrap: anywhere; pointer-events: none; font: 12px/18px ui-monospace, monospace; }
+.architecture-summary-text:hover > .architecture-summary-tooltip, .architecture-summary-text:focus > .architecture-summary-tooltip,
+.architecture-matrix-action:hover > .architecture-summary-tooltip, .architecture-matrix-action:focus > .architecture-summary-tooltip { display: block; }
+.architecture-summary-text:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
+.architecture-card-parameters { position: absolute; left: 8px; width: min(282px, calc(100% - 16px)); pointer-events: auto; font: 12px/18px ui-monospace, monospace; }
+.architecture-tensor-row { display: flex; align-items: start; gap: 6px; min-height: 26px; }
+.architecture-tensor-name { flex: 1; min-width: 0; padding-top: 3px; }
+.architecture-node .architecture-matrix-action { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 24px; height: 24px; padding: 4px; border-color: transparent; background: transparent; color: var(--ui-text-muted); }
+.architecture-node .architecture-matrix-action[aria-disabled="true"] { opacity: 0.55; cursor: default; }
+.architecture-tensor-row:has(.architecture-card-shape) { min-height: 42px; }
+.architecture-card-shape { font-size: 10px; line-height: 16px; color: var(--ui-text-muted); }
+.architecture-constant { height: 24px; padding-top: 3px; box-sizing: border-box; }
+.architecture-node .architecture-more-parameters { height: 26px; display: block; padding: 2px 4px; border: none; background: transparent; font-size: 11px; }
+.architecture-node[data-expanded="true"] .architecture-port-label { max-width: 120px; }
+.architecture-port-shape { display: block; overflow: hidden; text-overflow: ellipsis; color: var(--ui-text-muted); }
 .architecture-port-label { position: absolute; font: 10px/16px ui-monospace, monospace; max-width: 43%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
 .architecture-explorer .react-flow__edge-text { font: 11px ui-monospace, monospace; }
 .architecture-explorer .react-flow__edge-path { stroke: var(--ui-text-muted); }

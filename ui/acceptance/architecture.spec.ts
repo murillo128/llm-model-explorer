@@ -76,8 +76,8 @@ async function openParameter(page: Page, graph: Graph, parameter: Graph['paramet
   const camera = await page.locator('.react-flow__viewport').getAttribute('style');
   const layoutCount = await canvas.getAttribute('data-layout-count'), scope = await canvas.getAttribute('data-scope-id');
   const beforeSelection = observed.length;
-  for (const target of ['.architecture-node-label', '.architecture-node-type']) {
-    await card.locator(target).click();
+  for (const target of ['.architecture-node-label', '.architecture-node-heading']) {
+    await card.locator(target).click(target === '.architecture-node-heading' ? { position: { x: 2, y: (await card.locator(target).boundingBox())!.height - 2 } } : {});
     await expect(card.locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
     await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
@@ -92,9 +92,19 @@ async function openParameter(page: Page, graph: Graph, parameter: Graph['paramet
     await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
     expect(observed.slice(requests)).toEqual([]);
   }
-  const trigger = card.locator('.architecture-info');
-  await trigger.dblclick();
-  await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
+  let trigger = card.locator(`[data-parameter-id=${JSON.stringify(parameter.id)}] .architecture-matrix-action`);
+  if (parameter.inspection.status === 'unavailable') {
+    await expect(trigger).toBeDisabled();
+    await expect(trigger).toHaveAccessibleDescription(`${parameter.inspection.reason.replaceAll('_', ' ')}: ${parameter.inspection.message}`);
+    await trigger.focus(); await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(observed.slice(beforeSelection)).toEqual([]);
+    // Unavailable weights keep descriptor inspection through the ordinary modal.
+    trigger = card.locator('.architecture-info');
+    await trigger.click();
+    await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
+  } else await trigger.click();
+  await expect(page.getByLabel('Inspect parameter', { exact: true })).toHaveValue(parameter.id);
   return trigger;
 }
 async function released(page: Page) {
@@ -669,10 +679,11 @@ test('shared structure production [templates] neutral mode, distinct instance we
   await page.keyboard.press('Escape');
   await page.getByLabel('Shared structure instance', { exact: true }).selectOption(first!.node_id);
   await page.getByRole('button', { name: 'Fit view', exact: true }).click();
-  await page.locator(`.react-flow__node[data-id=${JSON.stringify(q0.id)}] .architecture-info`).click();
+  await page.locator(`.react-flow__node[data-id=${JSON.stringify(q0.id)}] .architecture-node-label`).click();
   await page.evaluate(() => { const p = (window as any).__acceptance; p.captureScalars = true; p.scalarValues.length = 0; });
   await control('arm', { kind: 'logical_tensor' });
-  await page.getByLabel('Inspect parameter', { exact: true }).selectOption(p0.id);
+  await page.getByRole('button', { name: `Inspect matrix ${p0.name}`, exact: true }).click();
+  await expect(page.getByLabel('Inspect parameter', { exact: true })).toHaveValue(p0.id);
   await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
   await expect.poll(async () => (await control('state')).control.entered).toBe(true);
   await expect.poll(async () => (await metrics(page)).firstRender).toBeGreaterThan(0);
@@ -691,13 +702,14 @@ test('shared structure production [templates] neutral mode, distinct instance we
   expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
   await page.evaluate(() => { (window as any).__acceptance.scalarValues.length = 0; });
-  await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+  const matrixTrigger = page.getByRole('button', { name: `Inspect matrix ${p1.name}`, exact: true });
+  await matrixTrigger.focus(); await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Inspect parameter', { exact: true })).toHaveValue(p1.id);
   await expect(page.getByRole('dialog')).toContainText('Module: model.layers.1.self_attn.q_proj');
   await page.getByText('Concrete instance interface connections', { exact: true }).click();
   const memberIds = new Set(second!.nodes.map((n) => n.node_id));
   const external = graph.edges.filter((e) => memberIds.has(e.source.node_id) !== memberIds.has(e.target.node_id));
   for (const edge of external) await expect(page.getByRole('dialog')).toContainText(edge.id);
-  await page.getByLabel('Inspect parameter', { exact: true }).selectOption(p1.id);
   await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
   await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
   expect(await page.evaluate(() => (window as any).__acceptance.scalarValues)).toEqual(Array.from({ length: 144 }, (_, i) => 200 + (i % 29 - 14) / 8));

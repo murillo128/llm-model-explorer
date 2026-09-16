@@ -199,9 +199,39 @@ Changing hover, keyboard focus, or pinned connection selection must not move nod
 
 ## Clean default presentation and dimensions
 
-Default nodes show concise operation/component labels, relevant type distinctions, groups, and connections. Details do not occupy permanent side panels. Dimensions are hidden initially; Show dimensions adds endpoint tensor shapes to connections. Shapes distinguish constants, declared symbols, expressions, and unknown values; expressions are rendered as text, not evaluated.
+Cards retain their title and independent header controls, followed by one muted,
+source-backed formula or operation signature when supplied. Formula text is
+inert display text; the UI never infers equations or adds missing bias. Existing
+input/output labels (including `out`), directions, handles and port identities
+remain visible. A card then shows only its own explicitly referenced tensors,
+deduplicated by exact parameter identity across `parameter_ids` and parameter
+references. Groups do not aggregate descendant parameters.
 
-Full paths, formulas, descriptions, configuration attributes, provenance, diagnostics, and parameter references belong in inspection rather than permanently filling the canvas. A graph describes mathematical operations and selected meaningful shape changes, not every PyTorch instruction or allocation. Coverage and unknown regions remain visible enough to avoid interpreting a partial diagram as complete.
+Tensor rows place a subtle matrix button to the left of the real name, including
+rank-1 biases. A single explicit owning-module reference may establish a removable
+prefix; all remaining path segments stay verbatim. Ambiguous or absent ownership
+keeps the original name. Full names remain available on hover/focus and in
+accessible identity. Relevant computational scalar attributes follow the tensors
+with their original names and actual values and no matrix button. Use a small
+operation-specific mapping, never a configuration dump or invented defaults;
+missing/unknown values stay missing/unknown. Semantic roles, provenance and
+diagnostics are not constants.
+
+**Show dimensions** is initially off and consistently controls tensor-row,
+input/output and connection shape annotations. Shapes are API logical shapes,
+including constants, symbols, display-only expressions and unknowns; never packed
+geometry, flattened ranks or evaluated expressions. Names, constants, values and
+controls remain visible with dimensions off. Full inspection descriptors remain
+independent of this preference.
+
+Keep content within the same rounded card, without Inputs/Parameters headings,
+repeated type pills, Greek aliases or a permanent metadata panel. Size each card
+for its own content and ports; expanded group headers reserve space above children.
+Long text uses bounded width and full-text hover/focus disclosure without moving
+geometry. Long own-parameter lists may use a truthful `+N more` action opening
+the ordinary inspector. Verbose descriptions, configuration, provenance and
+diagnostics remain in inspection. Coverage and unknown regions remain visible
+enough to avoid interpreting a partial diagram as complete.
 
 Use the shared [visual language](visual-language.md). Architecture nodes, groups, controls, ports, and connections use the existing neutral surfaces, graphite text, hairline borders, restrained shadows, and warm amber interaction accent rather than introducing a new application theme or per-layer categorical palette. Graph zoom is its own camera. It must never zoom the prompt editor or impose a transform on a Matrix Explorer surface.
 
@@ -263,11 +293,21 @@ remains available through `−` and explicit keyboard/toolbar controls. No
 permanent inspector column, compulsory page transition, or nested modal stack
 is required.
 
+A tensor row's matrix button opens this same single modal with the exact clicked
+parameter already selected, without a preliminary component inspector, dropdown
+choice or explorer-tab change. Resolve it against the active graph/model/session
+and use only its verified `inspection.tensor_id`. Concrete repeated/shared views
+bind the chosen instance; structure-only shared views expose no numeric action.
+Unavailable, fused, unresolved and unsupported-rank capabilities retain a visibly
+non-actionable button with the supplied accessible reason. Pointer and keyboard
+activation cannot toggle, isolate, center or select another card or parent.
+Summary rendering and hover never fetch tensor values.
+
 For an available logical rank-1/rank-2 weight, compose the existing Matrix Explorer with the existing logical tensor endpoints and progressive subscriptions. The backend may provide native or admitted decoded weights; the UI performs no quantization decoding. Show its authoritative statistics/profiles when supported, preserving their independent arrival. Camera, readout, scalar-value fidelity, and resource lifetime remain owned by [matrix composition](architecture.md#matrix-explorer-composition), [rendering](rendering.md), and [Tensor Explorer](tensor-explorer.md). The graph's outer CSS/camera transform must not rescale this scientific surface. In particular, do not roll back the accepted Matrix Explorer zoom/navigation to implement graph inspection.
 
 An unavailable representation, fused region, unresolved binding, or higher-rank tensor shows its metadata and localized reason without trying to open a substitute matrix. Do not display packed integers as dequantized values or flatten patch-projection weights. A weight error does not close or invalidate the graph.
 
-Closing the modal restores focus and leaves camera/expansion intact. Escape closes it; focus stays contained while open. Keyboard users can select/expand/inspect components and connections without pointer-only access. Release numeric subscriptions, operation handles, CPU/GPU resources, and obsolete callbacks on close or replacement. A late result must not populate a different node/model's modal. Existing stream cancellation must preserve other consumers of shared work.
+Closing the modal restores focus and leaves camera/expansion intact. Escape closes it; focus stays contained while open. Keyboard users can select/expand/inspect components and connections without pointer-only access. Release numeric subscriptions, operation handles, CPU/GPU resources, and obsolete callbacks on close or replacement. A late result, including a same-shaped or same-ID return from an obsolete generation, must not populate a newer selection. Restore focus to the activating matrix button when it remains connected. Existing stream cancellation must preserve other consumers of shared work.
 
 Resource references are semantic: model scope, modules, parameters, and an optional tokenizer. They contain no UI routes. The initial numeric action is weight inspection; future Tokenizer Explorer or computation-view links can be added by the UI without rewriting the static graph. Do not display buttons for unimplemented endpoints or fabricate runtime activation resources.
 
