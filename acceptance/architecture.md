@@ -85,13 +85,15 @@ logs, traces, weight bytes and local-path manifests outside Git.
 | `backend/tests/test_architecture_service.py` | Startup socket is not listening until preparation finishes; sequential terminal outcomes; interruption before publication; no warm or GET regeneration |
 | Description tests and child evidence | Independent source-derived language branches, hybrid layer order, both V-JEPA stacks, geometry, aliases, packed/fused bindings, unresolved cases and guarded metadata-only analysis |
 | `ui/tests/architecture*.spec.ts` | Component graph stress, shape labels, collapsed dependency boundaries, accessible modal, late callbacks, model/session replacement and worker/renderer disposal |
-| Existing production suite | SmolLM2 fixture tensor/tokenizer/embedding, exact pixels, camera and continuity, sharing and cancellation regressions; actual SmolLM2 tests still need the regression checkpoint |
+| Existing production suite | SmolLM2 fixture tensor/tokenizer/embedding, exact pixels, camera and continuity, sharing and cancellation regressions; the resumed integration also passes the actual SmolLM2 Base regression at DPR 1 and 2 |
 
 The tiny checkpoints reuse independently authored component metadata. Their
 weights follow `(index % 29 - 14) / 8`; dense native weights use F16 to exercise
-conversion streaming. Packed bytes are synthetic, never a dequantization oracle.
-The actual-reference browser path verifies native samples with independent local
-Safetensors slices. Full mathematical topology comes from the source-derived
+conversion streaming. Synthetic packed samples use independently authored scalar
+formulas. The actual-reference browser path verifies native samples with local
+Safetensors slices and selected later-layer GPTQ/NVFP4 samples with the independent
+bounded scalar oracle in `backend/scripts/check_quantized_reference.py`.
+Full mathematical topology comes from the source-derived
 component assertions, not from treating analyzer output as its own oracle.
 
 ## Execution evidence
@@ -100,3 +102,13 @@ The current run's concise results and unresolved prerequisites are recorded in
 [architecture evidence](architecture-evidence.md). Neither static analysis nor
 these checks claims inference correctness, quantization numerical equivalence,
 universal checkpoint support, or hardware throughput.
+
+The original [navigation integration acceptance](architecture-integration.md)
+found retained obsolete layouts during repeated isolated-view returns. Its FAIL
+receipt remains unchanged. After the separately accepted
+[lifetime correction](architecture-lifetime.md), the
+[resumed integration acceptance](architecture-integration-completion.md) passes
+the full component-browser, production DPR 1/2, all four actual-reference, TCP,
+semantic-conservation, exterior-pixel and bounded-resource gates. CUDA remains
+unavailable and is recorded as SKIP; CPU and fixture results do not imply CUDA
+acceptance.

@@ -60,9 +60,10 @@ export function Connection({ data }: EdgeProps<ConnectionEdge>) {
 
 /** A single graph-local floating inspection surface. Native weight inspection
  * continues to use the existing modal, outside this graph transform. */
-export function ConnectionInspection({ graph, edge, node, trigger, onClose, inspectNode }: {
+export function ConnectionInspection({ graph, edge, node, trigger, onClose, inspectNode, explore }: {
   graph: Graph; edge?: ProjectedEdge | undefined; node?: ProjectedNode | undefined; trigger: HTMLElement;
   onClose: () => void; inspectNode: (id: string) => void;
+  explore?: (() => void) | undefined;
 }) {
   const close = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
@@ -97,6 +98,12 @@ export function ConnectionInspection({ graph, edge, node, trigger, onClose, insp
       </>}
       {node && <>
         <p>{node.summary}</p>
+        {explore && <button onClick={explore}>Explore component</button>}
+        {node.presentation === 'external' && <>
+          <p>External context endpoint. The source interface remains unchanged.</p>
+          {node.ports.flatMap((port) => port.endpoints.map((original) =>
+            <p key={endpointKey(original)}>{endpointText(original)} · <code>{endpointKey(original)}</code></p>))}
+        </>}
         {node.presentation === 'mlp' && <p>Derived visual group, reversible. These are five existing source operations.</p>}
         {node.repetitionId && <p>Repetition: <code>{node.repetitionId}</code>. Structural repetition does not share weights or states.</p>}
         {node.instances?.map((i) => <p key={i.node_id}>Instance {i.index}: {i.variant} · <code>{i.node_id}</code></p>)}

@@ -11,6 +11,7 @@ from unittest.mock import Mock
 
 import pytest
 import torch
+from architecture_assertions import transparent_edges
 from test_quantized_models import write_storage
 
 from llm_model_explorer.architecture_analysis import (
@@ -97,12 +98,8 @@ def linked(
     source_port: str = "out",
     target_port: str = "x",
 ) -> bool:
-    return any(
-        e.source.node_id == node(g, source).id
-        and e.target.node_id == node(g, target).id
-        and e.source.port_id == source_port
-        and e.target.port_id == target_port
-        for e in g.edges
+    return (node(g, source).id, source_port, node(g, target).id, target_port) in transparent_edges(
+        g
     )
 
 

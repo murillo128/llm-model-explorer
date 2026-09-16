@@ -1,11 +1,7 @@
 .architecture-explorer { flex: 1 1 0; min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; font-size: 13px; }
-.architecture-toolbar, .architecture-repetitions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px; flex-shrink: 0; max-height: 25%; overflow: auto; }
+
 .architecture-explorer button, .architecture-explorer select { color: var(--ui-text); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 4px; padding: 3px 6px; font-size: 12px; cursor: pointer; }
 .architecture-explorer button:hover { background: var(--ui-accent-soft); }
-.architecture-toolbar label, .architecture-repetitions label { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.architecture-toolbar select, .architecture-repetitions select { max-width: 230px; min-width: 0; }
-.architecture-coverage { padding: 4px 8px; flex-shrink: 0; max-height: 50px; overflow: auto; color: var(--ui-text-muted); }
-.architecture-diagnostics { max-height: 20%; overflow: auto; padding: 4px 8px; }
 .architecture-flow { flex: 1; min-height: 0; min-width: 0; background: var(--ui-surface-soft); }
 .architecture-node { width: 100%; height: 100%; background: var(--ui-surface); border: 1px solid var(--ui-border-strong); border-radius: 6px; position: relative; }
 .architecture-node[data-kind="group"] { background: var(--ui-surface-soft); border-style: dashed; }
@@ -20,7 +16,6 @@
 .architecture-explorer .react-flow__edge-path { stroke: var(--ui-text-muted); }
 .working-surface:has(.architecture-explorer) { display: flex; overflow: hidden; }
 .working-surface:has(.architecture-explorer) > .surface-content { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; padding: 4px; gap: 0; }
-@media (max-width: 600px) { .architecture-toolbar select { max-width: 180px; } }
 .architecture-inspection { width: min(1100px, calc(100vw - 24px)); height: calc(100dvh - 32px); max-width: none; max-height: none; box-sizing: border-box; padding: 12px; border: 1px solid var(--ui-border); border-radius: 8px; background: var(--ui-surface); color: var(--ui-text); overflow: hidden; }
 .architecture-inspection[open] { display: flex; flex-direction: column; gap: 8px; }
 .architecture-inspection::backdrop { background: #20201d66; }
@@ -37,11 +32,6 @@
 .architecture-explorer { position: relative; }
 .architecture-flow { position: relative; }
 .architecture-explorer button:focus-visible, .architecture-explorer select:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
-.architecture-repetition, .architecture-focus-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
-.architecture-repetition { width: 100%; }
-.architecture-focus-controls { padding: 4px 6px; flex-shrink: 0; font-size: 11px; max-height: 80px; overflow: auto; }
-.architecture-focus-controls label { display: flex; align-items: center; gap: 3px; }
-.architecture-pattern { color: var(--ui-text-muted); font-size: 11px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .architecture-node[data-expanded="true"] > .architecture-node-type { max-width: 300px; }
 .architecture-explorer .react-flow__node:has(.architecture-node[data-expanded="true"]) { pointer-events: none; }
 .architecture-node[data-expanded="true"] { background: transparent; pointer-events: none; }
@@ -69,3 +59,48 @@
 .architecture-connection-details p { margin: 6px 0; }
 .architecture-connection-details code { font-size: 10px; }
 .architecture-connection-details summary { cursor: pointer; }
+
+/* Controls own their disclosures and overflow; the canvas geometry is independent. */
+.architecture-controls { flex-shrink: 0; min-width: 0; max-height: 45%; overflow: auto; }
+.architecture-toolbar { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 5px 8px; overflow-x: auto; }
+.architecture-toolbar > button { flex-shrink: 0; min-height: 28px; }
+.architecture-breadcrumbs { display: flex; align-items: center; flex: 1; min-width: 100px; overflow-x: auto; white-space: nowrap; }
+.architecture-breadcrumbs > span { display: flex; align-items: center; gap: 2px; color: var(--ui-text-muted); }
+.architecture-breadcrumbs button { border-color: transparent; background: transparent; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.architecture-breadcrumbs button[aria-current] { font-weight: 600; color: var(--ui-text); }
+.architecture-context-row { display: flex; align-items: center; min-height: 36px; padding: 3px 8px 5px; gap: 10px; border-bottom: 1px solid var(--ui-border); overflow-x: auto; }
+.architecture-context-navigation { display: flex; align-items: center; gap: 5px; min-width: 0; overflow-x: auto; flex: 1; white-space: nowrap; }
+.architecture-context-navigation > * { flex-shrink: 0; }
+.architecture-stack-name { font-size: 12px; font-weight: 600; }
+.architecture-stack-name > span, .architecture-visible-range { color: var(--ui-text-muted); font-size: 11px; font-weight: 400; }
+.architecture-visible-range { max-width: 140px; overflow-x: auto; }
+.architecture-instance-picker select { max-width: 240px; }
+.architecture-selection { display: flex; gap: 4px; align-items: center; flex-shrink: 0; border-left: 1px solid var(--ui-border); padding-left: 10px; }
+.architecture-selection > span { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.architecture-partial { color: var(--ui-text-muted); font-size: 11px; white-space: nowrap; }
+.architecture-isolated-state { color: var(--ui-text); background: var(--ui-accent-soft); border: 1px solid var(--ui-accent); border-radius: 4px; padding: 3px 6px; font-size: 11px; white-space: nowrap; }
+.architecture-node[data-presentation="external"] { border-style: dashed; }
+.architecture-control-popover { position: absolute; z-index: 1300; top: 43px; right: 8px; width: min(430px, calc(100% - 16px)); max-height: calc(100% - 54px); overflow: auto; padding: 10px; box-sizing: border-box; border: 1px solid var(--ui-border-strong); border-radius: 6px; background: var(--ui-surface); color: var(--ui-text); box-shadow: var(--ui-shadow-float); }
+.architecture-search { display: flex; flex-direction: column; gap: 8px; }
+.architecture-search input { flex-shrink: 0; width: 100%; box-sizing: border-box; padding: 7px 8px; font: inherit; color: var(--ui-text); background: var(--ui-surface); border: 1px solid var(--ui-border-strong); border-radius: 4px; }
+.architecture-controls input:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.architecture-search-results { min-height: 0; overflow: auto; }
+.architecture-search-results [role="option"] { padding: 7px 8px; cursor: pointer; border-radius: 3px; }
+.architecture-search-results [role="option"]:hover, .architecture-search-results [aria-selected="true"] { background: var(--ui-accent-soft); outline: 1px solid var(--ui-accent); outline-offset: -1px; }
+.architecture-search-results strong, .architecture-search-results span { display: block; overflow-wrap: anywhere; }
+.architecture-search-results strong { font-size: 12px; font-weight: 600; }
+.architecture-search-results span, .architecture-search-count { font-size: 11px; color: var(--ui-text-muted); }
+.architecture-search-count { flex-shrink: 0; }
+.architecture-option-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.architecture-options fieldset { margin: 12px 0; padding: 8px; border: 1px solid var(--ui-border); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.architecture-options label { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.architecture-options details { font-size: 12px; overflow-wrap: anywhere; }
+.architecture-options summary { cursor: pointer; }
+.architecture-options summary:focus-visible { outline: 2px solid var(--ui-accent); }
+.architecture-controls button:disabled { opacity: 0.45; cursor: default; }
+@media (max-width: 700px) {
+  .architecture-context-navigation { flex: 0 0 auto; max-width: none; overflow: visible; }
+  .architecture-selection > span { max-width: 120px; }
+  .architecture-breadcrumbs { flex: 0 0 auto; min-width: 0; max-width: none; overflow: visible; }
+  .architecture-toolbar { gap: 4px; }
+}

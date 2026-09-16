@@ -1,0 +1,1035 @@
+{
+  "status": "FAIL: integrated acceptance incomplete; material UI lifetime correction required",
+  "runtime_revision": "f7764fd69fffde644dd484ba2f7ca851123f2206",
+  "unchanged_runtime_trees": {
+    "ui/src": "9b1c112887446ac7dbb32f4aba9fc420fb0c8bc0",
+    "backend/src": "4968b37a81250dfb69f08a2bb33b6b325fb356a4"
+  },
+  "test_sha256": {
+    "ui/acceptance/architecture.spec.ts": "66572bb8aa6f550f312728010ba3fe12fcb6234318a22feede84cbf0b03e31b4",
+    "ui/acceptance/architecture-probe.ts": "529a30d2cb625a72b64958d2ecc0464e34f04fc649b58f261e341401420b2e87"
+  },
+  "environment": {
+    "python": "3.12.14",
+    "torch": "2.14.0+cpu",
+    "node": "24.14.0",
+    "chromium": "153.0.8010.12",
+    "platform": "Linux 6.8.0-139-generic x86_64 glibc2.39",
+    "browser": "headed Chromium, isolated Xvfb without GLX, SwiftShader WebGL2, DPR 1"
+  },
+  "checks": {
+    "backend": {
+      "passed": 1224,
+      "skipped": 19,
+      "skip_reason": "CUDA unavailable",
+      "lint": "PASS",
+      "format": "PASS",
+      "mypy": "PASS (71 source files)"
+    },
+    "ui": {
+      "unit_passed": 731,
+      "files": 33,
+      "api_bindings": "PASS",
+      "typecheck": "PASS",
+      "lint": "PASS",
+      "build": "PASS"
+    },
+    "api": {
+      "openapi": "3.1 valid",
+      "references": 283,
+      "instances": 88,
+      "architecture_cases": 144,
+      "wire_fixtures": 76
+    },
+    "semantics": {
+      "passed": 7,
+      "baseline": "a82a1033b18eb575b41f13c6782cee496bd5b1a6"
+    },
+    "global_comparison": {
+      "passed": 24,
+      "baseline": "5d3522272cae1a7da8afcdf47017702b7698b36c",
+      "excluded": [
+        "milliseconds"
+      ]
+    }
+  },
+  "browser_stats": {
+    "startTime": "2026-09-15T22:05:59.170Z",
+    "duration": 139367.168,
+    "expected": 6,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  },
+  "browser_cases": [
+    {
+      "title": "deterministic production [smollm2] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 21466,
+      "observations": {
+        "compact-graph": {
+          "sourceNodes": 78,
+          "sourceEdges": 112,
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "dpr": 1,
+          "heap": {
+            "usedSize": 9920764,
+            "totalSize": 19197952,
+            "embedderHeapUsedSize": 5675624,
+            "backingStorageSize": 1134550
+          },
+          "collected": false,
+          "active": 0,
+          "created": 1,
+          "peak": 1,
+          "geometry": {
+            "width": 1228,
+            "height": 636,
+            "nodes": 11,
+            "edges": 10,
+            "layoutMs": 149.19999998807907
+          },
+          "observedGraphs": 1,
+          "observedLayouts": 1,
+          "retainedGraphs": 1,
+          "retainedLayouts": 1
+        },
+        "isolated-smollm2-attention-1440-geometry": {
+          "width": 1440,
+          "graph": "6f1a89f323d8678452980b911e0ced4f841db28707d09ea3b91e2986765c1a02",
+          "scope": "72db7e2468b7914ac267cf8d3039a932ba08acd8a590437e0b647451a5a7da22",
+          "sourceNodes": 78,
+          "visibleNodes": 28,
+          "visibleEdges": 30,
+          "layoutMs": 164.40000000596046,
+          "initialCamera": "transform: translate(-590.6px, 174.2px) scale(0.8);",
+          "component": {
+            "x": 180.3199005126953,
+            "y": 444.0667419433594,
+            "width": 1097.3804168701172,
+            "height": 211.86648559570312
+          },
+          "boundaryFanout": 3,
+          "resources": {
+            "heap": {
+              "usedSize": 21536988,
+              "totalSize": 48357376,
+              "embedderHeapUsedSize": 7798792,
+              "backingStorageSize": 789349
+            },
+            "collected": false,
+            "active": 0,
+            "created": 9,
+            "peak": 2,
+            "geometry": {
+              "width": 3224,
+              "height": 577,
+              "nodes": 28,
+              "edges": 30,
+              "layoutMs": 164.40000000596046
+            },
+            "observedGraphs": 1,
+            "observedLayouts": 7,
+            "retainedGraphs": 1,
+            "retainedLayouts": 7
+          }
+        },
+        "isolated-smollm2-mlp-1440-geometry": {
+          "width": 1440,
+          "graph": "6f1a89f323d8678452980b911e0ced4f841db28707d09ea3b91e2986765c1a02",
+          "scope": "dfa517299579fa4e68401f56b4b20211629312ce82ecb81981ff9dd0001e927c",
+          "sourceNodes": 78,
+          "visibleNodes": 8,
+          "visibleEdges": 7,
+          "layoutMs": 127.2999999821186,
+          "initialCamera": "transform: translate(85px, 215px) scale(1);",
+          "component": {
+            "x": 336,
+            "y": 384,
+            "width": 776,
+            "height": 332
+          },
+          "boundaryFanout": 2,
+          "resources": {
+            "heap": {
+              "usedSize": 25086312,
+              "totalSize": 58318848,
+              "embedderHeapUsedSize": 7222864,
+              "backingStorageSize": 779537
+            },
+            "collected": false,
+            "active": 0,
+            "created": 12,
+            "peak": 2,
+            "geometry": {
+              "width": 1228,
+              "height": 380,
+              "nodes": 8,
+              "edges": 7,
+              "layoutMs": 127.2999999821186
+            },
+            "observedGraphs": 1,
+            "observedLayouts": 10,
+            "retainedGraphs": 1,
+            "retainedLayouts": 10
+          }
+        },
+        "exhaustive-graph": {
+          "sourceNodes": 78,
+          "sourceEdges": 112,
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "dpr": 1,
+          "heap": {
+            "usedSize": 30005676,
+            "totalSize": 63037440,
+            "embedderHeapUsedSize": 27577008,
+            "backingStorageSize": 809095
+          },
+          "collected": false,
+          "active": 0,
+          "created": 14,
+          "peak": 2,
+          "geometry": {
+            "width": 10126,
+            "height": 1323,
+            "nodes": 78,
+            "edges": 88,
+            "layoutMs": 322.7999999821186
+          },
+          "observedGraphs": 1,
+          "observedLayouts": 12,
+          "retainedGraphs": 1,
+          "retainedLayouts": 12
+        },
+        "production-architecture-layout": {
+          "kind": "synthetic checkpoint",
+          "family": "smollm2",
+          "nodes": 78,
+          "edges": 112,
+          "layoutMs": 322.7999999821186,
+          "heapSnapshot": {
+            "usedSize": 27457496,
+            "totalSize": 72474624,
+            "embedderHeapUsedSize": 43742080,
+            "backingStorageSize": 810018
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      }
+    },
+    {
+      "title": "deterministic production [qwen3] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 27315,
+      "observations": {
+        "compact-graph": {
+          "sourceNodes": 82,
+          "sourceEdges": 116,
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "dpr": 1,
+          "heap": {
+            "usedSize": 10249092,
+            "totalSize": 19197952,
+            "embedderHeapUsedSize": 6063832,
+            "backingStorageSize": 1183944
+          },
+          "collected": false,
+          "active": 0,
+          "created": 1,
+          "peak": 1,
+          "geometry": {
+            "width": 1228,
+            "height": 636,
+            "nodes": 11,
+            "edges": 10,
+            "layoutMs": 148
+          },
+          "observedGraphs": 1,
+          "observedLayouts": 1,
+          "retainedGraphs": 1,
+          "retainedLayouts": 1
+        },
+        "isolated-qwen3-attention-1440-geometry": {
+          "width": 1440,
+          "graph": "82d2af00593f65682e1924ed0000edac7b187e746932bd911eb3a745ef820972",
+          "scope": "430b097084aa0a7d9bd6adbab78d0e130cbefd42497951120c92e8031a6db148",
+          "sourceNodes": 82,
+          "visibleNodes": 30,
+          "visibleEdges": 32,
+          "layoutMs": 232.90000000596046,
+          "initialCamera": "transform: translate(-666.6px, 174.2px) scale(0.8);",
+          "component": {
+            "x": 173.93939208984375,
+            "y": 450.0463562011719,
+            "width": 1107.2371215820312,
+            "height": 199.90731811523438
+          },
+          "boundaryFanout": 3,
+          "resources": {
+            "heap": {
+              "usedSize": 22879792,
+              "totalSize": 49143808,
+              "embedderHeapUsedSize": 8062280,
+              "backingStorageSize": 792921
+            },
+            "collected": false,
+            "active": 0,
+            "created": 9,
+            "peak": 2,
+            "geometry": {
+              "width": 3414,
+              "height": 577,
+              "nodes": 30,
+              "edges": 32,
+              "layoutMs": 232.90000000596046
+            },
+            "observedGraphs": 1,
+            "observedLayouts": 7,
+            "retainedGraphs": 1,
+            "retainedLayouts": 7
+          }
+        },
+        "isolated-qwen3-mlp-1440-geometry": {
+          "width": 1440,
+          "graph": "82d2af00593f65682e1924ed0000edac7b187e746932bd911eb3a745ef820972",
+          "scope": "5ef51988b22b4a78303a1b694232abbb8f7ac4f08c33538ab82a5721b9f8534e",
+          "sourceNodes": 82,
+          "visibleNodes": 8,
+          "visibleEdges": 7,
+          "layoutMs": 210.09999999403954,
+          "initialCamera": "transform: translate(85px, 215px) scale(1);",
+          "component": {
+            "x": 336,
+            "y": 384,
+            "width": 776,
+            "height": 332
+          },
+          "boundaryFanout": 2,
+          "resources": {
+            "heap": {
+              "usedSize": 22864560,
+              "totalSize": 61988864,
+              "embedderHeapUsedSize": 6531752,
+              "backingStorageSize": 761308
+            },
+            "collected": false,
+            "active": 0,
+            "created": 12,
+            "peak": 2,
+            "geometry": {
+              "width": 1228,
+              "height": 380,
+              "nodes": 8,
+              "edges": 7,
+              "layoutMs": 210.09999999403954
+            },
+            "observedGraphs": 1,
+            "observedLayouts": 10,
+            "retainedGraphs": 1,
+            "retainedLayouts": 10
+          }
+        },
+        "exhaustive-graph": {
+          "sourceNodes": 82,
+          "sourceEdges": 116,
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "dpr": 1,
+          "heap": {
+            "usedSize": 29270792,
+            "totalSize": 61988864,
+            "embedderHeapUsedSize": 27963560,
+            "backingStorageSize": 811525
+          },
+          "collected": false,
+          "active": 0,
+          "created": 14,
+          "peak": 2,
+          "geometry": {
+            "width": 10506,
+            "height": 1323,
+            "nodes": 82,
+            "edges": 92,
+            "layoutMs": 392.09999999403954
+          },
+          "observedGraphs": 1,
+          "observedLayouts": 12,
+          "retainedGraphs": 1,
+          "retainedLayouts": 12
+        },
+        "production-architecture-layout": {
+          "kind": "synthetic checkpoint",
+          "family": "qwen3",
+          "nodes": 82,
+          "edges": 116,
+          "layoutMs": 392.09999999403954,
+          "heapSnapshot": {
+            "usedSize": 15537096,
+            "totalSize": 70901760,
+            "embedderHeapUsedSize": 4555000,
+            "backingStorageSize": 786471
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      }
+    },
+    {
+      "title": "deterministic production [qwen35] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 26745,
+      "observations": {
+        "compact-graph": {
+          "sourceNodes": 91,
+          "sourceEdges": 125,
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "dpr": 1,
+          "heap": {
+            "usedSize": 10357652,
+            "totalSize": 19460096,
+            "embedderHeapUsedSize": 6092280,
+            "backingStorageSize": 1219555
+          },
+          "collected": false,
+          "active": 0,
+          "created": 1,
+          "peak": 1,
+          "geometry": {
+            "width": 1276,
+            "height": 636,
+            "nodes": 12,
+            "edges": 8,
+            "layoutMs": 207.19999998807907
+          },
+          "observedGraphs": 1,
+          "observedLayouts": 1,
+          "retainedGraphs": 1,
+          "retainedLayouts": 1
+        },
+        "isolated-qwen35-attention-1440-geometry": {
+          "width": 1440,
+          "graph": "bab0b3a5d95674b687abb336f7ab9b350e87b1a2be530865b3882035e687851b",
+          "scope": "4e9bc703165c9e6402fb883b192888ae6e88ef527ab5c955c411870ee45f0df9",
+          "sourceNodes": 91,
+          "visibleNodes": 32,
+          "visibleEdges": 35,
+          "layoutMs": 165.2999999821186,
+          "initialCamera": "transform: translate(-673px, 111.4px) scale(0.8);",
+          "component": {
+            "x": 162.47842407226562,
+            "y": 420.99468994140625,
+            "width": 1120.0520935058594,
+            "height": 258.01068115234375
+          },
+          "boundaryFanout": 0,
+          "resources": {
+            "heap": {
+              "usedSize": 27493632,
+              "totalSize": 76144640,
+              "embedderHeapUsedSize": 40500592,
+              "backingStorageSize": 938000
+            },
+            "collected": false,
+            "active": 0,
+            "created": 15,
+            "peak": 2,
+            "geometry": {
+              "width": 3430,
+              "height": 734,
+              "nodes": 32,
+              "edges": 35,
+              "layoutMs": 165.2999999821186
+            },
+            "observedGraphs": 1,
+            "observedLayouts": 11,
+            "retainedGraphs": 1,
+            "retainedLayouts": 11
+          }
+        },
+        "isolated-qwen35-mlp-1440-geometry": {
+          "width": 1440,
+          "graph": "bab0b3a5d95674b687abb336f7ab9b350e87b1a2be530865b3882035e687851b",
+          "scope": "59d5d153f410b90f20863a580d8fe893f03af9984b9b3851b0202d19dfcc0005",
+          "sourceNodes": 91,
+          "visibleNodes": 8,
+          "visibleEdges": 7,
+          "layoutMs": 139.30000001192093,
+          "initialCamera": "transform: translate(85px, 215px) scale(1);",
+          "component": {
+            "x": 336,
+            "y": 384,
+            "width": 776,
+            "height": 332
+          },
+          "boundaryFanout": 2,
+          "resources": {
+            "heap": {
+              "usedSize": 38670004,
+              "totalSize": 81911808,
+              "embedderHeapUsedSize": 17497128,
+              "backingStorageSize": 816517
+            },
+            "collected": false,
+            "active": 0,
+            "created": 18,
+            "peak": 2,
+            "geometry": {
+              "width": 1228,
+              "height": 380,
+              "nodes": 8,
+              "edges": 7,
+              "layoutMs": 139.30000001192093
+            },
+            "observedGraphs": 1,
+            "observedLayouts": 14,
+            "retainedGraphs": 1,
+            "retainedLayouts": 14
+          }
+        },
+        "exhaustive-graph": {
+          "sourceNodes": 91,
+          "sourceEdges": 125,
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "dpr": 1,
+          "heap": {
+            "usedSize": 21228928,
+            "totalSize": 82173952,
+            "embedderHeapUsedSize": 41134120,
+            "backingStorageSize": 869043
+          },
+          "collected": false,
+          "active": 0,
+          "created": 20,
+          "peak": 2,
+          "geometry": {
+            "width": 10618,
+            "height": 1376,
+            "nodes": 91,
+            "edges": 102,
+            "layoutMs": 517
+          },
+          "observedGraphs": 1,
+          "observedLayouts": 16,
+          "retainedGraphs": 1,
+          "retainedLayouts": 16
+        },
+        "production-architecture-layout": {
+          "kind": "synthetic checkpoint",
+          "family": "qwen35",
+          "nodes": 91,
+          "edges": 125,
+          "layoutMs": 517,
+          "heapSnapshot": {
+            "usedSize": 25117896,
+            "totalSize": 83484672,
+            "embedderHeapUsedSize": 61167584,
+            "backingStorageSize": 877879
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      }
+    },
+    {
+      "title": "deterministic production [vjepa2] full graph, concrete bindings and logical weight modal",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 23613,
+      "observations": {
+        "compact-graph": {
+          "sourceNodes": 95,
+          "sourceEdges": 137,
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "dpr": 1,
+          "heap": {
+            "usedSize": 12518832,
+            "totalSize": 19984384,
+            "embedderHeapUsedSize": 10524288,
+            "backingStorageSize": 1307756
+          },
+          "collected": false,
+          "active": 0,
+          "created": 1,
+          "peak": 1,
+          "geometry": {
+            "width": 3526,
+            "height": 977,
+            "nodes": 28,
+            "edges": 33,
+            "layoutMs": 179.30000001192093
+          },
+          "observedGraphs": 1,
+          "observedLayouts": 1,
+          "retainedGraphs": 1,
+          "retainedLayouts": 1
+        },
+        "isolated-vjepa2-attention-1440-geometry": {
+          "width": 1440,
+          "graph": "e06d738e9c2f1a1e780b516a762a37699f1d9cffe6e4209914140d3e85af52a6",
+          "scope": "09e3d49c283b45b615757aba8ff685331832257fb99c6d912547fcab59c9e191",
+          "sourceNodes": 95,
+          "visibleNodes": 17,
+          "visibleEdges": 18,
+          "layoutMs": 390.90000000596046,
+          "initialCamera": "transform: translate(-109px, 192.2px) scale(0.8);",
+          "component": {
+            "x": 227.19676208496094,
+            "y": 393.90264892578125,
+            "width": 1001.0872955322266,
+            "height": 312.19476318359375
+          },
+          "boundaryFanout": 3,
+          "resources": {
+            "heap": {
+              "usedSize": 33212748,
+              "totalSize": 74833920,
+              "embedderHeapUsedSize": 43790952,
+              "backingStorageSize": 901199
+            },
+            "collected": false,
+            "active": 0,
+            "created": 15,
+            "peak": 2,
+            "geometry": {
+              "width": 2020,
+              "height": 532,
+              "nodes": 17,
+              "edges": 18,
+              "layoutMs": 390.90000000596046
+            },
+            "observedGraphs": 1,
+            "observedLayouts": 11,
+            "retainedGraphs": 1,
+            "retainedLayouts": 11
+          }
+        },
+        "isolated-vjepa2-mlp-1440-geometry": {
+          "width": 1440,
+          "graph": "e06d738e9c2f1a1e780b516a762a37699f1d9cffe6e4209914140d3e85af52a6",
+          "scope": "370572cf9854403375e585f0cc43a793db8dbe32dc9dcfc879c9a0ebdea60312",
+          "sourceNodes": 95,
+          "visibleNodes": 6,
+          "visibleEdges": 4,
+          "layoutMs": 142.59999999403954,
+          "initialCamera": "transform: translate(188px, 279px) scale(1);",
+          "component": {
+            "x": 431,
+            "y": 448,
+            "width": 578,
+            "height": 204
+          },
+          "boundaryFanout": 0,
+          "resources": {
+            "heap": {
+              "usedSize": 23498700,
+              "totalSize": 80076800,
+              "embedderHeapUsedSize": 27492272,
+              "backingStorageSize": 846242
+            },
+            "collected": false,
+            "active": 0,
+            "created": 18,
+            "peak": 2,
+            "geometry": {
+              "width": 1022,
+              "height": 252,
+              "nodes": 6,
+              "edges": 4,
+              "layoutMs": 142.59999999403954
+            },
+            "observedGraphs": 1,
+            "observedLayouts": 14,
+            "retainedGraphs": 1,
+            "retainedLayouts": 14
+          }
+        },
+        "exhaustive-graph": {
+          "sourceNodes": 95,
+          "sourceEdges": 137,
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "dpr": 1,
+          "heap": {
+            "usedSize": 16065372,
+            "totalSize": 78241792,
+            "embedderHeapUsedSize": 4598632,
+            "backingStorageSize": 804254
+          },
+          "collected": false,
+          "active": 0,
+          "created": 20,
+          "peak": 2,
+          "geometry": {
+            "width": 12624,
+            "height": 1611,
+            "nodes": 95,
+            "edges": 107,
+            "layoutMs": 316
+          },
+          "observedGraphs": 1,
+          "observedLayouts": 16,
+          "retainedGraphs": 1,
+          "retainedLayouts": 16
+        },
+        "production-architecture-layout": {
+          "kind": "synthetic checkpoint",
+          "family": "vjepa2",
+          "nodes": 95,
+          "edges": 137,
+          "layoutMs": 316,
+          "heapSnapshot": {
+            "usedSize": 20655104,
+            "totalSize": 78241792,
+            "embedderHeapUsedSize": 32051432,
+            "backingStorageSize": 824433
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "browser": "153.0.8010.12"
+        }
+      }
+    },
+    {
+      "title": "deterministic production [smollm2] close during progressive data cancels and releases modal resources",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 10208,
+      "observations": {}
+    },
+    {
+      "title": "deterministic production [smollm2] repeated nested return releases obsolete layouts",
+      "project": "dpr1",
+      "status": "failed",
+      "duration_ms": 19661,
+      "observations": {
+        "repeated-return-resources": {
+          "sourceNodes": 78,
+          "sourceEdges": 112,
+          "samples": [
+            {
+              "cycle": 0,
+              "heap": {
+                "usedSize": 8990424,
+                "totalSize": 10285056,
+                "embedderHeapUsedSize": 2519544,
+                "backingStorageSize": 762553
+              },
+              "collected": true,
+              "active": 0,
+              "created": 7,
+              "peak": 2,
+              "geometry": {
+                "width": 1442,
+                "height": 636,
+                "nodes": 12,
+                "edges": 14,
+                "layoutMs": 142.30000001192093
+              },
+              "observedGraphs": 1,
+              "observedLayouts": 6,
+              "retainedGraphs": 1,
+              "retainedLayouts": 6
+            },
+            {
+              "cycle": 1,
+              "heap": {
+                "usedSize": 9731688,
+                "totalSize": 11071488,
+                "embedderHeapUsedSize": 2459632,
+                "backingStorageSize": 765263
+              },
+              "collected": true,
+              "active": 0,
+              "created": 12,
+              "peak": 2,
+              "geometry": {
+                "width": 1442,
+                "height": 636,
+                "nodes": 12,
+                "edges": 14,
+                "layoutMs": 144.2000000178814
+              },
+              "observedGraphs": 1,
+              "observedLayouts": 11,
+              "retainedGraphs": 1,
+              "retainedLayouts": 11
+            },
+            {
+              "cycle": 2,
+              "heap": {
+                "usedSize": 10217280,
+                "totalSize": 11333632,
+                "embedderHeapUsedSize": 2465592,
+                "backingStorageSize": 767978
+              },
+              "collected": true,
+              "active": 0,
+              "created": 17,
+              "peak": 2,
+              "geometry": {
+                "width": 1442,
+                "height": 636,
+                "nodes": 12,
+                "edges": 14,
+                "layoutMs": 149.59999999403954
+              },
+              "observedGraphs": 1,
+              "observedLayouts": 16,
+              "retainedGraphs": 1,
+              "retainedLayouts": 16
+            },
+            {
+              "cycle": 3,
+              "heap": {
+                "usedSize": 10725324,
+                "totalSize": 12120064,
+                "embedderHeapUsedSize": 2472144,
+                "backingStorageSize": 770690
+              },
+              "collected": true,
+              "active": 0,
+              "created": 22,
+              "peak": 2,
+              "geometry": {
+                "width": 1442,
+                "height": 636,
+                "nodes": 12,
+                "edges": 14,
+                "layoutMs": 259.80000001192093
+              },
+              "observedGraphs": 1,
+              "observedLayouts": 21,
+              "retainedGraphs": 1,
+              "retainedLayouts": 21
+            },
+            {
+              "cycle": 4,
+              "heap": {
+                "usedSize": 11217164,
+                "totalSize": 12382208,
+                "embedderHeapUsedSize": 2479296,
+                "backingStorageSize": 773416
+              },
+              "collected": true,
+              "active": 0,
+              "created": 27,
+              "peak": 2,
+              "geometry": {
+                "width": 1442,
+                "height": 636,
+                "nodes": 12,
+                "edges": 14,
+                "layoutMs": 141.40000000596046
+              },
+              "observedGraphs": 1,
+              "observedLayouts": 26,
+              "retainedGraphs": 1,
+              "retainedLayouts": 26
+            },
+            {
+              "cycle": 5,
+              "heap": {
+                "usedSize": 11690316,
+                "totalSize": 13168640,
+                "embedderHeapUsedSize": 2485280,
+                "backingStorageSize": 776127
+              },
+              "collected": true,
+              "active": 0,
+              "created": 32,
+              "peak": 2,
+              "geometry": {
+                "width": 1442,
+                "height": 636,
+                "nodes": 12,
+                "edges": 14,
+                "layoutMs": 140.7000000178814
+              },
+              "observedGraphs": 1,
+              "observedLayouts": 31,
+              "retainedGraphs": 1,
+              "retainedLayouts": 31
+            },
+            {
+              "cycle": 6,
+              "heap": {
+                "usedSize": 12188132,
+                "totalSize": 13168640,
+                "embedderHeapUsedSize": 2491104,
+                "backingStorageSize": 778783
+              },
+              "collected": true,
+              "active": 0,
+              "created": 37,
+              "peak": 2,
+              "geometry": {
+                "width": 1442,
+                "height": 636,
+                "nodes": 12,
+                "edges": 14,
+                "layoutMs": 147.80000001192093
+              },
+              "observedGraphs": 1,
+              "observedLayouts": 36,
+              "retainedGraphs": 1,
+              "retainedLayouts": 36
+            },
+            {
+              "cycle": 7,
+              "heap": {
+                "usedSize": 12670108,
+                "totalSize": 13955072,
+                "embedderHeapUsedSize": 2498488,
+                "backingStorageSize": 779891
+              },
+              "collected": true,
+              "active": 0,
+              "created": 42,
+              "peak": 2,
+              "geometry": {
+                "width": 1442,
+                "height": 636,
+                "nodes": 12,
+                "edges": 14,
+                "layoutMs": 148.40000000596046
+              },
+              "observedGraphs": 1,
+              "observedLayouts": 41,
+              "retainedGraphs": 1,
+              "retainedLayouts": 41
+            }
+          ],
+          "memory": "Main-thread CDP JS heap after explicit GC; not browser RSS or GPU memory."
+        }
+      }
+    },
+    {
+      "title": "deterministic production [smollm2] isolated session replacement rejects a late actual response",
+      "project": "dpr1",
+      "status": "passed",
+      "duration_ms": 8630,
+      "observations": {}
+    }
+  ],
+  "trace_disabled_no_element_handle_control": [
+    {
+      "state": "cycle 0",
+      "heap": {
+        "usedSize": 8828324,
+        "totalSize": 10285056,
+        "embedderHeapUsedSize": 2403096,
+        "backingStorageSize": 737694
+      },
+      "collected": true,
+      "active": 0,
+      "created": 7,
+      "peak": 1,
+      "geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14,
+        "layoutMs": 124.5
+      },
+      "observedGraphs": 1,
+      "observedLayouts": 7,
+      "retainedGraphs": 1,
+      "retainedLayouts": 7
+    },
+    {
+      "state": "cycle 1",
+      "heap": {
+        "usedSize": 9538344,
+        "totalSize": 10809344,
+        "embedderHeapUsedSize": 2273712,
+        "backingStorageSize": 739477
+      },
+      "collected": true,
+      "active": 0,
+      "created": 12,
+      "peak": 1,
+      "geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14,
+        "layoutMs": 123.09999999403954
+      },
+      "observedGraphs": 1,
+      "observedLayouts": 12,
+      "retainedGraphs": 1,
+      "retainedLayouts": 12
+    },
+    {
+      "state": "after unmount",
+      "heap": {
+        "usedSize": 7469712,
+        "totalSize": 8974336,
+        "embedderHeapUsedSize": 2063400,
+        "backingStorageSize": 724960
+      },
+      "collected": true,
+      "active": 0,
+      "created": 12,
+      "peak": 1,
+      "geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14,
+        "layoutMs": 123.09999999403954
+      },
+      "observedGraphs": 1,
+      "observedLayouts": 12,
+      "retainedGraphs": 0,
+      "retainedLayouts": 0
+    }
+  ],
+  "heap_retainer": "Mounted Model overview button __reactProps.onClick -> successive Canvas closure contexts -> prior result.layout objects. WeakRefs are not the strong path. Whole explorer unmount releases layouts in the no-handle control.",
+  "raw_heap_sha256": "2bc94f359beed84c20e08aace9289678a74b4e34a1e70e1154c489f4ad86b15a",
+  "remaining": [
+    "Full component browser suites",
+    "Architecture HTTP references and remaining TCP acceptance",
+    "DPR 2 production acceptance",
+    "All four complete local checkpoint browser runs",
+    "1178/1440/constrained exterior visual comparisons",
+    "Full performance and visual release review after the owning UI correction"
+  ]
+}
