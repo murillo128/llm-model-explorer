@@ -4,7 +4,7 @@ import { Decoration, EditorView, WidgetType, keymap } from '@codemirror/view';
 import type { DecorationSet } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { annotate } from './annotations';
-import type { Tokenization } from './annotations';
+import type { SourceSelection, Tokenization } from './annotations';
 
 const annotationsChanged = StateEffect.define<DecorationSet>();
 const annotationsStale = StateEffect.define<boolean>();
@@ -95,15 +95,18 @@ interface Props {
   onRowActivate?: ((row: number) => void) | undefined;
   onEdit: (text: string, composing: boolean, promptly?: boolean) => void;
   onContentHeight?: ((height: number) => void) | undefined;
+  onSourceSelection?: ((ranges: readonly SourceSelection[]) => void) | undefined;
 }
 
 /** CodeMirror's immutable document/history remain separate from decoration-only
  * transactions. Widgets and brackets never enter source, selections or copy. */
-export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect, onRowActivate, onContentHeight }: Props) {
+export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect, onRowActivate, onContentHeight, onSourceSelection }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const edit = useRef(onEdit);
   const measure = useRef(onContentHeight);
+  const selection = useRef(onSourceSelection);
+  useLayoutEffect(() => { selection.current = onSourceSelection; }, [onSourceSelection]);
   useLayoutEffect(() => { measure.current = onContentHeight; }, [onContentHeight]);
   useLayoutEffect(() => { edit.current = onEdit; }, [onEdit]);
   useLayoutEffect(() => {
@@ -119,6 +122,12 @@ export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect
         EditorView.contentAttributes.of({ id, role: 'textbox', 'aria-label': 'Prompt', 'aria-multiline': 'true', 'aria-describedby': `${id}-help ${id}-status`, spellcheck: 'false' }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) edit.current(update.state.doc.toString(), update.view.composing);
+          // Blur/DOM selection loss is not an intentional caret placement. Keep
+          // the native source range when inspecting another surface. Document
+          // edits always report their mapped selection for the next generation.
+          if (update.docChanged || (update.selectionSet && update.view.hasFocus)) {
+            selection.current?.(update.state.selection.ranges.map(({ from, to }) => ({ from, to })));
+          }
           if (update.geometryChanged || update.docChanged) reportHeight(update.view);
         }),
         EditorView.domEventHandlers({

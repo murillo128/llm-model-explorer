@@ -8,6 +8,7 @@ import { TensorViewport } from './tensor-viewport';
 import type { TensorDescriptor, ViewGeometry } from './geometry';
 import { DistributionScale } from './distribution-scale';
 import { MatrixScrollbars } from './matrix-scrollbars';
+import { MatrixRowSelection } from './matrix-row-selection';
 import type { DistributionDomain } from './distribution-scale';
 import './distribution-scale.css';
 
@@ -32,6 +33,7 @@ export class MatrixViewport {
   private rowScale?: DistributionScale;
   private columnScale?: DistributionScale;
   private scrollbars?: MatrixScrollbars;
+  private rowSelection?: MatrixRowSelection;
   private readonly observer: ResizeObserver;
 
   constructor(readonly host: HTMLElement, descriptor: TensorDescriptor, options: MatrixViewportOptions = {}) {
@@ -85,17 +87,19 @@ export class MatrixViewport {
       };
       layout();
       this.matrix = new TensorViewport(this.main, descriptor, { ...options, zoom: descriptor.rank === 2, onStateChange: (state) => {
-        if (state !== 'ready') { this.zoomSelection?.cancel(); this.inspection?.clear(); }
+        if (state !== 'ready') { this.zoomSelection?.cancel(); this.inspection?.clear(); this.rowSelection?.refresh(); }
         options.onStateChange?.(state);
       }, onViewChange: (view) => {
         layout();
         this.align(view);
+        this.rowSelection?.refresh();
         this.scrollbars?.refresh();
         this.zoomSelection?.refresh();
         this.inspection?.refresh();
       } });
       this.scrollbars = new MatrixScrollbars(this.main, descriptor.rank === 1 ? this.main : host);
       this.matrix.attachOverlay(this.scrollbars.element);
+      if (descriptor.rank === 2) this.rowSelection = new MatrixRowSelection(this);
       if (descriptor.rank === 2 && options.onInspection) this.inspection = new MatrixInspection(this, options.onInspection);
       if (descriptor.rank === 2 && descriptor.numel > 0) this.zoomSelection = new MatrixZoomSelection(this,
         (active) => this.inspection?.suspend(active));
@@ -164,6 +168,7 @@ export class MatrixViewport {
     this.columnScale?.setDomain(domain);
   }
   setLinkedRow(row: number | null) { this.inspection?.setLinkedRow(row); }
+  setSelectedRows(rows?: readonly number[]) { this.rowSelection?.setRows(rows); }
 
   private restoreHost() {
     this.host.classList.remove('matrix-surfaces');
@@ -178,6 +183,7 @@ export class MatrixViewport {
     this.zoomSelection?.dispose();
     this.cameraNavigation?.dispose();
     this.inspection?.dispose();
+    this.rowSelection?.dispose();
     this.scrollbars?.dispose();
     this.matrix.dispose();
     this.rows?.dispose();

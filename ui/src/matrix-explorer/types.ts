@@ -43,6 +43,9 @@ export interface MatrixExplorerProps {
   readonly onRenderingStateChange?: (state: RendererState) => void;
   /** Display-only row context from a linked view; does not select a cell or move focus. */
   readonly highlightedRow?: number | null;
+  /** Controlled native row positions, independent of inspection and navigation.
+   * Invalid entries are ignored; omitted/empty clears the display-only guides. */
+  readonly selectedRows?: readonly number[] | undefined;
   /** New object identity requests minimal vertical reveal, preserving scale/X/focus.
    * Keep stable across renders; omit on source/generation replacement. */
   readonly revealRow?: { readonly row: number } | null;

@@ -78,6 +78,15 @@ can inspect a cell again; linked consumers clear their external row when that
 local selection is reported. Clearing the external row does not clear a newer
 local cell.
 
+`selectedRows` accepts a controlled collection of native row positions for
+persistent, display-only row outlines, separate from `highlightedRow` and
+`revealRow`. Adjacent positions share an outlined band; disjoint positions stay
+disjoint. Invalid positions are ignored and omission/empty clears the guides.
+The matrix and right-hand distribution outlines stay inside their exact clipped
+raster bounds, including single-device-pixel rows at high DPR. They never emit
+cell callbacks, move the camera, or restart delivery. Consumers own generation
+fencing and must disable linkage on stale/hidden sources.
+
 `PanelHeader` composes identity, information, summary, status, and right-side actions in a fixed 40px scientific toolbar. Pass it through `MatrixExplorer.header`; status changes do not restart the source. `InfoPopover` supplies hover/focus previews and click/tap/keyboard pinning, with pinned-only close, outside/Escape dismissal, and focus restoration. Neither primitive depends on tensor transport or tokenizer state.
 
 `MatrixExplorer` uses `ViewerPanel` as one rounded card containing the title and

@@ -92,8 +92,9 @@ export function TokenizerWorkspace({ client, sessionId, ...props }: Props) {
       header={<PanelHeader identity={<h2>Prompt / Tokens</h2>} />}
       activeRow={link && linkedSignal === link.signal ? { signal: link.signal, row: link.matrixRow ?? link.tokenRow } : undefined}
       onRowSelect={selectTokenRow} onRowActivate={(row, current) => selectTokenRow(row, current, true)}
-      downstream={current => <>{divider}<section className="input-embeddings" aria-label="Input embeddings">
+      downstream={(current, selectedRows) => <>{divider}<section className="input-embeddings" aria-label="Input embeddings">
         <EmbeddingRegion client={client} sessionId={sessionId} current={current}
+          selectedRows={selectedRows}
           highlightedRow={link && link.signal === current?.signal ? link.tokenRow : null}
           revealRow={link && link.signal === current?.signal ? link.revealRow : null}
           onLinkedGeneration={setLinkedSignal}
@@ -110,10 +111,11 @@ interface EmbeddingSnapshot {
   cancel: EmbeddingController['cancel'];
 }
 
-function EmbeddingRegion({ client, sessionId, current, highlightedRow, revealRow, onRowSelect, onLinkedGeneration }: {
+function EmbeddingRegion({ client, sessionId, current, highlightedRow, selectedRows, revealRow, onRowSelect, onLinkedGeneration }: {
   client: ApiClient; sessionId: string; current: CurrentTokenization | undefined;
   revealRow: { row: number } | null;
   highlightedRow: number | null; onRowSelect: (row: number | null) => void;
+  selectedRows: readonly number[];
   onLinkedGeneration: (signal: AbortSignal | undefined) => void;
 }) {
   const data = current?.data, signal = current?.signal;
@@ -161,6 +163,7 @@ function EmbeddingRegion({ client, sessionId, current, highlightedRow, revealRow
       return <div key={snapshot.generation} className="embedding-layer" data-staging={hidden || undefined}
         aria-hidden={hidden || undefined} inert={hidden || undefined}>
         <MatrixExplorer source={source} highlightedRow={!hidden && linked ? highlightedRow : null}
+          selectedRows={!hidden && linked ? selectedRows : undefined}
           revealRow={!hidden && linked ? revealRow : null}
           onRowSelect={row => { if (!hidden && linked) onRowSelect(row); }}
           onRenderingStateChange={state => {

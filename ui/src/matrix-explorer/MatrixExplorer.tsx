@@ -11,7 +11,7 @@ import './matrix-explorer.css';
 
 /** Transport-free scientific composition. The parent owns operation status/errors. */
 export function MatrixExplorer({ source, header, label = 'Matrix; scroll to inspect all values',
-  onCellSelect, onRowSelect, onColumnSelect, onRenderingStateChange, highlightedRow = null, revealRow }: MatrixExplorerProps) {
+  onCellSelect, onRowSelect, onColumnSelect, onRenderingStateChange, highlightedRow = null, selectedRows, revealRow }: MatrixExplorerProps) {
   const host = useRef<HTMLDivElement>(null);
   const currentViewport = useRef<MatrixViewport | null>(null);
   const [inspection, setInspection] = useState<Inspection | null>(null);
@@ -115,6 +115,7 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
     };
   }, [source]);
   useLayoutEffect(() => { currentViewport.current?.setLinkedRow(highlightedRow); }, [highlightedRow, source]);
+  useLayoutEffect(() => { currentViewport.current?.setSelectedRows(selectedRows); }, [selectedRows, source]);
   useLayoutEffect(() => {
     if (revealRow) currentViewport.current?.revealRow(revealRow.row);
   }, [revealRow, source]);

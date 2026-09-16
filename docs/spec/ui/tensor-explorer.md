@@ -383,6 +383,30 @@ on color alone. Arrow-key focus uses the same coordinate propagation as hover.
 
 ## GPU interaction-state constraint
 
+### Controlled row selection
+
+Matrix Explorer also accepts an optional controlled collection of native selected
+row positions, independent from transient `highlightedRow`, explicit `revealRow`
+and exact cell callbacks. Omission/empty clears it; invalid/out-of-range entries
+are ignored and replacement is idempotent. Consumers without row context retain
+the existing inspection/navigation behavior.
+
+Selected rows use restrained, non-interactive amber outlines across their visible
+complete row extent. Coalesce adjacent rows, keep disjoint ranges separate, and
+project the same ranges into the right row-distribution data surface only. Leave
+band interiors and unselected values unchanged, with transient inspection still
+distinguishable. This is lightweight overlay state, separate from drag-to-zoom
+preview, scalar/count storage, transfer and distribution domains. It neither
+creates a pinned cell nor emits matrix selection callbacks.
+
+Guides follow exact snapped cell boundaries, clipping, centered underfill,
+scroll, zoom and DPR changes; blank margins never become selected data. Selection
+updates never navigate, mutate history, resize layout, recreate sources or
+renderers, resubscribe, upload data, recompute analysis or intercept gestures.
+Dispose guides with the owning viewport. Consumers own generation fencing.
+
+### Scalar storage
+
 Hover, selection, and zoom must not require a recolored copy of the tensor or a second copy of the weights in GPU memory.
 
 For the standard single-cell hover state, the renderer should be able to express selection with small interaction state such as the active row index, active column index, hover flag, and semantic-color parameters. The shader derives row/column/intersection overlays from that state while reading the same immutable scalar tensor representation.

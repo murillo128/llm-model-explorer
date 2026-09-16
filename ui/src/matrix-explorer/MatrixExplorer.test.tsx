@@ -12,6 +12,7 @@ import type { MatrixSource, MatrixUpdates } from './types';
 const fake = vi.hoisted(() => ({ fail: false, transferFails: false, views: [] as {
   options: MatrixViewportOptions; upload: ReturnType<typeof vi.fn>; transfer: ReturnType<typeof vi.fn>;
   fitWidth: ReturnType<typeof vi.fn>; revealRow: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn>; refresh: ReturnType<typeof vi.fn>;
+  setSelectedRows: ReturnType<typeof vi.fn>;
 }[] }));
 vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
   matrix;
@@ -23,12 +24,13 @@ vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
     const transfer = vi.fn(() => { if (fake.transferFails) throw new Error('Invalid transfer'); });
     this.matrix = { renderer: { upload, setTransfer: transfer } };
     this.dispose = vi.fn(() => { options.onInspection?.(null); host.replaceChildren(); });
-    fake.views.push({ options, upload, transfer, fitWidth: this.fitWidth, revealRow: this.revealRow, dispose: this.dispose, refresh: this.refresh });
+    fake.views.push({ options, upload, transfer, fitWidth: this.fitWidth, revealRow: this.revealRow, dispose: this.dispose, refresh: this.refresh, setSelectedRows: this.setSelectedRows });
   }
   fitWidth = vi.fn();
   revealRow = vi.fn();
   refresh = vi.fn();
   setLinkedRow = vi.fn();
+  setSelectedRows = vi.fn();
   setDistributionDomain = vi.fn();
   dispose;
 } }));
@@ -222,4 +224,19 @@ it('reveals only on a new semantic intent without restarting delivery or resetti
   expect(fake.views[0]!.upload).not.toHaveBeenCalled();
   view.rerender(<MatrixExplorer source={source()} />);
   expect(fake.views[1]!.revealRow).not.toHaveBeenCalled();
+});
+
+it('replaces and clears controlled rows without a subscription, upload, inspection or camera change', () => {
+  const data = source(), inspect = vi.fn();
+  const view = render(<MatrixExplorer source={data} onCellSelect={inspect} />);
+  view.rerender(<MatrixExplorer source={data} selectedRows={[0, 1]} onCellSelect={inspect} />);
+  const viewport = fake.views[0]!;
+  expect(viewport.setSelectedRows).toHaveBeenLastCalledWith([0, 1]);
+  view.rerender(<MatrixExplorer source={data} selectedRows={[1]} onCellSelect={inspect} />);
+  expect(viewport.setSelectedRows).toHaveBeenLastCalledWith([1]);
+  view.rerender(<MatrixExplorer source={data} onCellSelect={inspect} />);
+  expect(viewport.setSelectedRows).toHaveBeenLastCalledWith(undefined);
+  expect(fake.views).toHaveLength(1);
+  expect(data.updates).toHaveLength(1);
+  for (const action of [viewport.upload, viewport.transfer, viewport.fitWidth, viewport.revealRow, viewport.refresh, inspect]) expect(action).not.toHaveBeenCalled();
 });

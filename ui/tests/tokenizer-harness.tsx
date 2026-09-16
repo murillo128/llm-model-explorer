@@ -1,5 +1,8 @@
 import { GridRenderer } from '../src/rendering/tensor-renderer';
 import { EditorView } from '@codemirror/view';
+import { EditorSelection } from '@codemirror/state';
+import { CameraHistory } from '../src/rendering/camera-history';
+import { TensorViewport } from '../src/rendering/tensor-viewport';
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ApiClient } from '../src/api/client';
@@ -12,7 +15,10 @@ interface Pending { session: string; text: string; add_special_tokens: boolean; 
 declare global {
   interface Window {
     embeddingHarness: {
+      historyCalls: number;
+      transferCalls: number;
       renderers: GridRenderer[];
+      viewports: TensorViewport[];
       countRenderers: GridRenderer[];
       requests: { session: string; token_ids: number[]; aborted: boolean }[];
       auxiliary: { kind: 'statistics' | 'distributions'; session: string; token_ids: number[]; aborted: boolean }[];
@@ -26,6 +32,8 @@ declare global {
       requests: Pending[];
       source: () => string;
       selection: () => number[];
+      select: (anchor: number, head: number) => void;
+      coords: (position: number) => { x: number; y: number };
       complete: (index: number, data: Tokenization, status?: number) => void;
       fail: (index: number) => void;
     };
@@ -37,6 +45,14 @@ window.tokenizerHarness = {
   requests: [],
   source: () => EditorView.findFromDOM(document.querySelector('.cm-content')!)!.state.doc.toString(),
   selection: () => { const selection = EditorView.findFromDOM(document.querySelector('.cm-content')!)!.state.selection.main; return [selection.from, selection.to]; },
+  select: (anchor, head) => {
+    const view = EditorView.findFromDOM(document.querySelector('.cm-content')!)!;
+    view.focus(); view.dispatch({ selection: EditorSelection.single(anchor, head) });
+  },
+  coords: position => {
+    const rect = EditorView.findFromDOM(document.querySelector('.cm-content')!)!.coordsAtPos(position)!;
+    return { x: rect.left, y: (rect.top + rect.bottom) / 2 };
+  },
   complete: (index, data, status = 200) => resolvers[index]!(new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })),
   fail: (index) => rejecters[index]!(new Error('simulated late transport failure')),
 };
@@ -53,7 +69,10 @@ GridRenderer.prototype.setView = function (...args) {
   return setView.apply(this, args);
 };
 window.embeddingHarness = {
+  historyCalls: 0,
+  transferCalls: 0,
   renderers, countRenderers,
+  viewports: [],
   requests: [], cancelled: [], auxiliary: [],
   auxiliaryHeaders(index, status = 200) {
     auxiliaryResolvers[index]!(status === 200 ? new Response(new ReadableStream({ start(controller) { auxiliaryStreams[index] = controller; } }), {
@@ -72,6 +91,23 @@ window.embeddingHarness = {
     try { streams[index]!.enqueue(new Uint8Array(bytes)); if (close) streams[index]!.close(); } catch { /* A cancelled reader may be closed. */ }
   },
 };
+const refreshViewport = TensorViewport.prototype.refresh;
+TensorViewport.prototype.refresh = function () {
+  if (!window.embeddingHarness.viewports.includes(this)) window.embeddingHarness.viewports.push(this);
+  return refreshViewport.call(this);
+};
+const setTransfer = GridRenderer.prototype.setTransfer;
+GridRenderer.prototype.setTransfer = function (...args) {
+  window.embeddingHarness.transferCalls++;
+  return setTransfer.apply(this, args);
+};
+for (const method of ['record', 'pop', 'clear'] as const) {
+  const original = CameraHistory.prototype[method];
+  Object.assign(CameraHistory.prototype, { [method]: function (this: CameraHistory, ...args: unknown[]) {
+    window.embeddingHarness.historyCalls++;
+    return Reflect.apply(original, this, args);
+  } });
+}
 // Use the production typed client, but deliberately ignore abort when resolving
 // transport promises so a real browser exercises the generation fence as well.
 const client = new ApiClient({ backendBaseUrl: 'https://fixture.example' }, async (input, init) => {

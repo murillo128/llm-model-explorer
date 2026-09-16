@@ -4,6 +4,20 @@ export type Token = components['schemas']['Token'];
 export type Tokenization = components['schemas']['TokenizeResponse'];
 export interface SourceGroup { start: number; end: number; tokens: Token[] }
 export interface UnmappedToken { token: Token; anchor: number }
+export interface SourceSelection { readonly from: number; readonly to: number }
+
+/** Intersect native UTF-16 selections with individual trusted source spans.
+ * Annotation unions/anchors and vocabulary IDs cannot establish row identity. */
+export function selectedTokenRows(result: Tokenization, ranges: readonly SourceSelection[]): number[] {
+  const boundaries = utf16Boundaries(result.text);
+  const nonempty = ranges.map(({ from, to }) => [Math.min(from, to), Math.max(from, to)] as const)
+    .filter(([from, to]) => Number.isFinite(from) && Number.isFinite(to) && from < to);
+  return [...new Set(result.tokens.filter(token => {
+    if (token.start === undefined || token.end === undefined || token.end <= token.start) return false;
+    const start = boundaries[token.start], end = boundaries[token.end];
+    return start !== undefined && end !== undefined && nonempty.some(([from, to]) => start < to && end > from);
+  }).map(token => token.index))].sort((a, b) => a - b);
+}
 
 /** API offsets are code points; JavaScript and editor offsets are UTF-16 units. */
 export function utf16Boundaries(text: string): number[] {
