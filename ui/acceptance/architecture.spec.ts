@@ -71,14 +71,28 @@ async function openParameter(page: Page, graph: Graph, parameter: Graph['paramet
   const node = graph.nodes.find((n) => n.parameter_ids.includes(parameter.id))!;
   await findComponent(page, node.id);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  const card = page.locator(`.react-flow__node[data-id=${JSON.stringify(node.id)}]`);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const layoutCount = await canvas.getAttribute('data-layout-count'), scope = await canvas.getAttribute('data-scope-id');
+  const beforeSelection = observed.length;
+  for (const target of ['.architecture-node-label', '.architecture-node-type']) {
+    await card.locator(target).click();
+    await expect(card.locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
+    expect(await canvas.getAttribute('data-scope-id')).toBe(scope);
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+  }
+  expect(observed.slice(beforeSelection)).toEqual([]);
   if (isolated && await page.getByLabel('Architecture graph', { exact: true }).getAttribute('data-scope-id') !== node.id) {
     const requests = observed.length;
-    await page.getByRole('button', { name: 'Explore component', exact: true }).click();
+    await card.locator('.architecture-navigate').click();
     await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-scope-id', node.id);
     await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
     expect(observed.slice(requests)).toEqual([]);
   }
-  await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+  await card.locator('.architecture-node-label').dblclick();
   await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
 }
 async function released(page: Page) {

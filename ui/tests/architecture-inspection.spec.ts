@@ -26,6 +26,44 @@ const released = (page: Page) => expect.poll(() => page.evaluate(() => ({
   retainedScalars: window.explorerFixture.renderers.filter((r) => Reflect.get(r, 'values') !== null).length,
 }))).toEqual({ textures: 0, displays: 0, liveRenderers: 0, retainedScalars: 0 });
 
+test('card gestures select, expand, and open the native modal without changing the retained view', async ({ page }) => {
+  await open(page);
+  await findComponent(page, 'layer1');
+  const graph = page.getByLabel('Architecture graph', { exact: true });
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  const group = page.locator('.react-flow__node[data-id="layer1"]');
+  const before = await graph.getAttribute('data-layout-count');
+  for (const target of ['.architecture-node-label', '.architecture-node-type']) {
+    await group.locator(target).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(group.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'false');
+    expect(await graph.getAttribute('data-layout-count')).toBe(before);
+  }
+  await group.locator('.architecture-node-label').dblclick();
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  await expect(group.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(Number(await graph.getAttribute('data-layout-count'))).toBe(Number(before) + 1);
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const count = await graph.getAttribute('data-layout-count');
+  for (const id of ['layer1', 'linear1']) {
+    const label = page.locator(`.react-flow__node[data-id="${id}"] .architecture-node-label`);
+    await label.dblclick();
+    await expect(page.getByRole('dialog')).toHaveAccessibleName(id);
+    await page.keyboard.press('Escape');
+    await expect(label).toBeFocused();
+    await expect(group.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
+    expect(await graph.getAttribute('data-layout-count')).toBe(count);
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+  }
+  await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  await expect(group.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+  await requests(page, 0);
+});
+
 test('concrete repeated weight preserves exact progressive values, independent profiles/statistics and native camera', async ({ page }, info) => {
   await open(page);
   await graphAction(page, 'Show all operations');
