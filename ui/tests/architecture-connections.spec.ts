@@ -1,5 +1,5 @@
 import { fanoutPoint } from './architecture-pointer';
-import { chooseInstance, findComponent, graphAction, graphPreference } from './architecture-controls';
+import { openShared, chooseInstance, findComponent, graphAction, graphPreference } from './architecture-controls';
 import { expect, test } from '@playwright/test';
 import type { Locator, Page, TestInfo } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
@@ -46,7 +46,10 @@ async function fullAttention(page: Page) {
   await expect(port(page, 'layer-3.attention.core', 'K')).toBeVisible();
 }
 async function stableState(page: Page, clearHover = true) {
+  // aria-busy covers the current layout and its committed camera action.
+  await ready(page);
   if (clearHover) await page.mouse.move(0, 0);
+  // Flush temporary pointer emphasis; frame count does not establish camera readiness.
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   return page.evaluate(() => ({
     layoutCount: document.querySelector('[aria-label="Architecture graph"]')?.getAttribute('data-layout-count'),
@@ -131,12 +134,16 @@ test('exact source and destination dots, fan-out branches and line middles highl
   await emphasized(page, fanout);
   await unchanged(page, before);
   await capture(page, info, 'source-dot-fanout');
-  await hoverLine(page, fanout[1]!); await emphasized(page, [fanout[1]!]);
+  // Card sizes can move shared-trunk breakpoints. Sample a genuinely exclusive
+  // branch from SVG geometry, rather than treating the owning path as exclusive.
+  const keyBranch = await fanoutPoint(page, fanout, [fanout[1]!]);
+  await page.mouse.move(keyBranch.x, keyBranch.y); await emphasized(page, [fanout[1]!]);
   await unchanged(page, before);
   await capture(page, info, 'line-hover-complete-forwarding');
   await hoverDot(port(page, 'layer-3.attention.K', 'x')); await emphasized(page, [fanout[1]!]);
   // A neighboring source branch remains individually targetable.
-  await hoverLine(page, fanout[2]!); await emphasized(page, [fanout[2]!]);
+  const valueBranch = await fanoutPoint(page, fanout, [fanout[2]!]);
+  await page.mouse.move(valueBranch.x, valueBranch.y); await emphasized(page, [fanout[2]!]);
   await page.mouse.move(0, 0); await emphasized(page, []);
   await unchanged(page, before);
 });
@@ -315,6 +322,9 @@ test('24-instance compact navigation, first/last identity, MLP/state focus and e
   await expect(page.locator('.architecture-node[data-presentation="repetition"]')).toContainText('18 linear');
   await expect(page.locator('.architecture-node[data-presentation="repetition"]')).toContainText('6 full');
   expect(Number(await graph(page).getAttribute('data-visible-nodes'))).toBeLessThan(20);
+  // Keep the compact model cards inside both viewports for this DOM-coordinate
+  // comparison; resizing a narrower pane may legitimately change viewport culling.
+  await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
   const beforeResize = await stableState(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   const afterResize = await stableState(page);
@@ -324,6 +334,7 @@ test('24-instance compact navigation, first/last identity, MLP/state focus and e
   await page.setViewportSize({ width: 1178, height: 900 });
   const restoredSize = await stableState(page);
   expect({ ...restoredSize, camera: beforeResize.camera }).toEqual(beforeResize);
+  await page.getByRole('button', { name: 'Expand browser', exact: true }).click();
   await page.getByRole('button', { name: /Explore stack/ }).first().click(); await ready(page);
   await expect(page.getByRole('button', { name: /Previous window/ }).first()).toBeDisabled();
   await page.getByRole('button', { name: /Next window/ }).first().click(); await ready(page);
@@ -434,7 +445,7 @@ test('obsolete model layout replies cannot replace the latest graph; a failed wo
 
 test('shared structure retains geometry, exact QKV hit sets and semantic selection across nonconsecutive instances', async ({ page }, info) => {
   await open(page, 'templates');
-  await page.getByLabel('Shared structures', { exact: true }).selectOption('shared-full-attention'); await ready(page);
+  await openShared(page, 'shared-full-attention'); await ready(page);
   await expect(graph(page)).toHaveAttribute('data-template-instance-id', '');
   await expect(page.getByText('No instance selected; weights require a choice.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'View in model', exact: true })).toBeDisabled();
@@ -472,7 +483,9 @@ test('shared structure retains geometry, exact QKV hit sets and semantic selecti
   await page.getByRole('button', { name: 'Next shared instance', exact: true }).click();
   await page.getByRole('button', { name: 'View in model', exact: true }).click(); await ready(page);
   await expect(graph(page)).toHaveAttribute('data-template-id', '');
-  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention');
+  // The minimal toolbar's selected-item action reveals the exact selected source.
+  // The root card's separate View in model action remains covered by card navigation.
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention.Q');
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
   await expect(graph(page)).toHaveAttribute('data-template-instance-id', 'layer-2.attention');
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention.Q');
@@ -490,7 +503,7 @@ test('shared structure retains geometry, exact QKV hit sets and semantic selecti
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'Model overview', exact: true }).click(); await ready(page);
   await findComponent(page, 'layer-2.attention.K'); await ready(page);
-  await page.getByRole('button', { name: 'Shared structure', exact: true }).click(); await ready(page);
+  await page.getByRole('button', { name: 'Explore structure', exact: true }).click(); await ready(page);
   await expect(picker).toHaveValue('layer-2.attention');
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention.K');
 });
@@ -499,7 +512,7 @@ test('optional template metadata leaves ordinary overview, exhaustive projection
   const states = [];
   for (const fixture of ['templates-absent', 'templates']) {
     await open(page, fixture);
-    await expect(page.getByLabel('Shared structures', { exact: true })).toHaveCount(fixture === 'templates' ? 1 : 0);
+    await expect(page.locator('[data-family-id]')).toHaveCount(fixture === 'templates' ? 1 : 0);
     const overview = await stableState(page);
     await graphAction(page, 'Show all operations'); await ready(page);
     const exhaustive = await stableState(page);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArchitectureCanvas } from '../src/architecture-explorer/ArchitectureCanvas';
+import { summaryFixture } from './architecture-summary-fixture';
 import { GraphViews } from '../src/architecture-explorer/graph';
 import { contractResponse, referenceFixture } from './architecture-fixtures';
 import { makeProjectionFixture } from './architecture-projection-fixture';
@@ -9,6 +10,15 @@ import { makeExplicitFixture } from './architecture-explicit-fixture';
 import '../src/app/styles.css';
 
 function fixture(name: string) {
+  if (name === 'summaries') return { ...contractResponse, model_id: name, graph: summaryFixture(new URLSearchParams(location.search).has('long')) };
+  if (name === 'empty-group') {
+    const graph = structuredClone(contractResponse.graph);
+    const root = graph.nodes.find((n) => n.kind === 'group' && !n.parent_id)!;
+    graph.graph_id = 'empty-group';
+    graph.nodes = [{ ...root, kind: 'group', id: 'empty', label: 'Empty group', children: [], ports: [] }];
+    graph.edges = []; graph.repetitions = []; graph.parameters = [];
+    return { ...contractResponse, model_id: name, graph };
+  }
   if (name === 'templates' || name === 'templates-absent') {
     const graph = makeTemplateFixture();
     if (name === 'templates-absent') delete graph.templates;
@@ -31,11 +41,11 @@ function fixture(name: string) {
 
 function Harness() {
   const [views] = useState(() => new GraphViews());
-  const [name, setName] = useState('contract');
+  const [name, setName] = useState(() => new URLSearchParams(location.search).get('fixture') ?? 'contract');
   const [shown, setShown] = useState(true);
   const [inspection, setInspection] = useState('');
   const [response, setResponse] = useState(() => {
-    const response = structuredClone(contractResponse);
+    const response = structuredClone(fixture(name));
     if (location.search.includes('inert')) {
       response.graph.nodes[1]!.label = '<img src=x onerror=alert(1)>';
       response.graph.nodes.find((node) => node.id === 'linear0')!.ports.find((port) => port.id === 'out')!.shape =
@@ -45,7 +55,7 @@ function Harness() {
   });
   return <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
     <div><select aria-label="Fixture" value={name} onChange={(e) => { setName(e.target.value); setResponse(fixture(e.target.value)); }}>
-      {['contract', 'templates', 'templates-absent', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'components', 'components-large', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
+      {['contract', 'summaries', 'empty-group', 'templates', 'templates-absent', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'components', 'components-large', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
     </select><button onClick={() => setShown(!shown)}>Toggle explorer</button><output style={{ display: 'block', height: 20, overflow: 'hidden' }}>{inspection}</output></div>
     <div contentEditable suppressContentEditableWarning aria-label="Untransformed prompt">Prompt remains outside graph camera</div>
     {shown && <ArchitectureCanvas key={name} graph={response.graph} modelId={response.model_id} sessionId="fixture-session"

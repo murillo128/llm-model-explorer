@@ -7,6 +7,7 @@ import { TensorExplorer } from '../explorers/TensorExplorer';
 import type { ArchitectureSelection } from './ArchitectureCanvas';
 import { formatShape } from './graph';
 import type { Graph } from './graph';
+import { ownParameters } from './card-summary';
 
 type S = components['schemas'];
 function Provenance({ records }: { records: S['ArchitectureProvenance'][] }) {
@@ -36,10 +37,9 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
   const dialog = useRef<HTMLDialogElement>(null);
   const title = useId();
   const lifetime = useChildLifetime(context.selection);
-  const [choice, setChoice] = useState('');
+  const [choice, setChoice] = useState(selected.parameterId ?? '');
   const { node } = selected;
-  const ids = new Set([...node.parameter_ids, ...node.references.flatMap((r) => r.kind === 'parameter' ? [r.parameter_id] : [])]);
-  const parameters = selected.structureOnly ? [] : graph.parameters.filter((p) => ids.has(p.id));
+  const parameters = selected.structureOnly ? [] : ownParameters(node, new Map(graph.parameters.map((p) => [p.id, p])));
   const templateInstance = graph.templates?.flatMap((t) => t.instances).find((i) => i.node_id === selected.templateInstanceId);
   const members = new Set(templateInstance?.nodes.map((m) => m.node_id));
   const external = templateInstance ? graph.edges.filter((e) => members.has(e.source.node_id) !== members.has(e.target.node_id)) : [];

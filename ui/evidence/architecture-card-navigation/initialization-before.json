@@ -1,0 +1,186 @@
+[
+  {
+    "revision": "base",
+    "fixture": "templates-absent",
+    "before": {
+      "graph": "authored-projection-FLF-0-16-true-false-true-explicit",
+      "layout": "1",
+      "busy": "false",
+      "actual": [
+        1440,
+        738
+      ],
+      "consumed": [
+        1440,
+        718
+      ],
+      "nodes": 10,
+      "initialized": false,
+      "loading": false,
+      "camera": [
+        177,
+        41,
+        1
+      ]
+    },
+    "after": {
+      "graph": "authored-projection-FLF-0-16-true-false-true-explicit",
+      "layout": "1",
+      "busy": "false",
+      "actual": [
+        1440,
+        738
+      ],
+      "consumed": [
+        1440,
+        738
+      ],
+      "nodes": 10,
+      "initialized": false,
+      "loading": false,
+      "camera": [
+        177,
+        41,
+        1
+      ]
+    }
+  },
+  {
+    "revision": "base",
+    "fixture": "templates",
+    "before": {
+      "graph": "authored-projection-FLF-0-16-true-false-true-explicit",
+      "layout": "1",
+      "busy": "false",
+      "actual": [
+        1440,
+        738
+      ],
+      "consumed": [
+        1440,
+        718
+      ],
+      "nodes": 10,
+      "initialized": false,
+      "loading": false,
+      "camera": [
+        177,
+        41,
+        1
+      ]
+    },
+    "after": {
+      "graph": "authored-projection-FLF-0-16-true-false-true-explicit",
+      "layout": "1",
+      "busy": "false",
+      "actual": [
+        1440,
+        738
+      ],
+      "consumed": [
+        1440,
+        738
+      ],
+      "nodes": 10,
+      "initialized": false,
+      "loading": false,
+      "camera": [
+        177,
+        41,
+        1
+      ]
+    }
+  },
+  {
+    "revision": "head",
+    "fixture": "templates-absent",
+    "before": {
+      "graph": "authored-projection-FLF-0-16-true-false-true-explicit",
+      "layout": "1",
+      "busy": "false",
+      "actual": [
+        1440,
+        738
+      ],
+      "consumed": [
+        1440,
+        718
+      ],
+      "nodes": 10,
+      "initialized": false,
+      "loading": false,
+      "camera": [
+        177,
+        41,
+        1
+      ]
+    },
+    "after": {
+      "graph": "authored-projection-FLF-0-16-true-false-true-explicit",
+      "layout": "1",
+      "busy": "false",
+      "actual": [
+        1440,
+        738
+      ],
+      "consumed": [
+        1440,
+        738
+      ],
+      "nodes": 10,
+      "initialized": false,
+      "loading": false,
+      "camera": [
+        177,
+        41,
+        1
+      ]
+    }
+  },
+  {
+    "revision": "head",
+    "fixture": "templates",
+    "before": {
+      "graph": "authored-projection-FLF-0-16-true-false-true-explicit",
+      "layout": "1",
+      "busy": "false",
+      "actual": [
+        1440,
+        738
+      ],
+      "consumed": [
+        1440,
+        718
+      ],
+      "nodes": 10,
+      "initialized": false,
+      "loading": false,
+      "camera": [
+        177,
+        41,
+        1
+      ]
+    },
+    "after": {
+      "graph": "authored-projection-FLF-0-16-true-false-true-explicit",
+      "layout": "1",
+      "busy": "false",
+      "actual": [
+        1440,
+        738
+      ],
+      "consumed": [
+        1440,
+        738
+      ],
+      "nodes": 10,
+      "initialized": false,
+      "loading": false,
+      "camera": [
+        177,
+        41,
+        1
+      ]
+    }
+  }
+]

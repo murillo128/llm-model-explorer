@@ -23,62 +23,107 @@ Keep actual layer order and variant differences visible when grouped. Repetition
 
 Expanding a group preserves the acted-on location/context; do not reset the camera or automatically fit the entire graph after every expansion. Maintain camera, expanded groups, focused repetition/instance context, and valid node/connection selection while closing inspection or switching explorers during the browser session, keyed by model and graph identity. Server-restart persistence is not required. Reject late responses and clear invalid selections on session/model/graph replacement.
 
+Initial and scope camera work uses the current layout and the renderer's current,
+nonzero viewport size. Loading presentation must not displace that viewport.
+Readiness includes completion of the applicable camera action, not only layout
+calculation. Saved camera restoration, Back and newer scope/model choices take
+precedence over obsolete initialization; user camera interaction supersedes a
+pending initialization. Ordinary resizing, selection, hover and menus do not
+start another fit or layout. Initialization failure is bounded and recoverable.
+
 Viewport culling and asynchronous layout are allowed optimizations; discarding graph records or silently reducing detail is not. Bound layout work and provide an explicit recoverable failure rather than an indefinitely frozen canvas. All reference graphs must be usable when fully expanded on the documented acceptance environment. Record actual layout time, memory, and graph size rather than inventing a performance guarantee.
 
 React Flow and ELK are implementation candidates, not mandatory backend dependencies or reasons to change the graph contract. The layout implementation may be replaced without changing model semantics. Do not add a second matrix renderer, graph editor, export suite, or complex navigation framework in this increment.
 
-## Contextual navigation controls
+## Browser and contextual navigation
 
-Keep navigation within the Architecture panel in at most two compact rows at
-reference desktop widths. The primary row contains a navigable Model breadcrumb,
-short containment/repetition breadcrumbs for the current focus, **Find component**,
-**Fit view**, and **View options**. Breadcrumbs represent the current expansion
-context on the same global canvas. Connection hover, pinning and inspection do
-not change that navigation context.
+A separate left browser card provides navigation beside the canvas card. It uses
+ordered source containment, declared repetitions and optional verified template
+families from the received graph. Never infer structure from tensor filenames,
+sort away source order, or create a second semantic graph. Components with
+children use folder/component icons, terminal components use block icons, and
+Shared families use overlapping blocks (repeated structure, not weight tying).
 
-At model level the contextual row offers compact entry choices for available
-stacks and components. Within a stack it shows its name/count, concrete instance
-index and actual variant, previous/next instance actions with correct endpoints,
-and the currently visible instances. Range navigation uses the existing
-viewport-dependent window size; long ranges scroll within the control. Preserve
-source ordering, including nonperiodic variants. Only the currently focused stack
-needs controls; other stacks retain their own expansion/window state. Returning
-to Model restores the compact overview. Retain active stack/focus state with the
-existing model/graph-keyed browser-session view state.
+The browser header contains a collapse arrow, followed by local search, a
+**Model** hierarchy and a **Shared** family list. Disclosure and selectable names
+are separate controls. Indentation is capped at four levels; full public names,
+paths, exact IDs and concrete instance context remain available on hover/focus.
+The browser owns its vertical scrolling; its header and search stay reachable.
 
-Find component searches all already received source graph nodes, including
-collapsed interiors. Results show concise readable labels with containment and
-stack/instance context that distinguishes repeated names. Name, path and exact
-identity queries are local filters; they do not fetch graphs, execute operations
-or load tensor data. Arrow keys choose a result and Enter invokes the existing
-reveal/selection behavior, opening its ancestors and selecting the exact concrete
-instance when needed. Inspection remains a separate explicit action.
+Use the Tensor inventory's pane conventions without changing that explorer:
+280 CSS-pixel preferred width, bounded to 200–480 and available width minus the
+16-pixel divider and 360-pixel canvas minimum. The accessible vertical divider
+supports pointer capture, Left/Right in 16-pixel steps, and Home/End. Temporary
+viewport constraints do not overwrite preferred width. At 760 pixels or narrower,
+the expanded browser occupies a bounded upper row (28%, at least 130 pixels),
+with the canvas below and no width divider. Explicit collapse removes the pane,
+divider and gap in both layouts, leaving a 40-pixel icon-only restore rail beside
+a full-height canvas. Neither layout causes document scrolling or scales graph
+labels down. Restore retains width, query, scroll, selection and expansion.
+Store only pane preferences in optional local storage with an in-memory fallback;
+graph-specific navigation remains scoped to backend/model/graph view lifetime.
+Collapse and resize never remount the canvas, refetch, restart numeric consumers
+or invoke Fit view.
+
+Component names select the exact source component on both surfaces, including
+nonzero repeated instances. Selection does not expand, inspect, reveal, change
+scope or camera. A component's **+ / −** and name double-click use the same
+expansion controller as its canvas card. Leaves have no disclosure or double-click
+action. Keyboard disclosure uses that controller too. Contracting a parent
+retains hidden descendants' expansion and selection; unrelated siblings remain
+unchanged. No toggle implicitly Fits view. Only explicit **Center** reveals a
+hidden selection by opening required ancestors and its exact repetition window,
+without opening its own children or every sibling.
+
+Search filters the full received graph by real label, public containment/module
+path, exact identity and supported description source key. It includes collapsed
+interiors and verified families/instances, grouped under Model and Shared with
+paths and stack/instance context to distinguish equal names. Results are a flat
+filtered list, not automatically opened real tree branches. Typing changes no
+selection, expansion, scope, camera, layout, retrieval or numeric work. Clicking
+or Enter selects only; Center and navigation remain explicit. Clearing search
+restores the ordinary tree and its scroll, retaining expansion changes made
+while filtering. Clearing selection does not clear search. Canvas selection never
+clears a hiding filter or opens the collapsed browser. Arrow keys navigate rows;
+Escape from a row returns focus to search, and Escape in search clears the query.
+
+A Shared family shows its supplied label and actual count. Its disclosure opens
+only an ordered presentation list, including nonconsecutive declared indices.
+Concrete rows share source selection and expansion with their Model occurrence.
+Selecting a family offers **Explore structure**, which enters the existing
+structure-only view without choosing instance zero or permitting weights. A common
+canvas selection in that mode is not a selected concrete Model/Shared instance;
+explicit browser source selection retains its own exact identity without choosing
+a weight-bearing instance or silently changing scope.
+Absent templates show an honest empty state and preserve ordinary navigation.
+Verified instance switching, correspondence, cancellation and exact parameter
+binding retain their established rules. Stale source/family IDs are invalidated
+with their graph. Shared scope expansion maps concrete IDs through verified roles
+to the existing anchor state, never through independent browser flags.
+
+The minimal canvas header has current Model/component context on the left,
+selected node/connection with applicable **Inspect**, **Explore component** or
+**View in model**, **Center** and clear controls toward the right, and **Fit view**
+and **View options** at the far right. Omit inapplicable selected-item controls.
+No global horizontal component strip, Find component trigger or Shared structures
+dropdown remains. Preserve explicit isolation/shared context, Back and compact
+concrete instance/previous/next/window controls. Repetition entry controls live in
+the browser. Navigation focus and selection remain distinct.
 
 View options provides exhaustive **Show all operations**, collapse, center
 selection, zoom, dimensions (initially off), context, unused-interface and derived
-MLP preferences, plus the existing applicable group/layer/MLP/state navigation.
-Fit view changes the camera; Show all operations changes visible detail.
-Unused interfaces refers specifically to unconsumed interface branches, not every
-auxiliary signal. A state-focused view identifies its filtered context. Partial
-coverage remains visible; full scope, paths, IDs and diagnostics are available
-on demand in details/inspection.
+MLP preferences, plus applicable group/layer/MLP/state navigation. Fit view changes
+the camera; Show all operations changes visible detail. Unused interfaces refers
+to unconsumed interface branches, not every auxiliary signal. State focus identifies
+its filtered context; partial coverage stays visible and full diagnostics remain
+available on demand. Options dismiss on Escape with focus restored to the trigger
+or when focus moves outside. Controls use neutral/graphite/amber styling, English
+accessible names and visible focus, with bounded overflow at narrow widths.
 
-Show a concise selected node or pinned connection with applicable inspect, center
-and clear actions. Selection and navigation focus are separate. Opening a menu,
-typing a query, changing emphasis or inspecting selection must preserve the
-mounted canvas, graph retrieval and existing numeric lifetimes, source/projection
-records, generated coordinates/routes, layout invocation count and camera.
-Explicit reveal, expansion, presentation-preference and camera commands retain
-their intended effects.
-
-Controls use the shared neutral/graphite/amber language, visible keyboard focus,
-English labels and explicit accessible names. Search and options popovers stay
-inside the panel, dismiss on Escape and restore focus to their trigger. Moving
-focus outside dismisses them. Text-entry keys retain their editing meaning.
-At constrained widths use bounded horizontal control overflow and bounded
-popover scrolling, without body scrolling or shrinking graph labels. Toolbar
-height may reclaim graph work area; shared shell and scientific geometry remain
-unchanged.
+Selection, typing, menus, emphasis and inspection preserve the mounted canvas,
+graph retrieval and numeric lifetimes, source/projection records, generated
+coordinates/routes, layout invocation count and camera. Explicit reveal,
+expansion, presentation preferences and camera commands retain their effects.
 
 ## Source-preserving visible projection
 
@@ -121,9 +166,14 @@ real model/stack/instance location. Nested isolation is bounded navigation histo
 on one canvas. **Back** restores the preceding scope's camera, expansion,
 repetition window, filters and valid node/connection selection. **View in model**
 returns to the global graph and intentionally reveals and centers the selected
-concrete component. Search still covers all received records; choosing a result
-outside the current scope explicitly returns to model context to reveal it.
-Breadcrumb navigation outside a scope likewise restores global context. Keep
+concrete component. Search and the browser cover all received records. Selecting outside the current
+scope records exact identity without leaving isolation; explicit View in model
+or Explore component remains available. Center or expansion of an outside-scope
+component deliberately returns to Model before acting and retains the isolated
+snapshot for Back. Context ancestors may appear in the browser as Model context;
+they are not represented as computational nodes inside the isolated canvas.
+Within scope, both surfaces use that scope's common expansion. Back restores its
+prior state. Breadcrumb navigation outside a scope restores global context. Keep
 view snapshots local, bounded and keyed by backend/model/graph identity without
 copying the semantic graph per entry. Reject obsolete layout/retrieval results
 on session/model/graph replacement.
@@ -145,15 +195,14 @@ layout worker and connection algorithms.
 
 ## Optional verified shared structures
 
-A received template annotation offers **Shared structure** from any of its
-concrete component members and a compact **Shared structures** selector in the
-existing navigation. This remains an optional isolated view on the same canvas.
+A received template annotation offers **Explore structure** from its selected
+concrete component members and from families in the browser’s **Shared** list. This remains an optional isolated view on the same canvas.
 Ordinary overview, exhaustive access, isolation, routing and numerical inspection
 remain independent of template metadata. No frontend pattern matching establishes
 equivalence; the API's validated exact role mappings are authoritative.
 
 Entry from a selected component retains its concrete instance and selected
-operation. Entry from the template selector is explicitly **structure only**:
+operation. Entry from a selected browser family is explicitly **structure only**:
 show the common verified topology, shapes and attributes with no weight-bearing
 instance selected and no parameter action. The shared canvas covers the declared
 interior and explicit boundary forwarding; external producers/consumers remain
@@ -191,9 +240,39 @@ Changing hover, keyboard focus, or pinned connection selection must not move nod
 
 ## Clean default presentation and dimensions
 
-Default nodes show concise operation/component labels, relevant type distinctions, groups, and connections. Details do not occupy permanent side panels. Dimensions are hidden initially; Show dimensions adds endpoint tensor shapes to connections. Shapes distinguish constants, declared symbols, expressions, and unknown values; expressions are rendered as text, not evaluated.
+Cards retain their title and independent header controls, followed by one muted,
+source-backed formula or operation signature when supplied. Formula text is
+inert display text; the UI never infers equations or adds missing bias. Existing
+input/output labels (including `out`), directions, handles and port identities
+remain visible. A card then shows only its own explicitly referenced tensors,
+deduplicated by exact parameter identity across `parameter_ids` and parameter
+references. Groups do not aggregate descendant parameters.
 
-Full paths, formulas, descriptions, configuration attributes, provenance, diagnostics, and parameter references belong in inspection rather than permanently filling the canvas. A graph describes mathematical operations and selected meaningful shape changes, not every PyTorch instruction or allocation. Coverage and unknown regions remain visible enough to avoid interpreting a partial diagram as complete.
+Tensor rows place a subtle matrix button to the left of the real name, including
+rank-1 biases. A single explicit owning-module reference may establish a removable
+prefix; all remaining path segments stay verbatim. Ambiguous or absent ownership
+keeps the original name. Full names remain available on hover/focus and in
+accessible identity. Relevant computational scalar attributes follow the tensors
+with their original names and actual values and no matrix button. Use a small
+operation-specific mapping, never a configuration dump or invented defaults;
+missing/unknown values stay missing/unknown. Semantic roles, provenance and
+diagnostics are not constants.
+
+**Show dimensions** is initially off and consistently controls tensor-row,
+input/output and connection shape annotations. Shapes are API logical shapes,
+including constants, symbols, display-only expressions and unknowns; never packed
+geometry, flattened ranks or evaluated expressions. Names, constants, values and
+controls remain visible with dimensions off. Full inspection descriptors remain
+independent of this preference.
+
+Keep content within the same rounded card, without Inputs/Parameters headings,
+repeated type pills, Greek aliases or a permanent metadata panel. Size each card
+for its own content and ports; expanded group headers reserve space above children.
+Long text uses bounded width and full-text hover/focus disclosure without moving
+geometry. Long own-parameter lists may use a truthful `+N more` action opening
+the ordinary inspector. Verbose descriptions, configuration, provenance and
+diagnostics remain in inspection. Coverage and unknown regions remain visible
+enough to avoid interpreting a partial diagram as complete.
 
 Use the shared [visual language](visual-language.md). Architecture nodes, groups, controls, ports, and connections use the existing neutral surfaces, graphite text, hairline borders, restrained shadows, and warm amber interaction accent rather than introducing a new application theme or per-layer categorical palette. Graph zoom is its own camera. It must never zoom the prompt editor or impose a transform on a Matrix Explorer surface.
 
@@ -211,23 +290,41 @@ Hover/focus emphasis is temporary and uses the existing warm amber interaction s
 
 A single mouse click on a card label or ordinary body selects only, including
 presentation-backed cards. It does not inspect, expand, navigate, change focus,
-invoke layout/retrieval, or move the camera. Double-click expands a collapsed
-expandable card using the same action as `+`; otherwise it inspects. Double-click
-never collapses, and its preceding clicks may only select. Card double-clicks
+invoke layout/retrieval, or move the camera. Double-click toggles an expandable
+card once, using the same current state and action as `+`/`−`: expand when
+collapsed, contract when expanded. A leaf or empty group has no expansion
+control; double-click has no additional effect beyond the preceding selection
+clicks. Supported derived groups and repetition ranges use their actual contents
+and presentation identity, never an arbitrary substituted layer. Inspection is
+always explicit. Card double-clicks
 must not zoom the canvas. Background pan/zoom remains unchanged.
 
 Independent header controls are ordered `+/-` (when expandable), navigation,
 then `(i)`. The navigation control shows four outward diagonal arrows for
-**Explore component** in Model view and four inward diagonal arrows for
-**View in model** during isolation. It uses the existing navigation path with
-the pressed card's exact source or supported derived-MLP target, independently
-of prior selection. Returning a nested concrete child reveals, selects and
-centers that child. Synthetic repetition ranges, context/boundary aliases and
-other cards without an existing target show an unavailable control with an
+**Explore component** for valid components in Model view and descendants during
+isolation. Only the active isolated root shows four inward diagonal arrows for
+**View in model**. Resolve the action and target together from the pressed card's
+exact source or supported derived-MLP identity, independently of prior selection.
+Exploring a descendant pushes the preceding scope snapshot and makes that child
+the new isolated root; its descendants remain explorable. **Back** restores each
+preceding scope without collapsing it. The root's **View in model** reveals,
+selects and centers that exact root in the global model. Synthetic repetition
+ranges, context/boundary aliases and other cards without an existing target show an unavailable control with an
 accessible explanation. Structure-only shared views require a concrete instance
-before returning to the model. Controls have English target-specific names and
+before navigating; concrete shared cards use the current verified source mapping,
+not the template representative. Controls have English target-specific names and
 tooltips, visible focus and independent click/double-click hit behavior. Ports,
 connections and expanded-group children retain their own targets.
+
+The canvas and browser consume one authoritative component selection
+and expansion state per current model/graph/scope view, with changes from either
+representation immediately reflected by both. Contracting a parent hides its
+descendants but retains their nested expansion choices and unrelated sibling
+state. A valid selected source descendant stays selected even while hidden;
+hiding it does not select its parent or a synthetic range. Graph/model replacement
+still clears invalid identities. Reversible scope snapshots retain the previous
+scope's state without copying the semantic graph. Explicit toggles preserve the
+acted-on location through anchored layout and never implicitly fit the model.
 
 Explicit `(i)` and keyboard inspection open one closable modal with identity,
 function, known dimensions, provenance/diagnostics, and parameter choices.
@@ -237,11 +334,21 @@ remains available through `−` and explicit keyboard/toolbar controls. No
 permanent inspector column, compulsory page transition, or nested modal stack
 is required.
 
+A tensor row's matrix button opens this same single modal with the exact clicked
+parameter already selected, without a preliminary component inspector, dropdown
+choice or explorer-tab change. Resolve it against the active graph/model/session
+and use only its verified `inspection.tensor_id`. Concrete repeated/shared views
+bind the chosen instance; structure-only shared views expose no numeric action.
+Unavailable, fused, unresolved and unsupported-rank capabilities retain a visibly
+non-actionable button with the supplied accessible reason. Pointer and keyboard
+activation cannot toggle, isolate, center or select another card or parent.
+Summary rendering and hover never fetch tensor values.
+
 For an available logical rank-1/rank-2 weight, compose the existing Matrix Explorer with the existing logical tensor endpoints and progressive subscriptions. The backend may provide native or admitted decoded weights; the UI performs no quantization decoding. Show its authoritative statistics/profiles when supported, preserving their independent arrival. Camera, readout, scalar-value fidelity, and resource lifetime remain owned by [matrix composition](architecture.md#matrix-explorer-composition), [rendering](rendering.md), and [Tensor Explorer](tensor-explorer.md). The graph's outer CSS/camera transform must not rescale this scientific surface. In particular, do not roll back the accepted Matrix Explorer zoom/navigation to implement graph inspection.
 
 An unavailable representation, fused region, unresolved binding, or higher-rank tensor shows its metadata and localized reason without trying to open a substitute matrix. Do not display packed integers as dequantized values or flatten patch-projection weights. A weight error does not close or invalidate the graph.
 
-Closing the modal restores focus and leaves camera/expansion intact. Escape closes it; focus stays contained while open. Keyboard users can select/expand/inspect components and connections without pointer-only access. Release numeric subscriptions, operation handles, CPU/GPU resources, and obsolete callbacks on close or replacement. A late result must not populate a different node/model's modal. Existing stream cancellation must preserve other consumers of shared work.
+Closing the modal restores focus and leaves camera/expansion intact. Escape closes it; focus stays contained while open. Keyboard users can select/expand/inspect components and connections without pointer-only access. Release numeric subscriptions, operation handles, CPU/GPU resources, and obsolete callbacks on close or replacement. A late result, including a same-shaped or same-ID return from an obsolete generation, must not populate a newer selection. Restore focus to the activating matrix button when it remains connected. Existing stream cancellation must preserve other consumers of shared work.
 
 Resource references are semantic: model scope, modules, parameters, and an optional tokenizer. They contain no UI routes. The initial numeric action is weight inspection; future Tokenizer Explorer or computation-view links can be added by the UI without rewriting the static graph. Do not display buttons for unimplemented endpoints or fabricate runtime activation resources.
 
