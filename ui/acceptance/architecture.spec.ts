@@ -92,7 +92,7 @@ async function openParameter(page: Page, graph: Graph, parameter: Graph['paramet
     await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
     expect(observed.slice(requests)).toEqual([]);
   }
-  const trigger = card.locator('.architecture-node-label');
+  const trigger = card.locator('.architecture-info');
   await trigger.dblclick();
   await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
   return trigger;
