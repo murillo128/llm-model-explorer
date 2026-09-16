@@ -6,6 +6,7 @@ import './architecture.css';
 import type { Graph, GraphNode, GraphView, Layout, PortPosition } from './graph';
 import { requestLayout } from './layout';
 import { useCanvasCallback } from './useCanvasCallback';
+import { useLayoutCamera } from './useLayoutCamera';
 import type { ProjectedNode, ProjectionOptions } from './projection';
 import { connectionSet, endpointKey } from './projection';
 import { deriveMlpGroups } from './derived-groups';
@@ -36,7 +37,7 @@ interface CanvasProps {
 }
 type Data = { record: ProjectedNode; label: string; subtitle: string; ports: PortPosition[]; diagnostic: boolean;
   toggle: (id: string) => void; select: (id: string) => void; activate: (node: ProjectedNode, trigger: HTMLElement) => void;
-  navigation: ReturnType<typeof cardNavigation>; navigate: (id: string) => void;
+  navigation: ReturnType<typeof cardNavigation>; navigate: (navigation: ReturnType<typeof cardNavigation>) => void;
   inspect: (node: ProjectedNode, trigger: HTMLElement) => void };
 type CanvasNode = Node<Data, 'architecture'>;
 const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<CanvasNode>) {
@@ -44,7 +45,7 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
   const navigationName = `${data.navigation.action}: ${node.label} (${cardSelection(node)})`;
   return <div className="architecture-node nopan" data-kind={node.kind} data-selected={selected} data-expanded={node.expanded}
     data-source-ids={JSON.stringify(node.sourceIds)} data-presentation={node.presentation ?? 'source'}>
-    <div className="architecture-node-heading">
+    <div className="architecture-node-heading" onKeyDown={(event) => event.stopPropagation()}>
       <button className="nodrag nopan architecture-node-label" title={node.label} aria-label={`Select ${node.record?.label ?? node.label}`}
         aria-pressed={selected} onClick={(event) => { event.stopPropagation(); data.select(cardSelection(node)); }}
         onDoubleClick={(event) => { event.stopPropagation(); data.activate(node, event.currentTarget); }}
@@ -54,12 +55,13 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
           }
         }}>{data.label}</button>
       {node.kind === 'group' && <button className="nodrag nopan architecture-expand" aria-label={`${node.expanded ? 'Collapse' : 'Expand'} ${node.label}`}
+        title={`${node.expanded ? 'Collapse' : 'Expand'} ${node.label}`}
         aria-expanded={node.expanded} onDoubleClick={(event) => event.stopPropagation()}
         onClick={(event) => { event.stopPropagation(); if (event.detail < 2) data.toggle(node.id); }}>{node.expanded ? '−' : '+'}</button>}
       <button className="nodrag nopan architecture-navigate" aria-label={navigationName}
         title={`${navigationName}${data.navigation.reason ? ` — ${data.navigation.reason}` : ''}`}
         aria-disabled={!data.navigation.target} onDoubleClick={(event) => event.stopPropagation()}
-        onClick={(event) => { event.stopPropagation(); if (event.detail < 2 && data.navigation.target) data.navigate(data.navigation.target); }}>
+        onClick={(event) => { event.stopPropagation(); if (event.detail < 2) data.navigate(data.navigation); }}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
           <path d="M4 4l6 6m4 4 6 6M4 20l6-6m4-4 6-6" />
           <path d={data.navigation.action === 'Explore component'
@@ -67,7 +69,7 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
             : 'M5 10h5V5m4 0v5h5M5 14h5v5m4 0v-5h5'} />
         </svg>
       </button>
-      <button className="nodrag nopan architecture-info" aria-label={`Inspect ${node.label}`} onDoubleClick={(event) => event.stopPropagation()}
+      <button className="nodrag nopan architecture-info" aria-label={`Inspect ${node.label}`} title={`Inspect ${node.label}`} onDoubleClick={(event) => event.stopPropagation()}
         onClick={(event) => { event.stopPropagation(); if (event.detail < 2) data.inspect(node, event.currentTarget); }}>ⓘ</button>
     </div>
     <div className="architecture-node-type" title={data.subtitle}>{data.subtitle}{data.diagnostic ? ' · diagnostic' : ''}</div>
@@ -128,7 +130,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const [retry, setRetry] = useState(0), [zoom, setZoom] = useState(view.viewport?.zoom ?? 1);
   const [panelWidth, setPanelWidth] = useState(1178);
   const panel = useRef<HTMLDivElement>(null), picker = useRef<HTMLButtonElement>(null);
-  const appliedLayout = useRef<Layout | null>(null);
+  const flowContainer = useRef<HTMLDivElement>(null);
+  const savedViewport = useRef(view.viewport);
   const layoutCount = useRef(0), hoverFrame = useRef(0), focusFrame = useRef(0);
   const anchor = useRef<{ id: string; sourceId?: string | undefined; x: number; y: number } | null>(null);
   const centerPending = useRef<string | null>(null), fitPending = useRef(false), initialized = useRef(false);
@@ -289,8 +292,9 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     change({ ...base, expanded: [...expanded], repetitions, scope: undefined, stateScope: undefined,
       ...(derived ? { deriveMlp: true, exhaustive: false } : {}) });
   });
-  const navigateCard = useCanvasCallback((id: string) => {
-    if (options.scope) viewInModel(id); else isolate(id);
+  const navigateCard = useCanvasCallback((navigation: ReturnType<typeof cardNavigation>) => {
+    if (!navigation.target) return;
+    if (navigation.action === 'View in model') viewInModel(navigation.target); else isolate(navigation.target);
   });
   const nativeInspect = useCanvasCallback((record: GraphNode, trigger: HTMLElement) => {
     select(record.id); setInspection(null);
@@ -330,11 +334,6 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     focusContext(id); fitPending.current = true;
     change({ expanded: [...expanded], exhaustive: false, stateScope: id });
   });
-  const fit = useCanvasCallback(() => {
-    let focusNodes: CanvasNode[] | undefined;
-    if (!options.scope && focusId && boxes.has(focusId)) focusNodes = flow.getNodes().filter((n) => n.id === focusId);
-    void flow.fitView({ ...(focusNodes?.length ? { nodes: focusNodes } : {}), padding: 0.1, minZoom: 0.00001, maxZoom: 1 });
-  });
   useEffect(() => {
     const element = panel.current!;
     const observer = new ResizeObserver(([entry]) => { if (entry) setPanelWidth(entry.contentRect.width); });
@@ -357,28 +356,6 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     });
     return () => controller.abort();
   }, [layoutInput, options, retry, view]);
-  useEffect(() => {
-    if (!result.layout || appliedLayout.current === layoutResult.layout) return;
-    const frame = requestAnimationFrame(() => {
-      const camera = flow.getViewport();
-      const center = centerPending.current && boxes.get(centerPending.current);
-      const substitute = anchor.current?.sourceId && [...projected.values()].find((n) => n.sourceIds.includes(anchor.current!.sourceId!));
-      const at = anchor.current && (boxes.get(anchor.current.id) ?? (substitute ? boxes.get(substitute.id) : undefined));
-      if (restorePending.current) void flow.setViewport(restorePending.current);
-      else if (scopeCameraPending.current) void flow.fitView({ padding: 0.1, minZoom: 0.8, maxZoom: 1 });
-      else if (fitPending.current) fit();
-      else if (center) void flow.setCenter(center.absoluteX + Math.min(center.width / 2, 360), center.absoluteY + Math.min(center.height / 2, 240), { zoom: Math.max(camera.zoom, 0.8) });
-      else if (at && anchor.current) void flow.setViewport({ ...camera, x: anchor.current.x - at.absoluteX * camera.zoom, y: anchor.current.y - at.absoluteY * camera.zoom });
-      else if (!initialized.current) {
-        if (view.viewport) void flow.setViewport(view.viewport);
-        else void flow.fitView({ padding: 0.06, minZoom: 0.65, maxZoom: 1 });
-      }
-      appliedLayout.current = layoutResult.layout!;
-      initialized.current = true; anchor.current = null; centerPending.current = null; fitPending.current = false;
-      restorePending.current = undefined; scopeCameraPending.current = false;
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [result.layout, layoutResult.layout, boxes, flow, projected, view, fit]);
   useEffect(() => () => { cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current); }, []);
   const hover = useCanvasCallback((target: EmphasisTarget | null) => {
     cancelAnimationFrame(hoverFrame.current);
@@ -411,8 +388,34 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       selected: selected === cardSelection(record) || Boolean(selected && !projected.has(selected) && record.sourceIds.includes(selected)),
       data: { record, label: displayLabel(record, graph), subtitle: record.summary?.replaceAll('linear attention', 'linear').replaceAll('full attention', 'full') ?? variants.get(record.id)?.replace(/^Instance \d+ · /, '') ?? record.record?.operation?.replaceAll('_', ' ') ?? record.kind,
         ports: result.layout!.ports.filter((p) => p.nodeId === box.id), diagnostic: diagnosed.has(box.id), toggle, select, activate, inspect,
-        navigation: cardNavigation(record, Boolean(options.scope), sharedActive && !concreteInstance), navigate: navigateCard } };
+        navigation: cardNavigation(record, concreteInstance?.node_id ?? options.scope, sharedActive && !concreteInstance), navigate: navigateCard } };
   }), [activate, diagnosed, graph, inspect, projected, result.layout, selected, toggle, variants, select, options.scope, sharedActive, concreteInstance, navigateCard]);
+  const cameraState = useLayoutCamera(layoutResult.layout, options,
+    result.options === options && result.input === layoutInput.graph && !result.error, nodes, flowContainer, flow, async (fitLayout) => {
+      const camera = flow.getViewport();
+      const center = centerPending.current && boxes.get(centerPending.current);
+      const substitute = anchor.current?.sourceId && [...projected.values()].find((n) => n.sourceIds.includes(anchor.current!.sourceId!));
+      const at = anchor.current && (boxes.get(anchor.current.id) ?? (substitute ? boxes.get(substitute.id) : undefined));
+      if (restorePending.current) await flow.setViewport(restorePending.current);
+      else if (scopeCameraPending.current) await fitLayout({ padding: 0.1, minZoom: 0.8, maxZoom: 1 });
+      else if (fitPending.current) await fitLayout({ padding: 0.1, minZoom: 0.00001, maxZoom: 1,
+        ...(!options.scope && focusId && boxes.has(focusId) ? { nodes: flow.getNodes().filter((node) => node.id === focusId) } : {}) });
+      else if (center) await flow.setCenter(center.absoluteX + Math.min(center.width / 2, 360), center.absoluteY + Math.min(center.height / 2, 240), { zoom: Math.max(camera.zoom, 0.8) });
+      else if (at && anchor.current) await flow.setViewport({ ...camera, x: anchor.current.x - at.absoluteX * camera.zoom, y: anchor.current.y - at.absoluteY * camera.zoom });
+      else if (!initialized.current) {
+        if (savedViewport.current) await flow.setViewport(savedViewport.current);
+        else await fitLayout({ padding: 0.06, minZoom: 0.65, maxZoom: 1 });
+      }
+    }, () => {
+      initialized.current = true; anchor.current = null; centerPending.current = null; fitPending.current = false;
+      restorePending.current = undefined; scopeCameraPending.current = false;
+    });
+  const fit = useCanvasCallback(() => {
+    cameraState.cancel();
+    let focusNodes: CanvasNode[] | undefined;
+    if (!options.scope && focusId && boxes.has(focusId)) focusNodes = flow.getNodes().filter((n) => n.id === focusId);
+    void flow.fitView({ ...(focusNodes?.length ? { nodes: focusNodes } : {}), padding: 0.1, minZoom: 0.00001, maxZoom: 1 });
+  });
   const edges = useMemo<ConnectionEdge[]>(() => (result.layout?.projection.edges ?? []).map((edge) => ({
     id: edge.id, source: edge.source.node_id, target: edge.target.node_id, sourceHandle: `source:${edge.source.port_id}`,
     targetHandle: `target:${edge.target.port_id}`, type: 'connection', focusable: false, selectable: false,
@@ -451,19 +454,31 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const selectedEdge = result.layout?.projection.edges.find((e) => e.id === pinned);
   const eligibleTemplate = !shared && selectedRecord ? graph.templates?.find((t) => t.instances.some((i) => i.nodes.some((m) => m.node_id === selectedRecord.id))) : undefined;
   const eligibleInstance = eligibleTemplate?.instances.find((i) => i.nodes.some((m) => m.node_id === selectedRecord?.id));
+  const centerInLayout = (id: string) => {
+    // The requested reveal/center owns the next layout's camera, even while
+    // the current scope is still awaiting its initial fit.
+    scopeCameraPending.current = false; fitPending.current = false;
+    reveal(id);
+  };
   const centerSelected = () => {
     if (!selectedRecord) return;
-    if (!shared) { reveal(selectedRecord.id); return; }
+    if (!shared) { centerInLayout(selectedRecord.id); return; }
     const presentation = [...projected.values()].find((n) => n.record?.id === selectedRecord.id);
     const box = presentation && boxes.get(presentation.id);
-    if (box) void flow.setCenter(box.absoluteX + box.width / 2, box.absoluteY + box.height / 2, { zoom: flow.getZoom() });
+    if (box) {
+      cameraState.cancel();
+      void flow.setCenter(box.absoluteX + box.width / 2, box.absoluteY + box.height / 2, { zoom: flow.getZoom() });
+    }
   };
   const controlSelection: ControlSelection | undefined = selectedEdge ? {
     edge: true,
     label: `${projected.get(selectedEdge.source.node_id)?.label ?? 'Source'} → ${projected.get(selectedEdge.target.node_id)?.label ?? 'Destination'}`,
     detail: `${selectedEdge.source.port_id} → ${selectedEdge.target.port_id} · ${selectedEdge.originalEdgeIds.join(', ')}`,
     inspect: (trigger) => setInspection({ edgeId: selectedEdge.id, trigger }),
-    center: () => { void flow.fitView({ nodes: flow.getNodes().filter((n) => n.id === selectedEdge.source.node_id || n.id === selectedEdge.target.node_id), padding: 0.2, minZoom: 0.00001, maxZoom: 1 }); },
+    center: () => {
+      cameraState.cancel();
+      void flow.fitView({ nodes: flow.getNodes().filter((n) => n.id === selectedEdge.source.node_id || n.id === selectedEdge.target.node_id), padding: 0.2, minZoom: 0.00001, maxZoom: 1 });
+    },
     clear: () => { setPinned(null); view.update({ edge: null }); setInspection(null); },
   } : selectedRecord ? {
     edge: false, nodeId: selectedRecord.id,
@@ -477,13 +492,13 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     explore: !shared && ['group', 'operation'].includes(selectedRecord.kind) && selectedRecord.id !== options.scope ? () => isolate(selectedRecord.id) : undefined,
   } : selected && mlps.some((group) => group.id === selected) ? {
     edge: false, nodeId: selected, label: 'MLP (derived)', detail: selected,
-    center: () => reveal(selected), clear: () => { setSelected(null); view.update({ selected: null }); },
+    center: () => centerInLayout(selected), clear: () => { setSelected(null); view.update({ selected: null }); },
     explore: selected !== options.scope ? () => isolate(selected) : undefined,
   } : undefined;
   return <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
     data-template-id={shared?.templateId ?? ''} data-template-instance-id={shared?.instanceId ?? ''}
     data-scope-id={concreteInstance?.node_id ?? options.scope ?? ''} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
-    data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options}
+    data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options || !result.error && !cameraState.ready}
     data-source-node-ids={JSON.stringify(sourceNodeIds)} data-represented-edge-ids={JSON.stringify(result.layout?.edgeIds ?? [])}>
     {notice && <p role="status">{notice}</p>}
     <ArchitectureControls shared={shared && template ? { template, instanceId: shared.instanceId, choose: chooseSharedInstance } : undefined}
@@ -508,15 +523,17 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
           view.update({ dimensions: patch.dimensions }); setDimensions(patch.dimensions);
         }
         change(patch);
-      }} zoomIn={() => { void flow.zoomIn(); }} zoomOut={() => { void flow.zoomOut(); }}
+      }} zoomIn={() => { cameraState.cancel(); void flow.zoomIn(); }} zoomOut={() => { cameraState.cancel(); void flow.zoomOut(); }}
       filtered={!options.exhaustive && !options.showUnused && !!result.layout?.projection.filteredEdgeIds.length} />
     {result.error && <div role="alert">{result.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button>{shared && <button onClick={back}>Return to ordinary view</button>}</div>}
-    {!result.layout && !result.error && <p role="status">Laying out architecture…</p>}
-    <div className="architecture-flow">
+    {cameraState.error && <div role="alert">{cameraState.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button></div>}
+    <div className="architecture-flow" ref={flowContainer}>
+      {!result.layout && !result.error && <p className="architecture-loading" role="status">Laying out architecture…</p>}
       <ConnectionContext.Provider value={interaction}>
         <ReactFlow<CanvasNode, ConnectionEdge> nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onlyRenderVisibleElements
           zIndexMode="manual" nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
           minZoom={0.00001} maxZoom={4} defaultViewport={view.viewport ?? { x: 0, y: 0, zoom: 1 }} panOnDrag zoomOnScroll
+          onMoveStart={(event) => { if (event) cameraState.cancel(); }}
           onViewportChange={(viewport) => setZoom(viewport.zoom)} onMoveEnd={(_, viewport) => view.update({ viewport })}
           onNodeClick={(event, node) => { event.stopPropagation(); select(cardSelection(node.data.record)); }}
           onNodeDoubleClick={(event, node) => { event.stopPropagation(); activate(node.data.record, event.currentTarget as HTMLElement); }}

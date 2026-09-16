@@ -23,6 +23,14 @@ Keep actual layer order and variant differences visible when grouped. Repetition
 
 Expanding a group preserves the acted-on location/context; do not reset the camera or automatically fit the entire graph after every expansion. Maintain camera, expanded groups, focused repetition/instance context, and valid node/connection selection while closing inspection or switching explorers during the browser session, keyed by model and graph identity. Server-restart persistence is not required. Reject late responses and clear invalid selections on session/model/graph replacement.
 
+Initial and scope camera work uses the current layout and the renderer's current,
+nonzero viewport size. Loading presentation must not displace that viewport.
+Readiness includes completion of the applicable camera action, not only layout
+calculation. Saved camera restoration, Back and newer scope/model choices take
+precedence over obsolete initialization; user camera interaction supersedes a
+pending initialization. Ordinary resizing, selection, hover and menus do not
+start another fit or layout. Initialization failure is bounded and recoverable.
+
 Viewport culling and asynchronous layout are allowed optimizations; discarding graph records or silently reducing detail is not. Bound layout work and provide an explicit recoverable failure rather than an indefinitely frozen canvas. All reference graphs must be usable when fully expanded on the documented acceptance environment. Record actual layout time, memory, and graph size rather than inventing a performance guarantee.
 
 React Flow and ELK are implementation candidates, not mandatory backend dependencies or reasons to change the graph contract. The layout implementation may be replaced without changing model semantics. Do not add a second matrix renderer, graph editor, export suite, or complex navigation framework in this increment.
@@ -218,14 +226,18 @@ must not zoom the canvas. Background pan/zoom remains unchanged.
 
 Independent header controls are ordered `+/-` (when expandable), navigation,
 then `(i)`. The navigation control shows four outward diagonal arrows for
-**Explore component** in Model view and four inward diagonal arrows for
-**View in model** during isolation. It uses the existing navigation path with
-the pressed card's exact source or supported derived-MLP target, independently
-of prior selection. Returning a nested concrete child reveals, selects and
-centers that child. Synthetic repetition ranges, context/boundary aliases and
-other cards without an existing target show an unavailable control with an
+**Explore component** for valid components in Model view and descendants during
+isolation. Only the active isolated root shows four inward diagonal arrows for
+**View in model**. Resolve the action and target together from the pressed card's
+exact source or supported derived-MLP identity, independently of prior selection.
+Exploring a descendant pushes the preceding scope snapshot and makes that child
+the new isolated root; its descendants remain explorable. **Back** restores each
+preceding scope without collapsing it. The root's **View in model** reveals,
+selects and centers that exact root in the global model. Synthetic repetition
+ranges, context/boundary aliases and other cards without an existing target show an unavailable control with an
 accessible explanation. Structure-only shared views require a concrete instance
-before returning to the model. Controls have English target-specific names and
+before navigating; concrete shared cards use the current verified source mapping,
+not the template representative. Controls have English target-specific names and
 tooltips, visible focus and independent click/double-click hit behavior. Ports,
 connections and expanded-group children retain their own targets.
 

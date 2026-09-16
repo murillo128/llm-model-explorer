@@ -10,6 +10,7 @@ interface IsolationProbe {
   reject: boolean; hold: boolean; release?: () => void;
 }
 declare global { interface Window { isolationProbe: IsolationProbe } }
+const card = (page: Page, id: string) => page.locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`);
 const panel = (page: Page) => page.getByLabel('Architecture graph', { exact: true });
 async function ready(page: Page) {
   await expect(panel(page)).toHaveAttribute('aria-busy', 'false');
@@ -174,14 +175,14 @@ test('layout failure allows retry and Back; queued late results cannot replace a
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
   expect((await state(page)).camera).toBe(before.camera);
   await page.evaluate(() => { window.isolationProbe.hold = true; });
-  await page.getByRole('button', { name: 'Explore component', exact: true }).click();
+  await card(page, 'layer-3.attention').locator('.architecture-navigate').click();
   await expect(panel(page)).toHaveAttribute('aria-busy', 'true');
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
   const current = await state(page);
   await page.evaluate(() => window.isolationProbe.release?.()); await ready(page);
   expect(await state(page)).toEqual(current);
   await page.evaluate(() => { window.isolationProbe.hold = true; });
-  await page.getByRole('button', { name: 'Explore component', exact: true }).click();
+  await card(page, 'layer-3.attention').locator('.architecture-navigate').click();
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('partial'); await ready(page);
   const replacement = await state(page);
   await page.evaluate(() => window.isolationProbe.release?.()); await ready(page);
@@ -205,4 +206,65 @@ test('optional shared-view failures recover to ordinary exploration and reject c
   await findComponent(page, 'layer-2.attention'); await ready(page);
   await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready(page);
   await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-2.attention');
+});
+
+
+test('card navigation resolves the active root, nests exact children, and restores each scope without collapse', async ({ page }, info) => {
+  await findComponent(page, 'layer-3'); await ready(page);
+  await graphAction(page, 'Toggle selected group'); await ready(page);
+  await graphPreference(page, 'Unused interfaces', true); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  const layerCard = card(page, 'layer-3'), attention = card(page, 'layer-3.attention');
+  const nav = (id: string) => card(page, id).locator('.architecture-navigate');
+  const capture = async (name: string) => {
+    const path = info.outputPath(`${name}.png`);
+    await panel(page).screenshot({ path });
+    await info.attach(name, { path, contentType: 'image/png' });
+  };
+  for (const control of await page.locator('.architecture-navigate[aria-disabled="false"]').all()) {
+    await expect(control).toHaveAccessibleName(/^Explore component:/);
+  }
+  await capture('navigation-model');
+  const model = await state(page);
+  await nav('layer-3').click(); await ready(page);
+  await expect(nav('layer-3')).toHaveAccessibleName(/^View in model:/);
+  await expect(nav('layer-3.attention')).toHaveAccessibleName(/^Explore component:/);
+  await expect(nav('layer-3.mlp')).toHaveAccessibleName(/^Explore component:/);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  await capture('navigation-isolated-root');
+  // Select A, activate B. B's action must neither return to A nor collapse A.
+  await layerCard.locator('.architecture-node-label').click();
+  const layer = await state(page);
+  await nav('layer-3.attention').dblclick(); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-3.attention');
+  await expect(nav('layer-3.attention')).toHaveAccessibleName(/^View in model:/);
+  await expect(nav('layer-3.attention.Q')).toHaveAccessibleName(/^Explore component:/);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  await capture('navigation-nested-isolation');
+  await attention.locator('.architecture-node-label').click();
+  const component = await state(page);
+  // Non-expandable source operation, explicit keyboard navigation.
+  await expect(card(page, 'layer-3.attention.Q').locator('.architecture-expand')).toHaveCount(0);
+  await nav('layer-3.attention.Q').focus(); await page.keyboard.press('Space'); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-3.attention.Q');
+  await expect(nav('layer-3.attention.Q')).toHaveAccessibleName(/^View in model:/);
+  for (const previous of [component, layer, model]) {
+    await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
+    const restored = await state(page);
+    expect(restored.options).toEqual(previous.options);
+    expect(restored.camera).toBe(previous.camera);
+    expect(restored.selection).toBe(previous.selection);
+    expect(restored.layout.boxes).toEqual(previous.layout.boxes);
+  }
+  // Root return is independent from the selected descendant.
+  await nav('layer-3').click(); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  await attention.locator('.architecture-node-label').click();
+  await nav('layer-3').click(); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-scope-id', '');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-3');
+  await expect(layerCard.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
+  await info.attach('exact-navigation-targets', { body: JSON.stringify({
+    model: 'layer-3', isolatedRoot: 'layer-3', child: 'layer-3.attention', nested: 'layer-3.attention.Q', returnedRoot: 'layer-3',
+  }), contentType: 'application/json' });
 });

@@ -6,10 +6,11 @@ export const cardSelection = (node: ProjectedNode) => node.record?.id ?? node.id
 export const cardDoubleClick = (node: ProjectedNode) =>
   node.kind === 'group' && !node.expanded ? 'expand' : 'inspect';
 
-export function cardNavigation(node: ProjectedNode, isolated: boolean, structureOnly: boolean) {
-  const action = isolated ? 'View in model' : 'Explore component';
+/** activeRoot uses concrete source identity, including a rebound shared instance. */
+export function cardNavigation(node: ProjectedNode, activeRoot: string | undefined, structureOnly: boolean) {
   const target = node.presentation === 'mlp' ? node.id
     : node.record && ['group', 'operation'].includes(node.record.kind) ? node.record.id : undefined;
+  const action = target && target === activeRoot ? 'View in model' : 'Explore component';
   const reason = structureOnly ? 'Choose a concrete instance to view in model.'
     : !target ? 'This presentation has no component navigation target.' : undefined;
   return { action, target: reason ? undefined : target, reason };

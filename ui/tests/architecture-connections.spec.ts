@@ -46,7 +46,10 @@ async function fullAttention(page: Page) {
   await expect(port(page, 'layer-3.attention.core', 'K')).toBeVisible();
 }
 async function stableState(page: Page, clearHover = true) {
+  // aria-busy covers the current layout and its committed camera action.
+  await ready(page);
   if (clearHover) await page.mouse.move(0, 0);
+  // Flush temporary pointer emphasis; frame count does not establish camera readiness.
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   return page.evaluate(() => ({
     layoutCount: document.querySelector('[aria-label="Architecture graph"]')?.getAttribute('data-layout-count'),
