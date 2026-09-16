@@ -20,7 +20,7 @@ export class MatrixRowSelection {
 
   constructor(private readonly viewport: MatrixViewport) {
     this.surfaces = [viewport.matrix.renderer, ...(viewport.rows ? [viewport.rows] : [])]
-      .map(renderer => ({ renderer, guides: [] as HTMLDivElement[] }));
+      .map(renderer => ({ renderer, guides: [] as SVGSVGElement[] }));
   }
 
   setRows(rows: readonly number[] = []) {
@@ -39,21 +39,34 @@ export class MatrixRowSelection {
           if (bottom <= top || view.width <= 0) continue;
           let guide = guides[used++];
           if (!guide) {
-            guide = document.createElement('div');
-            guide.className = 'matrix-selected-rows';
+            guide = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            guide.setAttribute('class', 'matrix-selected-rows');
             guide.setAttribute('aria-hidden', 'true');
-            Object.assign(guide.style, { position: 'absolute', pointerEvents: 'none', boxSizing: 'border-box' });
+            Object.assign(guide.style, { position: 'absolute', pointerEvents: 'none', overflow: 'hidden', display: 'block' });
+            const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            outline.setAttribute('fill', 'none');
+            outline.setAttribute('stroke', 'rgba(245, 154, 56, 0.7)');
+            outline.setAttribute('stroke-width', '1');
+            outline.setAttribute('shape-rendering', 'crispEdges');
+            guide.append(outline);
             guides.push(guide);
             renderer.canvas.parentElement!.append(guide);
           }
           guide.dataset.rows = `${from}:${to}`;
+          const width = view.width, height = bottom - top;
+          // SVG units are device pixels. Draw inside the clipped raster box:
+          // CSS borders impose a minimum box size and round fractional widths,
+          // so they cannot represent singleton rows at native scale / high DPR.
+          guide.setAttribute('viewBox', `0 0 ${width} ${height}`);
+          guide.firstElementChild!.setAttribute('d', [
+            `M0.5 0V${height} M${width - 0.5} 0V${height}`,
+            ...(start >= 0 ? [`M0 0.5H${width}`] : []),
+            ...(end <= view.height ? [`M0 ${height - 0.5}H${width}`] : []),
+          ].join(' '));
           Object.assign(guide.style, {
             left: `${parseFloat(renderer.canvas.style.left || '0')}px`,
             top: `${parseFloat(renderer.canvas.style.top || '0') + top / view.dpr}px`,
-            width: `${view.width / view.dpr}px`, height: `${(bottom - top) / view.dpr}px`,
-            border: `${1 / view.dpr}px solid rgba(245, 154, 56, 0.7)`,
-            borderTopWidth: start < 0 ? '0px' : `${1 / view.dpr}px`,
-            borderBottomWidth: end > view.height ? '0px' : `${1 / view.dpr}px`,
+            width: `${width / view.dpr}px`, height: `${height / view.dpr}px`,
           });
         }
       }

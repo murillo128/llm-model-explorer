@@ -22,6 +22,14 @@ The same-shaped replacement test changes reliable source spans and requires a
 new row mapping only after the matching staged matrix is promoted. Cancellation,
 failed tokenization, session/options changes, edits and late responses are fenced.
 
+Device-resolution Chromium screenshots also verify singleton and disjoint rows
+at the native one-device-pixel scale for DPR 1 and 2, on desktop and narrow
+viewports. Pixel differences must stay inside the selected scanlines on both
+the matrix and row distributions; neighboring rows and blank margins remain
+unchanged. A clipped-camera case checks the visible first/last row fragments
+and excludes an invented edge at the viewport boundary. SVG strokes remain
+inside the exact clipped raster interval without CSS border minimum dimensions.
+
 Unit tests independently cover strict offset intersection (including multiple
 ranges, surrogate halves and transitively overlapping annotations), invalid row
 positions, and controlled Matrix Explorer updates without subscription or camera

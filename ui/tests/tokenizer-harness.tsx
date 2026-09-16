@@ -2,6 +2,7 @@ import { GridRenderer } from '../src/rendering/tensor-renderer';
 import { EditorView } from '@codemirror/view';
 import { EditorSelection } from '@codemirror/state';
 import { CameraHistory } from '../src/rendering/camera-history';
+import { TensorViewport } from '../src/rendering/tensor-viewport';
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ApiClient } from '../src/api/client';
@@ -17,6 +18,7 @@ declare global {
       historyCalls: number;
       transferCalls: number;
       renderers: GridRenderer[];
+      viewports: TensorViewport[];
       countRenderers: GridRenderer[];
       requests: { session: string; token_ids: number[]; aborted: boolean }[];
       auxiliary: { kind: 'statistics' | 'distributions'; session: string; token_ids: number[]; aborted: boolean }[];
@@ -70,6 +72,7 @@ window.embeddingHarness = {
   historyCalls: 0,
   transferCalls: 0,
   renderers, countRenderers,
+  viewports: [],
   requests: [], cancelled: [], auxiliary: [],
   auxiliaryHeaders(index, status = 200) {
     auxiliaryResolvers[index]!(status === 200 ? new Response(new ReadableStream({ start(controller) { auxiliaryStreams[index] = controller; } }), {
@@ -87,6 +90,11 @@ window.embeddingHarness = {
   send(index, bytes, close = false) {
     try { streams[index]!.enqueue(new Uint8Array(bytes)); if (close) streams[index]!.close(); } catch { /* A cancelled reader may be closed. */ }
   },
+};
+const refreshViewport = TensorViewport.prototype.refresh;
+TensorViewport.prototype.refresh = function () {
+  if (!window.embeddingHarness.viewports.includes(this)) window.embeddingHarness.viewports.push(this);
+  return refreshViewport.call(this);
 };
 const setTransfer = GridRenderer.prototype.setTransfer;
 GridRenderer.prototype.setTransfer = function (...args) {

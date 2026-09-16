@@ -698,8 +698,8 @@ async function alignedGuides(page: Page, ranges: [number, number][]) {
       expect(guide.events).toBe('none');
       expect(Math.abs(guide.x - x)).toBeLessThan(0.1);
       expect(Math.abs(guide.width - width)).toBeLessThan(0.1);
-      expect(Math.abs(guide.y - geometry.y - top / v.dpr)).toBeLessThan(1 / v.dpr + 0.05);
-      expect(Math.abs(guide.height - (bottom - top) / v.dpr)).toBeLessThan(1 / v.dpr + 0.05);
+      expect(Math.abs(guide.y - geometry.y - top / v.dpr)).toBeLessThan(0.05);
+      expect(Math.abs(guide.height - (bottom - top) / v.dpr)).toBeLessThan(0.05);
     }
   });
 }
@@ -842,4 +842,95 @@ test('selected rows are recomputed from current source only after matching gener
   await expect(rowGuides(page)).toHaveCount(0);
   await editor.press('ArrowRight');
   await expect(rowGuides(page)).toHaveCount(0);
+});
+
+/** Include sibling overlays and a two-device-pixel blank margin, not just GL bytes. */
+async function selectedRowPixels(page: Page, surface: '.matrix-scroll' | '.row-distributions', dpr: number) {
+  const box = (await page.locator(`${surface} canvas`).boundingBox())!;
+  const width = Math.round(box.width * dpr), height = Math.round(box.height * dpr);
+  // Capture the full device-resolution frame: Playwright rounds clip dimensions
+  // to CSS pixels, losing the last scanline of odd-height native matrices at DPR 2.
+  const png = await page.screenshot({ scale: 'device' });
+  const pixels = await page.evaluate(async ({ base64, x, y, width, height, dpr }) => {
+    const image = new Image(); image.src = `data:image/png;base64,${base64}`; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+    const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+    if (image.width !== innerWidth * dpr) throw new Error('Screenshot must preserve device-pixel resolution');
+    return { width, height, bytes: [...context.getImageData(x, y, width, height).data] };
+  }, { base64: png.toString('base64'), x: Math.round(box.x * dpr) - 2, y: Math.round(box.y * dpr) - 2,
+    width: width + 4, height: height + 4, dpr });
+  return pixels;
+}
+function changedRowPixels(before: Awaited<ReturnType<typeof selectedRowPixels>>, after: typeof before, selectedScanlines: number[]) {
+  expect([after.width, after.height]).toEqual([before.width, before.height]);
+  const changedRows = new Set<number>();
+  let outsideChanges = 0;
+  for (let y = 0; y < before.height; y++) for (let x = 0; x < before.width; x++) {
+    const offset = (y * before.width + x) * 4;
+    if (before.bytes.slice(offset, offset + 4).every((value, c) => value === after.bytes[offset + c])) continue;
+    if (x < 2 || x >= before.width - 2 || !selectedScanlines.includes(y - 2)) outsideChanges++;
+    changedRows.add(y - 2);
+  }
+  expect(outsideChanges, 'No painted guide pixels may enter unselected rows or blank margins').toBe(0);
+  expect([...changedRows].sort((a, b) => a - b)).toEqual(selectedScanlines);
+}
+
+for (const dpr of [1, 2]) test.describe(`selected row pixels DPR ${dpr}`, () => {
+  // Match the compositor's native scale too. Context-only DPR emulation rounds
+  // CSS paint to the host's DPR 1 grid before upscaling the screenshot.
+  const pixelTest = test.extend({ page: async ({ playwright }, use, testInfo) => {
+    const browser = await playwright.chromium.launch({
+      args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', `--force-device-scale-factor=${dpr}`],
+    });
+    try {
+      await use(await browser.newPage({ viewport: testInfo.project.use.viewport!, deviceScaleFactor: dpr }));
+    } finally { await browser.close(); }
+  } });
+  for (const disjoint of [false, true]) pixelTest(`thin selected rows stay inside native and clipped pixels at DPR ${dpr}, disjoint ${disjoint}`, async ({ page }) => {
+    const editor = await start(page), text = 'abcdefg', ids = [0, 1, 2, 0, 1, 2, 0];
+    const result = tokens(text, ids);
+    if (disjoint) for (const token of result.tokens) if (![0, 3, 6].includes(token.index)) {
+      delete token.start; delete token.end;
+    }
+    await editor.fill(text); await count(page, 2); await tokenize(page, 1, result);
+    await embeddingCount(page, 1); await stream(page, 0, ids, 64);
+    await auxiliary(page, 0, analysis(ids, 64).statisticsStream);
+    await auxiliary(page, 1, analysis(ids, 64).distributionStream);
+    await nativeCamera(page);
+    await expect.poll(() => page.evaluate(() => window.embeddingHarness.renderers.at(-1)!.view!.scaleY)).toBe(1);
+    await editor.press('Control+Home'); await page.mouse.move(0, 0);
+    const surfaces = ['.matrix-scroll', '.row-distributions'] as const;
+    const before = await Promise.all(surfaces.map(surface => selectedRowPixels(page, surface, dpr)));
+    const state = await selectionSnapshot(page);
+    if (disjoint) await editor.press('Control+a');
+    else { await editor.press('ArrowRight'); await editor.press('Shift+ArrowRight'); }
+    const rows = disjoint ? [0, 3, 6] : [1];
+    await expect.poll(() => guideRows(page)).toEqual(rows.map(row => `${row}:${row + 1}`));
+    await alignedGuides(page, rows.map(row => [row, row + 1]));
+    const after = await Promise.all(surfaces.map(surface => selectedRowPixels(page, surface, dpr)));
+    before.forEach((pixels, i) => changedRowPixels(pixels, after[i]!, rows));
+    expect(await selectionSnapshot(page)).toEqual(state);
+
+    if (!disjoint) return;
+    await editor.press('Control+Home');
+    await page.evaluate(() => {
+      const v = window.embeddingHarness.viewports.at(-1)!;
+      v.host.style.height = v.host.style.maxHeight = `${12 / devicePixelRatio}px`;
+      v.zoomAt(4, 0, 0); v.host.scrollTop = 1 / devicePixelRatio; v.refresh();
+    });
+    await expect.poll(() => page.evaluate(() => {
+      const v = window.embeddingHarness.renderers.at(-1)!.view!;
+      return [v.scaleY, v.y, v.height];
+    })).toEqual([4, 0.25, 12]);
+    const clippedBefore = await Promise.all(surfaces.map(surface => selectedRowPixels(page, surface, dpr)));
+    await page.evaluate(() => window.tokenizerHarness.select(0, 4));
+    await alignedGuides(page, [[0, 1], [3, 4]]);
+    const clippedAfter = await Promise.all(surfaces.map(surface => selectedRowPixels(page, surface, dpr)));
+    clippedBefore.forEach((pixels, i) => {
+      changedRowPixels(pixels, clippedAfter[i]!, [0, 1, 2, 11]);
+      // The first selected row starts offscreen: no invented top edge through its middle.
+      const middle = (2 * pixels.width + Math.floor(pixels.width / 2)) * 4;
+      expect(clippedAfter[i]!.bytes.slice(middle, middle + 4)).toEqual(pixels.bytes.slice(middle, middle + 4));
+    });
+  });
 });
