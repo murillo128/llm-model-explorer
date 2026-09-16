@@ -5,6 +5,7 @@ import type { Tokenization } from '../src/tokenizer/annotations';
 
 import { color } from './scalar-oracle';
 import { frame, meta, data, values, analysis } from './embedding-fixtures';
+import { integratedCard } from './viewer-panel';
 
 function tokens(text: string, ids = [2, 0, 2], special = true): Tokenization {
   return { text, add_special_tokens: special, tokens: text ? ids.map((id, index) => ({ index, id, token: 'fixture', decoded: '', special: false,
@@ -33,16 +34,19 @@ async function start(page: Page) {
   return page.getByRole('textbox', { name: 'Prompt', exact: true });
 }
 
-test('empty and unavailable embeddings share the full-width title/body composition', async ({ page }) => {
+test('empty, loading and unavailable embeddings share an integrated card while Prompt / Tokens keeps its composition', async ({ page }) => {
   const editor = await start(page);
+  const prompt = page.locator('.prompt-panel');
+  const promptBounds = (await prompt.boundingBox())!;
+  expect(await prompt.locator('.matrix-panel-header').boundingBox()).toEqual({ ...promptBounds, height: 40 });
+  expect(await prompt.locator('.viewer-panel').evaluate(node => getComputedStyle(node).borderTopWidth)).toBe('0px');
+  expect(await prompt.locator('.matrix-panel-header').evaluate(node => getComputedStyle(node).borderTopLeftRadius)).toBe('0px');
+  expect(await prompt.locator('.viewer-panel-body').evaluate(node => getComputedStyle(node).borderTopWidth)).toBe('1px');
   async function fullWidthHeader() {
     const panel = page.locator('.input-embeddings');
     await expect(panel.locator('.matrix-panel-header')).toHaveCount(1);
-    const region = (await panel.boundingBox())!, title = (await panel.locator('.matrix-panel-header').boundingBox())!;
-    const body = (await panel.locator('.viewer-panel-body').boundingBox())!;
-    expect(title).toEqual({ x: region.x, y: region.y, width: region.width, height: 40 });
-    expect(body.x).toBe(title.x); expect(body.width).toBe(title.width);
-    expect(body.y).toBe(title.y + title.height);
+    await integratedCard(panel.locator('.viewer-panel'));
+    expect(await panel.locator('.viewer-panel').boundingBox()).toEqual(await panel.boundingBox());
   }
   await fullWidthHeader();
   await editor.fill('A'); await count(page, 2); await tokenize(page, 1, tokens('A'));
@@ -70,13 +74,16 @@ for (const dpr of [1, 2]) test(`exact progressive rows, linked annotations and f
   await send(page, 0, [...meta([2, 0, 2]), ...payload.slice(0, 15)]);
   const matrix = page.locator('.matrix-scroll');
   await expect(matrix).toBeVisible();
+  await integratedCard(page.locator('.input-embeddings .viewer-panel'));
   await matrix.focus();
   await expect(page.locator('.inspection-readout')).toContainText('Unavailable');
   await send(page, 0, payload.slice(15, 16));
   await expect(page.locator('.inspection-readout')).toContainText('0.4375');
   await expect(page.getByText('Streaming input embeddings…')).toBeVisible();
+  await integratedCard(page.locator('.input-embeddings .viewer-panel'));
   await send(page, 0, [...payload.slice(16), ...frame(4)], true);
   await expect(page.getByText('[3 × 7] · float32')).toBeVisible();
+  await integratedCard(page.locator('.input-embeddings .viewer-panel'));
   const expected = values([2, 0, 2]);
   for (let row = 0; row < 3; row++) {
     if (row) { for (let i = 0; i < 6; i++) await matrix.press('ArrowLeft'); await matrix.press('ArrowDown'); }
