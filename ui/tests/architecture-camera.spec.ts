@@ -63,6 +63,8 @@ test('cold fit waits for current geometry, then selection, menus, hover and resi
   await page.getByRole('button', { name: 'View options', exact: true }).click(); await page.keyboard.press('Escape');
   await page.setViewportSize({ width: info.project.use.viewport!.width, height: info.project.use.viewport!.height! - 30 });
   await expect.poll(async () => (await sample(page)).actual[1]).not.toBe(before.actual[1]);
+  // An ordinary resize does not reopen initialization; await its own size notification.
+  await expect.poll(async () => { const state = await sample(page); return state.actual.every((size, i) => size === state.consumed[i]); }).toBe(true);
   await ready(page);
   expect((await sample(page)).camera).toEqual(before.camera);
   expect((await sample(page)).layout).toBe(before.layout);
