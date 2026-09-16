@@ -80,9 +80,13 @@ local cell.
 
 `PanelHeader` composes identity, information, summary, status, and right-side actions in a fixed 40px scientific toolbar. Pass it through `MatrixExplorer.header`; status changes do not restart the source. `InfoPopover` supplies hover/focus previews and click/tap/keyboard pinning, with pinned-only close, outside/Escape dismissal, and focus restoration. Neither primitive depends on tensor transport or tokenizer state.
 
-`MatrixExplorer` uses `ViewerPanel` to place this title above a sibling padded
-content card. The card owns the scientific viewport, rendering errors and local
-inspection; its border/padding never wraps the title. Use
+`MatrixExplorer` uses `ViewerPanel` as one rounded card containing the title and
+padded scientific body. The outer panel owns the 1px border, 9px radius, surface
+background and subtle shadow. The 40px soft-neutral header has rounded top corners
+and one internal bottom separator; the body owns only layout and 12px padding
+(8px at narrow widths), without a second outer border or radius. Keep overflow
+visible on the card/header so information popovers float freely below their trigger.
+The body contains the scientific viewport, rendering errors and local inspection. Use
 `<ViewerPanel header={<PanelHeader ... />}>…</ViewerPanel>` for empty or unavailable
 states without allocating a source. Both forms fill the bounded parent width.
 Consumers should supply the header once and avoid wrapping the whole viewer in

@@ -2,6 +2,7 @@ import { findComponent, graphAction } from './architecture-controls';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { nativeCamera } from './native-camera';
+import { integratedCard } from './viewer-panel';
 
 async function open(page: Page, model = 'lab/alpha', strict = false) {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html?architecture${strict ? '&strict' : ''}`);
@@ -38,12 +39,7 @@ test('concrete repeated weight preserves exact progressive values, independent p
   await requests(page, 3);
   await expect(page.locator('.matrix-panel-header')).toHaveCount(1);
   await expect(page.locator('.architecture-inspection-heading')).toHaveCount(1);
-  const panel = (await page.locator('.viewer-panel').boundingBox())!;
-  const title = (await page.locator('.matrix-panel-header').boundingBox())!;
-  const body = (await page.locator('.viewer-panel-body').boundingBox())!;
-  expect(title).toEqual({ x: panel.x, y: panel.y, width: panel.width, height: 40 });
-  expect(body.y).toBe(title.y + title.height);
-  expect(body.width).toBe(title.width);
+  await integratedCard(page.locator('.viewer-panel'));
   expect(await page.locator('dialog.architecture-inspection').boundingBox()).toEqual(shell);
   expect(await page.evaluate(() => window.explorerFixture.requests.map((r) => [r.tensor, r.kind]))).toEqual([['B', 'data'], ['B', 'statistics'], ['B', 'distributions']]);
   await page.evaluate(() => { const f = window.explorerFixture; f.emit(0, 1, f.metadata(0)); f.data(0, [-2, 0], 3); });

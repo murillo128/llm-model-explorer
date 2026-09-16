@@ -1,8 +1,10 @@
-.viewer-panel { display: flex; flex-direction: column; flex: 1; width: 100%; min-width: 0; min-height: 0; }
-.viewer-panel-body { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; box-sizing: border-box; padding: 12px; border: 1px solid var(--ui-border, #d7d3ca); border-radius: 9px; background: var(--ui-surface, #fff); box-shadow: var(--ui-shadow, 0 1px 2px #2b271f0a); }
+.viewer-panel { display: flex; flex-direction: column; flex: 1; width: 100%; min-width: 0; min-height: 0; box-sizing: border-box; border: 1px solid var(--ui-border, #d7d3ca); border-radius: 9px; background: var(--ui-surface, #fff); box-shadow: var(--ui-shadow, 0 1px 2px #2b271f0a); }
+.viewer-panel-body { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; box-sizing: border-box; padding: 12px; }
 .viewer-panel-body > :not(.matrix-surfaces) { flex-shrink: 0; }
 .viewer-panel-body > .matrix-surfaces { flex: 1; min-height: 0; }
 .matrix-explorer-header { flex: none; min-width: 0; font-size: 13px; line-height: 20px; }
+/* Round the header background without clipping its floating information surface. */
+.viewer-panel > .matrix-explorer-header > .matrix-panel-header { border-radius: 8px 8px 0 0; }
 @media (max-width: 760px) { .viewer-panel-body { padding: 8px; } }
 .matrix-scroll { background: var(--ui-surface-soft, #fbfaf7); }
 

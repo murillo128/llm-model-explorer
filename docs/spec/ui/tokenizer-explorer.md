@@ -79,8 +79,9 @@ Token identity is not encoded by assigning a different color to every token. The
 Tokenizer Explorer composes two vertically stacked, visually distinct panels:
 **Prompt / Tokens** wraps the existing editable annotation surface, and
 **Input Embeddings** uses the same reusable `MatrixExplorer` as Tensor Explorer.
-Each has its own full-width compact title bar above its own content card, using
-the shared title/body composition from `visual-language.md`. The surrounding
+Input Embeddings uses the integrated Matrix Explorer header and scientific body
+inside one rounded card, as defined in `visual-language.md`. Prompt / Tokens
+retains its separately owned full-width compact title above the editor card. The surrounding
 workspace is a neutral layout container, with no third enclosing card. Empty,
 loading, unavailable and failed embeddings retain the full-width title/body.
 Wrapping the prompt must preserve its inline text/bracket/ID layout and native editor behavior; it must not

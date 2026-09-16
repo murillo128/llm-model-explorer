@@ -3,6 +3,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import type { MatrixViewportOptions } from '../rendering/matrix-viewport';
 import type { Inspection } from '../rendering/matrix-inspection';
 import { MatrixExplorer } from './MatrixExplorer';
+import { PanelHeader } from './PanelHeader';
+import { ViewerPanel } from './ViewerPanel';
 import { TensorHeader } from '../components/TensorHeader';
 import { tensors } from '../test/shell-fixtures';
 import type { MatrixSource, MatrixUpdates } from './types';
@@ -167,13 +169,44 @@ it('releases the viewport and fences callbacks when a parent subscription throws
   expect(fake.views.every((v) => v.upload.mock.calls.length === 0)).toBe(true);
 });
 
-it('composes Fit width into the header action slot without resubscribing or uploading', () => {
+it('keeps header, actions and scientific body in one card without restarting delivery', () => {
   const data = source();
-  render(<MatrixExplorer source={data} header={(controls) => <header>Result {controls}</header>} />);
+  const view = render(<MatrixExplorer source={data} header={(controls) => <PanelHeader identity="Result" actions={controls} />} />);
+  const card = view.container.querySelector('.viewer-panel')!;
+  const title = card.querySelector('.matrix-explorer-header')!;
+  const body = card.querySelector('.viewer-panel-body')!;
+  const matrix = body.querySelector('.matrix-scroll');
+  expect([...card.children]).toEqual([title, body]);
+  expect(title).toContainElement(screen.getByText('Result'));
+  expect(title).toContainElement(screen.getByRole('button', { name: 'Fit width' }));
+  expect(matrix).toBeInTheDocument();
+  act(() => data.updates[0]!.values(new Float32Array([1, 2, 3]), 0));
+  view.rerender(<MatrixExplorer source={data} header={(controls) => <PanelHeader identity="Updated result"
+    status="Streaming" actions={<><button>Cancel</button>{controls}</>} />} />);
+  expect(view.container.querySelector('.viewer-panel')).toBe(card);
+  expect([...card.children]).toEqual([title, body]);
+  expect(title).toContainElement(screen.getByText('Updated result'));
+  expect(title).toContainElement(screen.getByText('Streaming'));
+  expect(title).toContainElement(screen.getByRole('button', { name: 'Cancel' }));
+  expect(body.querySelector('.matrix-scroll')).toBe(matrix);
   fireEvent.click(screen.getByRole('button', { name: 'Fit width' }));
   expect(fake.views[0]!.fitWidth).toHaveBeenCalledOnce();
-  expect(fake.views[0]!.upload).not.toHaveBeenCalled();
+  expect(fake.views).toHaveLength(1);
+  expect(fake.views[0]!.upload).toHaveBeenCalledOnce();
+  expect(fake.views[0]!.dispose).not.toHaveBeenCalled();
   expect(data.updates).toHaveLength(1);
+  expect(data.detach).not.toHaveBeenCalled();
+});
+
+it.each(['Waiting', 'Empty', 'Unavailable'])('keeps %s content inside the same card as its header without a renderer', (state) => {
+  const view = render(<ViewerPanel header={<PanelHeader identity="Result" />}><p>{state}</p></ViewerPanel>);
+  const card = view.container.querySelector('.viewer-panel')!;
+  const title = card.querySelector('.matrix-explorer-header')!;
+  const body = card.querySelector('.viewer-panel-body')!;
+  expect([...card.children]).toEqual([title, body]);
+  expect(title).toContainElement(screen.getByText('Result'));
+  expect(body).toContainElement(screen.getByText(state));
+  expect(fake.views).toHaveLength(0);
 });
 
 it('reveals only on a new semantic intent without restarting delivery or resetting the camera', () => {
