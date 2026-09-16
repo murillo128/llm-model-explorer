@@ -40,3 +40,12 @@ were undercharged. The correction charges those separators and checks six byte
 limits around the complete two-template size, including one byte below it; source
 records and coverage remain intact. All 16 producer-template tests pass after the
 correction. No UI navigation was integrated before this review.
+
+Fresh semantic/API review of corrected head
+`583c2c361cde8bc90baabad8a84e1c021db635f6` returned **PASS**, with
+`final-capable: no` (intermediate checkpoint only). The reviewer reran all 16
+producer-template tests and eight adjacent byte-budget limits for each of the
+dense and visual fixtures. At one byte below the complete dense document, the
+producer retains one optional template and every original graph record with
+complete coverage. No further material findings remained. UI navigation work
+began only after that PASS; final acceptance belongs to the PR audit controller.
