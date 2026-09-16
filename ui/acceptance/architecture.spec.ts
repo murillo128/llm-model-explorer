@@ -444,6 +444,24 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
   });
 }
 
+test('complete local reference [qwen3] exhaustive global detail remains reachable at readable scale', async ({ page }, info) => {
+  const graph = await selectGraph(page);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  await graphAction(page, 'Show all operations');
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  const mlp = graph.nodes.find((node) => node.kind === 'group' && node.attributes.some((a) => a.name === 'semantic_role' && a.value === 'mlp'))!;
+  const operation = graph.nodes.find((node) => node.parent_id === mlp.id && node.kind === 'operation')!;
+  const requests = observed.length;
+  await findComponent(page, operation.id);
+  await page.getByRole('button', { name: 'Center selected', exact: true }).click();
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator(`.react-flow__node[data-id=${JSON.stringify(operation.id)}]`)).toBeInViewport();
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
+  expect(observed.slice(requests)).toEqual([]);
+  await recordGraph(page, info, 'exhaustive-global-detail', graph);
+});
+
 test('deterministic production [smollm2] close during progressive data cancels and releases modal resources', async ({ page }) => {
   const graph = await selectGraph(page);
   const parameter = graph.parameters.find((p) => p.binding === 'native' && p.inspection.status === 'available' && p.logical_shape?.length === 2)!;
