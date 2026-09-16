@@ -17,17 +17,21 @@ import { Connection, ConnectionInspection } from './Connection';
 import { ConnectionContext } from './connection-context';
 import { connectionHitResolver } from './connection-hit';
 import { componentScope } from './scope';
-import { backFromComponent, enterComponent, expandComponent, projectionOptions, returnToModel } from './scope-navigation';
+import { backFromComponent, enterComponent, expandComponent, projectionOptions, returnToModel, snapshotView } from './scope-navigation';
+import { bindTemplateLayout, commonNode, enterSharedStructure, remapNode, templateGraph } from './shared-structure';
 import type { ConnectionEdge } from './Connection';
 import type { EmphasisTarget } from './connection-context';
 
 export interface ArchitectureSelection {
   modelId: string; sessionId: string; graphId: string; node: GraphNode; trigger: HTMLElement;
   filteredInputs?: string[];
+  structureOnly?: { label: string; role: string };
+  templateInstanceId?: string;
 }
 interface CanvasProps {
   graph: Graph; modelId: string; sessionId: string; view: GraphView;
   onInspect?: ((selection: ArchitectureSelection) => void) | undefined;
+  onDismissInspection?: (() => void) | undefined;
 }
 type Data = { record: ProjectedNode; label: string; subtitle: string; ports: PortPosition[]; diagnostic: boolean;
   toggle: (id: string) => void; activate: (node: ProjectedNode, trigger: HTMLElement) => void;
@@ -76,7 +80,7 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
 const nodeTypes = { architecture: OperationNode }, edgeTypes = { connection: Connection };
 
 export function ArchitectureCanvas(props: CanvasProps) { return <ReactFlowProvider><Canvas {...props} /></ReactFlowProvider>; }
-function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
+function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspection }: CanvasProps) {
   const flow = useReactFlow<CanvasNode>();
   const [options, setOptions] = useState<ProjectionOptions>(() => projectionOptions(view));
   const [selected, setSelected] = useState(view.selected), [dimensions, setDimensions] = useState(view.dimensions);
@@ -84,7 +88,26 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
   const [activeStack, setActiveStack] = useState(view.activeStack);
   const [temporary, setTemporary] = useState<EmphasisTarget | null>(null), [focused, setFocused] = useState<EmphasisTarget | null>(null);
   const [inspection, setInspection] = useState<{ edgeId?: string; nodeId?: string; trigger: HTMLElement } | null>(null);
-  const [result, setResult] = useState<{ layout?: Layout; error?: string; options?: ProjectionOptions; invocation?: number }>({});
+  const [layoutResult, setResult] = useState<{ layout?: Layout; error?: string; options?: ProjectionOptions; invocation?: number; input?: Graph }>({});
+  const [shared, setShared] = useState(view.shared);
+  const [notice, setNotice] = useState(view.notice);
+  const template = graph.templates?.find((t) => t.id === shared?.templateId);
+  const anchorInstance = template?.instances.find((i) => i.node_id === shared?.anchorId);
+  const concreteInstance = template?.instances.find((i) => i.node_id === shared?.instanceId) ?? null;
+  const sharedActive = Boolean(shared);
+  const layoutInput = useMemo(() => {
+    if (!sharedActive) return { graph };
+    try {
+      if (!anchorInstance) throw new Error('Shared structure correspondence changed. Return to the model view.');
+      return { graph: templateGraph(graph, anchorInstance) };
+    } catch (error) { return { error: error instanceof Error ? error.message : 'Shared structure is unavailable.' }; }
+  }, [graph, anchorInstance, sharedActive]);
+  const result = useMemo(() => {
+    if (sharedActive && layoutResult.input !== layoutInput.graph) return {};
+    if (!sharedActive || !layoutResult.layout || !template || !anchorInstance) return layoutResult;
+    try { return { ...layoutResult, layout: bindTemplateLayout(layoutResult.layout, graph, template, anchorInstance, concreteInstance) }; }
+    catch (error) { return { ...layoutResult, layout: undefined, error: error instanceof Error ? error.message : 'Shared structure is unavailable.' }; }
+  }, [layoutResult, layoutInput, graph, template, anchorInstance, concreteInstance, sharedActive]);
   const [retry, setRetry] = useState(0), [zoom, setZoom] = useState(view.viewport?.zoom ?? 1);
   const [panelWidth, setPanelWidth] = useState(1178);
   const panel = useRef<HTMLDivElement>(null), picker = useRef<HTMLButtonElement>(null);
@@ -127,6 +150,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     });
   });
   const syncView = useCanvasCallback((initial: boolean = false) => {
+    onDismissInspection?.(); setShared(view.shared);
     setOptions(projectionOptions(view)); setSelected(view.selected); setPinned(view.edge);
     setDimensions(view.dimensions); setFocusId(view.focus); setActiveStack(view.activeStack);
     setInspection(null); setTemporary(null); setFocused(null);
@@ -142,6 +166,23 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     picker.current?.focus();
   });
   const back = useCanvasCallback(() => { backFromComponent(view); syncView(); picker.current?.focus(); });
+  const openShared = useCanvasCallback((id: string, instanceId: string | null = null) => {
+    const target = graph.templates?.find((t) => t.id === id);
+    if (!target) { setNotice('Shared structure is no longer available. Choose an ordinary component.'); return; }
+    enterSharedStructure(view, target, instanceId, flow.getViewport()); syncView(true);
+    picker.current?.focus();
+  });
+  const chooseSharedInstance = useCanvasCallback((id: string | null) => {
+    if (!shared || !template || !anchorInstance) return;
+    const target = id ? template.instances.find((i) => i.node_id === id) : anchorInstance;
+    if (!target) { setNotice('Instance correspondence changed; return to the model view.'); return; }
+    onDismissInspection?.();
+    const nextSelected = remapNode(selected, concreteInstance ?? anchorInstance, target);
+    if (selected && !nextSelected) setNotice('The previous operation has no verified correspondence; its selection was cleared.');
+    const next = { ...shared, instanceId: id };
+    view.update({ shared: next, selected: nextSelected }); setShared(next); setSelected(nextSelected);
+    setInspection(null); setTemporary(null); setFocused(null);
+  });
   const rememberAnchor = useCanvasCallback((id: string) => {
     const box = boxes.get(id);
     if (!box) return;
@@ -194,7 +235,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     change({ expanded: [...expanded], exhaustive: false });
   });
   const reveal = useCanvasCallback((id: string) => {
-    const base = scope && !scope.members.has(id) && scope.id !== id ? leaveIsolation() : options;
+    const base = shared || scope && !scope.members.has(id) && scope.id !== id ? leaveIsolation() : options;
     select(id);
     const derived = mlps.find((group) => group.id === id && !records.has(id));
     const sourceId = derived?.sourceIds[0] ?? id;
@@ -211,10 +252,13 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
       ...(derived ? { deriveMlp: true, exhaustive: false } : {}) });
   });
   const viewInModel = useCanvasCallback(() => {
-    const id = selected && (records.has(selected) || mlps.some((group) => group.id === selected)) ? selected : options.scope;
+    const sharedReturn = shared ? snapshotView(view, flow.getViewport()) : undefined;
+    if (shared && !concreteInstance) return;
+    const id = concreteInstance?.node_id ?? (selected && (records.has(selected) || mlps.some((group) => group.id === selected)) ? selected : options.scope);
     // reveal performs the same exact-instance action after restoring global state.
     if (!id) return;
     const base = leaveIsolation();
+    if (sharedReturn) view.update({ history: [sharedReturn], globalView: snapshotView(view) });
     const derived = mlps.find((group) => group.id === id && !records.has(id));
     const source = derived?.sourceIds[0] ?? id;
     const expanded = withAncestors(source, new Set(base.expanded));
@@ -231,7 +275,13 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
   const nativeInspect = useCanvasCallback((record: GraphNode, trigger: HTMLElement) => {
     select(record.id); setInspection(null);
     const filteredInputs = options.exhaustive || options.showUnused ? [] : result.layout?.projection.unusedInputs.filter((p) => p.node_id === record.id).map((p) => p.port_id) ?? [];
-    onInspect?.({ modelId, sessionId, graphId: graph.graph_id, node: record, trigger, filteredInputs });
+    if (shared && template && anchorInstance && !concreteInstance) {
+      const role = anchorInstance.nodes.find((m) => m.node_id === record.id)?.role;
+      if (!role) return;
+      onInspect?.({ modelId, sessionId, graphId: graph.graph_id, node: commonNode(record, role), trigger, filteredInputs,
+        structureOnly: { label: template.label, role } });
+    } else onInspect?.({ modelId, sessionId, graphId: graph.graph_id, node: record, trigger, filteredInputs,
+      ...(concreteInstance ? { templateInstanceId: concreteInstance.node_id } : {}) });
   });
   const inspect = useCanvasCallback((node: ProjectedNode, trigger: HTMLElement) => {
     if (node.record) nativeInspect(records.get(node.record.id)!, trigger);
@@ -273,18 +323,23 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
   }, []);
   useEffect(() => {
     const controller = new AbortController(); layoutCount.current++;
-    void requestLayout(graph, options, controller.signal).then((layout) => {
+    if (!layoutInput.graph) {
+      // Failure is local to this optional view; ordinary model navigation stays available.
+      void Promise.resolve().then(() => { if (!controller.signal.aborted) setResult({ error: layoutInput.error, options }); });
+      return () => controller.abort();
+    }
+    void requestLayout(layoutInput.graph, options, controller.signal).then((layout) => {
       if (!controller.signal.aborted) {
-        setResult({ layout, options, invocation: layoutCount.current });
+        setResult({ layout, options, invocation: layoutCount.current, input: layoutInput.graph });
         if (view.edge && !layout.projection.edges.some((e) => e.id === view.edge)) { view.update({ edge: null }); setPinned(null); setInspection(null); }
       }
     }, () => {
-      if (!controller.signal.aborted) setResult({ options, invocation: layoutCount.current, error: 'Layout failed or exceeded 10 seconds. Retry or collapse groups.' });
+      if (!controller.signal.aborted) setResult({ options, input: layoutInput.graph, invocation: layoutCount.current, error: 'Layout failed or exceeded 10 seconds. Retry or collapse groups.' });
     });
     return () => controller.abort();
-  }, [graph, options, retry, view]);
+  }, [layoutInput, options, retry, view]);
   useEffect(() => {
-    if (!result.layout || appliedLayout.current === result.layout) return;
+    if (!result.layout || appliedLayout.current === layoutResult.layout) return;
     const frame = requestAnimationFrame(() => {
       const camera = flow.getViewport();
       const center = centerPending.current && boxes.get(centerPending.current);
@@ -299,12 +354,12 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
         if (view.viewport) void flow.setViewport(view.viewport);
         else void flow.fitView({ padding: 0.06, minZoom: 0.65, maxZoom: 1 });
       }
-      appliedLayout.current = result.layout!;
+      appliedLayout.current = layoutResult.layout!;
       initialized.current = true; anchor.current = null; centerPending.current = null; fitPending.current = false;
       restorePending.current = undefined; scopeCameraPending.current = false;
     });
     return () => cancelAnimationFrame(frame);
-  }, [result.layout, boxes, flow, projected, view, fit]);
+  }, [result.layout, layoutResult.layout, boxes, flow, projected, view, fit]);
   useEffect(() => () => { cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current); }, []);
   const hover = useCanvasCallback((target: EmphasisTarget | null) => {
     cancelAnimationFrame(hoverFrame.current);
@@ -333,7 +388,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     const record = projected.get(box.id)!;
     return { id: box.id, type: 'architecture', position: { x: box.x, y: box.y },
       ...(box.parentId ? { parentId: box.parentId } : {}), width: box.width, height: box.height,
-      style: { width: box.width, height: box.height, pointerEvents: record.expanded ? 'none' : 'auto' }, zIndex: 200, selected: selected === box.id,
+      style: { width: box.width, height: box.height, pointerEvents: record.expanded ? 'none' : 'auto' }, zIndex: 200, selected: selected === box.id || Boolean(selected && record.sourceIds.includes(selected)),
       data: { record, label: displayLabel(record, graph), subtitle: record.summary?.replaceAll('linear attention', 'linear').replaceAll('full attention', 'full') ?? variants.get(record.id)?.replace(/^Instance \d+ · /, '') ?? record.record?.operation?.replaceAll('_', ' ') ?? record.kind,
         ports: result.layout!.ports.filter((p) => p.nodeId === box.id), diagnostic: diagnosed.has(box.id), toggle, activate, inspect } };
   }), [activate, diagnosed, graph, inspect, projected, result.layout, selected, toggle, variants]);
@@ -373,6 +428,15 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
   if (focusedMlp) breadcrumbs.push({ id: focusedMlp.id, kind: 'node', label: records.has(focusedMlp.id) ? focusedMlp.label : 'MLP (derived)' });
   const selectedRecord = selected ? records.get(selected) : undefined;
   const selectedEdge = result.layout?.projection.edges.find((e) => e.id === pinned);
+  const eligibleTemplate = !shared && selectedRecord ? graph.templates?.find((t) => t.instances.some((i) => i.nodes.some((m) => m.node_id === selectedRecord.id))) : undefined;
+  const eligibleInstance = eligibleTemplate?.instances.find((i) => i.nodes.some((m) => m.node_id === selectedRecord?.id));
+  const centerSelected = () => {
+    if (!selectedRecord) return;
+    if (!shared) { reveal(selectedRecord.id); return; }
+    const presentation = [...projected.values()].find((n) => n.record?.id === selectedRecord.id);
+    const box = presentation && boxes.get(presentation.id);
+    if (box) void flow.setCenter(box.absoluteX + box.width / 2, box.absoluteY + box.height / 2, { zoom: flow.getZoom() });
+  };
   const controlSelection: ControlSelection | undefined = selectedEdge ? {
     edge: true,
     label: `${projected.get(selectedEdge.source.node_id)?.label ?? 'Source'} → ${projected.get(selectedEdge.target.node_id)?.label ?? 'Destination'}`,
@@ -382,27 +446,33 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
     clear: () => { setPinned(null); view.update({ edge: null }); setInspection(null); },
   } : selectedRecord ? {
     edge: false, nodeId: selectedRecord.id,
-    label: displayLabel({ id: selectedRecord.id, kind: selectedRecord.kind, label: selectedRecord.label, record: selectedRecord, sourceIds: [selectedRecord.id], ports: [], expanded: false }, graph),
-    detail: `${selectedRecord.label} · ${selectedRecord.id}`,
+    label: shared && !concreteInstance ? [...projected.values()].find((n) => n.record?.id === selectedRecord.id)?.label ?? template?.label ?? 'Shared operation' :
+      displayLabel({ id: selectedRecord.id, kind: selectedRecord.kind, label: selectedRecord.label, record: selectedRecord, sourceIds: [selectedRecord.id], ports: [], expanded: false }, graph),
+    detail: shared && !concreteInstance ? 'Verified common operation; choose an instance for weights.' : `${selectedRecord.label} · ${selectedRecord.id}`,
+    shared: eligibleTemplate && eligibleInstance ? () => openShared(eligibleTemplate.id, eligibleInstance.node_id) : undefined,
     inspect: onInspect ? (trigger) => nativeInspect(selectedRecord, trigger) : undefined,
-    center: () => reveal(selectedRecord.id),
+    center: centerSelected,
     clear: () => { setSelected(null); view.update({ selected: null }); },
-    explore: ['group', 'operation'].includes(selectedRecord.kind) && selectedRecord.id !== options.scope ? () => isolate(selectedRecord.id) : undefined,
+    explore: !shared && ['group', 'operation'].includes(selectedRecord.kind) && selectedRecord.id !== options.scope ? () => isolate(selectedRecord.id) : undefined,
   } : selected && mlps.some((group) => group.id === selected) ? {
     edge: false, nodeId: selected, label: 'MLP (derived)', detail: selected,
     center: () => reveal(selected), clear: () => { setSelected(null); view.update({ selected: null }); },
     explore: selected !== options.scope ? () => isolate(selected) : undefined,
   } : undefined;
   return <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
-    data-scope-id={options.scope ?? ''} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
+    data-template-id={shared?.templateId ?? ''} data-template-instance-id={shared?.instanceId ?? ''}
+    data-scope-id={concreteInstance?.node_id ?? options.scope ?? ''} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
     data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options}
     data-source-node-ids={JSON.stringify(sourceNodeIds)} data-represented-edge-ids={JSON.stringify(result.layout?.edgeIds ?? [])}>
-    <ArchitectureControls graph={graph} focus={focusId} stack={stack} options={options} picker={picker}
-      isolation={scope ? { back, viewInModel, expand: () => change(expandComponent(view, graph)),
+    {notice && <p role="status">{notice}</p>}
+    <ArchitectureControls shared={shared && template ? { template, instanceId: shared.instanceId, choose: chooseSharedInstance } : undefined}
+      openShared={openShared} returnContext={!scope && view.history.length ? back : undefined} graph={graph} focus={focusId} stack={stack} options={options} picker={picker}
+      isolation={scope ? { back, viewInModel: shared && !concreteInstance ? undefined : viewInModel, expand: () => change(expandComponent(view, graph)),
         nodeIds: scope.members, excludedEdges: result.layout?.projection.scope?.excludedEdgeIds ?? [] } : undefined}
       instanceId={instance?.instance.node_id ?? (stack ? stack.instances[options.repetitions?.[stack.id]?.start ?? 0]?.node_id : undefined)}
       visibleInstances={stack?.instances.filter((i) => projected.has(i.node_id)).map((i) => i.node_id) ?? []}
-      breadcrumbs={breadcrumbs} selection={controlSelection} reveal={reveal} navigate={(item) => {
+      breadcrumbs={shared && template ? [{ id: template.id, kind: 'node', label: template.label }] : breadcrumbs} selection={controlSelection} reveal={reveal} navigate={(item) => {
+        if (shared && item.id === template?.id) return;
         if (item.kind === 'stack') exploreStack(item.id);
         else if (!scope && mlps.some((g) => g.id === item.id)) focusMlp();
         else { const info = instanceOf(graph, item.id); if (info?.instance.node_id === item.id) chooseInstance(item.id); else reveal(item.id); }
@@ -419,7 +489,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
         change(patch);
       }} zoomIn={() => { void flow.zoomIn(); }} zoomOut={() => { void flow.zoomOut(); }}
       filtered={!options.exhaustive && !options.showUnused && !!result.layout?.projection.filteredEdgeIds.length} />
-    {result.error && <div role="alert">{result.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button></div>}
+    {result.error && <div role="alert">{result.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button>{shared && <button onClick={back}>Return to ordinary view</button>}</div>}
     {!result.layout && !result.error && <p role="status">Laying out architecture…</p>}
     <div className="architecture-flow">
       <ConnectionContext.Provider value={interaction}>
@@ -428,10 +498,11 @@ function Canvas({ graph, modelId, sessionId, view, onInspect }: CanvasProps) {
           minZoom={0.00001} maxZoom={4} defaultViewport={view.viewport ?? { x: 0, y: 0, zoom: 1 }} panOnDrag zoomOnScroll
           onViewportChange={(viewport) => setZoom(viewport.zoom)} onMoveEnd={(_, viewport) => view.update({ viewport })}
           onNodeClick={(event, node) => activate(node.data.record, event.currentTarget as HTMLElement)}
-          onNodesChange={(changes) => { for (const value of changes) if (value.type === 'select' && value.selected && records.has(value.id)) select(value.id); }}
+          onNodesChange={(changes) => { for (const value of changes) if (value.type === 'select' && value.selected) { const node = projected.get(value.id)?.record; if (node) select(node.id); } }}
           aria-label="Architecture canvas" />
       </ConnectionContext.Provider>
       {inspection && (activeInspectionEdge || activeInspectionNode) && <ConnectionInspection graph={graph} edge={activeInspectionEdge} node={activeInspectionNode}
+        structure={shared && !concreteInstance && activeInspectionEdge ? { source: projected.get(activeInspectionEdge.source.node_id)?.label ?? '', target: projected.get(activeInspectionEdge.target.node_id)?.label ?? '' } : undefined}
         explore={activeInspectionNode?.presentation === 'mlp' && activeInspectionNode.id !== options.scope ? () => isolate(activeInspectionNode.id) : undefined}
         trigger={inspection.trigger} onClose={() => setInspection(null)} inspectNode={(id) => {
           if (picker.current) nativeInspect(records.get(id)!, picker.current);

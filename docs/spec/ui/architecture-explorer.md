@@ -143,6 +143,40 @@ layout inputs, route identities and interaction results. Keep scope membership a
 reversible navigation at small testable seams; use the existing cancellable
 layout worker and connection algorithms.
 
+## Optional verified shared structures
+
+A received template annotation offers **Shared structure** from any of its
+concrete component members and a compact **Shared structures** selector in the
+existing navigation. This remains an optional isolated view on the same canvas.
+Ordinary overview, exhaustive access, isolation, routing and numerical inspection
+remain independent of template metadata. No frontend pattern matching establishes
+equivalence; the API's validated exact role mappings are authoritative.
+
+Entry from a selected component retains its concrete instance and selected
+operation. Entry from the template selector is explicitly **structure only**:
+show the common verified topology, shapes and attributes with no weight-bearing
+instance selected and no parameter action. The shared canvas covers the declared
+interior and explicit boundary forwarding; external producers/consumers remain
+concrete instance context. With an instance selected, inspection exposes its exact
+interface connections and original source identities.
+
+The instance selector shows actual stack/layer location separately from position
+within the verified family. Previous/next traverses only that ordered family,
+including nonconsecutive source indices. Switching rebinds source node, port,
+edge and parameter references through the exact correspondence, preserves selected
+operation or pinned connection, and reuses compatible geometry and camera without
+new layout work. Shapes, operation attributes and parameters come from the chosen
+source records; repeated structure never means shared or substituted weights.
+Close active inspection using its existing cancellation and lifetime guards so
+obsolete numerical responses cannot populate the replacement instance.
+
+**View in model** requires a concrete instance and reveals that component;
+**Back** restores the preceding shared context. View history retains bounded
+navigation state, not graph/geometry copies. A graph replacement clears stale
+shared correspondence with an explanation. A shared-view preparation/layout
+failure offers recovery to ordinary exploration, which remains fully available.
+Use the existing renderer, cancellable layout worker and connection-hit behavior.
+
 ## Automatic layout and directional routing
 
 The graph communicates computational direction primarily from left to right. Apply that ordering recursively at every expanded scope: the model, repeated stacks, concrete layers, attention blocks, and other expanded groups. Successive stages in a genuine serial dependency chain advance horizontally in their actual dependency order; a serial set of layers or operations must not degrade into a vertical list merely because it is nested inside a group.

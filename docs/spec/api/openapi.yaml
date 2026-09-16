@@ -1860,6 +1860,97 @@ components:
           unresolved: '#/components/schemas/ArchitectureDirectParameter'
           alias: '#/components/schemas/ArchitectureAliasParameter'
           fused_region: '#/components/schemas/ArchitectureFusedParameter'
+    ArchitectureTemplateNodeRole:
+      type: object
+      additionalProperties: false
+      required: [role, node_id]
+      properties:
+        role:
+          $ref: '#/components/schemas/ArchitectureId'
+        node_id:
+          $ref: '#/components/schemas/ArchitectureId'
+    ArchitectureTemplatePortRole:
+      type: object
+      additionalProperties: false
+      required: [role, node_id, port_id]
+      properties:
+        role:
+          $ref: '#/components/schemas/ArchitectureId'
+        node_id:
+          $ref: '#/components/schemas/ArchitectureId'
+        port_id:
+          $ref: '#/components/schemas/ArchitectureId'
+    ArchitectureTemplateEdgeRole:
+      type: object
+      additionalProperties: false
+      required: [role, edge_id]
+      properties:
+        role:
+          $ref: '#/components/schemas/ArchitectureId'
+        edge_id:
+          $ref: '#/components/schemas/ArchitectureId'
+    ArchitectureTemplateParameterRole:
+      type: object
+      additionalProperties: false
+      required: [role, parameter_id]
+      properties:
+        role:
+          $ref: '#/components/schemas/ArchitectureId'
+        parameter_id:
+          $ref: '#/components/schemas/ArchitectureId'
+    ArchitectureTemplateInstance:
+      type: object
+      additionalProperties: false
+      required: [node_id, nodes, ports, edges, parameters]
+      properties:
+        node_id:
+          $ref: '#/components/schemas/ArchitectureId'
+        nodes:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureTemplateNodeRole'
+        ports:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureTemplatePortRole'
+        edges:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureTemplateEdgeRole'
+        parameters:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureTemplateParameterRole'
+    ArchitectureTemplate:
+      type: object
+      additionalProperties: false
+      required: [id, label, component_role, revision, provenance, instances]
+      properties:
+        id:
+          $ref: '#/components/schemas/ArchitectureId'
+        label:
+          $ref: '#/components/schemas/ArchitectureName'
+        component_role:
+          type: string
+          enum: [attention, mlp]
+        revision:
+          $ref: '#/components/schemas/ArchitectureName'
+        provenance:
+          type: array
+          minItems: 1
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureProvenance'
+        instances:
+          type: array
+          minItems: 2
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureTemplateInstance'
     ArchitectureGraph:
       type: object
       additionalProperties: false
@@ -1917,6 +2008,11 @@ components:
           maxItems: 33554432
           items:
             $ref: '#/components/schemas/ArchitectureDiagnostic'
+        templates:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureTemplate'
     ArchitectureAvailableResponse:
       type: object
       additionalProperties: false

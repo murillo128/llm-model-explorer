@@ -369,3 +369,7 @@ def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
             ),
             "Inspection storage identity is not native.",
         )
+
+    from .template_validation import validate_templates
+
+    validate_templates(graph)

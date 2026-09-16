@@ -374,7 +374,11 @@ def test_response_budget_includes_envelope_on_cold_and_warm_start(
 ) -> None:
     local_fixture(settings.model_root, False)
     with TestClient(create_app(settings)) as client:
-        response_length = len(architecture(client, session(client)).content)
+        body = architecture(client, session(client)).json()
+        # This gate concerns the mandatory graph and HTTP envelope. Optional
+        # annotations may be omitted during a cold rebuild to fit its budget.
+        body["graph"].pop("templates", None)
+        response_length = len(json.dumps(body, separators=(",", ":"), ensure_ascii=False).encode())
     monkeypatch.setattr("llm_model_explorer.architecture_service.MAX_BYTES", response_length - 1)
     for cold in [False, True]:
         if cold:
@@ -385,6 +389,31 @@ def test_response_budget_includes_envelope_on_cold_and_warm_start(
             assert len(response.content) < response_length
         if cold:
             assert not list(settings.cache_dir.iterdir())
+
+
+def test_optional_template_budget_rebuild_preserves_source_graph(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_fixture(settings.model_root, False)
+    with TestClient(create_app(settings)) as client:
+        response = architecture(client, session(client))
+        original = response.json()["graph"]
+        limit = len(response.content) - 1
+    monkeypatch.setattr("llm_model_explorer.architecture_service.MAX_BYTES", limit)
+    # Oversized immutable cached artifacts are rejected, never edited on GET.
+    with TestClient(create_app(settings)) as client:
+        assert architecture(client, session(client)).json()["reason"] == "unsupported_size"
+    shutil.rmtree(settings.cache_dir)
+    for _ in range(2):  # New publication and subsequent immutable cache retrieval.
+        with TestClient(create_app(settings)) as client:
+            response = architecture(client, session(client))
+            body = response.json()
+            assert body["status"] == "available"
+            assert len(response.content) <= limit
+            graph = body["graph"]
+            assert len(graph.get("templates", [])) < len(original["templates"])
+            for field in ["graph_id", "coverage", "nodes", "edges", "parameters", "repetitions"]:
+                assert graph[field] == original[field]
 
 
 def test_failed_source_publication_aborts_and_continues(

@@ -95,7 +95,8 @@ class DenseGraph:
                 + [role_attribute(self.b.producer, operation_role(key, operation))],
                 provenance=self.provenance(*fields) + [source_key(self.b.producer, key)],
                 **kwargs,
-            )
+            ),
+            semantic_key=key,
         )
         return key
 
@@ -122,7 +123,8 @@ class DenseGraph:
                 attributes=[] if role is None else [role_attribute(self.b.producer, role)],
                 provenance=self.b.producer.provenance() + [source_key(self.b.producer, key)],
                 **kwargs,
-            )
+            ),
+            semantic_key=key,
         )
 
     def parameter(self, name: str, dims: tuple[int, ...], *, packed: bool = False) -> str:
@@ -259,6 +261,7 @@ class DenseGraph:
         norm = self.norm(key + ".input_layernorm", key, hidden, c.hidden)
         self.edge(key, norm, source_port="x")
         attention = key + ".self_attn"
+        self.b.begin_template(attention, attention, "dense_attention", "attention")
         self.edge(norm, attention)
         for auxiliary in ("cos", "sin", "mask"):
             self.edge(key, attention, auxiliary, auxiliary)
@@ -408,6 +411,7 @@ class DenseGraph:
         post = self.norm(key + ".post_attention_layernorm", key, hidden, c.hidden)
         self.edge(residual, post)
         mlp = key + ".mlp"
+        self.b.begin_template(mlp, mlp, "gated_mlp", "mlp")
         self.edge(post, mlp)
         gate = self.linear(key + ".mlp.gate_proj", mlp, c.hidden, c.intermediate, c.mlp_bias)
         up = self.linear(key + ".mlp.up_proj", mlp, c.hidden, c.intermediate, c.mlp_bias)

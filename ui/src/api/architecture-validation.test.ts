@@ -16,7 +16,7 @@ function edit(value: unknown, edits: { path: string[]; value?: unknown; delete?:
 describe('UI contextual validation against the independently published oracle cases', () => {
   for (const test of fixtures.cases) it(test.name, () => {
     const context = edit(fixtures.context, 'context_edits' in test ? test.context_edits : []) as typeof fixtures.context;
-    const check = () => validateArchitecture(edit(fixtures.response, test.edits), {
+    const check = () => validateArchitecture(edit(('base' in test ? fixtures.template_response : fixtures.response), test.edits), {
       modelId: context.session.model_id, inventory: validateSchema('TensorInventory', context.inventory), tokenizerAvailable: context.tokenizer_available,
     });
     if (test.valid) expect(check).not.toThrow(); else expect(check).toThrow();

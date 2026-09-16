@@ -1,6 +1,7 @@
 import type { components } from './generated/types';
 import { requireProtocol as require } from './errors';
 import { product, validateSchema } from './validation';
+import { validateTemplates } from './template-validation';
 
 type S = components['schemas'];
 export interface ArchitectureContext {
@@ -162,5 +163,6 @@ export function validateArchitecture(value: unknown, context: ArchitectureContex
       validatePackedStorage(terminal, tensor, geometry);
     }
   }
+  validateTemplates(graph);
   return response;
 }

@@ -2,7 +2,8 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import type { Graph, GraphNode } from './graph';
 import type { ProjectionOptions } from './projection';
-import { displayLabel, patternSummary } from './presentation';
+import { displayLabel, instanceOf, patternSummary } from './presentation';
+import type { Template } from './shared-structure';
 
 type Repetition = Graph['repetitions'][number];
 export interface NavigationItem { id: string; label: string; kind: 'node' | 'stack' }
@@ -10,13 +11,17 @@ export interface ControlSelection {
   label: string; detail: string; edge: boolean; nodeId?: string;
   inspect?: ((trigger: HTMLElement) => void) | undefined;
   explore?: (() => void) | undefined;
+  shared?: (() => void) | undefined;
   center: () => void; clear: () => void;
 }
 interface Props {
+  shared: { template: Template; instanceId: string | null; choose: (id: string | null) => void } | undefined;
+  openShared: (id: string, instanceId?: string | null) => void;
+  returnContext: (() => void) | undefined;
   graph: Graph; focus: string | null; stack: Repetition | undefined;
   instanceId: string | undefined; visibleInstances: string[]; options: ProjectionOptions;
   breadcrumbs: NavigationItem[]; selection: ControlSelection | undefined;
-  isolation: { back: () => void; viewInModel: () => void; expand: () => void; nodeIds: Set<string>; excludedEdges: string[] } | undefined;
+  isolation: { back: () => void; viewInModel: (() => void) | undefined; expand: () => void; nodeIds: Set<string>; excludedEdges: string[] } | undefined;
   picker: RefObject<HTMLButtonElement | null>;
   reveal: (id: string) => void; navigate: (item: NavigationItem) => void;
   overview: () => void; fit: () => void; expandAll: () => void; collapseAll: () => void;
@@ -98,7 +103,7 @@ export function ArchitectureControls(props: Props) {
     if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setPopover(null);
   }}>
     <div className="architecture-toolbar" aria-label="Graph navigation">
-      {props.isolation && <span className="architecture-isolated-state">Isolated component</span>}
+      {props.isolation && <span className="architecture-isolated-state">{props.shared ? 'Shared structure' : 'Isolated component'}</span>}
       <nav className="architecture-breadcrumbs" aria-label="Architecture focus">
         <button onClick={props.overview} aria-label="Model overview" aria-current={!props.focus && !stack && !props.isolation ? 'location' : undefined}>Model</button>
         {props.breadcrumbs.map((item, i) => <span key={`${item.kind}:${item.id}`}>
@@ -109,16 +114,36 @@ export function ArchitectureControls(props: Props) {
       {graph.coverage === 'partial' && <span className="architecture-partial">Partial coverage</span>}
       <button ref={picker} aria-expanded={popover === 'search'} aria-controls={listId} aria-haspopup="dialog"
         onClick={() => { setQuery(''); setActive(0); setPopover(popover === 'search' ? null : 'search'); }}>Find component</button>
+      {!!graph.templates?.length && <select aria-label="Shared structures" value={props.shared?.template.id ?? ''}
+        onChange={(event) => props.openShared(event.target.value)}>
+        <option value="" disabled>Shared structures…</option>
+        {graph.templates.map((t) => <option key={t.id} value={t.id}>{t.label} · {t.instances.length} instances</option>)}
+      </select>}
       <button onClick={props.fit}>Fit view</button>
       <button ref={optionsTrigger} aria-expanded={popover === 'options'} aria-controls={optionsId} aria-haspopup="dialog"
         onClick={() => setPopover(popover === 'options' ? null : 'options')}>View options</button>
     </div>
     {(props.isolation || stack || entryNodes.length > 0 || graph.repetitions.length > 0 || selection) && <div className="architecture-context-row">
       <div className="architecture-context-navigation" aria-label={props.isolation ? 'Component navigation' : stack ? 'Stack navigation' : 'Model components'}>
+        {props.returnContext && !props.isolation && <button onClick={props.returnContext}>Back</button>}
         {props.isolation ? <>
           <button onClick={props.isolation.back}>Back</button>
-          <button onClick={props.isolation.viewInModel}>View in model</button>
+          <button disabled={!props.isolation.viewInModel} onClick={props.isolation.viewInModel}>View in model</button>
           <button onClick={props.isolation.expand}>Expand component</button>
+          {props.shared && <>
+            <button aria-label="Previous shared instance" disabled={props.shared.template.instances.findIndex((i) => i.node_id === props.shared!.instanceId) <= 0}
+              onClick={() => { const at = props.shared!.template.instances.findIndex((i) => i.node_id === props.shared!.instanceId); props.shared!.choose(props.shared!.template.instances[at - 1]!.node_id); }}>←</button>
+            <select aria-label="Shared structure instance" value={props.shared.instanceId ?? ''} onChange={(event) => props.shared!.choose(event.target.value || null)}>
+              <option value="">Structure only · choose an instance for weights</option>
+              {props.shared.template.instances.map((item, position) => {
+                const location = instanceOf(graph, item.node_id);
+                return <option key={item.node_id} value={item.node_id}>{location ? `${location.repetition.label} / Layer ${location.instance.index}` : graph.nodes.find((n) => n.id === item.node_id)?.label} · family instance {position + 1} of {props.shared!.template.instances.length}</option>;
+              })}
+            </select>
+            <button aria-label="Next shared instance" disabled={!props.shared.instanceId || props.shared.template.instances.at(-1)?.node_id === props.shared.instanceId}
+              onClick={() => { const at = props.shared!.template.instances.findIndex((i) => i.node_id === props.shared!.instanceId); props.shared!.choose(props.shared!.template.instances[at + 1]!.node_id); }}>→</button>
+            <span role="status">{props.shared.instanceId ? 'Exact instance selected' : 'No instance selected; weights require a choice.'}</span>
+          </>}
         </> : stack ? <>
           <span className="architecture-stack-name" title={patternSummary(stack.instances)}>{stack.label} <span>({stack.instances.length})</span></span>
           <button aria-label={`Previous instance of ${stack.label}`} disabled={current <= 0} onClick={() => props.chooseInstance(stack.instances[current - 1]!.node_id)}>←</button>
@@ -145,6 +170,7 @@ export function ArchitectureControls(props: Props) {
         <span title={selection.detail}>{selection.label}</span>
         {selection.inspect && <button aria-label={selection.edge ? 'Inspect connection' : 'Inspect selected'} onClick={(event) => selection.inspect?.(event.currentTarget)}>Inspect</button>}
         {selection.explore && <button onClick={selection.explore}>Explore component</button>}
+        {selection.shared && <button onClick={selection.shared}>Shared structure</button>}
         <button aria-label={selection.edge ? 'Center connection' : 'Center selected'} onClick={selection.center}>Center</button>
         <button aria-label={selection.edge ? 'Clear connection selection' : 'Clear node selection'} onClick={() => { picker.current?.focus(); selection.clear(); }}>×</button>
       </div>}
@@ -193,7 +219,7 @@ export function ArchitectureControls(props: Props) {
         {props.filtered && <p>Unconsumed interface branches filtered</p>}
         {options.stateScope && <p>State dependencies only; other flows are filtered</p>}
         {selection && <p>{selection.detail}</p>}
-        {props.isolation && <details onToggle={(event) => setOutsideOpen(event.currentTarget.open)}>
+        {props.isolation && !props.shared && <details onToggle={(event) => setOutsideOpen(event.currentTarget.open)}>
           <summary>Outside component: {graph.nodes.length - props.isolation.nodeIds.size} source records · {props.isolation.excludedEdges.length} connections</summary>
           <p>All source interfaces and connections remain in the model. Choose a record to reveal it in model context, then Inspect for its complete interface.</p>
           {outsideOpen && graph.nodes.filter((node) => !props.isolation!.nodeIds.has(node.id)).map((node) =>

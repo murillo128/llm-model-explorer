@@ -139,7 +139,7 @@ def test_reviewed_groups_and_revision(
             ]
             assert component.parameter_ids == []  # instance weights stay on their operations
     # The navigation annotation is optional; absence does not change computational coverage.
-    legacy = graph.model_copy(deep=True)
+    legacy = graph.model_copy(deep=True, update={"templates": []})
     for node in legacy.nodes:
         node.attributes[:] = [a for a in node.attributes if a.name != "semantic_role"]
     validate_graph(legacy, inputs.bindings)

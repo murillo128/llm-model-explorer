@@ -410,7 +410,8 @@ class Graph:
                 + [role_attribute(PRODUCER, role)],
                 provenance=PRODUCER.provenance() + [source_key(PRODUCER, key)],
                 **args,
-            )
+            ),
+            semantic_key=key,
         )
         for k, v in inputs.items():
             self.link(v, key, k)
@@ -460,7 +461,8 @@ class Graph:
                 attributes=[] if role is None else [role_attribute(PRODUCER, role)],
                 provenance=PRODUCER.provenance() + [source_key(PRODUCER, key)],
                 **args,
-            )
+            ),
+            semantic_key=key,
         )
         return Value(key, "out", out.shape)
 
@@ -523,6 +525,7 @@ def full_attention(g: Graph, p: str, x: Value, positions: Value, mask: Value) ->
     nh = c["num_attention_heads"]
     nk = c["num_key_value_heads"]
     d = c["head_dim"]
+    g.b.begin_template(p, p, "full_attention", "attention")
     inputs = {"x": x, "positions": positions, "mask": mask}
     v = g.group(p, inputs)
     x = v["x"]
@@ -670,6 +673,7 @@ def linear_attention(g: Graph, p: str, x: Value, mask: Value) -> Value:
     kd = nk * dk
     vd = nv * dv
     width = 2 * kd + vd
+    g.b.begin_template(p, p, "linear_attention", "attention")
     inputs = {"x": x, "mask": mask}
     v = g.group(p, inputs)
     x = g.op(p + ".padding_mask", "mask_padding_states", v, v["x"].shape, parent=p)
@@ -875,6 +879,7 @@ def build(inputs: AnalysisInput, b: GraphBuilder) -> None:
         )
         norm = g.norm(p + ".post_attention_layernorm", post, p)
         mlp = p + ".mlp"
+        b.begin_template(mlp, mlp, "gated_mlp", "mlp")
         mlp_inputs = {"x": norm}
         mv = g.group(mlp, mlp_inputs)
         gate = g.linear(p + ".mlp.gate_proj", mv["x"], c["intermediate_size"], mlp)

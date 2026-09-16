@@ -633,7 +633,7 @@ def main():
     embedding_analysis = embedding_analysis_fixtures()
     architecture = architecture_fixtures()
     for case in architecture['cases']:
-        value = apply_edits(architecture['response'], case['edits'])
+        value = apply_edits(architecture[case.get('base', 'response')], case['edits'])
         context = apply_edits(architecture['context'], case['context_edits'])
         validator = Draft202012Validator(
             {'$ref': '#/components/schemas/ArchitectureResponse', 'components': document['components']})

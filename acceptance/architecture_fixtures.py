@@ -92,7 +92,7 @@ def packed_storage(name, dtype, shape):
     return None
 
 
-def write_checkpoint(directory, config, storage):
+def write_checkpoint(directory, config, storage, scalar_value=None):
     directory.mkdir(parents=True)
     (directory / "config.json").write_text(json.dumps(config))
     header, payload = {}, bytearray()
@@ -106,13 +106,14 @@ def write_checkpoint(directory, config, storage):
             payload.extend(encoded)
         elif dtype in {"F32", "F16", "BF16"}:
             for i in range(count):
-                scalar = struct.pack("<f", value(i))
+                number = value(i) if scalar_value is None else scalar_value(name, i)
+                scalar = struct.pack("<f", number)
                 payload.extend(
                     scalar
                     if dtype == "F32"
                     else scalar[2:]
                     if dtype == "BF16"
-                    else struct.pack("<e", value(i))
+                    else struct.pack("<e", number)
                 )
         else:
             payload.extend(bytes(count * WIDTHS[dtype]))
@@ -146,7 +147,29 @@ def generate(root):
         write_checkpoint(root / family, fixture["configuration"], fixture["storage"])
 
 
+def generate_templates(root):
+    """Same structural family, intentionally different exact F16 per-instance weights."""
+    sys.path.insert(0, str(FIXTURES.parent))
+    try:
+        from dense_fixtures import small_config, small_storage
+
+        def scalar(name, index):
+            layer = int(name.split(".")[2]) if name.startswith("model.layers.") else -1
+            return 100 * (layer + 1) + value(index)
+
+        write_checkpoint(
+            root / "templates",
+            small_config(False),
+            {name: {"dtype": "F16", "shape": shape} for name, _, shape in small_storage(False)},
+            scalar,
+        )
+    finally:
+        sys.path.pop(0)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("root", type=Path)
-    generate(parser.parse_args().root)
+    parser.add_argument("--templates", action="store_true")
+    args = parser.parse_args()
+    (generate_templates if args.templates else generate)(args.root)

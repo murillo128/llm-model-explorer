@@ -644,6 +644,1360 @@
       "diagnostics": []
     }
   },
+  "template_response": {
+    "status": "available",
+    "model_id": "test/architecture",
+    "diagnostics": [],
+    "graph": {
+      "graph_id": "independent-templates",
+      "scope": "language_model",
+      "coverage": "complete",
+      "symbols": [],
+      "nodes": [
+        {
+          "id": "root",
+          "kind": "group",
+          "label": "root",
+          "ports": [],
+          "parameter_ids": [],
+          "references": [],
+          "attributes": [],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "children": [
+            "layer0",
+            "layer2"
+          ]
+        },
+        {
+          "id": "layer0",
+          "kind": "group",
+          "label": "layer0",
+          "ports": [
+            {
+              "id": "x",
+              "label": "x",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "label": "out",
+              "direction": "output",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [],
+          "references": [],
+          "attributes": [],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "parent_id": "root",
+          "children": [
+            "attention0"
+          ]
+        },
+        {
+          "id": "attention0",
+          "kind": "group",
+          "label": "attention0",
+          "ports": [
+            {
+              "id": "x",
+              "label": "x",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "label": "out",
+              "direction": "output",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [],
+          "references": [],
+          "attributes": [
+            {
+              "name": "semantic_role",
+              "value": "attention",
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            }
+          ],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "parent_id": "layer0",
+          "children": [
+            "q0",
+            "k0",
+            "dot0"
+          ]
+        },
+        {
+          "id": "q0",
+          "kind": "operation",
+          "label": "q0",
+          "ports": [
+            {
+              "id": "x",
+              "label": "x",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "label": "out",
+              "direction": "output",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [
+            "qweight0"
+          ],
+          "references": [
+            {
+              "kind": "parameter",
+              "parameter_id": "qweight0"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "semantic_role",
+              "value": "query_projection",
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            },
+            {
+              "name": "bias",
+              "value": false,
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            }
+          ],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "parent_id": "attention0",
+          "operation": "linear"
+        },
+        {
+          "id": "k0",
+          "kind": "operation",
+          "label": "k0",
+          "ports": [
+            {
+              "id": "x",
+              "label": "x",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "label": "out",
+              "direction": "output",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [
+            "kweight0"
+          ],
+          "references": [
+            {
+              "kind": "parameter",
+              "parameter_id": "kweight0"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "semantic_role",
+              "value": "key_projection",
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            },
+            {
+              "name": "bias",
+              "value": false,
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            }
+          ],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "parent_id": "attention0",
+          "operation": "linear"
+        },
+        {
+          "id": "dot0",
+          "kind": "operation",
+          "label": "dot0",
+          "ports": [
+            {
+              "id": "q",
+              "label": "q",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "k",
+              "label": "k",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "label": "out",
+              "direction": "output",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [],
+          "references": [],
+          "attributes": [
+            {
+              "name": "causal",
+              "value": true,
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            }
+          ],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "parent_id": "attention0",
+          "operation": "matmul",
+          "formula": "Q K^T"
+        },
+        {
+          "id": "layer2",
+          "kind": "group",
+          "label": "layer2",
+          "ports": [
+            {
+              "id": "x",
+              "label": "x",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "label": "out",
+              "direction": "output",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [],
+          "references": [],
+          "attributes": [],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "parent_id": "root",
+          "children": [
+            "attention2"
+          ]
+        },
+        {
+          "id": "attention2",
+          "kind": "group",
+          "label": "attention2",
+          "ports": [
+            {
+              "id": "x",
+              "label": "x",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "label": "out",
+              "direction": "output",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [],
+          "references": [],
+          "attributes": [
+            {
+              "name": "semantic_role",
+              "value": "attention",
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            }
+          ],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "parent_id": "layer2",
+          "children": [
+            "q2",
+            "k2",
+            "dot2"
+          ]
+        },
+        {
+          "id": "q2",
+          "kind": "operation",
+          "label": "q2",
+          "ports": [
+            {
+              "id": "x",
+              "label": "x",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "label": "out",
+              "direction": "output",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [
+            "qweight2"
+          ],
+          "references": [
+            {
+              "kind": "parameter",
+              "parameter_id": "qweight2"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "semantic_role",
+              "value": "query_projection",
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            },
+            {
+              "name": "bias",
+              "value": false,
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            }
+          ],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "parent_id": "attention2",
+          "operation": "linear"
+        },
+        {
+          "id": "k2",
+          "kind": "operation",
+          "label": "k2",
+          "ports": [
+            {
+              "id": "x",
+              "label": "x",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "label": "out",
+              "direction": "output",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [
+            "kweight2"
+          ],
+          "references": [
+            {
+              "kind": "parameter",
+              "parameter_id": "kweight2"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "semantic_role",
+              "value": "key_projection",
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            },
+            {
+              "name": "bias",
+              "value": false,
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            }
+          ],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "parent_id": "attention2",
+          "operation": "linear"
+        },
+        {
+          "id": "dot2",
+          "kind": "operation",
+          "label": "dot2",
+          "ports": [
+            {
+              "id": "q",
+              "label": "q",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "k",
+              "label": "k",
+              "direction": "input",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "id": "out",
+              "label": "out",
+              "direction": "output",
+              "shape": [
+                {
+                  "kind": "constant",
+                  "value": 2
+                },
+                {
+                  "kind": "constant",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "parameter_ids": [],
+          "references": [],
+          "attributes": [
+            {
+              "name": "causal",
+              "value": true,
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            }
+          ],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "parent_id": "attention2",
+          "operation": "matmul",
+          "formula": "Q K^T"
+        }
+      ],
+      "edges": [
+        {
+          "id": "input0",
+          "source": {
+            "node_id": "layer0",
+            "port_id": "x"
+          },
+          "target": {
+            "node_id": "attention0",
+            "port_id": "x"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "q_input0",
+          "source": {
+            "node_id": "attention0",
+            "port_id": "x"
+          },
+          "target": {
+            "node_id": "q0",
+            "port_id": "x"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "k_input0",
+          "source": {
+            "node_id": "attention0",
+            "port_id": "x"
+          },
+          "target": {
+            "node_id": "k0",
+            "port_id": "x"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "q_dot0",
+          "source": {
+            "node_id": "q0",
+            "port_id": "out"
+          },
+          "target": {
+            "node_id": "dot0",
+            "port_id": "q"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "k_dot0",
+          "source": {
+            "node_id": "k0",
+            "port_id": "out"
+          },
+          "target": {
+            "node_id": "dot0",
+            "port_id": "k"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "result0",
+          "source": {
+            "node_id": "dot0",
+            "port_id": "out"
+          },
+          "target": {
+            "node_id": "attention0",
+            "port_id": "out"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "output0",
+          "source": {
+            "node_id": "attention0",
+            "port_id": "out"
+          },
+          "target": {
+            "node_id": "layer0",
+            "port_id": "out"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "input2",
+          "source": {
+            "node_id": "layer2",
+            "port_id": "x"
+          },
+          "target": {
+            "node_id": "attention2",
+            "port_id": "x"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "q_input2",
+          "source": {
+            "node_id": "attention2",
+            "port_id": "x"
+          },
+          "target": {
+            "node_id": "q2",
+            "port_id": "x"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "k_input2",
+          "source": {
+            "node_id": "attention2",
+            "port_id": "x"
+          },
+          "target": {
+            "node_id": "k2",
+            "port_id": "x"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "q_dot2",
+          "source": {
+            "node_id": "q2",
+            "port_id": "out"
+          },
+          "target": {
+            "node_id": "dot2",
+            "port_id": "q"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "k_dot2",
+          "source": {
+            "node_id": "k2",
+            "port_id": "out"
+          },
+          "target": {
+            "node_id": "dot2",
+            "port_id": "k"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "result2",
+          "source": {
+            "node_id": "dot2",
+            "port_id": "out"
+          },
+          "target": {
+            "node_id": "attention2",
+            "port_id": "out"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "output2",
+          "source": {
+            "node_id": "attention2",
+            "port_id": "out"
+          },
+          "target": {
+            "node_id": "layer2",
+            "port_id": "out"
+          },
+          "kind": "data",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        }
+      ],
+      "parameters": [
+        {
+          "id": "qweight0",
+          "name": "layer0.q.weight",
+          "logical_shape": [
+            {
+              "kind": "constant",
+              "value": 2
+            },
+            {
+              "kind": "constant",
+              "value": 2
+            }
+          ],
+          "binding": "unresolved",
+          "storage": [],
+          "inspection": {
+            "status": "unavailable",
+            "reason": "unresolved_binding",
+            "message": "Independent fixture has no storage."
+          },
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "kweight0",
+          "name": "layer0.k.weight",
+          "logical_shape": [
+            {
+              "kind": "constant",
+              "value": 2
+            },
+            {
+              "kind": "constant",
+              "value": 2
+            }
+          ],
+          "binding": "unresolved",
+          "storage": [],
+          "inspection": {
+            "status": "unavailable",
+            "reason": "unresolved_binding",
+            "message": "Independent fixture has no storage."
+          },
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "qweight2",
+          "name": "layer2.q.weight",
+          "logical_shape": [
+            {
+              "kind": "constant",
+              "value": 2
+            },
+            {
+              "kind": "constant",
+              "value": 2
+            }
+          ],
+          "binding": "unresolved",
+          "storage": [],
+          "inspection": {
+            "status": "unavailable",
+            "reason": "unresolved_binding",
+            "message": "Independent fixture has no storage."
+          },
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "kweight2",
+          "name": "layer2.k.weight",
+          "logical_shape": [
+            {
+              "kind": "constant",
+              "value": 2
+            },
+            {
+              "kind": "constant",
+              "value": 2
+            }
+          ],
+          "binding": "unresolved",
+          "storage": [],
+          "inspection": {
+            "status": "unavailable",
+            "reason": "unresolved_binding",
+            "message": "Independent fixture has no storage."
+          },
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "repetitions": [
+        {
+          "id": "layers",
+          "parent_id": "root",
+          "label": "layers",
+          "instances": [
+            {
+              "node_id": "layer0",
+              "index": 0,
+              "variant": "full_attention"
+            },
+            {
+              "node_id": "layer2",
+              "index": 2,
+              "variant": "full_attention"
+            }
+          ]
+        }
+      ],
+      "templates": [
+        {
+          "id": "shared_attention",
+          "label": "Attention",
+          "component_role": "attention",
+          "revision": "1",
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-attention-fixture",
+              "revision": "1"
+            }
+          ],
+          "instances": [
+            {
+              "node_id": "attention0",
+              "nodes": [
+                {
+                  "role": "component",
+                  "node_id": "attention0"
+                },
+                {
+                  "role": "q",
+                  "node_id": "q0"
+                },
+                {
+                  "role": "k",
+                  "node_id": "k0"
+                },
+                {
+                  "role": "dot",
+                  "node_id": "dot0"
+                }
+              ],
+              "ports": [
+                {
+                  "role": "component.x",
+                  "node_id": "attention0",
+                  "port_id": "x"
+                },
+                {
+                  "role": "component.out",
+                  "node_id": "attention0",
+                  "port_id": "out"
+                },
+                {
+                  "role": "q.x",
+                  "node_id": "q0",
+                  "port_id": "x"
+                },
+                {
+                  "role": "q.out",
+                  "node_id": "q0",
+                  "port_id": "out"
+                },
+                {
+                  "role": "k.x",
+                  "node_id": "k0",
+                  "port_id": "x"
+                },
+                {
+                  "role": "k.out",
+                  "node_id": "k0",
+                  "port_id": "out"
+                },
+                {
+                  "role": "dot.q",
+                  "node_id": "dot0",
+                  "port_id": "q"
+                },
+                {
+                  "role": "dot.k",
+                  "node_id": "dot0",
+                  "port_id": "k"
+                },
+                {
+                  "role": "dot.out",
+                  "node_id": "dot0",
+                  "port_id": "out"
+                }
+              ],
+              "edges": [
+                {
+                  "role": "q_input",
+                  "edge_id": "q_input0"
+                },
+                {
+                  "role": "k_input",
+                  "edge_id": "k_input0"
+                },
+                {
+                  "role": "q_dot",
+                  "edge_id": "q_dot0"
+                },
+                {
+                  "role": "k_dot",
+                  "edge_id": "k_dot0"
+                },
+                {
+                  "role": "result",
+                  "edge_id": "result0"
+                }
+              ],
+              "parameters": [
+                {
+                  "role": "q.weight",
+                  "parameter_id": "qweight0"
+                },
+                {
+                  "role": "k.weight",
+                  "parameter_id": "kweight0"
+                }
+              ]
+            },
+            {
+              "node_id": "attention2",
+              "nodes": [
+                {
+                  "role": "component",
+                  "node_id": "attention2"
+                },
+                {
+                  "role": "q",
+                  "node_id": "q2"
+                },
+                {
+                  "role": "k",
+                  "node_id": "k2"
+                },
+                {
+                  "role": "dot",
+                  "node_id": "dot2"
+                }
+              ],
+              "ports": [
+                {
+                  "role": "component.x",
+                  "node_id": "attention2",
+                  "port_id": "x"
+                },
+                {
+                  "role": "component.out",
+                  "node_id": "attention2",
+                  "port_id": "out"
+                },
+                {
+                  "role": "q.x",
+                  "node_id": "q2",
+                  "port_id": "x"
+                },
+                {
+                  "role": "q.out",
+                  "node_id": "q2",
+                  "port_id": "out"
+                },
+                {
+                  "role": "k.x",
+                  "node_id": "k2",
+                  "port_id": "x"
+                },
+                {
+                  "role": "k.out",
+                  "node_id": "k2",
+                  "port_id": "out"
+                },
+                {
+                  "role": "dot.q",
+                  "node_id": "dot2",
+                  "port_id": "q"
+                },
+                {
+                  "role": "dot.k",
+                  "node_id": "dot2",
+                  "port_id": "k"
+                },
+                {
+                  "role": "dot.out",
+                  "node_id": "dot2",
+                  "port_id": "out"
+                }
+              ],
+              "edges": [
+                {
+                  "role": "q_input",
+                  "edge_id": "q_input2"
+                },
+                {
+                  "role": "k_input",
+                  "edge_id": "k_input2"
+                },
+                {
+                  "role": "q_dot",
+                  "edge_id": "q_dot2"
+                },
+                {
+                  "role": "k_dot",
+                  "edge_id": "k_dot2"
+                },
+                {
+                  "role": "result",
+                  "edge_id": "result2"
+                }
+              ],
+              "parameters": [
+                {
+                  "role": "q.weight",
+                  "parameter_id": "qweight2"
+                },
+                {
+                  "role": "k.weight",
+                  "parameter_id": "kweight2"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
   "context": {
     "session": {
       "id": "12345678-1234-4234-8234-123456789abc",
@@ -7668,6 +9022,1355 @@
           ]
         }
       ]
+    },
+    {
+      "name": "template-verified-nonconsecutive",
+      "base": "template_response",
+      "edits": [],
+      "valid": true,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-absent",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates"
+          ],
+          "delete": true
+        }
+      ],
+      "valid": true,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-empty",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates"
+          ],
+          "value": []
+        }
+      ],
+      "valid": true,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-null",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates"
+          ],
+          "value": null
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": false
+    },
+    {
+      "name": "template-singleton",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances"
+          ],
+          "value": [
+            {
+              "node_id": "attention0",
+              "nodes": [
+                {
+                  "role": "component",
+                  "node_id": "attention0"
+                },
+                {
+                  "role": "q",
+                  "node_id": "q0"
+                },
+                {
+                  "role": "k",
+                  "node_id": "k0"
+                },
+                {
+                  "role": "dot",
+                  "node_id": "dot0"
+                }
+              ],
+              "ports": [
+                {
+                  "role": "component.x",
+                  "node_id": "attention0",
+                  "port_id": "x"
+                },
+                {
+                  "role": "component.out",
+                  "node_id": "attention0",
+                  "port_id": "out"
+                },
+                {
+                  "role": "q.x",
+                  "node_id": "q0",
+                  "port_id": "x"
+                },
+                {
+                  "role": "q.out",
+                  "node_id": "q0",
+                  "port_id": "out"
+                },
+                {
+                  "role": "k.x",
+                  "node_id": "k0",
+                  "port_id": "x"
+                },
+                {
+                  "role": "k.out",
+                  "node_id": "k0",
+                  "port_id": "out"
+                },
+                {
+                  "role": "dot.q",
+                  "node_id": "dot0",
+                  "port_id": "q"
+                },
+                {
+                  "role": "dot.k",
+                  "node_id": "dot0",
+                  "port_id": "k"
+                },
+                {
+                  "role": "dot.out",
+                  "node_id": "dot0",
+                  "port_id": "out"
+                }
+              ],
+              "edges": [
+                {
+                  "role": "q_input",
+                  "edge_id": "q_input0"
+                },
+                {
+                  "role": "k_input",
+                  "edge_id": "k_input0"
+                },
+                {
+                  "role": "q_dot",
+                  "edge_id": "q_dot0"
+                },
+                {
+                  "role": "k_dot",
+                  "edge_id": "k_dot0"
+                },
+                {
+                  "role": "result",
+                  "edge_id": "result0"
+                }
+              ],
+              "parameters": [
+                {
+                  "role": "q.weight",
+                  "parameter_id": "qweight0"
+                },
+                {
+                  "role": "k.weight",
+                  "parameter_id": "kweight0"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": false
+    },
+    {
+      "name": "template-reversed-order",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances"
+          ],
+          "value": [
+            {
+              "node_id": "attention2",
+              "nodes": [
+                {
+                  "role": "component",
+                  "node_id": "attention2"
+                },
+                {
+                  "role": "q",
+                  "node_id": "q2"
+                },
+                {
+                  "role": "k",
+                  "node_id": "k2"
+                },
+                {
+                  "role": "dot",
+                  "node_id": "dot2"
+                }
+              ],
+              "ports": [
+                {
+                  "role": "component.x",
+                  "node_id": "attention2",
+                  "port_id": "x"
+                },
+                {
+                  "role": "component.out",
+                  "node_id": "attention2",
+                  "port_id": "out"
+                },
+                {
+                  "role": "q.x",
+                  "node_id": "q2",
+                  "port_id": "x"
+                },
+                {
+                  "role": "q.out",
+                  "node_id": "q2",
+                  "port_id": "out"
+                },
+                {
+                  "role": "k.x",
+                  "node_id": "k2",
+                  "port_id": "x"
+                },
+                {
+                  "role": "k.out",
+                  "node_id": "k2",
+                  "port_id": "out"
+                },
+                {
+                  "role": "dot.q",
+                  "node_id": "dot2",
+                  "port_id": "q"
+                },
+                {
+                  "role": "dot.k",
+                  "node_id": "dot2",
+                  "port_id": "k"
+                },
+                {
+                  "role": "dot.out",
+                  "node_id": "dot2",
+                  "port_id": "out"
+                }
+              ],
+              "edges": [
+                {
+                  "role": "q_input",
+                  "edge_id": "q_input2"
+                },
+                {
+                  "role": "k_input",
+                  "edge_id": "k_input2"
+                },
+                {
+                  "role": "q_dot",
+                  "edge_id": "q_dot2"
+                },
+                {
+                  "role": "k_dot",
+                  "edge_id": "k_dot2"
+                },
+                {
+                  "role": "result",
+                  "edge_id": "result2"
+                }
+              ],
+              "parameters": [
+                {
+                  "role": "q.weight",
+                  "parameter_id": "qweight2"
+                },
+                {
+                  "role": "k.weight",
+                  "parameter_id": "kweight2"
+                }
+              ]
+            },
+            {
+              "node_id": "attention0",
+              "nodes": [
+                {
+                  "role": "component",
+                  "node_id": "attention0"
+                },
+                {
+                  "role": "q",
+                  "node_id": "q0"
+                },
+                {
+                  "role": "k",
+                  "node_id": "k0"
+                },
+                {
+                  "role": "dot",
+                  "node_id": "dot0"
+                }
+              ],
+              "ports": [
+                {
+                  "role": "component.x",
+                  "node_id": "attention0",
+                  "port_id": "x"
+                },
+                {
+                  "role": "component.out",
+                  "node_id": "attention0",
+                  "port_id": "out"
+                },
+                {
+                  "role": "q.x",
+                  "node_id": "q0",
+                  "port_id": "x"
+                },
+                {
+                  "role": "q.out",
+                  "node_id": "q0",
+                  "port_id": "out"
+                },
+                {
+                  "role": "k.x",
+                  "node_id": "k0",
+                  "port_id": "x"
+                },
+                {
+                  "role": "k.out",
+                  "node_id": "k0",
+                  "port_id": "out"
+                },
+                {
+                  "role": "dot.q",
+                  "node_id": "dot0",
+                  "port_id": "q"
+                },
+                {
+                  "role": "dot.k",
+                  "node_id": "dot0",
+                  "port_id": "k"
+                },
+                {
+                  "role": "dot.out",
+                  "node_id": "dot0",
+                  "port_id": "out"
+                }
+              ],
+              "edges": [
+                {
+                  "role": "q_input",
+                  "edge_id": "q_input0"
+                },
+                {
+                  "role": "k_input",
+                  "edge_id": "k_input0"
+                },
+                {
+                  "role": "q_dot",
+                  "edge_id": "q_dot0"
+                },
+                {
+                  "role": "k_dot",
+                  "edge_id": "k_dot0"
+                },
+                {
+                  "role": "result",
+                  "edge_id": "result0"
+                }
+              ],
+              "parameters": [
+                {
+                  "role": "q.weight",
+                  "parameter_id": "qweight0"
+                },
+                {
+                  "role": "k.weight",
+                  "parameter_id": "kweight0"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-duplicate-instance",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1"
+          ],
+          "value": {
+            "node_id": "attention0",
+            "nodes": [
+              {
+                "role": "component",
+                "node_id": "attention0"
+              },
+              {
+                "role": "q",
+                "node_id": "q0"
+              },
+              {
+                "role": "k",
+                "node_id": "k0"
+              },
+              {
+                "role": "dot",
+                "node_id": "dot0"
+              }
+            ],
+            "ports": [
+              {
+                "role": "component.x",
+                "node_id": "attention0",
+                "port_id": "x"
+              },
+              {
+                "role": "component.out",
+                "node_id": "attention0",
+                "port_id": "out"
+              },
+              {
+                "role": "q.x",
+                "node_id": "q0",
+                "port_id": "x"
+              },
+              {
+                "role": "q.out",
+                "node_id": "q0",
+                "port_id": "out"
+              },
+              {
+                "role": "k.x",
+                "node_id": "k0",
+                "port_id": "x"
+              },
+              {
+                "role": "k.out",
+                "node_id": "k0",
+                "port_id": "out"
+              },
+              {
+                "role": "dot.q",
+                "node_id": "dot0",
+                "port_id": "q"
+              },
+              {
+                "role": "dot.k",
+                "node_id": "dot0",
+                "port_id": "k"
+              },
+              {
+                "role": "dot.out",
+                "node_id": "dot0",
+                "port_id": "out"
+              }
+            ],
+            "edges": [
+              {
+                "role": "q_input",
+                "edge_id": "q_input0"
+              },
+              {
+                "role": "k_input",
+                "edge_id": "k_input0"
+              },
+              {
+                "role": "q_dot",
+                "edge_id": "q_dot0"
+              },
+              {
+                "role": "k_dot",
+                "edge_id": "k_dot0"
+              },
+              {
+                "role": "result",
+                "edge_id": "result0"
+              }
+            ],
+            "parameters": [
+              {
+                "role": "q.weight",
+                "parameter_id": "qweight0"
+              },
+              {
+                "role": "k.weight",
+                "parameter_id": "kweight0"
+              }
+            ]
+          }
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-missing-provenance",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "provenance"
+          ],
+          "value": []
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": false
+    },
+    {
+      "name": "template-wrong-component-role",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "component_role"
+          ],
+          "value": "mlp"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-id-collision",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "id"
+          ],
+          "value": "root"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-nodes-missing",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "nodes"
+          ],
+          "value": [
+            {
+              "role": "q",
+              "node_id": "q2"
+            },
+            {
+              "role": "k",
+              "node_id": "k2"
+            },
+            {
+              "role": "dot",
+              "node_id": "dot2"
+            }
+          ]
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-nodes-duplicate-role",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "nodes",
+            "1",
+            "role"
+          ],
+          "value": "component"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-nodes-foreign-reference",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "nodes",
+            "0",
+            "node_id"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-nodes-wrong-subtree",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "nodes",
+            "0"
+          ],
+          "value": {
+            "role": "component",
+            "node_id": "attention0"
+          }
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-ports-missing",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "ports"
+          ],
+          "value": [
+            {
+              "role": "component.out",
+              "node_id": "attention2",
+              "port_id": "out"
+            },
+            {
+              "role": "q.x",
+              "node_id": "q2",
+              "port_id": "x"
+            },
+            {
+              "role": "q.out",
+              "node_id": "q2",
+              "port_id": "out"
+            },
+            {
+              "role": "k.x",
+              "node_id": "k2",
+              "port_id": "x"
+            },
+            {
+              "role": "k.out",
+              "node_id": "k2",
+              "port_id": "out"
+            },
+            {
+              "role": "dot.q",
+              "node_id": "dot2",
+              "port_id": "q"
+            },
+            {
+              "role": "dot.k",
+              "node_id": "dot2",
+              "port_id": "k"
+            },
+            {
+              "role": "dot.out",
+              "node_id": "dot2",
+              "port_id": "out"
+            }
+          ]
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-ports-duplicate-role",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "ports",
+            "1",
+            "role"
+          ],
+          "value": "component.x"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-ports-foreign-reference",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "ports",
+            "0",
+            "node_id"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-ports-wrong-subtree",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "ports",
+            "0"
+          ],
+          "value": {
+            "role": "component.x",
+            "node_id": "attention0",
+            "port_id": "x"
+          }
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-edges-missing",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "edges"
+          ],
+          "value": [
+            {
+              "role": "k_input",
+              "edge_id": "k_input2"
+            },
+            {
+              "role": "q_dot",
+              "edge_id": "q_dot2"
+            },
+            {
+              "role": "k_dot",
+              "edge_id": "k_dot2"
+            },
+            {
+              "role": "result",
+              "edge_id": "result2"
+            }
+          ]
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-edges-duplicate-role",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "edges",
+            "1",
+            "role"
+          ],
+          "value": "q_input"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-edges-foreign-reference",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "edges",
+            "0",
+            "edge_id"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-edges-wrong-subtree",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "edges",
+            "0"
+          ],
+          "value": {
+            "role": "q_input",
+            "edge_id": "q_input0"
+          }
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-parameters-missing",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "parameters"
+          ],
+          "value": [
+            {
+              "role": "k.weight",
+              "parameter_id": "kweight2"
+            }
+          ]
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-parameters-duplicate-role",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "parameters",
+            "1",
+            "role"
+          ],
+          "value": "q.weight"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-parameters-foreign-reference",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "parameters",
+            "0",
+            "parameter_id"
+          ],
+          "value": "foreign"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-parameters-wrong-subtree",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "parameters",
+            "0"
+          ],
+          "value": {
+            "role": "q.weight",
+            "parameter_id": "qweight0"
+          }
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-swapped-same-shape-qk",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "10",
+            "target",
+            "port_id"
+          ],
+          "value": "k"
+        },
+        {
+          "path": [
+            "graph",
+            "edges",
+            "11",
+            "target",
+            "port_id"
+          ],
+          "value": "q"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-swapped-port-roles",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "ports",
+            "6",
+            "role"
+          ],
+          "value": "dot.k"
+        },
+        {
+          "path": [
+            "graph",
+            "templates",
+            "0",
+            "instances",
+            "1",
+            "ports",
+            "7",
+            "role"
+          ],
+          "value": "dot.q"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-wrong-instance-parameter",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "8",
+            "parameter_ids"
+          ],
+          "value": [
+            "qweight0"
+          ]
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-different-operation",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "10",
+            "operation"
+          ],
+          "value": "linear_attention"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-different-formula",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "10",
+            "formula"
+          ],
+          "value": "K Q^T"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-different-normalization",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "8",
+            "attributes",
+            "1"
+          ],
+          "value": {
+            "name": "epsilon",
+            "value": 1e-06,
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "independent-attention-fixture",
+                "revision": "1"
+              }
+            ]
+          }
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-different-bias",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "8",
+            "attributes",
+            "1",
+            "value"
+          ],
+          "value": true
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-different-shape",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "logical_shape"
+          ],
+          "value": [
+            {
+              "kind": "constant",
+              "value": 3
+            },
+            {
+              "kind": "constant",
+              "value": 2
+            }
+          ]
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-different-state-rule",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "10",
+            "attributes",
+            "0"
+          ],
+          "value": {
+            "name": "state_rule",
+            "value": "recurrent",
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "independent-attention-fixture",
+                "revision": "1"
+              }
+            ]
+          }
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-different-edge-kind",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "edges",
+            "10",
+            "kind"
+          ],
+          "value": "state"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-unknown-attribute",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "10",
+            "attributes",
+            "0",
+            "value"
+          ],
+          "value": null
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-unknown-shape",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "logical_shape"
+          ],
+          "value": null
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-parameter-alias",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "binding"
+          ],
+          "value": "alias"
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "alias_of"
+          ],
+          "value": "qweight0"
+        }
+      ],
+      "valid": true,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-internal-alias-change",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "3",
+            "binding"
+          ],
+          "value": "alias"
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "3",
+            "alias_of"
+          ],
+          "value": "qweight2"
+        }
+      ],
+      "valid": false,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
+      "name": "template-unavailable-storage-difference",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "inspection",
+            "reason"
+          ],
+          "value": "unsupported_representation"
+        }
+      ],
+      "valid": true,
+      "context_edits": [],
+      "schema_valid": true
     }
   ],
   "byte_cases": [
