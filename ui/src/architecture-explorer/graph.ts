@@ -1,6 +1,7 @@
 import type { components } from '../api/generated/types';
 import type { Projection, ProjectionOptions } from './projection';
 import { componentScope } from './scope';
+import { sharedContext, type SharedStructure } from './shared-structure';
 
 export type Graph = components['schemas']['ArchitectureGraph'];
 export type GraphNode = components['schemas']['ArchitectureNode'];
@@ -11,8 +12,10 @@ export interface PortPosition extends Point { nodeId: string; portId: string; ab
 export interface Route { id: string; sections: Point[][]; junctions: Point[]; labels?: { x: number; y: number; width: number; height: number; lines: string[] }[] }
 export interface Layout { boxes: Box[]; ports: PortPosition[]; routes: Route[]; projection: Projection; edgeIds: string[]; width: number; height: number; milliseconds: number }
 export type GraphSnapshot = Pick<GraphView, 'selected' | 'dimensions' | 'edge' | 'focus' | 'activeStack' | 'repetitions' |
-  'exhaustive' | 'showUnused' | 'showContext' | 'deriveMlp' | 'stateScope' | 'expanded' | 'viewport' | 'scope'>;
+  'exhaustive' | 'showUnused' | 'showContext' | 'deriveMlp' | 'stateScope' | 'expanded' | 'viewport' | 'scope' | 'shared'>;
 export class GraphView {
+  shared: SharedStructure | undefined;
+  notice: string | undefined;
   scope: string | undefined;
   history: GraphSnapshot[] = [];
   globalView: GraphSnapshot | undefined;
@@ -40,8 +43,12 @@ export class GraphViews {
     if (!view) {
       // Old graph identities for this model cannot contain valid navigation
       // references to the replacement graph. Bound retained models as well.
-      for (const existing of this.views.keys()) if ((JSON.parse(existing) as string[])[0] === model) this.views.delete(existing);
+      let clearedShared = false;
+      for (const existing of this.views.keys()) if ((JSON.parse(existing) as string[])[0] === model) {
+        clearedShared ||= Boolean(this.views.get(existing)?.shared); this.views.delete(existing);
+      }
       view = new GraphView(graph.nodes.filter((n) => n.kind === 'group' && !n.parent_id).map((n) => n.id));
+      if (clearedShared) view.notice = "Graph changed; the shared structure selection was cleared.";
       this.views.set(key, view);
     }
     this.views.delete(key); this.views.set(key, view);
@@ -53,6 +60,14 @@ export class GraphViews {
     if (view.focus && !ids.has(view.focus) && !(view.focus.startsWith('mlp:') && ids.has(view.focus.slice(4)))) view.focus = null;
     if (view.stateScope && !ids.has(view.stateScope)) view.stateScope = undefined;
     if (view.selected && !ids.has(view.selected) && !(view.selected.startsWith('mlp:') && ids.has(view.selected.slice(4)))) view.selected = null;
+    if (view.shared) {
+      try { sharedContext(graph, view.shared); }
+      catch {
+        const reset = new GraphView(graph.nodes.filter((n) => n.kind === 'group' && !n.parent_id).map((n) => n.id));
+        reset.notice = 'Shared structure correspondence changed; returned to the model view.';
+        this.views.set(key, reset); return reset;
+      }
+    }
     if (view.scope) {
       try { componentScope(graph, view.scope); }
       catch {

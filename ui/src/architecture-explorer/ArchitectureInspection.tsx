@@ -39,12 +39,15 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
   const [choice, setChoice] = useState('');
   const { node } = selected;
   const ids = new Set([...node.parameter_ids, ...node.references.flatMap((r) => r.kind === 'parameter' ? [r.parameter_id] : [])]);
-  const parameters = graph.parameters.filter((p) => ids.has(p.id));
+  const parameters = selected.structureOnly ? [] : graph.parameters.filter((p) => ids.has(p.id));
+  const templateInstance = graph.templates?.flatMap((t) => t.instances).find((i) => i.node_id === selected.templateInstanceId);
+  const members = new Set(templateInstance?.nodes.map((m) => m.node_id));
+  const external = templateInstance ? graph.edges.filter((e) => members.has(e.source.node_id) !== members.has(e.target.node_id)) : [];
   const parameter = parameters.find((p) => p.id === choice);
   const inspection = parameter?.inspection;
   const tensor = inspection?.status === 'available'
     ? inventory.tensors.find((t) => t.id === inspection.tensor_id) : undefined;
-  const diagnostics = [...graph.diagnostics, ...responseDiagnostics].filter((d) => d.node_id === node.id || (parameter && d.parameter_id === parameter.id));
+  const diagnostics = selected.structureOnly ? [] : [...graph.diagnostics, ...responseDiagnostics].filter((d) => d.node_id === node.id || (parameter && d.parameter_id === parameter.id));
   const close = () => { lifetime?.dispose(); onClose(); };
   useLayoutEffect(() => {
     const element = dialog.current!;
@@ -68,7 +71,11 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
     }}>
     <header className="architecture-inspection-heading"><h2 id={title}>{node.label}</h2><button autoFocus onClick={close} aria-label="Close inspection">×</button></header>
     <div className="architecture-inspection-details">
-      <p>{selected.modelId} · {node.id}{node.parent_id && ` · parent ${node.parent_id}`} · {node.operation ?? node.kind}</p>
+      {selected.structureOnly ? <p>Shared structure: {selected.structureOnly.label} · {selected.structureOnly.role}. No instance selected; choose an instance for weights.</p>
+        : <p>{selected.modelId} · {node.id}{node.parent_id && ` · parent ${node.parent_id}`} · {node.operation ?? node.kind}</p>}
+      {!!external.length && <details><summary>Concrete instance interface connections</summary>{external.map((edge) => <p key={edge.id}>
+        {graph.nodes.find((n) => n.id === edge.source.node_id)?.label} · <code>{edge.source.node_id}:{edge.source.port_id}</code> → {graph.nodes.find((n) => n.id === edge.target.node_id)?.label} · <code>{edge.target.node_id}:{edge.target.port_id}</code><br />Original edge: <code>{edge.id}</code>
+      </p>)}</details>}
       {node.description && <p>{node.description}</p>}
       {node.formula && <pre>{node.formula}</pre>}
       {node.ports.map((p) => <p key={p.id}>{p.direction} {p.label}: {formatShape(p.shape)}</p>)}

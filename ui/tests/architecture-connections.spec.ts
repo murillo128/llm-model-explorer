@@ -431,3 +431,83 @@ test('obsolete model layout replies cannot replace the latest graph; a failed wo
   await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click();
   await expect.poll(async () => (await state()).live).toBe(0);
 });
+
+test('shared structure retains geometry, exact QKV hit sets and semantic selection across nonconsecutive instances', async ({ page }, info) => {
+  await open(page, 'templates');
+  await page.getByLabel('Shared structures', { exact: true }).selectOption('shared-full-attention'); await ready(page);
+  await expect(graph(page)).toHaveAttribute('data-template-instance-id', '');
+  await expect(page.getByText('No instance selected; weights require a choice.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'View in model', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  await page.locator('[data-id="layer-0.attention.Q"]').getByRole('button', { name: 'Inspect Q', exact: true }).click();
+  await expect(page.locator('output')).toHaveText('Structure only: Q');
+  const before = await stableState(page);
+  const picker = page.getByLabel('Shared structure instance', { exact: true });
+  await expect(picker.locator('option').nth(2)).toHaveText('Decoder layers / Layer 2 · family instance 2 of 2');
+  await picker.selectOption('layer-2.attention'); await ready(page);
+  await expect(page.locator('output')).toHaveText('');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention.Q');
+  await expect(graph(page)).toHaveAttribute('data-source-node-ids', /layer-2.attention.Q/);
+  await unchanged(page, before);
+  const fanout = ['Q', 'K', 'V'].map((name) => connection(page, 'layer-0.attention', 'x', `layer-0.attention.${name}`, 'x'));
+  for (const edge of fanout) await expect(edge).toHaveCount(1);
+  const trunk = await fanoutPoint(page, fanout, fanout);
+  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, fanout);
+  const branch = await fanoutPoint(page, fanout, [fanout[1]!]);
+  await page.mouse.move(branch.x, branch.y); await emphasized(page, [fanout[1]!]);
+  await hoverDot(port(page, 'layer-0.attention.V', 'x')); await emphasized(page, [fanout[2]!]);
+  await unchanged(page, before);
+  await fanout[1]!.focus(); await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'Connection inspection', exact: true })).toContainText('layer-2.attention.K');
+  const ids = await fanout[1]!.getAttribute('data-original-edge-ids');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Previous shared instance', exact: true }).click();
+  await expect(graph(page)).toHaveAttribute('data-template-instance-id', 'layer-0.attention');
+  expect(await fanout[1]!.getAttribute('data-original-edge-ids')).not.toBe(ids);
+  await emphasized(page, [fanout[1]!]); await unchanged(page, before);
+  await page.getByRole('button', { name: 'Inspect connection', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Connection inspection', exact: true })).toContainText('layer-0.attention.K');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Clear connection selection', exact: true }).click();
+  await page.getByRole('button', { name: 'Next shared instance', exact: true }).click();
+  await page.getByRole('button', { name: 'View in model', exact: true }).click(); await ready(page);
+  await expect(graph(page)).toHaveAttribute('data-template-id', '');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention');
+  await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
+  await expect(graph(page)).toHaveAttribute('data-template-instance-id', 'layer-2.attention');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention.Q');
+  const restored = await stableState(page);
+  expect({ ...restored, layoutCount: before.layoutCount }).toEqual(before);
+  await capture(page, info, 'shared-attention-instance-2');
+  for (const width of [1178, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await picker.selectOption('layer-0.attention');
+    await picker.selectOption('layer-2.attention');
+    expect(await graph(page).getAttribute('data-layout-count')).toBe(restored.layoutCount);
+    await capture(page, info, `shared-controls-${width}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole('button', { name: 'Model overview', exact: true }).click(); await ready(page);
+  await findComponent(page, 'layer-2.attention.K'); await ready(page);
+  await page.getByRole('button', { name: 'Shared structure', exact: true }).click(); await ready(page);
+  await expect(picker).toHaveValue('layer-2.attention');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention.K');
+});
+
+test('optional template metadata leaves ordinary overview, exhaustive projection, routing and isolation unchanged', async ({ page }) => {
+  const states = [];
+  for (const fixture of ['templates-absent', 'templates']) {
+    await open(page, fixture);
+    await expect(page.getByLabel('Shared structures', { exact: true })).toHaveCount(fixture === 'templates' ? 1 : 0);
+    const overview = await stableState(page);
+    await graphAction(page, 'Show all operations'); await ready(page);
+    const exhaustive = await stableState(page);
+    await findComponent(page, 'layer-2.attention'); await ready(page);
+    await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready(page);
+    await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+    const isolated = await stableState(page);
+    states.push({ overview, exhaustive, isolated });
+  }
+  expect(states[1]).toEqual(states[0]);
+});

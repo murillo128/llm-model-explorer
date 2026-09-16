@@ -15,7 +15,7 @@ export function snapshotView(view: GraphSnapshot, viewport = view.viewport): Gra
     activeStack: view.activeStack, expanded: [...view.expanded],
     repetitions: Object.fromEntries(Object.entries(view.repetitions).map(([id, window]) => [id, { ...window }])),
     exhaustive: view.exhaustive, showUnused: view.showUnused, showContext: view.showContext,
-    deriveMlp: view.deriveMlp, stateScope: view.stateScope, scope: view.scope,
+    deriveMlp: view.deriveMlp, stateScope: view.stateScope, scope: view.scope, shared: view.shared ? { ...view.shared } : undefined,
     viewport: viewport ? { ...viewport } : undefined };
 }
 
@@ -41,7 +41,7 @@ export function backFromComponent(view: GraphView) {
 
 export function returnToModel(view: GraphView) {
   if (view.globalView) view.update(snapshotView(view.globalView));
-  view.scope = undefined; view.history = []; view.globalView = undefined;
+  view.scope = undefined; view.shared = undefined; view.history = []; view.globalView = undefined;
 }
 
 export function expandComponent(view: GraphView, graph: Graph): ProjectionOptions {

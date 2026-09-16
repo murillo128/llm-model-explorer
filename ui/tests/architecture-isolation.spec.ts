@@ -187,3 +187,22 @@ test('layout failure allows retry and Back; queued late results cannot replace a
   await page.evaluate(() => window.isolationProbe.release?.()); await ready(page);
   expect(await state(page)).toEqual(replacement);
 });
+
+test('optional shared-view failures recover to ordinary exploration and reject cancelled layout callbacks', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('templates'); await ready(page);
+  await page.evaluate(() => { window.isolationProbe.reject = true; });
+  await page.getByLabel('Shared structures', { exact: true }).selectOption('shared-full-attention');
+  await expect(page.getByRole('alert')).toContainText('Layout failed');
+  await page.getByRole('button', { name: 'Return to ordinary view', exact: true }).click(); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-template-id', '');
+  await page.evaluate(() => { window.isolationProbe.hold = true; });
+  await page.getByLabel('Shared structures', { exact: true }).selectOption('shared-full-attention');
+  await expect.poll(() => page.evaluate(() => Boolean(window.isolationProbe.release))).toBe(true);
+  await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
+  const ordinary = await state(page);
+  await page.evaluate(() => window.isolationProbe.release?.()); await ready(page);
+  expect(await state(page)).toEqual(ordinary);
+  await findComponent(page, 'layer-2.attention'); await ready(page);
+  await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready(page);
+  await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-2.attention');
+});

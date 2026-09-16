@@ -252,7 +252,7 @@ test.beforeEach(async ({ page }, info) => {
     await info.attach('actual-reference-inventory', { body: JSON.stringify(selected.report), contentType: 'application/json' });
     args = ['-m', 'llm_model_explorer', '--model-root', dirname(selected.directory), '--cache-dir', join(root, 'cache'), '--port', String(port), '--cors-origin', origin];
   } else {
-    execFileSync(python, ['-m', 'acceptance.architecture_fixtures', join(root, 'models')], { cwd: repo });
+    execFileSync(python, ['-m', 'acceptance.architecture_fixtures', join(root, 'models'), ...(family === 'templates' ? ['--templates'] : [])], { cwd: repo });
     modelId = family;
     args = ['-m', 'acceptance.server', '--root', root, '--port', String(port), '--origin', origin];
   }
@@ -631,4 +631,78 @@ test.describe('Extended mounted lifetime without persistent element handles', ()
     expect(samples[7]!.retainedLayouts).toBeLessThanOrEqual(samples[1]!.retainedLayouts);
     expect(samples.at(-1)!.retainedLayouts).toBeLessThanOrEqual(samples[7]!.retainedLayouts);
   });
+});
+
+test('shared structure production [templates] neutral mode, distinct instance weights and cancellation preserve one canvas', async ({ page }, info) => {
+  const graph = await selectGraph(page), canvas = page.getByLabel('Architecture graph', { exact: true });
+  const template = graph.templates!.find((t) => t.component_role === 'attention')!;
+  expect(template.instances).toHaveLength(2);
+  const [first, second] = template.instances;
+  const query = (instance: NonNullable<Graph['templates']>[number]['instances'][number]) => graph.nodes.find((n) =>
+    instance.nodes.some((m) => m.node_id === n.id) && n.attributes.some((a) => a.name === 'semantic_role' && a.value === 'query_projection'))!;
+  const q0 = query(first!), q1 = query(second!);
+  const p0 = graph.parameters.find((p) => p.id === q0.parameter_ids[0])!, p1 = graph.parameters.find((p) => p.id === q1.parameter_ids[0])!;
+  expect(p0.name).toBe('model.layers.0.self_attn.q_proj.weight'); expect(p1.name).toBe('model.layers.1.self_attn.q_proj.weight');
+  await page.getByLabel('Shared structures', { exact: true }).selectOption(template.id);
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  const before = observed.length;
+  await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('No instance selected');
+  await expect(page.getByLabel('Inspect parameter', { exact: true })).toHaveCount(0);
+  expect(observed.slice(before)).toEqual([]);
+  await page.keyboard.press('Escape');
+  await page.getByLabel('Shared structure instance', { exact: true }).selectOption(first!.node_id);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  await page.locator(`.react-flow__node[data-id=${JSON.stringify(q0.id)}] .architecture-info`).click();
+  await page.evaluate(() => { const p = (window as any).__acceptance; p.captureScalars = true; p.scalarValues.length = 0; });
+  await control('arm', { kind: 'logical_tensor' });
+  await page.getByLabel('Inspect parameter', { exact: true }).selectOption(p0.id);
+  await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
+  await expect.poll(async () => (await control('state')).control.entered).toBe(true);
+  await expect.poll(async () => (await metrics(page)).firstRender).toBeGreaterThan(0);
+  expect(await page.evaluate(() => (window as any).__acceptance.scalarValues)).toEqual(Array.from({ length: 144 }, (_, i) => 100 + (i % 29 - 14) / 8));
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const layoutCount = await canvas.getAttribute('data-layout-count');
+  // Drive the same instance-change event with a modal open to exercise its
+  // defensive dismissal/lifetime fence; ordinary pointer use closes the modal first.
+  await page.getByLabel('Shared structure instance', { exact: true }).evaluate((element, id) => {
+    (element as HTMLSelectElement).value = id; element.dispatchEvent(new Event('change', { bubbles: true }));
+  }, second!.node_id);
+  await expect(page.getByRole('dialog')).toHaveCount(0); await released(page);
+  await expect.poll(async () => { const s = await control('state'); return [s.operations, s.readers, s.consumers, s.flights, s.tasks, s.temporary]; }).toEqual([0, 0, 0, 0, 0, 0]);
+  await control('release', {});
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', q1.id);
+  expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+  await page.evaluate(() => { (window as any).__acceptance.scalarValues.length = 0; });
+  await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('Module: model.layers.1.self_attn.q_proj');
+  await page.getByText('Concrete instance interface connections', { exact: true }).click();
+  const memberIds = new Set(second!.nodes.map((n) => n.node_id));
+  const external = graph.edges.filter((e) => memberIds.has(e.source.node_id) !== memberIds.has(e.target.node_id));
+  for (const edge of external) await expect(page.getByRole('dialog')).toContainText(edge.id);
+  await page.getByLabel('Inspect parameter', { exact: true }).selectOption(p1.id);
+  await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
+  await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as any).__acceptance.scalarValues)).toEqual(Array.from({ length: 144 }, (_, i) => 200 + (i % 29 - 14) / 8));
+  for (const parameter of [p0, p1]) {
+    expect(parameter.inspection.status).toBe('available');
+    if (parameter.inspection.status === 'available') {
+      const tensorId = parameter.inspection.tensor_id;
+      expect(observed.some((path) => path.endsWith(`/tensors/${tensorId}/data`))).toBe(true);
+    }
+  }
+  await page.keyboard.press('Escape'); await released(page);
+  const requests = observed.length;
+  const samples = [];
+  for (let cycle = 0; cycle < 8; cycle++) {
+    await page.getByLabel('Shared structure instance', { exact: true }).selectOption(cycle % 2 ? first!.node_id : second!.node_id);
+    samples.push(await graphObservation(page, true));
+  }
+  expect(observed.slice(requests)).toEqual([]);
+  expect(samples.every((sample) => sample.active === 0 && sample.retainedLayouts <= 1 && sample.retainedGraphs <= 2)).toBe(true);
+  expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+  await info.attach('shared-instance-resources', { body: JSON.stringify(samples), contentType: 'application/json' });
+  await recordGraph(page, info, 'shared-instance-weight-cancelled', graph);
 });
