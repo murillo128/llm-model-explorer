@@ -5,6 +5,7 @@ import json
 import os
 import platform
 import re
+import struct
 import time
 from pathlib import Path
 
@@ -209,15 +210,55 @@ def native_samples(directory, name, *, row=None, column=None):
     raise AssertionError("Admitted native tensor missing from checkpoint")
 
 
+def packed_sample(directory, family, name, row, column):
+    """Reuse the independent bounded scalar oracle, never the production decoder."""
+    from backend.scripts.check_quantized_reference import CHECKPOINTS, scalar_reference
+
+    encoding = CHECKPOINTS[family]["encoding"]
+    entry = next(
+        e for e in ModelCatalogue(directory.parent).discover() if e._snapshot.directory == directory
+    )
+    source = entry.pin()
+    physical = {tensor.name: tensor for tensor in source.physical_tensors()}
+    prefix = name.removesuffix(".weight")
+    assert name == prefix + ".weight"
+    suffixes = (
+        ("qweight", "qzeros", "scales", "g_idx")
+        if encoding == "gptq-int4"
+        else ("weight", "weight_scale", "weight_scale_2", "input_scale")
+    )
+    storage = tuple(physical[prefix + "." + suffix] for suffix in suffixes)
+    packed = storage[0]
+    shape = (
+        (packed.shape[1], packed.shape[0] * 8)
+        if encoding == "gptq-int4"
+        else (packed.shape[0], packed.shape[1] * 2)
+    )
+    assert row is not None and column is not None
+    assert 0 <= row < shape[0] and 0 <= column < shape[1]
+    offset = row * shape[1] + column
+    expected, _, _ = scalar_reference(source._snapshot, storage, encoding, shape, offset, 1)
+    return {
+        "shape": list(shape),
+        "samples": [{"offset": offset, "value": struct.unpack("<f", expected)[0]}],
+    }
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("family", choices=REFERENCES)
     parser.add_argument("--tensor")
     parser.add_argument("--row", type=int)
     parser.add_argument("--column", type=int)
+    parser.add_argument("--packed", action="store_true")
     args = parser.parse_args()
     directory, model_id, report = inventory(args.family, selections()[args.family])
     if args.tensor:
-        print(json.dumps(native_samples(directory, args.tensor, row=args.row, column=args.column)))
+        result = (
+            packed_sample(directory, args.family, args.tensor, args.row, args.column)
+            if args.packed
+            else native_samples(directory, args.tensor, row=args.row, column=args.column)
+        )
+        print(json.dumps(result))
     else:
         print(json.dumps({"directory": str(directory), "model_id": model_id, "report": report}))
