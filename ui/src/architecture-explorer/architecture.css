@@ -2,7 +2,8 @@
 
 .architecture-explorer button, .architecture-explorer select { color: var(--ui-text); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 4px; padding: 3px 6px; font-size: 12px; cursor: pointer; }
 .architecture-explorer button:hover { background: var(--ui-accent-soft); }
-.architecture-flow { flex: 1; min-height: 0; min-width: 0; background: var(--ui-surface-soft); }
+.architecture-flow { position: relative; flex: 1; min-height: 0; min-width: 0; background: var(--ui-surface-soft); }
+.architecture-loading { position: absolute; top: 0; left: 8px; z-index: 1; pointer-events: none; }
 .architecture-node { width: 100%; height: 100%; background: var(--ui-surface); border: 1px solid var(--ui-border-strong); border-radius: 6px; position: relative; }
 .architecture-node[data-kind="group"] { background: var(--ui-surface-soft); border-style: dashed; }
 .architecture-node[data-selected="true"] { border-color: var(--ui-accent); box-shadow: inset 0 0 0 1px var(--ui-accent); }

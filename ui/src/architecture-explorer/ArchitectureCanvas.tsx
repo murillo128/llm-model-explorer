@@ -6,6 +6,7 @@ import './architecture.css';
 import type { Graph, GraphNode, GraphView, Layout, PortPosition } from './graph';
 import { requestLayout } from './layout';
 import { useCanvasCallback } from './useCanvasCallback';
+import { useLayoutCamera } from './useLayoutCamera';
 import type { ProjectedNode, ProjectionOptions } from './projection';
 import { connectionSet, endpointKey } from './projection';
 import { deriveMlpGroups } from './derived-groups';
@@ -129,7 +130,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const [retry, setRetry] = useState(0), [zoom, setZoom] = useState(view.viewport?.zoom ?? 1);
   const [panelWidth, setPanelWidth] = useState(1178);
   const panel = useRef<HTMLDivElement>(null), picker = useRef<HTMLButtonElement>(null);
-  const appliedLayout = useRef<Layout | null>(null);
+  const flowContainer = useRef<HTMLDivElement>(null);
+  const savedViewport = useRef(view.viewport);
   const layoutCount = useRef(0), hoverFrame = useRef(0), focusFrame = useRef(0);
   const anchor = useRef<{ id: string; sourceId?: string | undefined; x: number; y: number } | null>(null);
   const centerPending = useRef<string | null>(null), fitPending = useRef(false), initialized = useRef(false);
@@ -332,11 +334,6 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     focusContext(id); fitPending.current = true;
     change({ expanded: [...expanded], exhaustive: false, stateScope: id });
   });
-  const fit = useCanvasCallback(() => {
-    let focusNodes: CanvasNode[] | undefined;
-    if (!options.scope && focusId && boxes.has(focusId)) focusNodes = flow.getNodes().filter((n) => n.id === focusId);
-    void flow.fitView({ ...(focusNodes?.length ? { nodes: focusNodes } : {}), padding: 0.1, minZoom: 0.00001, maxZoom: 1 });
-  });
   useEffect(() => {
     const element = panel.current!;
     const observer = new ResizeObserver(([entry]) => { if (entry) setPanelWidth(entry.contentRect.width); });
@@ -359,28 +356,6 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     });
     return () => controller.abort();
   }, [layoutInput, options, retry, view]);
-  useEffect(() => {
-    if (!result.layout || appliedLayout.current === layoutResult.layout) return;
-    const frame = requestAnimationFrame(() => {
-      const camera = flow.getViewport();
-      const center = centerPending.current && boxes.get(centerPending.current);
-      const substitute = anchor.current?.sourceId && [...projected.values()].find((n) => n.sourceIds.includes(anchor.current!.sourceId!));
-      const at = anchor.current && (boxes.get(anchor.current.id) ?? (substitute ? boxes.get(substitute.id) : undefined));
-      if (restorePending.current) void flow.setViewport(restorePending.current);
-      else if (scopeCameraPending.current) void flow.fitView({ padding: 0.1, minZoom: 0.8, maxZoom: 1 });
-      else if (fitPending.current) fit();
-      else if (center) void flow.setCenter(center.absoluteX + Math.min(center.width / 2, 360), center.absoluteY + Math.min(center.height / 2, 240), { zoom: Math.max(camera.zoom, 0.8) });
-      else if (at && anchor.current) void flow.setViewport({ ...camera, x: anchor.current.x - at.absoluteX * camera.zoom, y: anchor.current.y - at.absoluteY * camera.zoom });
-      else if (!initialized.current) {
-        if (view.viewport) void flow.setViewport(view.viewport);
-        else void flow.fitView({ padding: 0.06, minZoom: 0.65, maxZoom: 1 });
-      }
-      appliedLayout.current = layoutResult.layout!;
-      initialized.current = true; anchor.current = null; centerPending.current = null; fitPending.current = false;
-      restorePending.current = undefined; scopeCameraPending.current = false;
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [result.layout, layoutResult.layout, boxes, flow, projected, view, fit]);
   useEffect(() => () => { cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current); }, []);
   const hover = useCanvasCallback((target: EmphasisTarget | null) => {
     cancelAnimationFrame(hoverFrame.current);
@@ -408,13 +383,39 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const nodes = useMemo<CanvasNode[]>(() => (result.layout?.boxes ?? []).map((box) => {
     const record = projected.get(box.id)!;
     return { id: box.id, type: 'architecture', position: { x: box.x, y: box.y },
-      ...(box.parentId ? { parentId: box.parentId } : {}), width: box.width, height: box.height,
+      ...(box.parentId ? { parentId: box.parentId } : {}), width: box.width, height: box.height, measured: { width: box.width, height: box.height },
       style: { width: box.width, height: box.height, pointerEvents: record.expanded ? 'none' : 'auto' }, zIndex: 200,
       selected: selected === cardSelection(record) || Boolean(selected && !projected.has(selected) && record.sourceIds.includes(selected)),
       data: { record, label: displayLabel(record, graph), subtitle: record.summary?.replaceAll('linear attention', 'linear').replaceAll('full attention', 'full') ?? variants.get(record.id)?.replace(/^Instance \d+ · /, '') ?? record.record?.operation?.replaceAll('_', ' ') ?? record.kind,
         ports: result.layout!.ports.filter((p) => p.nodeId === box.id), diagnostic: diagnosed.has(box.id), toggle, select, activate, inspect,
         navigation: cardNavigation(record, concreteInstance?.node_id ?? options.scope, sharedActive && !concreteInstance), navigate: navigateCard } };
   }), [activate, diagnosed, graph, inspect, projected, result.layout, selected, toggle, variants, select, options.scope, sharedActive, concreteInstance, navigateCard]);
+  const cameraState = useLayoutCamera(layoutResult.layout, options,
+    result.options === options && result.input === layoutInput.graph && !result.error, nodes, flowContainer, flow, async (fitLayout) => {
+      const camera = flow.getViewport();
+      const center = centerPending.current && boxes.get(centerPending.current);
+      const substitute = anchor.current?.sourceId && [...projected.values()].find((n) => n.sourceIds.includes(anchor.current!.sourceId!));
+      const at = anchor.current && (boxes.get(anchor.current.id) ?? (substitute ? boxes.get(substitute.id) : undefined));
+      if (restorePending.current) await flow.setViewport(restorePending.current);
+      else if (scopeCameraPending.current) await fitLayout({ padding: 0.1, minZoom: 0.8, maxZoom: 1 });
+      else if (fitPending.current) await fitLayout({ padding: 0.1, minZoom: 0.00001, maxZoom: 1,
+        ...(!options.scope && focusId && boxes.has(focusId) ? { nodes: flow.getNodes().filter((node) => node.id === focusId) } : {}) });
+      else if (center) await flow.setCenter(center.absoluteX + Math.min(center.width / 2, 360), center.absoluteY + Math.min(center.height / 2, 240), { zoom: Math.max(camera.zoom, 0.8) });
+      else if (at && anchor.current) await flow.setViewport({ ...camera, x: anchor.current.x - at.absoluteX * camera.zoom, y: anchor.current.y - at.absoluteY * camera.zoom });
+      else if (!initialized.current) {
+        if (savedViewport.current) await flow.setViewport(savedViewport.current);
+        else await fitLayout({ padding: 0.06, minZoom: 0.65, maxZoom: 1 });
+      }
+    }, () => {
+      initialized.current = true; anchor.current = null; centerPending.current = null; fitPending.current = false;
+      restorePending.current = undefined; scopeCameraPending.current = false;
+    });
+  const fit = useCanvasCallback(() => {
+    cameraState.cancel();
+    let focusNodes: CanvasNode[] | undefined;
+    if (!options.scope && focusId && boxes.has(focusId)) focusNodes = flow.getNodes().filter((n) => n.id === focusId);
+    void flow.fitView({ ...(focusNodes?.length ? { nodes: focusNodes } : {}), padding: 0.1, minZoom: 0.00001, maxZoom: 1 });
+  });
   const edges = useMemo<ConnectionEdge[]>(() => (result.layout?.projection.edges ?? []).map((edge) => ({
     id: edge.id, source: edge.source.node_id, target: edge.target.node_id, sourceHandle: `source:${edge.source.port_id}`,
     targetHandle: `target:${edge.target.port_id}`, type: 'connection', focusable: false, selectable: false,
@@ -485,7 +486,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   return <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
     data-template-id={shared?.templateId ?? ''} data-template-instance-id={shared?.instanceId ?? ''}
     data-scope-id={concreteInstance?.node_id ?? options.scope ?? ''} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
-    data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options}
+    data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options || !result.error && !cameraState.ready}
     data-source-node-ids={JSON.stringify(sourceNodeIds)} data-represented-edge-ids={JSON.stringify(result.layout?.edgeIds ?? [])}>
     {notice && <p role="status">{notice}</p>}
     <ArchitectureControls shared={shared && template ? { template, instanceId: shared.instanceId, choose: chooseSharedInstance } : undefined}
@@ -510,15 +511,17 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
           view.update({ dimensions: patch.dimensions }); setDimensions(patch.dimensions);
         }
         change(patch);
-      }} zoomIn={() => { void flow.zoomIn(); }} zoomOut={() => { void flow.zoomOut(); }}
+      }} zoomIn={() => { cameraState.cancel(); void flow.zoomIn(); }} zoomOut={() => { cameraState.cancel(); void flow.zoomOut(); }}
       filtered={!options.exhaustive && !options.showUnused && !!result.layout?.projection.filteredEdgeIds.length} />
     {result.error && <div role="alert">{result.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button>{shared && <button onClick={back}>Return to ordinary view</button>}</div>}
-    {!result.layout && !result.error && <p role="status">Laying out architecture…</p>}
-    <div className="architecture-flow">
+    {cameraState.error && <div role="alert">{cameraState.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button></div>}
+    <div className="architecture-flow" ref={flowContainer}>
+      {!result.layout && !result.error && <p className="architecture-loading" role="status">Laying out architecture…</p>}
       <ConnectionContext.Provider value={interaction}>
         <ReactFlow<CanvasNode, ConnectionEdge> nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onlyRenderVisibleElements
           zIndexMode="manual" nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
           minZoom={0.00001} maxZoom={4} defaultViewport={view.viewport ?? { x: 0, y: 0, zoom: 1 }} panOnDrag zoomOnScroll
+          onMoveStart={(event) => { if (event) cameraState.cancel(); }}
           onViewportChange={(viewport) => setZoom(viewport.zoom)} onMoveEnd={(_, viewport) => view.update({ viewport })}
           onNodeClick={(event, node) => { event.stopPropagation(); select(cardSelection(node.data.record)); }}
           onNodeDoubleClick={(event, node) => { event.stopPropagation(); activate(node.data.record, event.currentTarget as HTMLElement); }}

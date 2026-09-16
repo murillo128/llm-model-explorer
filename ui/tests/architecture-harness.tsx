@@ -31,11 +31,11 @@ function fixture(name: string) {
 
 function Harness() {
   const [views] = useState(() => new GraphViews());
-  const [name, setName] = useState('contract');
+  const [name, setName] = useState(() => new URLSearchParams(location.search).get('fixture') ?? 'contract');
   const [shown, setShown] = useState(true);
   const [inspection, setInspection] = useState('');
   const [response, setResponse] = useState(() => {
-    const response = structuredClone(contractResponse);
+    const response = structuredClone(fixture(name));
     if (location.search.includes('inert')) {
       response.graph.nodes[1]!.label = '<img src=x onerror=alert(1)>';
       response.graph.nodes.find((node) => node.id === 'linear0')!.ports.find((port) => port.id === 'out')!.shape =

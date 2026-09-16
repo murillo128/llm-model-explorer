@@ -42,3 +42,7 @@ UI_TEST_PORT=46360 npm run test:browser -- --project=desktop --project=narrow \
 Browser reports additionally attach all three screenshots for each viewport
 (1440 × 900 and 390 × 844) and the exact target IDs. Only the compact desktop
 screenshots are retained here; generated reports/traces stay outside Git.
+
+The subsequent [camera initialization repair](initialization.md) records the
+causal before/after evidence and deterministic lifecycle regressions required
+by the issue's accepted design repair.
