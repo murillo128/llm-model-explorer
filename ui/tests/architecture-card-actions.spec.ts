@@ -24,8 +24,8 @@ async function state(page: Page) {
 }
 async function selectOnly(page: Page, id: string) {
   const before = await state(page), node = card(page, id);
-  for (const target of ['.architecture-node-label', '.architecture-node-type']) {
-    await node.locator(target).click();
+  for (const target of ['.architecture-node-label', '.architecture-node-heading']) {
+    await node.locator(target).click(target === '.architecture-node-heading' ? { position: { x: 2, y: (await node.locator(target).boundingBox())!.height - 2 } } : {});
     await expect(node.locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
     await expect(page.locator('.architecture-node[data-selected="true"]')).toHaveCount(1);
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -65,13 +65,13 @@ test('real double-clicks toggle once, preserve zoom and leave leaf inspection ex
   await expect(page.locator('output')).toBeEmpty();
   await findComponent(page, 'layer1'); await ready(page);
   const collapsed = await state(page);
-  await card(page, 'layer1').locator('.architecture-node-type').dblclick(); await ready(page);
+  await card(page, 'layer1').locator('.architecture-node-heading').dblclick({ position: { x: 2, y: (await card(page, 'layer1').locator('.architecture-node-heading').boundingBox())!.height - 2 } }); await ready(page);
   await expect(card(page, 'layer1').locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
   const expanded = await state(page);
   expect(Number(expanded.count)).toBe(Number(collapsed.count) + 1);
   expect(expanded.camera?.match(/scale\(([^)]+)\)/)?.[1]).toBe(collapsed.camera?.match(/scale\(([^)]+)\)/)?.[1]);
   await expect(page.locator('output')).toBeEmpty();
-  await card(page, 'linear1').locator('.architecture-node-type').dblclick(); await ready(page);
+  await card(page, 'linear1').locator('.architecture-node-heading').dblclick({ position: { x: 2, y: (await card(page, 'linear1').locator('.architecture-node-heading').boundingBox())!.height - 2 } }); await ready(page);
   expect(await state(page)).toEqual(expanded);
   await card(page, 'layer1').locator('.architecture-node-label').dblclick(); await ready(page);
   await expect(card(page, 'layer1').locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'false');
@@ -124,7 +124,7 @@ test('empty groups have no toggle, remain selectable and inspect only explicitly
   await expect(empty.locator('.architecture-expand')).toHaveCount(0);
   await selectOnly(page, 'empty');
   await empty.locator('.architecture-node-label').dblclick();
-  await empty.locator('.architecture-node-type').dblclick();
+  await empty.locator('.architecture-node-heading').dblclick({ position: { x: 2, y: (await empty.locator('.architecture-node-heading').boundingBox())!.height - 2 } });
   await empty.locator('.architecture-node-label').focus();
   await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowLeft');
   expect(await state(page)).toEqual(before);
@@ -241,6 +241,7 @@ test('nested derived double-click contracts after expansion and shared structure
   await page.keyboard.press('Escape');
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('templates'); await ready(page);
   await page.getByLabel('Shared structures', { exact: true }).selectOption('shared-full-attention'); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   const controls = page.locator('.architecture-navigate');
   for (const control of await controls.all()) {
     await expect(control).toHaveAttribute('aria-disabled', 'true');

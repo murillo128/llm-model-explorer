@@ -2,6 +2,7 @@ import { layoutGraph } from './auto-layout';
 import { describe, expect, it } from 'vitest';
 import { makeProjectionFixture } from '../../tests/architecture-projection-fixture';
 import { makeExplicitFixture } from '../../tests/architecture-explicit-fixture';
+import { summaryFixture } from '../../tests/architecture-summary-fixture';
 import { groupHeaderHeight, layerGap } from './auto-layout';
 import { deriveMlpGroups } from './derived-groups';
 import type { Box, Graph, Layout, Point } from './graph';
@@ -116,6 +117,25 @@ function layerStages(layout: Layout, graph: Graph, id: string) {
 }
 
 describe('generated horizontal graph geometry', () => {
+  it.each([false, true])('reserves group-owned summary space above children and boundary ports (dimensions=%s)', async (dimensions) => {
+    const graph = summaryFixture(), group = graph.nodes[0]!;
+    group.parameter_ids = ['norm-weight'];
+    group.formula = 'Explicitly supplied group signature';
+    group.ports = [{ id: 'x', label: 'x', direction: 'input', shape: null }, { id: 'out', label: 'out', direction: 'output', shape: null }];
+    graph.edges.push(
+      { id: 'enter', source: { node_id: 'block', port_id: 'x' }, target: { node_id: 'norm', port_id: 'x' }, kind: 'data', provenance: [] },
+      { id: 'leave', source: { node_id: 'linear', port_id: 'out' }, target: { node_id: 'block', port_id: 'out' }, kind: 'data', provenance: [] });
+    const layout = await layoutGraph(graph, { expanded: ['block'], dimensions, showUnused: true });
+    const parent = box(layout, 'block');
+    // Title + formula + a port row + one owned tensor row, with extra shape lines.
+    const contentBottom = dimensions ? 164 : 132;
+    for (const id of ['norm', 'linear']) {
+      expect(box(layout, id).y).toBeGreaterThan(contentBottom);
+      expect(box(layout, id).absoluteY + box(layout, id).height).toBeLessThan(parent.absoluteY + parent.height);
+    }
+    for (const port of layout.ports.filter((p) => p.nodeId === 'block')) expect(port.y).toBeGreaterThan(contentBottom);
+    horizontal(layout, ['norm', 'linear']); geometry(layout);
+  });
   it('isolates the same component geometry regardless of surrounding model size', async () => {
     const small = makeExplicitFixture({ count: 4 }), large = makeExplicitFixture({ count: 48 });
     for (const scope of ['layer-3.attention', 'layer-3.mlp', 'layer-3.attention.core']) {

@@ -57,7 +57,7 @@ function SessionArchitectureExplorer(props: Props) {
     <ArchitectureCanvas key={JSON.stringify([session.id, response.model_id, response.graph.graph_id])} graph={response.graph}
       modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspected(null)} onInspect={(value) => { setInspected(value); onInspect?.(value); }} />
     {inspected && result.inventory && inspected.sessionId === session.id && inspected.modelId === response.model_id && inspected.graphId === response.graph.graph_id &&
-      <ArchitectureInspection key={JSON.stringify([inspected.sessionId, inspected.graphId, inspected.node.id, Boolean(inspected.structureOnly)])} context={props}
+      <ArchitectureInspection key={JSON.stringify([inspected.sessionId, inspected.graphId, inspected.node.id, inspected.parameterId, Boolean(inspected.structureOnly)])} context={props}
         graph={response.graph} diagnostics={response.diagnostics} inventory={result.inventory} selected={inspected} onClose={() => setInspected(null)} />}
   </>;
 }

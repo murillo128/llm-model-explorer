@@ -134,12 +134,16 @@ test('exact source and destination dots, fan-out branches and line middles highl
   await emphasized(page, fanout);
   await unchanged(page, before);
   await capture(page, info, 'source-dot-fanout');
-  await hoverLine(page, fanout[1]!); await emphasized(page, [fanout[1]!]);
+  // Card sizes can move shared-trunk breakpoints. Sample a genuinely exclusive
+  // branch from SVG geometry, rather than treating the owning path as exclusive.
+  const keyBranch = await fanoutPoint(page, fanout, [fanout[1]!]);
+  await page.mouse.move(keyBranch.x, keyBranch.y); await emphasized(page, [fanout[1]!]);
   await unchanged(page, before);
   await capture(page, info, 'line-hover-complete-forwarding');
   await hoverDot(port(page, 'layer-3.attention.K', 'x')); await emphasized(page, [fanout[1]!]);
   // A neighboring source branch remains individually targetable.
-  await hoverLine(page, fanout[2]!); await emphasized(page, [fanout[2]!]);
+  const valueBranch = await fanoutPoint(page, fanout, [fanout[2]!]);
+  await page.mouse.move(valueBranch.x, valueBranch.y); await emphasized(page, [fanout[2]!]);
   await page.mouse.move(0, 0); await emphasized(page, []);
   await unchanged(page, before);
 });
