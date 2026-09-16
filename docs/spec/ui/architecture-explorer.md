@@ -209,7 +209,33 @@ Hover/focus emphasis is temporary and uses the existing warm amber interaction s
 
 ## Simple modal inspection and resource navigation
 
-Clicking/keyboard-activating an inspectable node opens one closable modal with its identity, function, known dimensions, provenance/diagnostics, and parameter choices. Group expansion remains a distinct simple affordance. No permanent inspector column, compulsory page transition, or nested modal stack is required.
+A single mouse click on a card label or ordinary body selects only, including
+presentation-backed cards. It does not inspect, expand, navigate, change focus,
+invoke layout/retrieval, or move the camera. Double-click expands a collapsed
+expandable card using the same action as `+`; otherwise it inspects. Double-click
+never collapses, and its preceding clicks may only select. Card double-clicks
+must not zoom the canvas. Background pan/zoom remains unchanged.
+
+Independent header controls are ordered `+/-` (when expandable), navigation,
+then `(i)`. The navigation control shows four outward diagonal arrows for
+**Explore component** in Model view and four inward diagonal arrows for
+**View in model** during isolation. It uses the existing navigation path with
+the pressed card's exact source or supported derived-MLP target, independently
+of prior selection. Returning a nested concrete child reveals, selects and
+centers that child. Synthetic repetition ranges, context/boundary aliases and
+other cards without an existing target show an unavailable control with an
+accessible explanation. Structure-only shared views require a concrete instance
+before returning to the model. Controls have English target-specific names and
+tooltips, visible focus and independent click/double-click hit behavior. Ports,
+connections and expanded-group children retain their own targets.
+
+Explicit `(i)` and keyboard inspection open one closable modal with identity,
+function, known dimensions, provenance/diagnostics, and parameter choices.
+Keyboard selection, ArrowLeft/ArrowRight expansion, and explicit inspection and
+navigation controls remain available without double-clicking. Group collapse
+remains available through `−` and explicit keyboard/toolbar controls. No
+permanent inspector column, compulsory page transition, or nested modal stack
+is required.
 
 For an available logical rank-1/rank-2 weight, compose the existing Matrix Explorer with the existing logical tensor endpoints and progressive subscriptions. The backend may provide native or admitted decoded weights; the UI performs no quantization decoding. Show its authoritative statistics/profiles when supported, preserving their independent arrival. Camera, readout, scalar-value fidelity, and resource lifetime remain owned by [matrix composition](architecture.md#matrix-explorer-composition), [rendering](rendering.md), and [Tensor Explorer](tensor-explorer.md). The graph's outer CSS/camera transform must not rescale this scientific surface. In particular, do not roll back the accepted Matrix Explorer zoom/navigation to implement graph inspection.
 

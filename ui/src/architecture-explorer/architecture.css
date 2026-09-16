@@ -9,7 +9,9 @@
 .architecture-node-heading { height: 42px; display: flex; align-items: start; gap: 2px; padding: 4px; max-width: 300px; }
 .architecture-node-label { flex: 1; min-width: 0; overflow: hidden; text-align: left; font-weight: 600; line-height: 16px; max-height: 38px; }
 .architecture-node .architecture-node-label { border: none; background: transparent; padding: 2px; font-size: 13px; }
-.architecture-node .architecture-expand, .architecture-node .architecture-info { flex-shrink: 0; padding: 1px 3px; border-color: transparent; background: transparent; }
+.architecture-node .architecture-expand, .architecture-node .architecture-info, .architecture-node .architecture-navigate { flex-shrink: 0; padding: 1px 3px; border-color: transparent; background: transparent; }
+.architecture-node .architecture-navigate { display: inline-flex; align-items: center; min-height: 20px; }
+.architecture-node .architecture-navigate[aria-disabled="true"] { opacity: 0.45; cursor: default; }
 .architecture-node-type { font-size: 11px; color: var(--ui-text-muted); padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .architecture-port-label { position: absolute; font: 10px/16px ui-monospace, monospace; max-width: 43%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
 .architecture-explorer .react-flow__edge-text { font: 11px ui-monospace, monospace; }
@@ -35,7 +37,7 @@
 .architecture-node[data-expanded="true"] > .architecture-node-type { max-width: 300px; }
 .architecture-explorer .react-flow__node:has(.architecture-node[data-expanded="true"]) { pointer-events: none; }
 .architecture-node[data-expanded="true"] { background: transparent; pointer-events: none; }
-.architecture-node[data-expanded="true"] .architecture-node-heading, .architecture-node[data-expanded="true"] .architecture-port { pointer-events: auto; }
+.architecture-node[data-expanded="true"] .architecture-node-heading, .architecture-node[data-expanded="true"] > .architecture-node-type, .architecture-node[data-expanded="true"] .architecture-port { pointer-events: auto; }
 .architecture-explorer .architecture-port { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: transparent; border-radius: 50%; display: grid; place-items: center; z-index: 6; }
 .architecture-port-dot { width: 7px; height: 7px; border: 1px solid var(--ui-text-muted); border-radius: 50%; background: var(--ui-surface); box-sizing: border-box; pointer-events: none; }
 .architecture-explorer .architecture-port:hover { background: transparent; }

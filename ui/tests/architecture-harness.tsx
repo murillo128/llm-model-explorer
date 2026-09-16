@@ -46,7 +46,7 @@ function Harness() {
   return <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
     <div><select aria-label="Fixture" value={name} onChange={(e) => { setName(e.target.value); setResponse(fixture(e.target.value)); }}>
       {['contract', 'templates', 'templates-absent', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'components', 'components-large', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
-    </select><button onClick={() => setShown(!shown)}>Toggle explorer</button><output>{inspection}</output></div>
+    </select><button onClick={() => setShown(!shown)}>Toggle explorer</button><output style={{ display: 'block', height: 20, overflow: 'hidden' }}>{inspection}</output></div>
     <div contentEditable suppressContentEditableWarning aria-label="Untransformed prompt">Prompt remains outside graph camera</div>
     {shown && <ArchitectureCanvas key={name} graph={response.graph} modelId={response.model_id} sessionId="fixture-session"
       view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspection('')} onInspect={(selection) => setInspection(selection.structureOnly ? `Structure only: ${selection.structureOnly.role}` : `${selection.graphId}: ${selection.node.id}`)} />}

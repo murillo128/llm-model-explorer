@@ -71,15 +71,31 @@ async function openParameter(page: Page, graph: Graph, parameter: Graph['paramet
   const node = graph.nodes.find((n) => n.parameter_ids.includes(parameter.id))!;
   await findComponent(page, node.id);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  const card = page.locator(`.react-flow__node[data-id=${JSON.stringify(node.id)}]`);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const layoutCount = await canvas.getAttribute('data-layout-count'), scope = await canvas.getAttribute('data-scope-id');
+  const beforeSelection = observed.length;
+  for (const target of ['.architecture-node-label', '.architecture-node-type']) {
+    await card.locator(target).click();
+    await expect(card.locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
+    expect(await canvas.getAttribute('data-scope-id')).toBe(scope);
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+  }
+  expect(observed.slice(beforeSelection)).toEqual([]);
   if (isolated && await page.getByLabel('Architecture graph', { exact: true }).getAttribute('data-scope-id') !== node.id) {
     const requests = observed.length;
-    await page.getByRole('button', { name: 'Explore component', exact: true }).click();
+    await card.locator('.architecture-navigate').click();
     await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-scope-id', node.id);
     await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
     expect(observed.slice(requests)).toEqual([]);
   }
-  await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+  const trigger = card.locator('.architecture-node-label');
+  await trigger.dblclick();
   await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
+  return trigger;
 }
 async function released(page: Page) {
   await expect.poll(async () => { const m = await metrics(page); return [m.textures, m.readers]; }).toEqual([0, 0]);
@@ -330,7 +346,7 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     const parameter = graph.parameters.find((p) => p.binding === 'native' && p.inspection.status === 'available' && p.logical_shape?.length === 1 && p.name.includes('.1.'))!;
     expect(parameter).toBeTruthy();
     await page.evaluate(() => { (window as any).__acceptance.captureScalars = true; });
-    await openParameter(page, graph, parameter, true);
+    const parameterTrigger = await openParameter(page, graph, parameter, true);
     await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
     await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
     expect(observed.some((p) => p.includes(`/tensors/${parameter.inspection.status === 'available' ? parameter.inspection.tensor_id : ''}/data`))).toBe(true);
@@ -343,7 +359,7 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     }
     const camera = await page.locator('.react-flow__viewport').getAttribute('style');
     await page.keyboard.press('Escape'); await released(page);
-    await expect(page.getByRole('button', { name: 'Inspect selected', exact: true })).toBeFocused();
+    await expect(parameterTrigger).toBeFocused();
     expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
     await page.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(canvas).toHaveAttribute('aria-busy', 'false');

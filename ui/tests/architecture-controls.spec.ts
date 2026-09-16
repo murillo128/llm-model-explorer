@@ -155,7 +155,7 @@ test('breadcrumbs, first/last and mixed variants preserve two independent stack 
   await expect(page.getByRole('button', { name: 'Explore stack Encoder layers', exact: true })).toBeVisible();
 });
 
-for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack canvas MLP ${activation} activation keeps focus and instance controls consistent`, async ({ page }) => {
+for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack canvas MLP ${activation} navigation keeps focus and instance controls consistent`, async ({ page }) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('mixed-stacks'); await ready(page);
   await findComponent(page, 'encoder.layer-3.gate'); await ready(page);
   await findComponent(page, 'predictor.layer-1.attention.Q'); await ready(page);
@@ -175,8 +175,12 @@ for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack can
   }, panel);
   for (let i = 0; i < 16 && !await inView(); i++) { await graphAction(page, 'Zoom graph out'); await ready(page); }
   expect(await inView()).toBe(true);
-  if (activation === 'pointer') await mlp.click();
-  else { await mlp.focus(); await page.keyboard.press('Enter'); }
+  const navigation = page.locator('[data-id="mlp:encoder.layer-3.gate"] .architecture-navigate');
+  if (activation === 'pointer') await navigation.click();
+  else { await navigation.focus(); await page.keyboard.press('Enter'); }
+  await ready(page);
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-scope-id', 'mlp:encoder.layer-3.gate');
+  await page.getByRole('button', { name: 'View in model', exact: true }).click();
   await ready(page);
   const crumb = page.getByRole('navigation', { name: 'Architecture focus' });
   await expect(crumb).toContainText('Encoder layers');
@@ -189,8 +193,8 @@ for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack can
   await expect(page.getByRole('button', { name: 'Previous instance of Encoder layers', exact: true })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Next instance of Encoder layers', exact: true })).toBeEnabled();
   await expect(page.locator('.architecture-visible-range')).toHaveText('Visible 3');
-  // Canvas navigation changes focus, independently of the selected source node.
-  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'predictor.layer-1.attention.Q');
+  // Explicit card navigation replaces the previously selected other-stack node.
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'mlp:encoder.layer-3.gate');
   const after = await snapshot(page);
   expect(after.requests.at(-1)!.graph).toEqual(before.requests.at(-1)!.graph);
   expect(after.requests.at(-1)!.options.repetitions).toEqual(windows);
