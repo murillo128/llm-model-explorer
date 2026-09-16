@@ -152,6 +152,7 @@ class ComponentTemplates:
             overhead = serialized_size(template.document(), builder.byte_limit) - sum(
                 serialized_size(i.document(), builder.byte_limit) + 1 for i in instances
             )
+            overhead += int(bool(templates))  # Comma between complete template records.
             if overhead > remaining:
                 omitted = True
                 continue

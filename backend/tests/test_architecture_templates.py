@@ -163,3 +163,22 @@ def test_singletons_remain_ordinary_components() -> None:
     graph = build(inputs, registry).finish()
     assert graph.templates is None
     assert graph.coverage == "complete"
+
+
+def test_multiple_template_array_separator_budget_boundaries() -> None:
+    _, inputs, registry = cases()[0]
+    complete = build(inputs, registry).finish()
+    assert len(complete.templates or []) == 2
+    full_size = serialized_size(complete.document())
+    # Independent serialization counts the enclosing array's separators too.
+    # At every boundary an ordinary graph must remain usable and within budget.
+    for limit in range(full_size - 4, full_size + 2):
+        builder = build(inputs, registry)
+        builder.byte_limit = limit
+        actual = builder.finish()
+        assert actual.coverage == complete.coverage
+        assert actual.nodes == complete.nodes and actual.edges == complete.edges
+        assert actual.parameters == complete.parameters
+        assert serialized_size(actual.document()) <= limit
+        if limit >= full_size:
+            assert actual.templates == complete.templates

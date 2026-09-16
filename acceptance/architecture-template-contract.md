@@ -32,3 +32,11 @@ Validation on Python 3.12.14 and Node 24.14.0:
 These are fixture/static checks. They do not claim actual-checkpoint numerical
 or browser acceptance. Full backend and subsequent integration results are
 recorded in the PR/check evidence; no model/cache payloads are committed.
+
+The full backend suite at the initial checkpoint passed 1,369 tests with 20
+CUDA-only skips. Fresh intermediate review of `3cf123f03fa09c54f281ee72400d439bb1408d88`
+found one material boundary defect: separators between optional template records
+were undercharged. The correction charges those separators and checks six byte
+limits around the complete two-template size, including one byte below it; source
+records and coverage remain intact. All 16 producer-template tests pass after the
+correction. No UI navigation was integrated before this review.
