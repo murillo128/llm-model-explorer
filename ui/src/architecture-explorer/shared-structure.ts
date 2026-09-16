@@ -88,7 +88,7 @@ export function enterSharedStructure(view: GraphView, template: Template,
   const previous = snapshotView(view, viewport);
   if (!view.scope) view.globalView = previous;
   view.history = [...view.history, previous].slice(-16);
-  view.update({ shared: { templateId: template.id, anchorId: anchor.node_id, instanceId },
+  view.update({ selectionMode: instanceId ? 'source' : 'structure', shared: { templateId: template.id, anchorId: anchor.node_id, instanceId },
     scope: anchor.node_id, expanded: anchor.nodes.map((m) => m.node_id), repetitions: {},
     selected: instanceId && anchor.nodes.some((n) => n.node_id === view.selected) ? view.selected : anchor.node_id,
     edge: null, focus: anchor.node_id, activeStack: null, exhaustive: false, deriveMlp: false, showUnused: true,
