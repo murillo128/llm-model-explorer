@@ -1,6 +1,7 @@
 import type { Graph, GraphNode, GraphView } from './graph';
 import { displayLabel } from './presentation';
 import { remapNode } from './shared-structure';
+import { componentScope } from './scope';
 
 export function componentLabel(node: GraphNode, graph: Graph) {
   return displayLabel({ id: node.id, kind: node.kind, label: node.label, record: node, sourceIds: [node.id], ports: [], expanded: false }, graph);
@@ -37,4 +38,18 @@ export function browserExpansionId(graph: Graph, view: GraphView, id: string) {
   const anchor = template?.instances.find((i) => i.node_id === view.shared?.anchorId);
   const concrete = template?.instances.find((i) => i.node_id === view.shared?.instanceId);
   return anchor && concrete ? remapNode(id, concrete, anchor) ?? id : id;
+}
+
+/** Render predicates must not retain a Canvas render's obsolete layout context. */
+export function browserPredicates(graph: Graph, view: GraphView) {
+  const members = view.scope ? componentScope(graph, view.scope).members : undefined;
+  const instance = graph.templates?.find((family) => family.id === view.shared?.templateId)
+    ?.instances.find((item) => item.node_id === view.shared?.instanceId);
+  const instanceIds = new Set(instance?.nodes.map((node) => node.node_id));
+  const inside = (id: string) => !view.scope || (view.shared ? instanceIds.has(id) : members?.has(id) || view.scope === id);
+  const expanded = (id: string) => {
+    const state = inside(id) ? view : view.globalView ?? view;
+    return state.exhaustive || state.expanded.includes(browserExpansionId(graph, view, id));
+  };
+  return { inside, expanded };
 }

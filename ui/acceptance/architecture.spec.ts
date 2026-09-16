@@ -729,9 +729,9 @@ test('shared structure production [templates] neutral mode, distinct instance we
     samples.push(await graphObservation(page, true));
   }
   expect(observed.slice(requests)).toEqual([]);
+  await info.attach('shared-instance-resources', { body: JSON.stringify(samples), contentType: 'application/json' });
   expect(samples.every((sample) => sample.active === 0 && sample.retainedLayouts <= 1 && sample.retainedGraphs <= 2)).toBe(true);
   expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
-  await info.attach('shared-instance-resources', { body: JSON.stringify(samples), contentType: 'application/json' });
   await recordGraph(page, info, 'shared-instance-weight-cancelled', graph);
 });

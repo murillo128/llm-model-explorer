@@ -29,13 +29,24 @@ test files. No model download or GPU was required.
 | `npm run check` | Passed: generated API bindings, typecheck, lint, 43 unit-test files / 985 tests, production build |
 | Complete Architecture Explorer and Tensor inventory browser suite, narrow | 76 passed |
 | Desktop camera, family, repetition, shared-instance and isolation revalidation | Passed |
+| Final focused browser interaction suite, desktop and narrow | 16 passed |
 | Built UI + real backend, four architecture fixtures and cancellation/shared-instance scenarios, DPR 1 and 2 | 12 passed |
+| Follow-up built-shell safety at 390/1178/1440 pixels and shared-instance lifetime checks, DPR 1 and 2 | 8 passed |
 
 The PR's UI check supplies complete desktop and native-scrollbar regression
 coverage on the published commit; its application check runs the integrated
 product gates. Both must pass on the current commit before the review-ready
 handoff. The local narrow run also verifies the complete synthetic graphs for
 SmolLM2, Qwen3, Qwen3.5 and V-JEPA2, independent of checkpoint acceptance.
+
+The production lifetime check performs eight concrete-instance switches after
+weight inspection/cancellation. Each final sample has zero active workers, two
+total worker/layout invocations, two retained source graphs and one retained
+layout; switching leaves layout count and camera unchanged and sends no requests.
+Heap diagnosis identified stale Canvas closures in detached toolbar props and
+the worker effect's cleanup. Toolbar/browser event proxies and the separately
+scoped worker hook release those references without relaxing the memory bound.
+Temporary heap instrumentation and snapshots are not repository artifacts.
 
 ## Reproduction
 
@@ -56,6 +67,9 @@ SwiftShader, and local synthetic model fixtures:
 UI_TEST_PORT=4340 xvfb-run -a npm run test:acceptance -- architecture.spec.ts \
   --project dpr1 --project dpr2 \
   --grep 'deterministic production.*full graph|close during progressive|shared structure production'
+UI_TEST_PORT=4350 xvfb-run -a npm run test:acceptance -- \
+  --project dpr1 --project dpr2 \
+  --grep 'architecture safety baseline|shared structure production'
 ```
 
 On this host Xvfb requires the Mesa EGL vendor selection:

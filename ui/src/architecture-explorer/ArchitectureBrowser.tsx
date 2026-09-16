@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import type { KeyboardEvent, RefObject } from 'react';
 import type { Graph, GraphView } from './graph';
-import { browserIndex } from './browser-model';
+import { browserIndex, browserPredicates } from './browser-model';
 
 function BrowserIcon({ kind }: { kind: 'component' | 'block' | 'family' }) {
   return <svg data-icon={kind} aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
@@ -12,10 +12,11 @@ function BrowserIcon({ kind }: { kind: 'component' | 'block' | 'family' }) {
 }
 interface Props {
   graph: Graph; view: GraphView; searchRef: RefObject<HTMLInputElement | null>;
-  select: (id: string) => void; selectFamily: (id: string) => void; toggle: (id: string) => void; expanded: (id: string) => boolean;
-  inside: (id: string) => boolean; exploreStack: (id: string) => void;
+  select: (id: string) => void; selectFamily: (id: string) => void; toggle: (id: string) => void;
+  exploreStack: (id: string) => void;
 }
-export function ArchitectureBrowser({ graph, view, searchRef, select, selectFamily, toggle, expanded, inside, exploreStack }: Props) {
+export function ArchitectureBrowser({ graph, view, searchRef, select, selectFamily, toggle, exploreStack }: Props) {
+  const { inside, expanded } = browserPredicates(graph, view);
   const entries = useMemo(() => browserIndex(graph), [graph]);
   const byId = useMemo(() => new Map(entries.map((entry) => [entry.node.id, entry])), [entries]);
   const scroll = useRef<HTMLDivElement>(null);

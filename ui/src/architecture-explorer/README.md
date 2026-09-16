@@ -35,6 +35,13 @@ snapshots in `scope-navigation.ts`; it contains neither subscriptions nor graph
 copies. Consumers should use the shared commands and `view.update`, rather than
 maintaining their own expansion maps.
 
+Browser and toolbar actions use `useCanvasCallback` proxies. Render-time
+scope/expansion predicates live in `browser-model.ts`. Keeping Canvas render
+closures in browser rows or detached control props can retain an obsolete layout
+after its worker has ended; the proxies retain only the current handler.
+`useLayoutRequest` owns the worker effect in a separate closure, so its cleanup
+also cannot retain the Canvas layout that preceded the request.
+
 Every modal and weight choice has a child `Lifetime`. Closing, replacing a weight,
 or disposing the session cancels only its own numeric handles; Matrix Explorer
 unsubscription releases the viewport's retained CPU/GPU resources. Existing

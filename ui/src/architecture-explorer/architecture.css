@@ -83,7 +83,7 @@
 
 /* Controls own their disclosures and overflow; the canvas geometry is independent. */
 .architecture-controls { flex-shrink: 0; min-width: 0; max-height: 45%; overflow: auto; }
-.architecture-toolbar { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 5px 8px; overflow-x: auto; }
+.architecture-toolbar { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 8px 5px; overflow-x: auto; }
 .architecture-toolbar > button { flex-shrink: 0; min-height: 28px; }
 .architecture-breadcrumbs { display: flex; align-items: center; flex: 1; min-width: 100px; overflow-x: auto; white-space: nowrap; }
 .architecture-breadcrumbs > span { display: flex; align-items: center; gap: 2px; color: var(--ui-text-muted); }
@@ -98,6 +98,7 @@
 .architecture-instance-picker select { max-width: 240px; }
 .architecture-selection { display: flex; gap: 4px; align-items: center; flex-shrink: 0; border-left: 1px solid var(--ui-border); padding-left: 10px; }
 .architecture-selection > span { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.architecture-selection > button { flex-shrink: 0; white-space: nowrap; }
 .architecture-partial { color: var(--ui-text-muted); font-size: 11px; white-space: nowrap; }
 .architecture-isolated-state { color: var(--ui-text); background: var(--ui-accent-soft); border: 1px solid var(--ui-accent); border-radius: 4px; padding: 3px 6px; font-size: 11px; white-space: nowrap; }
 .architecture-node[data-presentation="external"] { border-style: dashed; }
