@@ -2,13 +2,16 @@ name: UI checks
 
 on:
   pull_request:
+    # Epic children validate their scoped change locally; the aggregate epic PR runs CI.
+    branches-ignore:
+      - 'codex/epic-issue-*'
     paths:
       - 'ui/**'
       - 'docs/spec/api/openapi.yaml'
       - 'api/fixtures/**'
       - '.github/workflows/ui-ci.yml'
   push:
-    branches: [main, 'codex/epic-issue-*']
+    branches: [main]
     paths:
       - 'ui/**'
       - 'docs/spec/api/openapi.yaml'
@@ -62,8 +65,8 @@ jobs:
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
             browser_command=(npm run test:browser)
           else
-            # PR and epic-branch validation keeps the canonical desktop coverage and
-            # the native-scrollbar project; main retains the duplicate narrow pass.
+            # PR validation keeps the canonical desktop coverage and the
+            # native-scrollbar project; main retains the duplicate narrow pass.
             browser_command=(npm run test:browser -- --project=desktop --project=native-scrollbars)
           fi
 

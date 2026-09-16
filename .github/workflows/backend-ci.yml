@@ -2,11 +2,14 @@ name: Backend checks
 
 on:
   pull_request:
+    # Epic children validate their scoped change locally; the aggregate epic PR runs CI.
+    branches-ignore:
+      - 'codex/epic-issue-*'
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
   push:
-    branches: [main, 'codex/epic-issue-*']
+    branches: [main]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'

@@ -2,6 +2,9 @@ name: Validate API contract
 
 on:
   pull_request:
+    # Epic children validate their scoped change locally; the aggregate epic PR runs CI.
+    branches-ignore:
+      - 'codex/epic-issue-*'
     paths:
       - 'docs/spec/api/**'
       - 'api/**'
@@ -9,8 +12,6 @@ on:
   push:
     branches:
       - main
-      - 'codex/issue-*'
-      - 'codex/epic-issue-*'
     paths:
       - 'docs/spec/api/**'
       - 'api/**'

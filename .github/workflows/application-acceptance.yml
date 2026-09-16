@@ -2,6 +2,9 @@ name: Application acceptance
 
 on:
   pull_request:
+    # Epic children validate their scoped change locally; the aggregate epic PR runs acceptance.
+    branches-ignore:
+      - 'codex/epic-issue-*'
     paths:
       - 'backend/**'
       - 'ui/**'
@@ -9,7 +12,7 @@ on:
       - 'acceptance/**'
       - '.github/workflows/application-acceptance.yml'
   push:
-    branches: [main, 'codex/epic-issue-*']
+    branches: [main]
     paths:
       - 'backend/**'
       - 'ui/**'
