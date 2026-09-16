@@ -769,6 +769,8 @@ for (const dpr of [1, 2]) test(`persistent source selection maps exact rows with
   await page.waitForTimeout(100);
   await alignedGuides(page, [[1, 6], [7, 11]]);
   await cdp.send('Emulation.setDeviceMetricsOverride', { ...page.viewportSize()!, deviceScaleFactor: dpr === 1 ? 2 : 1, mobile: false });
+  // CDP can change DPR without delivering the monitor/window resize event.
+  await page.evaluate(() => window.dispatchEvent(new Event('resize')));
   await expect.poll(() => page.evaluate(() => window.embeddingHarness.renderers.at(-1)!.view!.dpr)).toBe(dpr === 1 ? 2 : 1);
   await alignedGuides(page, [[1, 6], [7, 11]]);
   await page.getByRole('button', { name: 'Close workspace' }).click();
