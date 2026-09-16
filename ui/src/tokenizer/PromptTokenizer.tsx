@@ -4,7 +4,8 @@ import { ApiFailure } from '../api/errors';
 import type { ReactNode } from 'react';
 import { InlineEditor } from './InlineEditor';
 import { ViewerPanel } from '../matrix-explorer';
-import type { Tokenization } from './annotations';
+import { selectedTokenRows } from './annotations';
+import type { SourceSelection, Tokenization } from './annotations';
 import './tokenizer.css';
 
 interface Props {
@@ -19,7 +20,7 @@ interface Props {
   activeRow?: { signal: AbortSignal; row: number | null } | undefined;
   onRowSelect?: (row: number | null, current: CurrentTokenization | undefined) => void;
   onRowActivate?: (row: number, current: CurrentTokenization | undefined) => void;
-  downstream?: (result: CurrentTokenization | undefined) => ReactNode;
+  downstream?: (result: CurrentTokenization | undefined, selectedRows: readonly number[]) => ReactNode;
 }
 interface Editor { text: string; generation: number; composing: boolean; promptly: boolean }
 /** Each request owns a unique signal: also the opaque token/embedding generation identity. */
@@ -35,6 +36,7 @@ export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, to
   const id = useId();
   const [editor, setEditor] = useState<Editor>({ text: '', generation: 0, composing: false, promptly: false });
   const [result, setResult] = useState<Result>();
+  const [sourceSelection, setSourceSelection] = useState<readonly SourceSelection[]>([]);
   const [hasPrevious, setHasPrevious] = useState(false);
   const generation = useRef(0);
   const requestGeneration = useRef(0);
@@ -43,6 +45,8 @@ export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, to
   const context = useMemo(() => ({ client, sessionId, addSpecialTokens, tokenizerAvailable, signal }),
     [client, sessionId, addSpecialTokens, tokenizerAvailable, signal]);
   const current = result?.editor === editor && result.context === context && tokenizerAvailable && !signal?.aborted ? result : undefined;
+  const selectedRows = useMemo(() => current?.data ? selectedTokenRows(current.data, sourceSelection) : [],
+    [current, sourceSelection]);
 
   function edit(text: string, isComposing: boolean, promptly = false) {
     pending.current?.abort();
@@ -90,6 +94,7 @@ export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, to
     <label className="section-label" htmlFor={id}>Prompt</label>
     <p id={`${id}-help`} className="tokenizer-help">Edit the prompt directly. Gray brackets and IDs annotate source spans. Gray token text is an annotation without a source span.</p>
     <InlineEditor id={id} result={current?.data} onEdit={edit} onContentHeight={onContentHeight}
+      onSourceSelection={setSourceSelection}
       activeRow={activeRow?.signal === current?.signal ? activeRow?.row : null}
       onRowSelect={row => onRowSelect?.(row, tokenization)}
       onRowActivate={row => onRowActivate?.(row, tokenization)} />
@@ -102,5 +107,5 @@ export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, to
     </div>
   </section>;
   return <>{header ? <section id={panelId} className="prompt-panel" aria-label="Prompt / Tokens"><ViewerPanel header={header}>{prompt}</ViewerPanel></section> : prompt}
-    {downstream?.(tokenization)}</>;
+    {downstream?.(tokenization, selectedRows)}</>;
 }

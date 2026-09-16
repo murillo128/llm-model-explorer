@@ -631,3 +631,206 @@ test('old histograms stay with stale values while equal-shaped replacement promo
   expect(await page.evaluate(() => window.embeddingHarness.countRenderers.filter(r => r.state !== 'disposed').length)).toBe(2);
   expect(await page.evaluate(() => window.embeddingHarness.countRenderers.filter(r => r.state === 'disposed').every(r => r.diagnostics.cpuBytes === 0))).toBe(true);
 });
+
+const selectionText = 'Hi 中😀\nHi <s>';
+function selectionTokens(): Tokenization {
+  const spans = [null, [0, 2], [2, 3], [3, 4], [4, 5], [4, 5], null, [5, 6], [6, 8], [8, 9], [9, 12], null];
+  return { text: selectionText, add_special_tokens: true, tokens: spans.map((span, index) => ({
+    index, id: index === 8 ? 1 : index, token: span ? 'source' : '<inserted>', decoded: '',
+    special: [0, 10, 11].includes(index), ...(span ? { start: span[0]!, end: span[1]! } : {}),
+  })) };
+}
+const rowGuides = (page: Page) => page.locator('.embedding-layer:not([data-staging]) .matrix-scroll .matrix-selected-rows');
+async function guideRows(page: Page) {
+  return rowGuides(page).evaluateAll(nodes => nodes.map(node => node.getAttribute('data-rows')));
+}
+async function selectionSnapshot(page: Page) {
+  return page.evaluate(() => {
+    const matrix = document.querySelector<HTMLElement>('.embedding-layer:not([data-staging]) .matrix-scroll')!;
+    const prompt = document.querySelector('.cm-scroller')!;
+    const renderers = [...window.embeddingHarness.renderers, ...window.embeddingHarness.countRenderers];
+    return {
+      views: renderers.map(r => r.view), resources: renderers.map(r => r.diagnostics),
+      samples: renderers.map(r => r.state === 'ready' ? r.readCell(0, 0) : null),
+      requests: [window.tokenizerHarness.requests.length, window.embeddingHarness.requests.length, window.embeddingHarness.auxiliary.length],
+      history: window.embeddingHarness.historyCalls,
+      transfers: window.embeddingHarness.transferCalls,
+      scroll: [matrix.scrollLeft, matrix.scrollTop, prompt.scrollLeft, prompt.scrollTop, window.scrollX, window.scrollY],
+      split: document.querySelector('[role="separator"]')!.getAttribute('aria-valuenow'),
+      domain: [...document.querySelectorAll('.distribution-scale')].map(node => node.textContent),
+    };
+  });
+}
+async function alignedGuides(page: Page, ranges: [number, number][]) {
+  const geometry = await page.evaluate(() => {
+    const r = window.embeddingHarness.renderers.findLast(r => r.state === 'ready' && !r.canvas.closest('[data-staging]'))!;
+    const rect = r.canvas.getBoundingClientRect();
+    const read = (selector: string) => [...document.querySelectorAll<HTMLElement>(selector)].map(node => {
+      const box = node.getBoundingClientRect();
+      return { rows: node.dataset.rows, x: box.x, y: box.y, width: box.width, height: box.height,
+        events: getComputedStyle(node).pointerEvents };
+    });
+    const rowCanvas = document.querySelector('.embedding-layer:not([data-staging]) .row-distributions canvas')!.getBoundingClientRect();
+    return { view: r.view!, x: rect.x, y: rect.y, width: rect.width, rowX: rowCanvas.x, rowWidth: rowCanvas.width,
+      main: read('.embedding-layer:not([data-staging]) .matrix-scroll .matrix-selected-rows'),
+      rows: read('.embedding-layer:not([data-staging]) .row-distributions .matrix-selected-rows'),
+      columns: read('.column-distributions .matrix-selected-rows') };
+  });
+  const v = geometry.view;
+  const expected = ranges.map(([from, to]) => ({ from, to,
+    top: Math.max(0, Math.ceil((from - v.y) * v.scaleY)),
+    bottom: Math.min(v.height, Math.ceil((to - v.y) * v.scaleY)),
+  })).filter(({ top, bottom }) => bottom > top);
+  expect(geometry.main).toHaveLength(expected.length);
+  expect(geometry.rows).toHaveLength(expected.length);
+  expect(geometry.columns).toEqual([]);
+  expected.forEach(({ from, to, top, bottom }, index) => {
+    for (const [guides, x, width] of [[geometry.main, geometry.x, geometry.width], [geometry.rows, geometry.rowX, geometry.rowWidth]] as const) {
+      const guide = guides[index]!;
+      expect(guide.rows).toBe(`${from}:${to}`);
+      expect(guide.events).toBe('none');
+      expect(Math.abs(guide.x - x)).toBeLessThan(0.1);
+      expect(Math.abs(guide.width - width)).toBeLessThan(0.1);
+      expect(Math.abs(guide.y - geometry.y - top / v.dpr)).toBeLessThan(1 / v.dpr + 0.05);
+      expect(Math.abs(guide.height - (bottom - top) / v.dpr)).toBeLessThan(1 / v.dpr + 0.05);
+    }
+  });
+}
+
+for (const dpr of [1, 2]) test(`persistent source selection maps exact rows without camera or scientific side effects at DPR ${dpr}`, async ({ page }, testInfo) => {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setDeviceMetricsOverride', { ...page.viewportSize()!, deviceScaleFactor: dpr, mobile: false });
+  const editor = await start(page);
+  const result = selectionTokens(), ids = result.tokens.map(t => t.id);
+  await editor.fill(selectionText); await count(page, 2); await tokenize(page, 1, result);
+  await embeddingCount(page, 1); await stream(page, 0, ids, 64);
+  await expect(page.getByText('[12 × 64] · float32')).toBeVisible();
+  await auxiliary(page, 0, analysis(ids, 64).statisticsStream);
+  await auxiliary(page, 1, analysis(ids, 64).distributionStream);
+  await editor.press('Control+Home'); await page.mouse.move(0, 0);
+  const before = await selectionSnapshot(page);
+  const drag = async (from: number, to: number) => {
+    const a = await page.evaluate(position => window.tokenizerHarness.coords(position), from);
+    const b = await page.evaluate(position => window.tokenizerHarness.coords(position), to);
+    await page.mouse.move(a.x + 0.1, a.y); await page.mouse.down();
+    await page.mouse.move(b.x + 0.1, b.y, { steps: 12 }); await page.mouse.up();
+    await expect.poll(() => page.evaluate(() => window.tokenizerHarness.selection())).toEqual([Math.min(from, to), Math.max(from, to)]);
+  };
+  await drag(1, 6); // Partial first token, Chinese, and both byte tokens for the emoji.
+  await expect.poll(() => guideRows(page)).toEqual(['1:6']);
+  await alignedGuides(page, [[1, 6]]);
+  await page.mouse.move(0, 0);
+  expect(await selectionSnapshot(page)).toEqual(before);
+  await page.locator('[data-token-index="8"]').hover();
+  await expect.poll(() => guideRows(page)).toEqual(['1:6']);
+  await page.locator('.matrix-scroll').focus();
+  await expect(page.locator('.inspection-readout')).toBeVisible();
+  await expect.poll(() => guideRows(page)).toEqual(['1:6']);
+  // An annotation focus/activation keeps native source selection and the group.
+  await page.locator('[data-token-index="3"]').focus();
+  await expect.poll(() => guideRows(page)).toEqual(['1:6']);
+  await drag(6, 1);
+  await expect.poll(() => guideRows(page)).toEqual(['1:6']);
+  await editor.press('Control+Home'); // Intentional caret clears.
+  await expect(rowGuides(page)).toHaveCount(0);
+  await editor.press('Shift+ArrowRight'); // Partial token.
+  await expect.poll(() => guideRows(page)).toEqual(['1:2']);
+  await editor.press('Control+Home');
+  for (let i = 0; i < 5; i++) await editor.press('Shift+ArrowRight');
+  await expect.poll(() => guideRows(page)).toEqual(['1:6']);
+  await editor.press('ArrowRight');
+  for (let i = 0; i < 5; i++) await editor.press('Shift+ArrowLeft');
+  await expect.poll(() => guideRows(page)).toEqual(['1:6']);
+  await editor.press('Control+a');
+  await expect.poll(() => guideRows(page)).toEqual(['1:6', '7:11']);
+  await alignedGuides(page, [[1, 6], [7, 11]]);
+  expect(await page.evaluate(() => window.tokenizerHarness.source())).toBe(selectionText);
+  expect(await page.evaluate(() => window.tokenizerHarness.selection())).toEqual([0, selectionText.length]);
+  await page.mouse.move(0, 0);
+  expect(await selectionSnapshot(page)).toEqual(before);
+  if (dpr === 1 && testInfo.project.name === 'desktop') {
+    const path = testInfo.outputPath('source-selection.png');
+    await page.locator('.tokenizer-workspace').screenshot({ path });
+    await testInfo.attach('Source selection and native embedding rows', { path, contentType: 'image/png' });
+  }
+  const caret = await page.evaluate(() => window.tokenizerHarness.coords(1));
+  await page.mouse.click(caret.x + 0.1, caret.y);
+  await expect(rowGuides(page)).toHaveCount(0);
+  await editor.press('Control+a');
+  // Camera changes are intentional here; guides must track underfill and scroll.
+  await nativeCamera(page);
+  await alignedGuides(page, [[1, 6], [7, 11]]);
+  await page.locator('.matrix-scroll').dispatchEvent('wheel', { deltaY: -1200, clientX: 150, clientY: 500 });
+  await alignedGuides(page, [[1, 6], [7, 11]]);
+  await page.locator('.matrix-scroll').evaluate(node => { node.scrollLeft = 30; node.scrollTop = 15; });
+  await page.waitForTimeout(50);
+  await alignedGuides(page, [[1, 6], [7, 11]]);
+  await page.setViewportSize({ width: page.viewportSize()!.width + 80, height: 780 });
+  await page.waitForTimeout(100);
+  await alignedGuides(page, [[1, 6], [7, 11]]);
+  await cdp.send('Emulation.setDeviceMetricsOverride', { ...page.viewportSize()!, deviceScaleFactor: dpr === 1 ? 2 : 1, mobile: false });
+  await expect.poll(() => page.evaluate(() => window.embeddingHarness.renderers.at(-1)!.view!.dpr)).toBe(dpr === 1 ? 2 : 1);
+  await alignedGuides(page, [[1, 6], [7, 11]]);
+  await page.getByRole('button', { name: 'Close workspace' }).click();
+  await expect(page.locator('.matrix-selected-rows')).toHaveCount(0);
+});
+
+test('offscreen source selection leaves camera/history and prompt scroll intact until manual navigation', async ({ page }) => {
+  const editor = await start(page);
+  const text = 'x'.repeat(180), ids = Array.from({ length: 180 }, (_, i) => i % 3);
+  await editor.fill(text); await count(page, 2); await tokenize(page, 1, tokens(text, ids));
+  await embeddingCount(page, 1); await stream(page, 0, ids, 16);
+  await expect(page.getByText('[180 × 16] · float32')).toBeVisible();
+  await page.mouse.move(0, 0);
+  const before = await selectionSnapshot(page);
+  await page.evaluate(() => window.tokenizerHarness.select(170, 179));
+  await expect(rowGuides(page)).toHaveCount(0);
+  expect(await selectionSnapshot(page)).toEqual(before);
+  await page.locator('.matrix-scroll').evaluate(node => { node.scrollTop = node.scrollHeight; });
+  await expect.poll(() => guideRows(page)).toEqual(['170:179']);
+  await alignedGuides(page, [[170, 179]]);
+  const p = await page.evaluate(() => { const n = document.querySelector('.cm-scroller')!; return [n.scrollTop, n.scrollLeft]; });
+  expect(p).toEqual(before.scroll.slice(2, 4));
+});
+
+test('selected rows are recomputed from current source only after matching generations promote', async ({ page }) => {
+  const editor = await start(page);
+  await editor.fill('ABC'); await count(page, 2); await tokenize(page, 1, tokens('ABC'));
+  await embeddingCount(page, 1); await stream(page, 0, [2, 0, 2], 64);
+  await editor.press('Control+a'); await expect.poll(() => guideRows(page)).toEqual(['0:3']);
+  // Options retain native selection, but the old visible matrix is immediately fenced.
+  await page.getByLabel('Add special tokens').uncheck(); await count(page, 3);
+  await expect(page.locator('.matrix-selected-rows')).toHaveCount(0);
+  const replacement = tokens('ABC', [2, 0, 2], false);
+  delete replacement.tokens[1]!.start; delete replacement.tokens[1]!.end;
+  await tokenize(page, 2, replacement); await embeddingCount(page, 2);
+  await page.evaluate(() => window.embeddingHarness.headers(1));
+  await send(page, 1, [...meta([2, 0, 2], 64), ...data([2, 0, 2], 64)]);
+  await expect(page.locator('[data-staging] .matrix-scroll')).toHaveCount(1);
+  await expect(page.locator('.matrix-selected-rows')).toHaveCount(0);
+  await send(page, 1, frame(4), true);
+  await expect.poll(() => guideRows(page)).toEqual(['0:1', '2:3']); // Same shape, different mapping.
+  await page.getByRole('button', { name: 'Change session' }).click(); await count(page, 4);
+  await expect(page.locator('.matrix-selected-rows')).toHaveCount(0);
+  await tokenize(page, 3, tokens('ABC', [2, 0, 2], false)); await embeddingCount(page, 3);
+  await page.evaluate(() => window.embeddingHarness.headers(2));
+  await send(page, 2, [...meta([2, 0, 2], 64), ...data([2, 0, 2], 64), ...frame(6)], true);
+  await expect(page.getByText(/Input embedding lookup cancelled/)).toBeVisible();
+  await expect(page.locator('.matrix-selected-rows')).toHaveCount(0);
+  await editor.fill('DEF'); await count(page, 5);
+  await page.evaluate(() => window.tokenizerHarness.fail(4));
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.locator('.matrix-selected-rows')).toHaveCount(0);
+  await editor.fill('GHI'); await count(page, 6);
+  await editor.fill('JKL'); await count(page, 7);
+  await editor.press('Control+a');
+  await tokenize(page, 6, tokens('JKL', [2, 0, 2], false)); await embeddingCount(page, 4);
+  await tokenize(page, 5, tokens('GHI', [2, 0, 2], false));
+  await expect(page.locator('.matrix-selected-rows')).toHaveCount(0);
+  await stream(page, 3, [2, 0, 2], 64);
+  await expect.poll(() => guideRows(page)).toEqual(['0:3']);
+  await page.keyboard.type('M');
+  await expect(rowGuides(page)).toHaveCount(0);
+  await editor.press('ArrowRight');
+  await expect(rowGuides(page)).toHaveCount(0);
+});

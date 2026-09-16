@@ -151,6 +151,33 @@ Use controlled row context, semantic selection callbacks and a narrow reveal
 intent through Matrix Explorer, without exposing renderer internals. Clear or
 fence linkage on source, generation, session replacement and remount.
 
+Native source text selection persistently selects complete embedding rows by
+zero-based token sequence position, separately from transient inspection. For
+each nonempty editor range, include every token whose reliable nonempty source
+span strictly intersects it, converting API code-point offsets to UTF-16 without
+normalization. Partial tokens select complete rows; overlapping byte-token spans
+include every associated position. Repeated IDs remain distinct positions.
+Union multiple native ranges without filling gaps. Boundary contact alone does
+not intersect. Whitespace, newlines and source-typed specials follow the same
+rule; inserted/unmapped annotations have no fabricated source span and retain
+their separate explicit inspection/activation.
+
+Pointer or keyboard selection in either direction replaces this group; an
+intentional collapsed selection/caret placement clears it. Pointer departure,
+annotation blur, loss of editor focus and matrix inspection do not clear or
+replace the group. Selection-only changes never retokenize. This path never
+reveals rows, scrolls either surface, zooms, fits, recenters, changes camera
+history or resizes the panel split. Offscreen rows stay offscreen until manual
+navigation. Matrix interactions never focus, select or scroll the prompt.
+
+Use the shared Matrix Explorer's controlled row guides, including aligned row
+distribution projection, independently from exact cell inspection and the
+transient drag-to-zoom preview. Clear active guides immediately when text,
+options, session/model or authoritative generation changes. A retained stale
+matrix and a hidden staging matrix never receive current source linkage. When
+the matching visible pair becomes authoritative, derive rows anew from the
+still-current source selection; never replay a previous generation's row list.
+
 While a replacement tokenization or embedding result is pending, the last successful embedding matrix remains mounted and visible as clearly stale/updating context rather than disappearing. Only an embedding result matching the current tokenization generation, session, model, options, and ordered token IDs may become authoritative. Older results must never replace newer state. A replacement is promoted atomically after successful complete delivery; initial embedding delivery remains progressive. Failure, cancellation, empty sequences, or unavailability retain the previous matrix only as explicitly stale context alongside the current status. Pending and failed replacement allocations are disposed, and successful replacement or workspace disposal releases superseded Matrix Explorer resources. Updating/error status stays in the existing header slot.
 
 Token-to-row linkage is active only when the visible tokenization and visible embedding matrix belong to the same authoritative generation. If a newer tokenization is already current while an older embedding matrix remains visible as stale context, they must not be linked as if their row identities still matched.
