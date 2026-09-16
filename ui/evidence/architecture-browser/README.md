@@ -12,6 +12,15 @@ windows. Outside-scope commands preserve a Back snapshot. A common operation in
 structure-only mode is distinguished from a concrete source selection without
 selecting instance zero or enabling weight actions.
 
+Component disclosure preserves existing repetition windows. Expanding a hidden
+instance adds only that exact instance alongside the current window; contraction
+uses the same canvas projection and restores the prior compact context. Regression
+coverage compares browser and canvas disclosure from a four-instance desktop
+window (two on narrow screens), and opens/closes instance 10 from both a compact
+overview and an existing window. It checks retained siblings, exact source/port
+provenance and the restored projection. These three cases reproduced the window
+overwrite before the correction.
+
 The pane retains its mounted browser/canvas, query, separate tree/search scroll and
 preferred width across collapse. Width/visibility use optional local preferences;
 graph-backed state follows the existing backend/model/graph view lifetime. At
@@ -27,17 +36,21 @@ test files. No model download or GPU was required.
 | Check | Result |
 | --- | --- |
 | `npm run check` | Passed: generated API bindings, typecheck, lint, 43 unit-test files / 985 tests, production build |
-| Complete Architecture Explorer and Tensor inventory browser suite, narrow | 76 passed |
-| Desktop camera, family, repetition, shared-instance and isolation revalidation | Passed |
-| Final focused browser interaction suite, desktop and narrow | 16 passed |
-| Built UI + real backend, four architecture fixtures and cancellation/shared-instance scenarios, DPR 1 and 2 | 12 passed |
-| Follow-up built-shell safety at 390/1178/1440 pixels and shared-instance lifetime checks, DPR 1 and 2 | 8 passed |
+| Initial complete Architecture Explorer and Tensor inventory browser suite, narrow | 76 passed |
+| Initial desktop camera, family, repetition, shared-instance and isolation revalidation | Passed |
+| Final browser/control regression suite, desktop and narrow (including six repetition-window cases) | 38 passed |
+| Initial built UI + real backend, four architecture fixtures and cancellation/shared-instance scenarios, DPR 1 and 2 | 12 passed |
+| Final built-shell safety at 390/1178/1440 pixels and shared-instance lifetime checks, DPR 1 and 2 | 8 passed |
 
 The PR's UI check supplies complete desktop and native-scrollbar regression
 coverage on the published commit; its application check runs the integrated
 product gates. Both must pass on the current commit before the review-ready
 handoff. The local narrow run also verifies the complete synthetic graphs for
 SmolLM2, Qwen3, Qwen3.5 and V-JEPA2, independent of checkpoint acceptance.
+
+The first local production rerun encountered a port collision before DPR 2 model
+selection: the backend port served HTML instead of `/models` JSON. The run was
+stopped and repeated with the unchanged snapshot on a verified free port range.
 
 The production lifetime check performs eight concrete-instance switches after
 weight inspection/cancellation. Each final sample has zero active workers, two
@@ -58,6 +71,8 @@ cd ui
 npm run check
 UI_TEST_PORT=4320 npm run test:browser -- 'tests/architecture.*spec.ts' \
   tests/tensor-inventory.spec.ts --project desktop --project narrow
+UI_TEST_PORT=4370 npm run test:browser -- tests/architecture-browser.spec.ts \
+  tests/architecture-controls.spec.ts --project desktop --project narrow
 ```
 
 The production acceptance uses the existing harness, real HTTP backend, built UI,
@@ -67,7 +82,7 @@ SwiftShader, and local synthetic model fixtures:
 UI_TEST_PORT=4340 xvfb-run -a npm run test:acceptance -- architecture.spec.ts \
   --project dpr1 --project dpr2 \
   --grep 'deterministic production.*full graph|close during progressive|shared structure production'
-UI_TEST_PORT=4350 xvfb-run -a npm run test:acceptance -- \
+UI_TEST_PORT=4490 xvfb-run -a npm run test:acceptance -- \
   --project dpr1 --project dpr2 \
   --grep 'architecture safety baseline|shared structure production'
 ```

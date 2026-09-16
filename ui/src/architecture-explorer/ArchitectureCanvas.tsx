@@ -495,13 +495,11 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     const outside = !insideBrowserScope(id);
     if (outside) { const selection = view.selectionMode === 'source' ? view.selected : null; leaveIsolation(true); selectComponent(view, selection); }
     const mapped = browserExpansionId(graph, view, id), source = records.get(mapped)!;
-    const base = projectionOptions(view), info = instanceOf(graph, mapped);
+    const base = projectionOptions(view);
     const expanded = withAncestors(mapped, new Set(base.expanded));
-    // The shared anchor layout uses role correspondence; ordinary repetition
-    // windows name the exact instance, including when it has never been visible.
-    view.update({ expanded: [...expanded], stateScope: undefined,
-      ...(info && !view.shared && !view.scope ? { repetitions: { ...view.repetitions, [info.repetition.id]: {
-        start: info.repetition.instances.findIndex((i) => i.node_id === info.instance.node_id), count: 1 } } } : {}) });
+    // Exact expanded instances are already visible alongside repetition windows.
+    // Preserve those windows and let the shared toggle change only this component.
+    view.update({ expanded: [...expanded], stateScope: undefined });
     toggleComponent(view, graph, { id: mapped, kind: source.kind, label: source.label, record: source,
       sourceIds: [mapped], ports: [], expanded: base.exhaustive || base.expanded.includes(mapped) }, windowSize);
     if (outside) { centerPending.current = id; restorePending.current = undefined; }

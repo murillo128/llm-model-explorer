@@ -122,6 +122,55 @@ test('keyboard search selects before explicit Center reveals collapsed repeated 
   expect(await snapshot(page)).toEqual(before);
 });
 
+test('browser and canvas disclosure preserve the same multi-instance window and neighboring cards', async ({ page }) => {
+  const results = [];
+  for (const surface of ['canvas', 'browser'] as const) {
+    await page.goto(`${harness}?fixture=components`); await ready(page);
+    await page.getByRole('button', { name: 'Explore stack Decoder layers', exact: true }).click();
+    const before = await snapshot(page), options = before.requests.at(-1)!.options;
+    const count = page.viewportSize()!.width <= 760 ? 2 : 4;
+    expect(options.repetitions).toEqual({ 'decoder-layers': { start: 0, count } });
+    const disclosure = surface === 'canvas' ? page.locator('[data-id="layer-0"] .architecture-expand') :
+      page.getByRole('tree', { name: 'Model components', exact: true }).locator('[data-node-id="layer-0"] .architecture-browser-disclosure');
+    await disclosure.click();
+    const opened = await snapshot(page), projection = opened.layouts.at(-1)!.projection;
+    expect(opened.requests.at(-1)!.options.repetitions).toEqual(options.repetitions);
+    expect(projection.nodes.find((node) => node.id === 'layer-0')?.expanded).toBe(true);
+    for (let index = 1; index < count; index++) {
+      expect(projection.nodes.find((node) => node.id === `layer-${index}`)?.expanded).toBe(false);
+    }
+    assertTransportProjection(opened.requests.at(-1)!.graph, opened.layouts.at(-1)!);
+    await disclosure.click();
+    const closed = await snapshot(page);
+    expect(closed.requests.at(-1)!.options.repetitions).toEqual(options.repetitions);
+    expect(closed.layouts.at(-1)!.projection).toEqual(before.layouts.at(-1)!.projection);
+    results.push({ options: opened.requests.at(-1)!.options, projection });
+  }
+  expect(results[1]).toEqual(results[0]);
+});
+
+for (const window of ['compact', 'multi-instance'] as const) test(`browser disclosure reveals only the hidden exact instance and preserves the ${window} window`, async ({ page }) => {
+  await page.goto(`${harness}?fixture=components-large`); await ready(page);
+  if (window === 'multi-instance') await page.getByRole('button', { name: 'Explore stack Decoder layers', exact: true }).click();
+  const before = await snapshot(page), options = before.requests.at(-1)!.options;
+  const instanceIds = (layout: Layout) => layout.projection.nodes.filter((node) => /^layer-\d+$/.test(node.id)).map((node) => node.id);
+  const visible = instanceIds(before.layouts.at(-1)!);
+  expect(visible).not.toContain('layer-10');
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('layer-10');
+  const disclosure = page.getByRole('group', { name: 'Model search results', exact: true })
+    .locator('[data-node-id="layer-10"] .architecture-browser-disclosure');
+  await disclosure.click();
+  const opened = await snapshot(page);
+  expect(opened.requests.at(-1)!.options.repetitions).toEqual(options.repetitions);
+  expect(instanceIds(opened.layouts.at(-1)!)).toEqual([...visible, 'layer-10']);
+  expect(opened.layouts.at(-1)!.projection.nodes.find((node) => node.id === 'layer-10')?.expanded).toBe(true);
+  assertTransportProjection(opened.requests.at(-1)!.graph, opened.layouts.at(-1)!);
+  await disclosure.click();
+  const closed = await snapshot(page);
+  expect(closed.requests.at(-1)!.options.repetitions).toEqual(options.repetitions);
+  expect(closed.layouts.at(-1)!.projection).toEqual(before.layouts.at(-1)!.projection);
+});
+
 test('breadcrumbs, first/last and mixed variants preserve two independent stack windows and return context', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('mixed-stacks'); await ready(page);
   await page.getByRole('button', { name: 'Explore stack Encoder layers', exact: true }).click(); await ready(page);
