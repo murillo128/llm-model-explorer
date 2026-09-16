@@ -1,0 +1,1102 @@
+{
+  "status": "PASS",
+  "activation_integration_revision": "02ab3bd334381525ec3fab72e8187329b0a4cf56",
+  "full_acceptance_revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+  "additional_capture_revision": "463b23ae45d1660fbcbf6fa7d8d15e485d7a8fd9",
+  "source_note": "The later revision adds only the separate exhaustive-detail test; full 24-case and product suites ran unchanged at the earlier revision.",
+  "unchanged_git_objects_between_acceptance_revisions": {
+    "ui/src": "77aa1ad5046aa9e817db403db3174cc10b828f76",
+    "backend/src": "4968b37a81250dfb69f08a2bb33b6b325fb356a4",
+    "backend/tests": "e81ea9c123b041a4101b9d1d1478d5e148703f29",
+    "api": "feea138aebe167f15372bb4ef63a2c75493295f5",
+    "ui/tests": "a29746898221010a3579fdf4aca75bcfda1071a5",
+    "ui/acceptance/product.spec.ts": "8e281cef16d406d27ca7cf4602f94c41d39f516f"
+  },
+  "environment": {
+    "python": "3.12.14",
+    "torch": "2.14.0+cpu",
+    "node": "24.14.0",
+    "npm": "11.9.0",
+    "chromium": "153.0.8010.12",
+    "rendering": "headed SwiftShader under Xvfb without GLX",
+    "native_threads": 1,
+    "offline_models": true
+  },
+  "ui": {
+    "revision": "5a71df52b4edfd02adda55bfe35908762ce524c7",
+    "unit_tests": 734,
+    "files": 34,
+    "gates": [
+      "bindings",
+      "typecheck",
+      "eslint",
+      "build"
+    ],
+    "final_harness_typecheck_and_lint": "PASS"
+  },
+  "api": {
+    "openapi": "3.1",
+    "references": 283,
+    "instance_cases": 88,
+    "architecture_cases": 144,
+    "wire_fixtures": 76
+  },
+  "retained_backend_validation": {
+    "baseline": "f7764fd69fffde644dd484ba2f7ca851123f2206",
+    "candidate": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+    "identical_git_objects": {
+      "backend/src": "4968b37a81250dfb69f08a2bb33b6b325fb356a4",
+      "backend/tests": "e81ea9c123b041a4101b9d1d1478d5e148703f29",
+      "backend/pyproject.toml": "9786522e52f5b637f75272f52196751e0bd36a9f",
+      "backend/uv.lock": "87c5be3a3c667515856e27d1e168af05db57f6c8",
+      "api": "feea138aebe167f15372bb4ef63a2c75493295f5"
+    },
+    "validation": "Initial full backend suite: 1224 passed, 19 CUDA-unavailable skips. Reuse is restricted to these unchanged backend/API sources; resumed API and TCP results are separate."
+  },
+  "historical_preservation": {
+    "original_revision": "78a7d3a6d427f28dd42420da6ef2b41fb5d5a2f2",
+    "current_revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+    "original_eight_cycle_block_unchanged": true,
+    "block_sha256": "0c72af8d5a7923f6af3c8746c9fc81af68894770bd24c7f2f5967bff0131469b",
+    "acceptance/architecture-integration.md": {
+      "unchanged": true,
+      "sha256": "dd99cd9aa2c43d0f32fcc69c719ee9492de999d48dd3ef8cab66361ca5db0e1e"
+    },
+    "acceptance/evidence/architecture-integration/checks.json": {
+      "unchanged": true,
+      "sha256": "882668a74b762d44d49d9dc3c96396741fd46ab5bf88a930a60d0be567fe38fc"
+    },
+    "additional_capture_revision": "463b23ae45d1660fbcbf6fa7d8d15e485d7a8fd9",
+    "eight_cycle_block_still_unchanged_after_capture_addition": true
+  },
+  "adapter_smoke": {
+    "revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+    "status": "PASS",
+    "method": "packed_sample adapter against existing independent PackedFixture.expected() bytes; split physical companions across safetensors shards",
+    "families": {
+      "qwen3": {
+        "samples": 5,
+        "coordinates": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            15
+          ],
+          [
+            1,
+            16
+          ],
+          [
+            15,
+            255
+          ]
+        ]
+      },
+      "qwen35": {
+        "samples": 5,
+        "coordinates": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            15
+          ],
+          [
+            1,
+            16
+          ],
+          [
+            3,
+            63
+          ]
+        ]
+      }
+    },
+    "comparison": "exact canonical float32 bytes including zero sign; no production decode call"
+  },
+  "browser": {
+    "component-browser": {
+      "stats": {
+        "startTime": "2026-09-15T23:30:28.621Z",
+        "duration": 942456.2699999999,
+        "expected": 504,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "projects": {
+        "desktop": 247,
+        "narrow": 247,
+        "native-scrollbars": 10
+      }
+    },
+    "architecture-browser": {
+      "stats": {
+        "startTime": "2026-09-15T23:46:23.388Z",
+        "duration": 2040617.751,
+        "expected": 24,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "projects": {
+        "dpr1": 12,
+        "dpr2": 12
+      },
+      "cases": [
+        {
+          "title": "deterministic production [smollm2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "duration_ms": 19064
+        },
+        {
+          "title": "deterministic production [qwen3] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "duration_ms": 23647
+        },
+        {
+          "title": "deterministic production [qwen35] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "duration_ms": 28870
+        },
+        {
+          "title": "deterministic production [vjepa2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "duration_ms": 24329
+        },
+        {
+          "title": "complete local reference [smollm2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "duration_ms": 54601
+        },
+        {
+          "title": "complete local reference [qwen3] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "duration_ms": 281045
+        },
+        {
+          "title": "complete local reference [qwen35] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "duration_ms": 276730
+        },
+        {
+          "title": "complete local reference [vjepa2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr1",
+          "duration_ms": 89649
+        },
+        {
+          "title": "deterministic production [smollm2] close during progressive data cancels and releases modal resources",
+          "project": "dpr1",
+          "duration_ms": 13938
+        },
+        {
+          "title": "deterministic production [smollm2] repeated nested return releases obsolete layouts",
+          "project": "dpr1",
+          "duration_ms": 26754
+        },
+        {
+          "title": "deterministic production [smollm2] isolated session replacement rejects a late actual response",
+          "project": "dpr1",
+          "duration_ms": 11695
+        },
+        {
+          "title": "deterministic production [smollm2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "duration_ms": 26973
+        },
+        {
+          "title": "deterministic production [qwen3] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "duration_ms": 30593
+        },
+        {
+          "title": "deterministic production [qwen35] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "duration_ms": 37872
+        },
+        {
+          "title": "deterministic production [vjepa2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "duration_ms": 21406
+        },
+        {
+          "title": "complete local reference [smollm2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "duration_ms": 54106
+        },
+        {
+          "title": "complete local reference [qwen3] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "duration_ms": 497448
+        },
+        {
+          "title": "complete local reference [qwen35] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "duration_ms": 358946
+        },
+        {
+          "title": "complete local reference [vjepa2] full graph, concrete bindings and logical weight modal",
+          "project": "dpr2",
+          "duration_ms": 48208
+        },
+        {
+          "title": "deterministic production [smollm2] close during progressive data cancels and releases modal resources",
+          "project": "dpr2",
+          "duration_ms": 9008
+        },
+        {
+          "title": "deterministic production [smollm2] repeated nested return releases obsolete layouts",
+          "project": "dpr2",
+          "duration_ms": 17711
+        },
+        {
+          "title": "deterministic production [smollm2] isolated session replacement rejects a late actual response",
+          "project": "dpr2",
+          "duration_ms": 7206
+        },
+        {
+          "title": "deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts",
+          "project": "dpr1",
+          "duration_ms": 48219
+        },
+        {
+          "title": "deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts",
+          "project": "dpr2",
+          "duration_ms": 30442
+        }
+      ]
+    },
+    "product-browser": {
+      "stats": {
+        "startTime": "2026-09-16T00:25:04.159Z",
+        "duration": 1045280.0399999999,
+        "expected": 64,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "projects": {
+        "dpr1": 32,
+        "dpr2": 32
+      }
+    },
+    "resource-controls": {
+      "stats": {
+        "startTime": "2026-09-16T00:23:01.801Z",
+        "duration": 91324.842,
+        "expected": 4,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "projects": {
+        "dpr1": 2,
+        "dpr2": 2
+      }
+    },
+    "global-detail": {
+      "stats": {
+        "startTime": "2026-09-16T00:43:34.629Z",
+        "duration": 42099.74600000001,
+        "expected": 2,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "projects": {
+        "dpr1": 1,
+        "dpr2": 1
+      },
+      "cases": [
+        {
+          "title": "complete local reference [qwen3] exhaustive global detail remains reachable at readable scale",
+          "project": "dpr1",
+          "duration_ms": 20411
+        },
+        {
+          "title": "complete local reference [qwen3] exhaustive global detail remains reachable at readable scale",
+          "project": "dpr2",
+          "duration_ms": 20350
+        }
+      ]
+    }
+  },
+  "network": {
+    "tests": 33,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "skips": [
+      {
+        "test": "test_cuda_fixture",
+        "reason": "CUDA unavailable in the installed PyTorch/runtime; CPU acceptance is mandatory"
+      }
+    ],
+    "actual_architecture_cases": [
+      "test_complete_local_architecture_reference[qwen3]",
+      "test_complete_local_architecture_reference[qwen35]",
+      "test_complete_local_architecture_reference[vjepa2]",
+      "test_complete_local_architecture_reference[smollm2]"
+    ]
+  },
+  "network_references": {
+    "measurement_scope": "Readiness and Linux backend peak RSS cover the configured model parent root; cold means a fresh artifact cache, not a flushed OS page cache.",
+    "families": {
+      "smollm2": {
+        "repository": "HuggingFaceTB/SmolLM2-135M",
+        "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "fingerprint": "aeda1cbf6516239fa4d305117c5a70ca5f4a3af06ef7575544dc97914c61e57e",
+        "tokenizer_available": true,
+        "coverage": "complete",
+        "scope": "language_model",
+        "nodes": 1031,
+        "edges": 1596,
+        "parameters": 273,
+        "graph_id": "b6dd19862b0010730e7fa7bc9a50f09d92ed8bbd0e1bda3784e34952294f942c",
+        "runs": [
+          {
+            "mode": "cold",
+            "readiness_seconds": 10.507087053003488,
+            "peak_rss_kib": 404368
+          },
+          {
+            "mode": "warm",
+            "readiness_seconds": 5.578406164975604,
+            "peak_rss_kib": 388820
+          }
+        ]
+      },
+      "qwen3": {
+        "repository": "JunHowie/Qwen3-0.6B-GPTQ-Int4",
+        "revision": "b9d87006067b0c0c2dea836370d6288e14f112ab",
+        "fingerprint": "31bd7a3f28c9ef9a65b5c6039eec5d4defe5a0e75148af472bde6c3ca4864be2",
+        "tokenizer_available": true,
+        "coverage": "complete",
+        "scope": "language_model",
+        "nodes": 1019,
+        "edges": 1546,
+        "parameters": 311,
+        "graph_id": "067d60a31eca18dd3fb0ffc7b0f83aacc6f20a698417502b6b03af5ca2d61ba8",
+        "runs": [
+          {
+            "mode": "cold",
+            "readiness_seconds": 10.557376874989131,
+            "peak_rss_kib": 404384
+          },
+          {
+            "mode": "warm",
+            "readiness_seconds": 5.578070237010252,
+            "peak_rss_kib": 391960
+          }
+        ]
+      },
+      "qwen35": {
+        "repository": "AxionML/Qwen3.5-0.8B-NVFP4",
+        "revision": "2ac1e750cda67cc8538d731f6216f77b9c3a6f72",
+        "fingerprint": "907c94e9c7953070c91e7e94d0a09dff0dc1e6f2b230530bd7eecc6e984909e0",
+        "tokenizer_available": true,
+        "coverage": "complete",
+        "scope": "language_model",
+        "nodes": 972,
+        "edges": 1377,
+        "parameters": 333,
+        "graph_id": "18e2e0cc2b90b81e62f712c4d072f4e5d5b1e2186f868e1534fd86be96d82343",
+        "runs": [
+          {
+            "mode": "cold",
+            "readiness_seconds": 10.50726689901785,
+            "peak_rss_kib": 404064
+          },
+          {
+            "mode": "warm",
+            "readiness_seconds": 5.5788017740123905,
+            "peak_rss_kib": 385392
+          }
+        ]
+      },
+      "vjepa2": {
+        "repository": "facebook/vjepa2-vitl-fpc64-256",
+        "revision": "b3c1679b7c34d3255ef3547f27c7b226aefab26f",
+        "fingerprint": "062f2bf6be583704b8285ceec1359f066eebf7af344924f8ac4568d8b8b2e8fa",
+        "tokenizer_available": false,
+        "coverage": "complete",
+        "scope": "visual_encoder_predictor",
+        "nodes": 854,
+        "edges": 1259,
+        "parameters": 587,
+        "graph_id": "8227916aed7ae9833de3d1860b719f37dc49e503691c0863986d041c130589a6",
+        "runs": [
+          {
+            "mode": "cold",
+            "readiness_seconds": 10.506634608987952,
+            "peak_rss_kib": 404324
+          },
+          {
+            "mode": "warm",
+            "readiness_seconds": 5.575556160998531,
+            "peak_rss_kib": 385248
+          }
+        ]
+      }
+    }
+  },
+  "semantic_conservation": {
+    "passed": true,
+    "cases": 7,
+    "oracle": "ui/scripts/check-architecture-semantics.mjs",
+    "baseline": "backend/tests/fixtures/architecture-semantics-baseline.json"
+  },
+  "unchanged_global_views": {
+    "passed": true,
+    "cases": 24,
+    "baseline": "5d3522272cae1a7da8afcdf47017702b7698b36c",
+    "comparison": "Exact projection, ELK boxes/ports/routes, source edge IDs and bounds; elapsed milliseconds excluded",
+    "source_proof": {
+      "baseline": "5d3522272cae1a7da8afcdf47017702b7698b36c",
+      "verified_architecture_files": 26,
+      "candidate": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+      "comparison_script_sha256": "837c4941c7d7a0323c61bad01888c499f15690aa53a4c973f3c954fc201cb2e7"
+    },
+    "method": "Load current fixture factories and both revisions of layoutGraph through Vite ssrLoadModule. Run every fixture/options cross-product, remove only milliseconds from each result, and assert node:assert/strict deepEqual.",
+    "fixtures": [
+      {
+        "factory": "ui/tests/architecture-projection-fixture.ts:makeProjectionFixture",
+        "options": {
+          "count": 4
+        }
+      },
+      {
+        "factory": "ui/tests/architecture-explicit-fixture.ts:makeExplicitFixture",
+        "options": {
+          "count": 4
+        }
+      },
+      {
+        "factory": "ui/tests/architecture-projection-fixture.ts:makeProjectionFixture",
+        "options": {
+          "count": 2,
+          "partial": true,
+          "repetitions": false
+        }
+      },
+      {
+        "factory": "ui/tests/architecture-explicit-fixture.ts:makeExplicitFixture",
+        "options": {
+          "count": 3,
+          "secondStack": 2
+        }
+      }
+    ],
+    "view_options": [
+      {
+        "expanded": [
+          "model"
+        ]
+      },
+      {
+        "expanded": [
+          "model",
+          "layer-3",
+          "layer-3.attention"
+        ]
+      },
+      {
+        "expanded": [],
+        "exhaustive": true
+      },
+      {
+        "expanded": [
+          "model",
+          "layer-0",
+          "layer-0.attention"
+        ],
+        "stateScope": "layer-0"
+      },
+      {
+        "expanded": [
+          "model"
+        ],
+        "showContext": false,
+        "showUnused": true,
+        "deriveMlp": false
+      },
+      {
+        "expanded": [
+          "model",
+          "encoder",
+          "predictor"
+        ],
+        "repetitions": {
+          "encoder-layers": {
+            "start": 1,
+            "count": 2
+          },
+          "predictor-layers": {
+            "start": 0,
+            "count": 1
+          }
+        }
+      }
+    ]
+  },
+  "references": {
+    "smollm2": {
+      "repository": "HuggingFaceTB/SmolLM2-135M",
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "revision_source": "operator manifest",
+      "revision_absence_reason": null,
+      "fingerprint": "aeda1cbf6516239fa4d305117c5a70ca5f4a3af06ef7575544dc97914c61e57e",
+      "total_bytes": 272437465,
+      "physical_tensors": 272,
+      "checkpoint_declared_transformers_version": "4.40.1",
+      "tokenizer_available": true
+    },
+    "qwen3": {
+      "repository": "JunHowie/Qwen3-0.6B-GPTQ-Int4",
+      "revision": "b9d87006067b0c0c2dea836370d6288e14f112ab",
+      "revision_source": "operator manifest",
+      "revision_absence_reason": null,
+      "fingerprint": "31bd7a3f28c9ef9a65b5c6039eec5d4defe5a0e75148af472bde6c3ca4864be2",
+      "total_bytes": 557224424,
+      "physical_tensors": 898,
+      "checkpoint_declared_transformers_version": "4.55.4",
+      "tokenizer_available": true
+    },
+    "qwen35": {
+      "repository": "AxionML/Qwen3.5-0.8B-NVFP4",
+      "revision": "2ac1e750cda67cc8538d731f6216f77b9c3a6f72",
+      "revision_source": "operator manifest",
+      "revision_absence_reason": null,
+      "fingerprint": "907c94e9c7953070c91e7e94d0a09dff0dc1e6f2b230530bd7eecc6e984909e0",
+      "total_bytes": 1051242308,
+      "physical_tensors": 1046,
+      "checkpoint_declared_transformers_version": "5.2.0",
+      "tokenizer_available": true
+    },
+    "vjepa2": {
+      "repository": "facebook/vjepa2-vitl-fpc64-256",
+      "revision": "b3c1679b7c34d3255ef3547f27c7b226aefab26f",
+      "revision_source": "operator manifest",
+      "revision_absence_reason": null,
+      "fingerprint": "062f2bf6be583704b8285ceec1359f066eebf7af344924f8ac4568d8b8b2e8fa",
+      "total_bytes": 1303949947,
+      "physical_tensors": 587,
+      "checkpoint_declared_transformers_version": "4.53.0.dev0",
+      "tokenizer_available": false
+    }
+  },
+  "resource_controls": [
+    {
+      "project": "dpr1",
+      "cycles": 8,
+      "trace": "off",
+      "source_nodes": 78,
+      "source_edges": 112,
+      "returned_geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14
+      },
+      "memory": "Main-thread CDP JS heap after explicit GC; not browser RSS or GPU memory.",
+      "retained_layouts": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "retained_graphs": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "active_workers": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "used_js_heap_bytes_after_gc": [
+        8356360,
+        8602204,
+        8757312,
+        8818748,
+        8874400,
+        8875960,
+        8943172,
+        8995900
+      ],
+      "layout_ms": [
+        126.9,
+        122,
+        122.4,
+        126,
+        123.1,
+        121.7,
+        133.2,
+        124
+      ]
+    },
+    {
+      "project": "dpr2",
+      "cycles": 8,
+      "trace": "off",
+      "source_nodes": 78,
+      "source_edges": 112,
+      "returned_geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14
+      },
+      "memory": "Main-thread CDP JS heap after explicit GC; not browser RSS or GPU memory.",
+      "retained_layouts": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "retained_graphs": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "active_workers": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "used_js_heap_bytes_after_gc": [
+        8342956,
+        8589472,
+        8745908,
+        8800296,
+        8857924,
+        8869372,
+        8933268,
+        8996048
+      ],
+      "layout_ms": [
+        127.8,
+        124.1,
+        123,
+        125.5,
+        123.1,
+        123.5,
+        127,
+        123.7
+      ]
+    },
+    {
+      "project": "dpr1",
+      "cycles": 16,
+      "trace": "off",
+      "source_nodes": 78,
+      "source_edges": 112,
+      "returned_geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14
+      },
+      "memory": "Main-thread CDP JS heap after explicit GC; not browser RSS or GPU memory.",
+      "retained_layouts": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "retained_graphs": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "active_workers": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "used_js_heap_bytes_after_gc": [
+        8323008,
+        8612120,
+        8767180,
+        8817204,
+        8882000,
+        8895568,
+        8951944,
+        9010028,
+        9077176,
+        9150556,
+        9184340,
+        9219252,
+        9238988,
+        9246984,
+        9273176,
+        9309412
+      ],
+      "layout_ms": [
+        124,
+        122.5,
+        126.5,
+        123.9,
+        123.2,
+        122,
+        127.6,
+        123,
+        121.2,
+        125.3,
+        121.9,
+        122,
+        122.2,
+        123.7,
+        123.6,
+        123.3
+      ],
+      "teardown": {
+        "retainedGraphs": 0,
+        "retainedLayouts": 0,
+        "active": 0,
+        "heap": {
+          "usedSize": 7991484,
+          "totalSize": 9236480,
+          "embedderHeapUsedSize": 1672976,
+          "backingStorageSize": 724460
+        },
+        "collected": true
+      }
+    },
+    {
+      "project": "dpr2",
+      "cycles": 16,
+      "trace": "off",
+      "source_nodes": 78,
+      "source_edges": 112,
+      "returned_geometry": {
+        "width": 1442,
+        "height": 636,
+        "nodes": 12,
+        "edges": 14
+      },
+      "memory": "Main-thread CDP JS heap after explicit GC; not browser RSS or GPU memory.",
+      "retained_layouts": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "retained_graphs": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "active_workers": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "used_js_heap_bytes_after_gc": [
+        8323556,
+        8600804,
+        8755008,
+        8790096,
+        8870716,
+        8883344,
+        8926680,
+        8986624,
+        9053460,
+        9125452,
+        9161220,
+        9194032,
+        9214736,
+        9223852,
+        9249284,
+        9296656
+      ],
+      "layout_ms": [
+        124.1,
+        125.8,
+        124.6,
+        126.4,
+        124,
+        123.2,
+        122.7,
+        124.2,
+        123.3,
+        122.8,
+        125.1,
+        125.2,
+        122.5,
+        130,
+        124.3,
+        122.8
+      ],
+      "teardown": {
+        "retainedGraphs": 0,
+        "retainedLayouts": 0,
+        "active": 0,
+        "heap": {
+          "usedSize": 7992120,
+          "totalSize": 9236480,
+          "embedderHeapUsedSize": 1612992,
+          "backingStorageSize": 724459
+        },
+        "collected": true
+      }
+    }
+  ],
+  "process_incident": {
+    "revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+    "status": "LAUNCHER_INTERRUPTED; PLAYWRIGHT CHILD CONTINUED",
+    "process_exit": 143,
+    "signal": "SIGTERM",
+    "planned_tests": 24,
+    "assertion_failures_observed": 0,
+    "complete_json_report": "architecture-browser.json: 24 passed, zero skipped/unexpected/flaky",
+    "root_cause": "Launcher SIGTERM cause not established. Its child continued writing to the original log; wrapper exit was initially mistaken for suite termination.",
+    "completed_cases": 24,
+    "log_sha256": "edfad8ed322fc3b82f0f10b675f942367dd7b40a9b576c345672c42accec082c",
+    "followup": "Original Playwright child completed all 24 tests and its ports28622-28625 closed. Duplicate driver was stopped after verifying host ancestry; ports30622-30625 closed. Duplicate results excluded. Trace-disabled resource controls run alone afterward.",
+    "completed_passes_at_launcher_exit": 6,
+    "completed_passes_when_surviving_child_found": 18
+  },
+  "visual": {
+    "baseline": "c71f1b81bedfb534a6147f5c119ab0cfbf2cfeee",
+    "passed": true,
+    "comparisons": [
+      {
+        "state": "safety-tensor-1178",
+        "changed_pixels": 0,
+        "compared_pixels": 1060200,
+        "max_channel_delta": 0,
+        "shell_geometry_equal": true,
+        "baseline_sha256": "34dcbb6c8fe9324d21003e167a62acdd776d8605ac2cd5d836b8aba12bc13791",
+        "current_sha256": "34dcbb6c8fe9324d21003e167a62acdd776d8605ac2cd5d836b8aba12bc13791",
+        "comparison": "full image"
+      },
+      {
+        "state": "safety-tokenizer-1178",
+        "changed_pixels": 0,
+        "compared_pixels": 1060200,
+        "max_channel_delta": 0,
+        "shell_geometry_equal": true,
+        "baseline_sha256": "14c8bbe398a363646259be3dd83eef278c536a42dc4531279617306e4b1b504b",
+        "current_sha256": "14c8bbe398a363646259be3dd83eef278c536a42dc4531279617306e4b1b504b",
+        "comparison": "full image"
+      },
+      {
+        "state": "safety-architecture-1178",
+        "changed_pixels": 0,
+        "compared_pixels": 151932,
+        "max_channel_delta": 0,
+        "shell_geometry_equal": true,
+        "baseline_sha256": "80eab26fdc82cab6f2220240d793021f28e09ed8ac2394e059c51a9aa10b490a",
+        "current_sha256": "d53334d111378dea7076cf506376500f42e08fd263c044a797e70542c6e46599",
+        "comparison": "outside rounded Architecture panel interior"
+      },
+      {
+        "state": "safety-tensor-1440",
+        "changed_pixels": 0,
+        "compared_pixels": 1296000,
+        "max_channel_delta": 0,
+        "shell_geometry_equal": true,
+        "baseline_sha256": "6c8e78a27000a3770e7d88a84c26a6bfebb03df850fdc3b12afc64f996101a5a",
+        "current_sha256": "6c8e78a27000a3770e7d88a84c26a6bfebb03df850fdc3b12afc64f996101a5a",
+        "comparison": "full image"
+      },
+      {
+        "state": "safety-tokenizer-1440",
+        "changed_pixels": 0,
+        "compared_pixels": 1296000,
+        "max_channel_delta": 0,
+        "shell_geometry_equal": true,
+        "baseline_sha256": "3a87c474a5fe65d75a2c52cc8262fd602368268f397c82ce605836c38933d6d2",
+        "current_sha256": "3a87c474a5fe65d75a2c52cc8262fd602368268f397c82ce605836c38933d6d2",
+        "comparison": "full image"
+      },
+      {
+        "state": "safety-architecture-1440",
+        "changed_pixels": 0,
+        "compared_pixels": 179704,
+        "max_channel_delta": 0,
+        "shell_geometry_equal": true,
+        "baseline_sha256": "c5f9dc5817d04dc66b6184b964ac7549c7eab139390a976bd78ad95a12a25717",
+        "current_sha256": "4edddb48f2e2a5eefea19a4e62b2ca040b2917c681401b2a0080ef7e81ce374c",
+        "comparison": "outside rounded Architecture panel interior"
+      }
+    ]
+  },
+  "captures": {
+    "overview-qwen3-1178.png": {
+      "sha256": "50a08c1b205a696bf10308a76a4f397c7fb7cbfbe63b4993a4f7aa49404e70a0",
+      "source_revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+      "source_capture": "architecture-complete-loca-4839f-gs-and-logical-weight-modal-dpr1/compact-graph-1178.png"
+    },
+    "dense-mlp-1440.png": {
+      "sha256": "bee059632d0a9e9641ad1f59211e4f9d0b2a3ce11b098c9c1c850a4cbcc768e4",
+      "source_revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+      "source_capture": "architecture-complete-loca-4839f-gs-and-logical-weight-modal-dpr1/reference-qwen3-0-0-mlp-1440.png"
+    },
+    "hybrid-linear-1178.png": {
+      "sha256": "e773ed9a7005ca66f63c15f1bd7d1a88827ee1b30f1c63fa2417a6147722bd8b",
+      "source_revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+      "source_capture": "architecture-complete-loca-ef27b-gs-and-logical-weight-modal-dpr1/reference-qwen35-0-0-compact-1178.png"
+    },
+    "hybrid-full-1440.png": {
+      "sha256": "58be3ac1f8097b8011c75dc212dda25773b0b4ea3f64b864eca7392a4819af9d",
+      "source_revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+      "source_capture": "architecture-complete-loca-ef27b-gs-and-logical-weight-modal-dpr1/reference-qwen35-0-3-compact-1440.png"
+    },
+    "isolated-qwen3-trunk-1178.png": {
+      "sha256": "34e1471aff8cd11371c2a2a2fe0625b47232eaaa879fe8bd28916a4db6853e4f",
+      "source_revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+      "source_capture": "architecture-complete-loca-4839f-gs-and-logical-weight-modal-dpr1/isolated-qwen3-attention-1178.png"
+    },
+    "isolated-visual-1178.png": {
+      "sha256": "4e27ddfa1d3a964b7d0e0903ac7f681325a06c4939a4c75148713b3fb153f821",
+      "source_revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+      "source_capture": "architecture-complete-loca-1c804-gs-and-logical-weight-modal-dpr1/isolated-vjepa2-attention-1178-initial.png"
+    },
+    "nested-return-dpr2.png": {
+      "sha256": "485c506a84c031f1e11d3fb4d489725022513893fb9ad54fc6b6402c9ebb0a02",
+      "source_revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+      "source_capture": "architecture-deterministic-19369-n-releases-obsolete-layouts-dpr2/nested-return.png"
+    },
+    "constrained-390.png": {
+      "sha256": "29d1bb13d652a052e3664955e72e21e3887da2fd6de94f9c6ea51430be088e9b",
+      "source_revision": "4e876ed6d67ec9b0b2703f9607d66f65e5121603",
+      "source_capture": "product-architecture-safet-0f11d-nd-other-explorers-at-390px-dpr1/safety-architecture-390.png"
+    },
+    "exhaustive-global-detail-1440.png": {
+      "sha256": "c93d17f1bd2bf2754e818ec41c5a0355351a773d4cf22d0a5dec611712ad4df6",
+      "source_revision": "463b23ae45d1660fbcbf6fa7d8d15e485d7a8fd9",
+      "source_capture": "architecture-complete-loca-84e64-reachable-at-readable-scale-dpr1/exhaustive-global-detail-1440.png"
+    }
+  },
+  "log_sha256": {
+    "ui-check.log": "fa013774ec00fcd409af698f381e749cbed52cf0285bff1751472eee9b99494b",
+    "component-browser.log": "9d6343754bb0f21f5ae21e44bcd35393e13fc8ba8a84c05bb3499854aacc2bb9",
+    "architecture-browser.log": "edfad8ed322fc3b82f0f10b675f942367dd7b40a9b576c345672c42accec082c",
+    "resource-controls.log": "d5adc964788393ec55b5179525657727928582703f660618fd9e4ba02c2bd1f4",
+    "global-comparison.log": "491222999e6602ae1b4d3831062bd9a3eea618da9f7f1fc2525e8c5a44bb8638",
+    "global-detail.log": "dbb4dbacb08b90354538808ab7b45a88adab9b46d7369b8124dcf7e915a70841",
+    "product-browser.log": "57f38ae757455489b8d4057f61f13887c53926a52281f4b3269ccc7d61740b90",
+    "network.log": "472f101c67fc554ccbe0a35387e8db7a5576547930a827bc53dcce6b083b1c40",
+    "api.log": "d0917fe5a6910375ff51c52209001ccc51da59d45e6c37f785242e632b4dbff0"
+  }
+}
