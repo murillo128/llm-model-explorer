@@ -130,7 +130,7 @@ export function projectGraph(graph: Graph, options: ProjectionOptions): Projecti
     }
     if (mlp && parentId !== mlp.id) return;
     const n: ProjectedNode = { id, ...(parentId ? { parentId } : {}), kind: record.kind, label: record.label,
-      sourceIds: [id], record, ports: [], expanded: record.kind === 'group' && (exhaustive || expanded.has(id)) };
+      sourceIds: [id], record, ports: [], expanded: record.kind === 'group' && record.children.length > 0 && (exhaustive || expanded.has(id)) };
     add(n); owners.set(id, n);
     if (record.kind === 'group') {
       if (n.expanded) for (const child of record.children) visit(child, id);

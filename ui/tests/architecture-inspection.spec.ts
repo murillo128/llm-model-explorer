@@ -27,12 +27,13 @@ const released = (page: Page) => expect.poll(() => page.evaluate(() => ({
   retainedScalars: window.explorerFixture.renderers.filter((r) => Reflect.get(r, 'values') !== null).length,
 }))).toEqual({ textures: 0, displays: 0, liveRenderers: 0, retainedScalars: 0 });
 
-test('card gestures select, expand, and open the native modal without changing the retained view', async ({ page }) => {
+test('card gestures toggle expansion and explicit controls inspect without changing the retained view', async ({ page }) => {
   await open(page);
   await findComponent(page, 'layer1');
   const graph = page.getByLabel('Architecture graph', { exact: true });
   await expect(graph).toHaveAttribute('aria-busy', 'false');
   const group = page.locator('.react-flow__node[data-id="layer1"]');
+  const fetches = await page.evaluate(() => window.explorerFixture.metrics.fetches);
   const before = await graph.getAttribute('data-layout-count');
   for (const target of ['.architecture-node-label', '.architecture-node-type']) {
     await group.locator(target).click();
@@ -48,15 +49,16 @@ test('card gestures select, expand, and open the native modal without changing t
   const camera = await page.locator('.react-flow__viewport').getAttribute('style');
   const count = await graph.getAttribute('data-layout-count');
   for (const id of ['layer1', 'linear1']) {
-    const label = page.locator(`.react-flow__node[data-id="${id}"] .architecture-node-label`);
-    await label.dblclick();
+    const trigger = page.locator(`.react-flow__node[data-id="${id}"] .architecture-info`);
+    await trigger.dblclick();
     await expect(page.getByRole('dialog')).toHaveAccessibleName(id);
     await page.keyboard.press('Escape');
-    await expect(label).toBeFocused();
+    await expect(trigger).toBeFocused();
     await expect(group.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
     expect(await graph.getAttribute('data-layout-count')).toBe(count);
     expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
   }
+  expect(await page.evaluate(() => window.explorerFixture.metrics.fetches)).toBe(fetches);
   await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
   await expect(graph).toHaveAttribute('aria-busy', 'false');

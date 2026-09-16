@@ -219,9 +219,13 @@ Hover/focus emphasis is temporary and uses the existing warm amber interaction s
 
 A single mouse click on a card label or ordinary body selects only, including
 presentation-backed cards. It does not inspect, expand, navigate, change focus,
-invoke layout/retrieval, or move the camera. Double-click expands a collapsed
-expandable card using the same action as `+`; otherwise it inspects. Double-click
-never collapses, and its preceding clicks may only select. Card double-clicks
+invoke layout/retrieval, or move the camera. Double-click toggles an expandable
+card once, using the same current state and action as `+`/`−`: expand when
+collapsed, contract when expanded. A leaf or empty group has no expansion
+control; double-click has no additional effect beyond the preceding selection
+clicks. Supported derived groups and repetition ranges use their actual contents
+and presentation identity, never an arbitrary substituted layer. Inspection is
+always explicit. Card double-clicks
 must not zoom the canvas. Background pan/zoom remains unchanged.
 
 Independent header controls are ordered `+/-` (when expandable), navigation,
@@ -240,6 +244,16 @@ before navigating; concrete shared cards use the current verified source mapping
 not the template representative. Controls have English target-specific names and
 tooltips, visible focus and independent click/double-click hit behavior. Ports,
 connections and expanded-group children retain their own targets.
+
+The canvas and a future navigator consume one authoritative component selection
+and expansion state per current model/graph/scope view, with changes from either
+representation immediately reflected by both. Contracting a parent hides its
+descendants but retains their nested expansion choices and unrelated sibling
+state. A valid selected source descendant stays selected even while hidden;
+hiding it does not select its parent or a synthetic range. Graph/model replacement
+still clears invalid identities. Reversible scope snapshots retain the previous
+scope's state without copying the semantic graph. Explicit toggles preserve the
+acted-on location through anchored layout and never implicitly fit the model.
 
 Explicit `(i)` and keyboard inspection open one closable modal with identity,
 function, known dimensions, provenance/diagnostics, and parameter choices.
