@@ -2114,6 +2114,37 @@
       ]
     },
     {
+      "name": "model-defined-no-tokenizer",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "scope"
+          ],
+          "value": "model_defined"
+        },
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "5",
+            "references"
+          ],
+          "value": []
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "tokenizer_available"
+          ],
+          "value": false
+        }
+      ]
+    },
+    {
       "name": "explicit-partial-inventory",
       "valid": true,
       "schema_valid": true,

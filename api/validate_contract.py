@@ -617,6 +617,16 @@ def main():
     args = parser.parse_args()
     document = yaml.safe_load(CONTRACT.read_text())
     OpenAPIV31SpecValidator(document).validate()
+    definition_schema = json.loads((ROOT / 'docs/spec/backend/architecture-definition.schema.json').read_text())
+    Draft202012Validator.check_schema(definition_schema)
+    definition_validator = Draft202012Validator(definition_schema)
+    definition_example = json.loads((ROOT / 'examples/model-owned-architecture/architecture.json').read_text())
+    definition_validator.validate(definition_example)
+    for invalid in ({**definition_example, 'schema_version': 2},
+                    {**definition_example, 'schema_version': True},
+                    {**definition_example, 'python': 'not executable'},
+                    {**definition_example, 'coverage': 'partial'}):
+        require(not definition_validator.is_valid(invalid), 'invalid portable definition accepted')
     references = resolve_references(document)
     for schema in document['components']['schemas'].values():
         Draft202012Validator.check_schema(schema)

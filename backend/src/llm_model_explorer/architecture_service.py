@@ -10,12 +10,15 @@ from dataclasses import dataclass
 from time import perf_counter
 
 from .architecture_analysis import AnalysisInput, DescriptionRegistry, register_dense_descriptions
-from .architecture_analysis.core import AnalysisResult
+from .architecture_analysis.core import AnalysisResult, Scope
+from .architecture_analysis.model_defined import analyze_definition, parse_definition, producer_for
+from .architecture_analysis.model_defined_schema import MAX_DEFINITION_BYTES
 from .architecture_analysis.qwen35 import register_qwen35
 from .architecture_analysis.validation import MAX_BYTES, BindingContext, GraphError
 from .architecture_analysis.vjepa2 import register_vjepa2
 from .artifacts import ArchitectureArtifactSpec, ArtifactStore
 from .execution import BlockingWork
+from .model_files import ModelError
 from .models import CatalogueEntry, ModelCatalogue
 from .tensor_source import ModelSource
 
@@ -102,6 +105,7 @@ class ArchitectureService:
     def _prepare_one(self, entry: CatalogueEntry) -> None:
         model_id = entry.summary.id
         source = None
+        model_supplied = False
         outcome = "unavailable"
         mode = "analysis"
         hashing = analysis = cache_read = 0.0
@@ -116,9 +120,12 @@ class ArchitectureService:
             inputs = AnalysisInput.from_source(
                 source, tokenizer_available=entry.summary.tokenizer_available
             )
-            selected = self.registry.select(inputs)
+            raw_definition = source.architecture_definition(max_bytes=MAX_DEFINITION_BYTES)
+            model_supplied = raw_definition is not None
+            definition = parse_definition(raw_definition) if raw_definition is not None else None
+            selected = None if model_supplied else self.registry.select(inputs)
             key = (model_id, source.fingerprint)
-            if selected is None:
+            if selected is None and definition is None:
                 self._prepared[key] = Prepared(
                     None,
                     None,
@@ -130,10 +137,17 @@ class ArchitectureService:
                     ),
                 )
                 return
+            scope: Scope
+            if definition is not None:
+                producer = producer_for(definition)
+                scope = "model_defined"
+            else:
+                assert selected is not None
+                producer, scope = selected.producer, selected.scope
             spec = ArchitectureArtifactSpec(
                 model_fingerprint=source.fingerprint,
-                producer=selected.producer,
-                scope=selected.scope,
+                producer=producer,
+                scope=scope,
                 analysis_options={},
             )
             # Reserve the exact response envelope, including JSON-escaped model ID.
@@ -153,7 +167,11 @@ class ArchitectureService:
             else:
                 stamp = perf_counter()
                 try:
-                    result = self.registry.analyze(inputs, byte_limit=budget)
+                    result = (
+                        analyze_definition(definition, inputs, byte_limit=budget)
+                        if definition is not None
+                        else self.registry.analyze(inputs, byte_limit=budget)
+                    )
                 finally:
                     analysis += perf_counter() - stamp
                 self._check_stop()
@@ -188,11 +206,22 @@ class ArchitectureService:
             if source is not None:
                 reason = (
                     "unsupported_size"
-                    if isinstance(exc, GraphError) and exc.code == "unsupported_size"
+                    if isinstance(exc, (GraphError, ModelError)) and exc.code == "unsupported_size"
                     else "analysis_failed"
                 )
                 self._prepared[(model_id, source.fingerprint)] = Prepared(
-                    None, None, unavailable(model_id, reason, "Architecture preparation failed.")
+                    None,
+                    None,
+                    unavailable(
+                        model_id,
+                        reason,
+                        (
+                            "Model-supplied architecture.json is invalid or unsupported; "
+                            "no fallback was used."
+                        )
+                        if model_supplied
+                        else "Architecture preparation failed.",
+                    ),
                 )
         finally:
             logger.info(

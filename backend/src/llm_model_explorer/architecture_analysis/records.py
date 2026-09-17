@@ -3,7 +3,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_REVISION = "845f3bc82e18dd37a23a044b9dc4b3ab356b406558816e63f3a988e471de4d38"
+SCHEMA_REVISION = "ff386813a00de0f59a86281fe379846f05eb138801788fea343f1a80cc090307"
 
 
 class Record(BaseModel):
@@ -311,7 +311,7 @@ class ArchitectureTemplate(Record):
 
 class ArchitectureGraph(Record):
     graph_id: ArchitectureId
-    scope: Literal["language_model", "visual_encoder_predictor"]
+    scope: Literal["language_model", "visual_encoder_predictor", "model_defined"]
     coverage: Literal["complete", "partial"]
     symbols: Annotated[list[ArchitectureSymbol], Field(max_length=33554432)]
     nodes: Annotated[list[ArchitectureNode], Field(min_length=1, max_length=33554432)]
