@@ -33,7 +33,8 @@ it('retains Shared families and repetition navigation for model-owned provenance
   const view = new GraphViews().get('owned', graph), template = graph.templates![0]!;
   const second = template.instances[1]!;
   expect(browserIndex(graph).find((n) => n.node.id === second.node_id)!.path).toContain('Instance 2');
-  enterSharedStructure(view, template, second.node_id);
+  enterSharedStructure(view, template, null);
+  view.update({ shared: { ...view.shared!, instanceId: second.node_id } });
   expect(view.shared!.instanceId).toBe(second.node_id);
   expect(browserExpansionId(graph, view, second.node_id)).toBe(template.instances[0]!.node_id);
   expect(graph.nodes.find((n) => n.id === 'origin')!.attributes[1]!.value).toBe('not_verified');

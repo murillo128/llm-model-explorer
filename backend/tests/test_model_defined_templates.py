@@ -275,7 +275,7 @@ def test_ids_do_not_require_paths_or_prefix_conventions() -> None:
     assert analyze(value).status == "complete"
 
 
-def test_valid_optional_metadata_budget_and_invalid_after_exhaustion(caplog: pytest.LogCaptureFixture) -> None:
+def test_budget_does_not_hide_invalid_templates(caplog: pytest.LogCaptureFixture) -> None:
     base = document()
     del base["templates"]
     graph = analyze(base).graph

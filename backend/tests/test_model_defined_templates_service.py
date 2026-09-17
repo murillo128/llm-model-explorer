@@ -8,13 +8,13 @@ from typing import Any
 from unittest.mock import Mock
 
 import pytest
+from test_model_defined_service import prepare
 
 from llm_model_explorer import architecture_service
 from llm_model_explorer.architecture_analysis.core import DescriptionRegistry
 from llm_model_explorer.model_files import ModelError
 from llm_model_explorer.settings import Settings
 from llm_model_explorer.tensor_source import ModelSource
-from test_model_defined_service import prepare
 
 EXAMPLE = (
     Path(__file__).resolve().parents[2]
