@@ -188,3 +188,30 @@ test('neutral shared port stays pinned after blur and restoration, then binds to
   }
   expect(requests).toEqual([]);
 });
+
+test('source interface search remains inspectable from a neutral shared view', async ({ page }) => {
+  const requests: string[] = []; page.on('request', (r) => { if (/\/sessions\//.test(r.url())) requests.push(r.url()); });
+  await page.goto(`${harness}?fixture=templates&native-inspection`); await ready(page);
+  await openShared(page, 'shared-full-attention'); await ready(page);
+  const before = await camera(page), layouts = await page.locator(panel).getAttribute('data-layout-count');
+  const search = page.getByRole('searchbox', { name: 'Search components', exact: true });
+  await search.fill('positions'); await search.press('Enter');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const inspect = page.getByRole('button', { name: 'Inspect selected', exact: true });
+  for (const clear of [false, true]) {
+    if (clear) await search.fill('');
+    await inspect.click();
+    const dialog = page.getByRole('dialog', { name: 'Interface inspection' });
+    await expect(dialog).toContainText('positions · input');
+    await expect(dialog).toContainText('positions:out → model:positions');
+    await expect(dialog).toContainText('authored-projection-fixture');
+    await expect(dialog.getByLabel('Inspect parameter')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Close inspection' }).click();
+    await expect(inspect).toBeFocused();
+    await expect(page.locator(panel)).toHaveAttribute('data-template-instance-id', '');
+    await expect(page.locator(panel)).toHaveAttribute('data-scope-id', 'layer-0.attention');
+    await expect(page.locator(panel)).toHaveAttribute('data-layout-count', layouts!);
+    expect(await camera(page)).toBe(before);
+  }
+  expect(requests).toEqual([]);
+});

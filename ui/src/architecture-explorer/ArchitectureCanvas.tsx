@@ -179,6 +179,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const selectSource = useCanvasCallback((id: string) => { selectComponent(view, id); setInspection(null); });
   const selectBoundary = useCanvasCallback((boundary: BoundarySelection) => {
     view.update({ boundary, selected: boundary.owner.kind === 'source' ? boundary.owner.id : null, edge: null,
+      selectionMode: boundary.templatePort && !concreteInstance ? 'structure' : 'source',
       browser: { ...view.browser, selectedFamily: null } }); setInspection(null);
   });
   const selectFamily = useCanvasCallback((id: string) => {
@@ -562,7 +563,9 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const clearFamily = useCanvasCallback(() => view.update({ browser: { ...view.browser, selectedFamily: null } }));
   const inspectSelected = useCanvasCallback((trigger: HTMLElement) => {
     if (view.boundary) {
-      const common = shared && !concreteInstance && template && anchorInstance;
+      // Model-wide search targets source interfaces even while the canvas shows
+      // a neutral template. Only an actual template port has common metadata.
+      const common = view.boundary.templatePort && shared && !concreteInstance && template && anchorInstance;
       const node = common ? [...projected.values()].find((n) => n.record?.id === view.boundary!.owner.id)?.record : undefined;
       const role = common ? anchorInstance.nodes.find((m) => m.node_id === view.boundary!.owner.id)?.role : undefined;
       onInspect?.({ modelId, sessionId, graphId: graph.graph_id, trigger, boundary: view.boundary,
