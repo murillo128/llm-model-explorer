@@ -1,3 +1,4 @@
+import { assertInterfaceCoverage } from '../../tests/architecture-invariants';
 import { layoutGraph } from './auto-layout';
 import { describe, expect, it } from 'vitest';
 import { makeProjectionFixture } from '../../tests/architecture-projection-fixture';
@@ -211,7 +212,7 @@ describe('generated horizontal graph geometry', () => {
       if (i % 4 !== 3) horizontal(layout, [`${id}.attention.input`, `${id}.attention.conv`, `${id}.attention.delta`, `${id}.attention.output`]);
       else horizontal(layout, [`${id}.attention.Q`, `${id}.attention.rope-Q`, `${id}.attention.core`, `${id}.attention.output`]);
     }
-    expect(layout.boxes).toHaveLength(graph.nodes.length); expect(new Set(layout.edgeIds)).toEqual(new Set(graph.edges.map((e) => e.id)));
+    assertInterfaceCoverage(graph, layout.projection); expect(new Set(layout.edgeIds)).toEqual(new Set(graph.edges.map((e) => e.id)));
     geometry(layout);
   }, 60_000);
 

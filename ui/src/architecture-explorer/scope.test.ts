@@ -26,7 +26,7 @@ describe('isolated component projection', () => {
       expect(projection.nodes.filter((node) => node.presentation !== 'external').flatMap((node) => node.sourceIds)
         .every((id) => members.has(id))).toBe(true);
       expect(projection.nodes.find((node) => node.id === scope)?.parentId).toBeUndefined();
-      const represented = new Set(projection.edges.flatMap((edge) => edge.originalEdgeIds));
+      const represented = new Set([...projection.edges.flatMap((edge) => edge.originalEdgeIds), ...(projection.boundaryPaths ?? []).flat().map((e) => e.id)]);
       for (const edge of graph.edges) {
         const crossing = members.has(edge.source.node_id) !== members.has(edge.target.node_id);
         if (crossing) expect(represented.has(edge.id), edge.id).toBe(true);
@@ -52,8 +52,8 @@ describe('isolated component projection', () => {
       [ep('layer-3.prior-V', 'out'), ep('layer-3.attention.core', 'prior_V')],
       [ep('layer-3.attention.core', 'next_K'), ep('layer-3.next-K', 'x')],
       [ep('layer-3.attention.core', 'next_V'), ep('layer-3.next-V', 'x')],
-      [ep('layer-3', 'positions'), ep('layer-3.attention.rope-Q', 'positions')],
-      [ep('layer-3', 'mask'), ep('layer-3.attention.core', 'mask')],
+      [ep('layer-3.attention', 'positions'), ep('layer-3.attention.rope-Q', 'positions')],
+      [ep('layer-3.attention', 'mask'), ep('layer-3.attention.core', 'mask')],
     ]));
     expect(projection.scope!.excludedNodeIds).toContain('layer-3.residual-1');
     const residual = graph.edges.find((edge) => edge.target.node_id === 'layer-3.residual-1' && edge.target.port_id === 'residual')!;

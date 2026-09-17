@@ -110,7 +110,7 @@ test('component expansion, model-wide exhaustive access and View in model retain
   const exhaustive = await state(page);
   expect(exhaustive.options.scope).toBeUndefined(); expect(exhaustive.options.exhaustive).toBe(true);
   expect(exhaustive.layout.projection.nodes.map((node) => node.id).sort()).toEqual(
-    (await page.evaluate(() => window.isolationProbe.requests.at(-1)!.graph.nodes.map((node) => node.id))).sort());
+    (await page.evaluate(() => [...window.isolationProbe.requests.at(-1)!.graph.nodes.filter((node) => !['token-ids', 'positions', 'mask', 'current-mask', 'tokenizer'].includes(node.id)).map((node) => node.id), 'presentation:model'])).sort());
   expect(exhaustive.layout.projection.hiddenEdgeIds).toEqual([]); expect(exhaustive.layout.projection.filteredEdgeIds).toEqual([]);
 });
 

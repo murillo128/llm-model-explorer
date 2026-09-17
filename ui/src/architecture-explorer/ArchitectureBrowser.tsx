@@ -1,7 +1,9 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import type { KeyboardEvent, RefObject } from 'react';
 import type { Graph, GraphView } from './graph';
-import { browserIndex, browserPredicates } from './browser-model';
+import { browserIndex, browserPredicates, interfaceSearch } from './browser-model';
+import { interfaceIndex } from './interfaces';
+import type { BoundarySelection } from './interfaces';
 
 function BrowserIcon({ kind }: { kind: 'component' | 'block' | 'family' }) {
   return <svg data-icon={kind} aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
@@ -14,8 +16,10 @@ interface Props {
   graph: Graph; view: GraphView; searchRef: RefObject<HTMLInputElement | null>;
   select: (id: string) => void; selectFamily: (id: string) => void; toggle: (id: string) => void;
   exploreStack: (id: string) => void;
+  selectBoundary?: (selection: BoundarySelection) => void;
 }
-export function ArchitectureBrowser({ graph, view, searchRef, select, selectFamily, toggle, exploreStack }: Props) {
+export function ArchitectureBrowser({ graph, view, searchRef, select, selectFamily, toggle, exploreStack, selectBoundary }: Props) {
+  const interfaces = useMemo(() => interfaceIndex(graph), [graph]);
   const { inside, expanded } = browserPredicates(graph, view);
   const entries = useMemo(() => browserIndex(graph), [graph]);
   const byId = useMemo(() => new Map(entries.map((entry) => [entry.node.id, entry])), [entries]);
@@ -24,6 +28,12 @@ export function ArchitectureBrowser({ graph, view, searchRef, select, selectFami
   const searching = Boolean(query.trim());
   const terms = query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
   const matches = entries.filter((entry) => terms.every((term) => entry.search.includes(term)));
+  const interfaceMatches = (id: string) => searching ? interfaces.interfaces.filter((item) => item.owner.id === id && terms.every((term) => interfaceSearch(item.node).includes(term))) : [];
+  const selectEntry = (id: string) => {
+    const ports = interfaceMatches(id);
+    if (ports.length && selectBoundary) selectBoundary({ kind: 'boundary', owner: ports[0]!.owner, endpoints: ports.map((p) => p.endpoint) });
+    else select(id);
+  };
   const visible = searching ? matches : entries.filter(({ node }) => {
     let parent = node.parent_id;
     while (parent) {
@@ -55,7 +65,7 @@ export function ArchitectureBrowser({ graph, view, searchRef, select, selectFami
     const entry = byId.get(id);
     if (!entry) return null;
     const { node, label, path, depth } = entry;
-    const expandable = node.kind === 'group' && node.children.length > 0;
+    const expandable = node.kind === 'group' && node.children.some(interfaces.eligible);
     const isExpanded = expanded(id), selected = view.selectionMode === 'source' && view.selected === id && !view.edge;
     const detail = `${node.label} · ${path} · ${id}${inside(id) ? '' : ' · Model context; outside current canvas'}`;
     return <div key={id} className="architecture-browser-row" data-node-id={id} data-selected={selected} data-outside={!inside(id)}
@@ -67,16 +77,21 @@ export function ArchitectureBrowser({ graph, view, searchRef, select, selectFami
         aria-level={searching || shared ? undefined : depth + 1} aria-expanded={expandable ? isExpanded : undefined}
         aria-selected={searching || shared ? undefined : selected} aria-pressed={searching || shared ? selected : undefined}
         aria-label={`Select component ${label}`} aria-description={detail} title={detail}
-        onClick={() => select(id)} onDoubleClick={() => { if (expandable) toggle(id); }} onKeyDown={(event) => keys(event, id, expandable)}>
+        onClick={() => selectEntry(id)} onDoubleClick={() => { if (expandable) toggle(id); }} onKeyDown={(event) => keys(event, id, expandable)}>
         <BrowserIcon kind={expandable ? 'component' : 'block'} /><span><span>{label}</span>{(searching || shared) && <small>{path}</small>}</span>
         <span role="tooltip" className="architecture-browser-tooltip">{detail}</span>
+        {interfaceMatches(id).length > 0 && <small>Ports: {interfaceMatches(id).map((p) => p.label).join(', ')}</small>}
       </button>
     </div>;
   }
   return <>
     <div className="architecture-browser-search"><input ref={searchRef} type="search" aria-label="Search components" placeholder="Search components…" value={query}
       onChange={(event) => update({ query: event.target.value })} onKeyDown={(event) => {
-        if (event.key === 'Enter' && searching && matches[0]) { event.preventDefault(); select(matches[0].node.id); }
+        if (event.key === 'Enter' && searching) {
+          event.preventDefault();
+          if (interfaces.outer.kind === 'model' && interfaceMatches(interfaces.outer.id).length) selectEntry(interfaces.outer.id);
+          else if (matches[0]) selectEntry(matches[0].node.id);
+        }
         if (event.key === 'ArrowDown') { event.preventDefault(); scroll.current?.querySelector<HTMLButtonElement>('[data-browser-name]')?.focus(); }
         if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); update({ query: '' }); }
       }} />
@@ -85,10 +100,12 @@ export function ArchitectureBrowser({ graph, view, searchRef, select, selectFami
     <div className="architecture-browser-scroll" ref={scroll} onScroll={(event) => {
       update({ [searching ? 'searchScroll' : 'treeScroll']: event.currentTarget.scrollTop });
     }}>
-      <h3>Model</h3>
+      <h3>{interfaces.outer.kind === 'model' && selectBoundary ? <button aria-label="Select Model boundary"
+        onClick={() => selectBoundary({ kind: 'boundary', owner: interfaces.outer, endpoints: [] })}>Model</button> : 'Model'}</h3>
       <div role={searching ? 'group' : 'tree'} aria-label={searching ? 'Model search results' : 'Model components'}>
         {visible.map((entry) => row(entry.node.id))}
-        {searching && !visible.length && <p className="architecture-browser-empty">No matching components</p>}
+        {interfaces.outer.kind === 'model' && interfaceMatches(interfaces.outer.id).length > 0 && <button data-browser-name={interfaces.outer.id} aria-label="Select Model interface" onClick={() => selectEntry(interfaces.outer.id)}>Model · Ports: {interfaceMatches(interfaces.outer.id).map((p) => p.label).join(', ')}</button>}
+        {searching && !visible.length && !interfaceMatches(interfaces.outer.id).length && <p className="architecture-browser-empty">No matching components</p>}
       </div>
       {!searching && graph.repetitions.length > 0 && <details open className="architecture-browser-stacks"><summary>Repetition windows</summary>
         {graph.repetitions.map((stack) => <button key={stack.id} onClick={() => exploreStack(stack.id)} aria-label={`Explore stack ${stack.label}`}>{stack.label} · {stack.instances.length} instances</button>)}

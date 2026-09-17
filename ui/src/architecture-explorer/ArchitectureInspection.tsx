@@ -8,6 +8,7 @@ import type { ArchitectureSelection } from './ArchitectureCanvas';
 import { formatShape } from './graph';
 import type { Graph } from './graph';
 import { ownParameters } from './card-summary';
+import { interfaceIndex } from './interfaces';
 
 type S = components['schemas'];
 function Provenance({ records }: { records: S['ArchitectureProvenance'][] }) {
@@ -39,7 +40,7 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
   const lifetime = useChildLifetime(context.selection);
   const [choice, setChoice] = useState(selected.parameterId ?? '');
   const { node } = selected;
-  const parameters = selected.structureOnly ? [] : ownParameters(node, new Map(graph.parameters.map((p) => [p.id, p])));
+  const parameters = selected.structureOnly || !node || selected.boundary ? [] : ownParameters(node, new Map(graph.parameters.map((p) => [p.id, p])));
   const templateInstance = graph.templates?.flatMap((t) => t.instances).find((i) => i.node_id === selected.templateInstanceId);
   const members = new Set(templateInstance?.nodes.map((m) => m.node_id));
   const external = templateInstance ? graph.edges.filter((e) => members.has(e.source.node_id) !== members.has(e.target.node_id)) : [];
@@ -47,7 +48,7 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
   const inspection = parameter?.inspection;
   const tensor = inspection?.status === 'available'
     ? inventory.tensors.find((t) => t.id === inspection.tensor_id) : undefined;
-  const diagnostics = selected.structureOnly ? [] : [...graph.diagnostics, ...responseDiagnostics].filter((d) => d.node_id === node.id || (parameter && d.parameter_id === parameter.id));
+  const diagnostics = selected.structureOnly ? [] : [...graph.diagnostics, ...responseDiagnostics].filter((d) => d.node_id === node?.id || (parameter && d.parameter_id === parameter.id));
   const close = () => { lifetime?.dispose(); onClose(); };
   useLayoutEffect(() => {
     const element = dialog.current!;
@@ -69,8 +70,9 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }
     }}>
-    <header className="architecture-inspection-heading"><h2 id={title}>{node.label}</h2><button autoFocus onClick={close} aria-label="Close inspection">×</button></header>
+    <header className="architecture-inspection-heading"><h2 id={title}>{selected.boundary ? 'Interface inspection' : node?.label ?? 'Model'}</h2><button autoFocus onClick={close} aria-label="Close inspection">×</button></header>
     <div className="architecture-inspection-details">
+      {node && <>
       {selected.structureOnly ? <p>Shared structure: {selected.structureOnly.label} · {selected.structureOnly.role}. No instance selected; choose an instance for weights.</p>
         : <p>{selected.modelId} · {node.id}{node.parent_id && ` · parent ${node.parent_id}`} · {node.operation ?? node.kind}</p>}
       {!!external.length && <details><summary>Concrete instance interface connections</summary>{external.map((edge) => <p key={edge.id}>
@@ -83,6 +85,8 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
       {node.references.map((r, i) => r.kind === 'module' ? <p key={i}>Module: {r.name}</p> : r.kind === 'tokenizer' ? <p key={i}>Tokenizer context for this model</p> : null)}
       {node.attributes.map((a, i) => <div key={i}><p>{a.name}: {JSON.stringify(a.value)}</p><Provenance records={a.provenance} /></div>)}
       <Provenance records={node.provenance} />
+      </>}
+      <InterfaceDetails graph={graph} selected={selected} />
       {parameters.length > 0 && <label>Parameter <select aria-label="Inspect parameter" value={choice} onChange={(event) => setChoice(event.target.value)}>
         <option value="">Choose a parameter…</option>
         {parameters.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.binding}</option>)}
@@ -99,6 +103,34 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
     </div>
     {lifetime?.isCurrent() && tensor && (tensor.rank === 1 || tensor.rank === 2) && <InspectionWeight key={choice} context={context} tensor={tensor} parent={lifetime} />}
   </dialog>, document.body);
+}
+
+function InterfaceDetails({ graph, selected }: { graph: Graph; selected: ArchitectureSelection }) {
+  if (selected.structureOnly) return null;
+  const index = interfaceIndex(graph), boundary = selected.boundary;
+  const ids = new Set(boundary?.endpoints.map((p) => p.node_id) ?? []);
+  const owner = boundary?.owner.id ?? selected.node?.id;
+  const interfaces = index.interfaces.filter((item) => ids.size ? ids.has(item.node.id) : item.owner.id === owner);
+  const nodes = new Map(interfaces.map((item) => [item.node.id, item.node]));
+  if (boundary) for (const id of ids) { const node = graph.nodes.find((n) => n.id === id); if (node) nodes.set(id, node); }
+  return <>
+    {boundary?.owner.kind === 'model' && <p>Presentation boundary · {graph.scope} · {graph.coverage}. No source module or parameter binding.</p>}
+    {boundary?.owner.kind === 'model' && !ids.size && <p>Source components: {index.roots.map((n) => n.label).join(', ')}</p>}
+    {[...nodes.values()].map((node) => <details key={node.id} open={Boolean(boundary)}>
+      <summary>{node.label} · interface metadata</summary>
+      <p>{node.id} · {node.kind}{node.operation && ` · ${node.operation}`}{node.parent_id && ` · parent ${node.parent_id}`}</p>
+      {node.description && <p>{node.description}</p>}
+      {node.ports.map((p) => <p key={p.id}>{p.direction} {p.label} · {p.id}: {formatShape(p.shape)}</p>)}
+      {node.attributes.map((a, i) => <div key={i}>{a.name}: {JSON.stringify(a.value)}<Provenance records={a.provenance} /></div>)}
+      <Provenance records={node.provenance} />
+      {graph.diagnostics.filter((d) => d.node_id === node.id).map((d, i) => <p key={i}>{d.message}</p>)}
+      {graph.edges.filter((e) => e.source.node_id === node.id || e.target.node_id === node.id).map((e) => <div key={e.id}>
+        <p>{e.source.node_id}:{e.source.port_id} → {e.target.node_id}:{e.target.port_id} · {e.kind} · {e.id}</p><Provenance records={e.provenance} />
+      </div>)}
+      {!graph.edges.some((e) => e.source.node_id === node.id || e.target.node_id === node.id) && <p>No source connection.</p>}
+    </details>)}
+    {selected.node && index.notices.has(selected.node.id) && <p role="status">{index.notices.get(selected.node.id)}</p>}
+  </>;
 }
 
 function InspectionWeight({ context, tensor, parent }: { context: ExplorerContextValue; tensor: S['TensorDescriptor']; parent: Lifetime }) {

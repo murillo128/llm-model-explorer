@@ -65,6 +65,7 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
       ...(node.expanded ? { children: [] } : {}),
       layoutOptions: { ...scopeOptions,
         'elk.portConstraints': node.expanded ? 'FIXED_SIDE' : 'FIXED_POS',
+        'elk.spacing.portPort': String(metrics.portGap),
         'elk.padding': `[top=${height + 16},left=${gutter('input')},bottom=24,right=${gutter('output')}]`,
         'elk.spacing.portsSurrounding': `[top=${height},left=0,bottom=16,right=0]`,
       },
@@ -176,7 +177,44 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
       width: label.width ?? 0, height: label.height ?? 0, lines: labelLines.get(edge.id) ?? [] })) });
   }
   if (routes.length !== projection.edges.length) throw new Error('Layout did not route every connection. Collapse groups and retry.');
-  const represented = new Set(projection.edges.flatMap((edge) => edge.originalEdgeIds));
+  // Hierarchical ELK layouts may reorder compound ports even under FIXED_ORDER.
+  // Keep its spaced slots and child geometry, assign those slots in source order,
+  // and reconnect only incident route ends through the existing boundary gutter.
+  const moved = new Map<string, { from: Point; to: Point }>();
+  const byEndpoint = new Map(ports.map((p) => [endpointKey({ node_id: p.nodeId, port_id: p.portId }), p]));
+  for (const node of projection.nodes) {
+    if (!node.expanded || !node.ports.some((p) => p.interfaces?.length)) continue;
+    for (const side of ['left', 'right'] as const) {
+      const positions = node.ports.map((p) => byEndpoint.get(endpointKey({ node_id: node.id, port_id: p.id }))).filter((p): p is PortPosition => p?.side === side);
+      const slots = positions.map((p) => p.y).sort((a, b) => a - b);
+      positions.forEach((port, i) => {
+        const delta = slots[i]! - port.y;
+        if (!delta) return;
+        const from = { x: port.absoluteX, y: port.absoluteY };
+        port.y += delta; port.absoluteY += delta;
+        moved.set(endpointKey({ node_id: node.id, port_id: port.portId }), { from, to: { x: port.absoluteX, y: port.absoluteY } });
+      });
+    }
+  }
+  const near = (a: Point, b: Point) => Math.abs(a.x - b.x) < 0.001 && Math.abs(a.y - b.y) < 0.001;
+  const byRoute = new Map(routes.map((r) => [r.id, r]));
+  for (const edge of projection.edges) {
+    const route = byRoute.get(edge.id)!;
+    for (const endpoint of [edge.source, edge.target]) {
+      const move = moved.get(endpointKey(endpoint));
+      if (!move) continue;
+      route.sections = route.sections.map((section) => {
+        const reverse = near(section.at(-1)!, move.from);
+        const points = reverse ? [...section].reverse() : [...section];
+        if (!near(points[0]!, move.from)) return section;
+        const next = points[1];
+        points[0] = move.to;
+        if (next && next.x !== move.to.x && next.y !== move.to.y) points.splice(1, 0, { x: next.x, y: move.to.y });
+        return reverse ? points.reverse() : points;
+      });
+    }
+  }
+  const represented = new Set([...projection.edges.flatMap((edge) => edge.originalEdgeIds), ...(projection.boundaryPaths ?? []).flat().map((e) => e.id)]);
   return { boxes, ports, routes, projection, edgeIds: graph.edges.filter((edge) => represented.has(edge.id)).map((edge) => edge.id),
     width: laidOut.width ?? 0, height: laidOut.height ?? 0, milliseconds: performance.now() - started };
 }

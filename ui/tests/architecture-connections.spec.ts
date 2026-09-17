@@ -368,8 +368,8 @@ test('24-instance compact navigation, first/last identity, MLP/state focus and e
   await expect(page.getByRole('combobox', { name: /Expand instance of/ }).locator('option:checked')).toContainText(/instance 23/i);
   await graphPreference(page, 'Show dimensions', true); await ready(page);
   await graphAction(page, 'Show all operations'); await ready(page);
-  await expect(graph(page)).toHaveAttribute('data-visible-nodes', String(source.nodes.length));
-  expect(JSON.parse((await graph(page).getAttribute('data-source-node-ids'))!)).toEqual(source.nodes.map((node) => node.id));
+  await expect(graph(page)).toHaveAttribute('data-visible-nodes', String(source.nodes.length - 4));
+  expect(JSON.parse((await graph(page).getAttribute('data-source-node-ids'))!)).toEqual(source.nodes.filter((node) => !['token-ids', 'positions', 'mask', 'current-mask', 'tokenizer'].includes(node.id)).map((node) => node.id));
   expect(JSON.parse((await graph(page).getAttribute('data-represented-edge-ids'))!)).toEqual(source.edges.map((edge) => edge.id));
   const coordinates = info.outputPath('authored-exhaustive-coordinates.json');
   await writeFile(coordinates, JSON.stringify(await stableState(page)));

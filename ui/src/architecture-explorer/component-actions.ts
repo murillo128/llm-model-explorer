@@ -4,11 +4,14 @@ import { cardExpandable } from './card-actions';
 
 /** Shared canvas/navigator actions. Neither selection nor hiding a descendant reveals it. */
 export function selectComponent(view: GraphView, id: string | null, selectionMode: GraphView['selectionMode'] = 'source') {
-  view.update({ selected: id, selectionMode, edge: null, ...(view.browser.selectedFamily ? { browser: { ...view.browser, selectedFamily: null } } : {}) });
+  view.update({ selected: id, boundary: undefined, selectionMode, edge: null, ...(view.browser.selectedFamily ? { browser: { ...view.browser, selectedFamily: null } } : {}) });
 }
 
 export function toggleComponent(view: GraphView, graph: Graph, node: ProjectedNode, windowSize: number) {
   if (!cardExpandable(node)) return;
+  if (node.presentation === 'model') {
+    view.update({ modelCollapsed: node.expanded, exhaustive: false, expansionAnchor: node.id }); return;
+  }
   const expanded = new Set(view.exhaustive ? [...view.expanded, ...graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id)] : view.expanded);
   // Materialize exhaustive detail before contracting one component. Otherwise
   // the old compact preferences would also hide unrelated operations/interfaces.

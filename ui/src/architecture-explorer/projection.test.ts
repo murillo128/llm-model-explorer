@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertSemanticEquivalent, assertTraceability } from '../../tests/architecture-invariants';
+import { assertSemanticEquivalent, assertTraceability, assertInterfaceCoverage } from '../../tests/architecture-invariants';
 import { makeExplicitFixture } from '../../tests/architecture-explicit-fixture';
 import { makeProjectionFixture, type ProjectionFixtureOptions } from '../../tests/architecture-projection-fixture';
 import { validateArchitecture } from '../api/architecture-validation';
@@ -35,8 +35,8 @@ describe('source-preserving visible projection', () => {
     expect(stack.summary).toBe('18 linear attention · 6 full attention');
     expect(stack.sourceIds).toEqual(Array.from({ length: 24 }, (_, i) => `layer-${i}`));
     expect(projected.nodes.some((n) => n.id.startsWith('layer-'))).toBe(false);
-    expect(ids(projected)).toEqual(expect.arrayContaining(['tokenizer', 'model', 'embedding', 'final-norm', 'head']));
-    expect(projected.nodes.find((n) => n.id === 'tokenizer')!.ports).toEqual([]);
+    expect(ids(projected)).toEqual(expect.arrayContaining(['model', 'embedding', 'final-norm', 'head']));
+    expect(projected.nodes.some((n) => n.id === 'tokenizer')).toBe(false);
     expect(projected.edges.some((e) => e.source.node_id === 'tokenizer' || e.target.node_id === 'tokenizer')).toBe(false);
     expect(projected.nodes.length).toBeLessThan(15); assertTraceability(graph, projected);
   });
@@ -88,7 +88,7 @@ describe('source-preserving visible projection', () => {
       repetitions: { 'predictor-layers': { start: 1, count: 1 } } });
     expect(graph.repetitions.map((r) => r.id)).toEqual(['encoder-layers', 'predictor-layers']);
     expect(graph.nodes.some((n) => n.references.some((r) => r.kind === 'tokenizer'))).toBe(false);
-    expect(ids(projection)).toEqual(expect.arrayContaining(['encoder.layer-1', 'predictor.layer-1', 'representations']));
+    expect(ids(projection)).toEqual(expect.arrayContaining(['encoder.layer-1', 'predictor.layer-1']));
     expect(ids(projection)).not.toContain('tokenizer'); expect(ids(projection)).not.toContain('head');
     expect(graph.edges.filter((e) => e.kind === 'state').every((e) => e.source.node_id.split('.')[0] === e.target.node_id.split('.')[0])).toBe(true);
     assertTraceability(graph, projection);
@@ -123,9 +123,9 @@ describe('source-preserving visible projection', () => {
   it('exhaustively exposes every source record and original edge, overriding detail filters', () => {
     const graph = makeProjectionFixture();
     const projection = projectGraph(graph, { expanded: [], exhaustive: true, stateScope: 'layer-0', showContext: false });
-    expect(new Set(ids(projection))).toEqual(new Set(graph.nodes.map((n) => n.id)));
+    assertInterfaceCoverage(graph, projection);
     expect(new Set(projection.edges.flatMap((e) => e.originalEdgeIds))).toEqual(new Set(graph.edges.map((e) => e.id)));
-    expect(projection.nodes.some((n) => n.presentation)).toBe(false);
+    expect(projection.nodes.some((n) => n.presentation && n.presentation !== 'model')).toBe(false);
     expect(projection.hiddenEdgeIds).toEqual([]); expect(projection.filteredEdgeIds).toEqual([]);
     assertTraceability(graph, projection, true);
   });
@@ -150,11 +150,12 @@ describe('source-preserving visible projection', () => {
   it('composes nested boundary forwarding once and retains exact port signal identities', () => {
     const graph = fixture();
     const projection = projectGraph(graph, selected(3, ['layer-3.attention']));
-    const positions = projection.edges.filter((e) => e.source.node_id === 'positions' && e.target.node_id.startsWith('layer-3.attention.rope-'));
+    const positions = projection.edges.filter((e) => e.source.node_id === 'layer-3.attention' && e.source.port_id === 'positions' && e.target.node_id.startsWith('layer-3.attention.rope-'));
     expect(positions.map((e) => e.target.node_id).sort()).toEqual(['layer-3.attention.rope-K', 'layer-3.attention.rope-Q']);
     for (const edge of positions) {
-      expect(edge.paths).toHaveLength(1); expect(edge.paths[0]).toHaveLength(4);
-      expect(edge.paths[0]!.map((e) => e.target.node_id)).toEqual(['model', 'layer-3', 'layer-3.attention', edge.target.node_id]);
+      expect(edge.paths).toHaveLength(1); expect(edge.paths[0]).toHaveLength(1);
+      const routes = projection.edges.filter((e) => connectionSet(projection, { edgeId: edge.id }).includes(e.id));
+      expect(new Set(routes.flatMap((e) => e.paths.flatMap((p) => p.map((s) => s.target.node_id))))).toEqual(new Set(['model', 'layer-3', 'layer-3.attention', edge.target.node_id]));
     }
     const keys = projection.edges.map((e) => JSON.stringify([e.source, e.target, e.kind]));
     expect(new Set(keys).size).toBe(keys.length);

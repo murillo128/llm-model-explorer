@@ -2,6 +2,7 @@ import type { Graph, GraphNode, GraphView } from './graph';
 import { displayLabel } from './presentation';
 import { remapNode } from './shared-structure';
 import { componentScope } from './scope';
+import { interfaceIndex } from './interfaces';
 
 export function componentLabel(node: GraphNode, graph: Graph) {
   return displayLabel({ id: node.id, kind: node.kind, label: node.label, record: node, sourceIds: [node.id], ports: [], expanded: false }, graph);
@@ -9,6 +10,7 @@ export function componentLabel(node: GraphNode, graph: Graph) {
 
 /** Ordered containment and public provenance only; never infer a model hierarchy. */
 export function browserIndex(graph: Graph) {
+  const interfaces = interfaceIndex(graph);
   const records = new Map(graph.nodes.map((node) => [node.id, node]));
   const entries: { node: GraphNode; label: string; path: string; search: string; depth: number }[] = [];
   const instances = new Map(graph.repetitions.flatMap((repetition) => repetition.instances.map((instance) => [instance.node_id, { repetition, instance }] as const)));
@@ -23,8 +25,8 @@ export function browserIndex(graph: Graph) {
     const sources = node.provenance.filter((p) => p.kind === 'description' &&
       p.rule === 'Semantic source key in the reviewed packaged description').map((p) => p.source);
     const modules = node.references.filter((r) => r.kind === 'module').map((r) => r.name);
-    entries.push({ node, label, depth: parents.length, path: `${path}${context ? ` · ${context}` : ''}`,
-      search: [path, context, node.label, node.id, ...sources, ...modules].join(' ').toLocaleLowerCase() });
+    if (interfaces.eligible(node.id)) entries.push({ node, label, depth: parents.length, path: `${path}${context ? ` · ${context}` : ''}`,
+      search: [path, context, node.label, node.id, ...sources, ...modules, ...interfaces.interfaces.filter((item) => item.owner.id === node.id).map((item) => interfaceSearch(item.node))].join(' ').toLocaleLowerCase() });
     if (node.kind === 'group') for (const id of [...node.children].reverse()) {
       const child = records.get(id); if (child) pending.push({ node: child, parents: [...parents, label], inherited: info });
     }
@@ -53,3 +55,6 @@ export function browserPredicates(graph: Graph, view: GraphView) {
   };
   return { inside, expanded };
 }
+
+export const interfaceSearch = (node: GraphNode) => [node.label, node.id, ...node.ports.map((p) => p.label),
+  ...node.provenance.filter((p) => p.kind === 'description').map((p) => p.source)].join(' ').toLocaleLowerCase();

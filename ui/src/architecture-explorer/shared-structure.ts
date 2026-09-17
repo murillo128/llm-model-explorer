@@ -65,7 +65,8 @@ export function bindTemplateLayout(layout: Layout, graph: Graph, template: Templ
       const common = commonNode(record, roles.get(node.id)!, node.id === from.node_id ? template.label : undefined);
       return { ...node, label: chosen ? record.label : common.label, record: chosen ? record : common,
         sourceIds: chosen ? node.sourceIds.map((id) => nodes.get(id)!) : [],
-        ports: node.ports.map((p) => ({ ...p, label: chosen ? record.ports.find((port) => port.id === p.id)!.label : p.id,
+        ports: node.ports.map((p) => ({ ...p, label: chosen ? record.ports.find((port) => port.id === p.id)?.label ?? p.label : p.id,
+          ...(p.interfaces ? { interfaces: chosen ? p.interfaces.map((id) => nodes.get(id)!) : [] } : {}),
           endpoints: chosen ? p.endpoints.map((e) => {
             const target = ports.get(endpointKey(e));
             if (!target) throw new Error('Shared structure port correspondence is no longer available.');
@@ -76,6 +77,7 @@ export function bindTemplateLayout(layout: Layout, graph: Graph, template: Templ
       originalEdgeIds: chosen ? edge.originalEdgeIds.map(mappedEdge) : [],
       paths: edge.paths.map((path) => path.map((e) => sourceEdges.get(mappedEdge(e.id))!)) })),
     hiddenEdgeIds: layout.projection.hiddenEdgeIds.map(mappedEdge),
+    ...(layout.projection.boundaryPaths ? { boundaryPaths: layout.projection.boundaryPaths.map((path) => path.map((e) => sourceEdges.get(mappedEdge(e.id))!)) } : {}),
     filteredEdgeIds: layout.projection.filteredEdgeIds.map(mappedEdge),
     unusedInputs: layout.projection.unusedInputs.map((e) => ports.get(endpointKey(e))!),
   };
@@ -91,6 +93,6 @@ export function enterSharedStructure(view: GraphView, template: Template,
   view.update({ selectionMode: instanceId ? 'source' : 'structure', shared: { templateId: template.id, anchorId: anchor.node_id, instanceId },
     scope: anchor.node_id, expanded: anchor.nodes.map((m) => m.node_id), repetitions: {},
     selected: instanceId && anchor.nodes.some((n) => n.node_id === view.selected) ? view.selected : anchor.node_id,
-    edge: null, focus: anchor.node_id, activeStack: null, exhaustive: false, deriveMlp: false, showUnused: true,
+    edge: null, boundary: undefined, focus: anchor.node_id, activeStack: null, exhaustive: false, deriveMlp: false, showUnused: true,
     stateScope: undefined, viewport: undefined });
 }

@@ -1,3 +1,8 @@
+import { interfaceFixture } from './architecture-interface-fixture';
+import { ArchitectureInspection } from '../src/architecture-explorer/ArchitectureInspection';
+import type { ArchitectureSelection } from '../src/architecture-explorer/ArchitectureCanvas';
+import { ApiClient } from '../src/api/client';
+import { Lifetime } from '../src/app/lifetime';
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArchitectureCanvas } from '../src/architecture-explorer/ArchitectureCanvas';
@@ -10,6 +15,7 @@ import { makeExplicitFixture } from './architecture-explicit-fixture';
 import '../src/app/styles.css';
 
 function fixture(name: string) {
+  if (name.startsWith('interface-')) return { ...contractResponse, model_id: name, graph: interfaceFixture(name.includes('hybrid') ? 'hybrid' : name.includes('visual') ? 'visual' : 'dense', name.includes('many')) };
   if (name === 'summaries') return { ...contractResponse, model_id: name, graph: summaryFixture(new URLSearchParams(location.search).has('long')) };
   if (name === 'empty-group') {
     const graph = structuredClone(contractResponse.graph);
@@ -44,6 +50,8 @@ function Harness() {
   const [name, setName] = useState(() => new URLSearchParams(location.search).get('fixture') ?? 'contract');
   const [shown, setShown] = useState(true);
   const [inspection, setInspection] = useState('');
+  const [native, setNative] = useState<ArchitectureSelection | null>(null);
+  const [context] = useState(() => ({ client: new ApiClient({ backendBaseUrl: 'http://127.0.0.1:1' }), session: { id: 'fixture-session', model_id: name }, sessionId: 'fixture-session', selection: new Lifetime(), selectedTensor: null, reportStatus: () => {} }));
   const [response, setResponse] = useState(() => {
     const response = structuredClone(fixture(name));
     if (location.search.includes('inert')) {
@@ -55,11 +63,12 @@ function Harness() {
   });
   return <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
     <div><select aria-label="Fixture" value={name} onChange={(e) => { setName(e.target.value); setResponse(fixture(e.target.value)); }}>
-      {['contract', 'summaries', 'empty-group', 'templates', 'templates-absent', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'components', 'components-large', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
+      {['interface-dense', 'interface-hybrid', 'interface-visual', 'interface-many', 'contract', 'summaries', 'empty-group', 'templates', 'templates-absent', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'components', 'components-large', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
     </select><button onClick={() => setShown(!shown)}>Toggle explorer</button><output style={{ display: 'block', height: 20, overflow: 'hidden' }}>{inspection}</output></div>
     <div contentEditable suppressContentEditableWarning aria-label="Untransformed prompt">Prompt remains outside graph camera</div>
     {shown && <ArchitectureCanvas key={name} graph={response.graph} modelId={response.model_id} sessionId="fixture-session"
-      view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspection('')} onInspect={(selection) => setInspection(selection.structureOnly ? `Structure only: ${selection.structureOnly.role}` : `${selection.graphId}: ${selection.node.id}`)} />}
+      view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspection('')} onInspect={(selection) => { setInspection(selection.structureOnly ? `Structure only: ${selection.structureOnly.role}` : `${selection.graphId}: ${selection.node?.id ?? JSON.stringify(selection.boundary)}`); if (name.startsWith('interface-')) setNative(selection); }} />}
+    {native && <ArchitectureInspection context={context} graph={response.graph} inventory={{ tensors: [], coverage: 'complete', diagnostics: [] }} selected={native} onClose={() => setNative(null)} />}
   </div>;
 }
 createRoot(document.getElementById('root')!).render(<Harness />);

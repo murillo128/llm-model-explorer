@@ -139,12 +139,12 @@ test('contracting after Show all operations leaves sibling detail visible and re
   const graph = makeProjectionFixture({ count: 4 });
   const children = graph.nodes.filter((n) => n.parent_id === 'layer-3.attention');
   const before = await state(page);
-  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length - 4));
   await graphAction(page, 'Toggle selected group'); await ready(page);
-  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length - children.length));
+  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length - 4 - children.length));
   expect(Number((await state(page)).count)).toBe(Number(before.count) + 1);
   await graphAction(page, 'Toggle selected group'); await ready(page);
-  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length - 4));
   expect(Number((await state(page)).count)).toBe(Number(before.count) + 2);
   await expect(page.locator('output')).toBeEmpty();
   await expect(page.getByRole('dialog')).toHaveCount(0);

@@ -46,9 +46,10 @@ export function cardMetrics(node: ProjectedNode, summary: CardSummary, dimension
   const metadataTop = portStart + portRows * portGap + 4;
   const rowHeight = dimensions ? 42 : 26;
   const portLabelWidth = (direction: 'input' | 'output') => Math.min(120, Math.max(0, ...node.ports.filter((p) => p.direction === direction)
-    .map((p) => dimensions ? Math.max(p.label.length * 6, formatShape(p.shape).length * 6) : p.label.length * 6)));
+    .map((p) => dimensions ? Math.max((p.interfaceLabel ?? p.label).length * 6, formatShape(p.shape).length * 6) : (p.interfaceLabel ?? p.label).length * 6)));
   const height = Math.max(84, metadataTop + Math.min(summaryLimit, summary.parameters.length) * rowHeight +
     (summary.parameters.length > summaryLimit ? 26 : 0) + summary.constants.length * 24 + 10);
-  return { width: summary.formula || summary.parameters.length || summary.constants.length || dimensions ? summaryWidth : 180,
+  return { width: summary.formula || summary.parameters.length || summary.constants.length || dimensions ? summaryWidth :
+    node.ports.some((p) => p.interfaces?.length) ? Math.max(180, portLabelWidth('input') + portLabelWidth('output') + 48) : 180,
     height, portStart, portGap, metadataTop, rowHeight, portLabelWidth: { input: portLabelWidth('input'), output: portLabelWidth('output') } };
 }

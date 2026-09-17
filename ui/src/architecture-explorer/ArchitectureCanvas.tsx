@@ -33,9 +33,11 @@ import { backFromComponent, enterComponent, expandComponent, projectionOptions, 
 import { bindTemplateLayout, commonNode, enterSharedStructure, remapNode, templateGraph } from './shared-structure';
 import type { ConnectionEdge } from './Connection';
 import type { EmphasisTarget } from './connection-context';
+import { interfaceIndex } from './interfaces';
+import type { BoundarySelection } from './interfaces';
 
 export interface ArchitectureSelection {
-  modelId: string; sessionId: string; graphId: string; node: GraphNode; trigger: HTMLElement;
+  modelId: string; sessionId: string; graphId: string; node?: GraphNode; boundary?: BoundarySelection; trigger: HTMLElement;
   parameterId?: string;
   filteredInputs?: string[];
   structureOnly?: { label: string; role: string };
@@ -96,14 +98,14 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
       const hit = Math.min(20 / interaction.zoom, 23);
       return <div key={port.id}>
         <span className="architecture-port-label" data-emphasized={active} title={`${port.direction}: ${port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
-          style={{ maxWidth: node.expanded ? data.metrics.portLabelWidth[port.direction] : undefined, top: position.y - 7, ...(position.side === 'left' ? { left: position.x + 9 } : { right: 9 }) }}>{port.label}{data.dimensions && <span className="architecture-port-shape">{formatShape(port.shape)}</span>}</span>
+          style={{ maxWidth: node.expanded ? data.metrics.portLabelWidth[port.direction] : undefined, top: position.y - 7, ...(position.side === 'left' ? { left: position.x + 9 } : { right: 9 }) }}>{port.interfaceLabel ?? port.label}{data.dimensions && <span className="architecture-port-shape">{formatShape(port.shape)}</span>}</span>
         <button className="architecture-port nodrag nopan" data-node-id={node.id} data-port-id={port.id}
-          data-emphasized={active} aria-label={`${port.direction} port ${node.label}: ${port.label}`}
+          data-emphasized={active} aria-label={`${port.direction} port ${node.label}: ${port.interfaceLabel ?? port.label}`}
           aria-description={data.dimensions ? formatShape(port.shape) : undefined}
           style={{ left: position.x, top: position.y, width: hit, height: hit }}
           onPointerDown={(event) => event.stopPropagation()} onPointerEnter={() => interaction.hover({ port: target })}
           onPointerLeave={() => interaction.hover(null)} onFocus={() => interaction.focus({ port: target })} onBlur={() => interaction.focus(null)}
-          onClick={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()}>
+          onClick={(event) => { event.stopPropagation(); interaction.selectPort?.(target); }} onDoubleClick={(event) => event.stopPropagation()}>
           <span className="architecture-port-dot" />
         </button>
         {(['source', 'target'] as const).map((type) => <Handle key={type} type={type} id={`${type}:${port.id}`}
@@ -151,6 +153,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const anchor = useRef<{ id: string; sourceId?: string | undefined; x: number; y: number } | null>(null);
   const centerPending = useRef<string | null>(null), fitPending = useRef(false), initialized = useRef(false);
   const restorePending = useRef<GraphView['viewport']>(undefined), scopeCameraPending = useRef(false);
+  const interfaces = useMemo(() => interfaceIndex(graph), [graph]);
   const records = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph]);
   const parameters = useMemo(() => new Map(graph.parameters.map((p) => [p.id, p])), [graph]);
   const boxes = useMemo(() => new Map(result.layout?.boxes.map((b) => [b.id, b])), [result.layout]);
@@ -168,10 +171,18 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const windowSize = Math.max(2, Math.min(8, Math.floor((panelWidth - 140) / 240)));
   // Event proxies share only the committed render. Independently memoized
   // closures can chain older render contexts together and retain their layouts.
-  const select = useCanvasCallback((id: string) => { selectComponent(view, id, view.shared && !view.shared.instanceId ? 'structure' : 'source'); setInspection(null); });
+  const select = useCanvasCallback((id: string) => {
+    if (id === interfaces.outer.id && interfaces.outer.kind === 'model') {
+      view.update({ selected: null, edge: null, boundary: { kind: 'boundary', owner: interfaces.outer, endpoints: [] } }); setInspection(null); return;
+    }
+    selectComponent(view, id, view.shared && !view.shared.instanceId ? 'structure' : 'source'); setInspection(null); });
   const selectSource = useCanvasCallback((id: string) => { selectComponent(view, id); setInspection(null); });
+  const selectBoundary = useCanvasCallback((boundary: BoundarySelection) => {
+    view.update({ boundary, selected: boundary.owner.kind === 'source' ? boundary.owner.id : null, edge: null,
+      browser: { ...view.browser, selectedFamily: null } }); setInspection(null);
+  });
   const selectFamily = useCanvasCallback((id: string) => {
-    view.update({ selected: null, edge: null, browser: { ...view.browser, selectedFamily: id } }); setInspection(null);
+    view.update({ selected: null, boundary: undefined, edge: null, browser: { ...view.browser, selectedFamily: id } }); setInspection(null);
   });
   const focusContext = useCanvasCallback((id: string | null, stackId?: string) => {
     // A stack overview focuses its parent; all other navigation derives the
@@ -216,7 +227,16 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     const nextSelected = remapNode(selected, concreteInstance ?? anchorInstance, target);
     if (selected && !nextSelected) setNotice('The previous operation has no verified correspondence; its selection was cleared.');
     const next = { ...shared, instanceId: id };
-    view.update({ shared: next, selected: nextSelected, selectionMode: id ? 'source' : 'structure' });
+    const previousInstance = concreteInstance ?? anchorInstance;
+    const boundary = view.boundary;
+    const rebound = boundary ? boundary.endpoints.flatMap((endpoint) => {
+      const role = previousInstance.ports.find((p) => p.node_id === endpoint.node_id && p.port_id === endpoint.port_id)?.role;
+      const port = target.ports.find((p) => p.role === role);
+      return port ? [{ node_id: port.node_id, port_id: port.port_id }] : [];
+    }) : [];
+    const owner = boundary && remapNode(boundary.owner.id, previousInstance, target);
+    view.update({ shared: next, selected: nextSelected, selectionMode: id ? 'source' : 'structure',
+      boundary: boundary && owner && rebound.length ? { kind: 'boundary', owner: { kind: 'source', id: owner }, endpoints: rebound } : undefined });
     setInspection(null); setTemporary(null); setFocused(null);
   });
   const rememberAnchor = useCanvasCallback((id: string) => {
@@ -280,7 +300,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     if (mlp && base.deriveMlp !== false && !base.exhaustive) expanded.add(mlp.id);
     centerPending.current = id;
     restorePending.current = undefined;
-    change({ ...base, scope: base.scope, expanded: [...expanded], repetitions, stateScope: undefined,
+    change({ ...base, scope: base.scope, modelCollapsed: false, expanded: [...expanded], repetitions, stateScope: undefined,
       ...(derived ? { deriveMlp: true, exhaustive: false } : {}) });
   });
   const viewInModel = useCanvasCallback((target?: string) => {
@@ -318,6 +338,9 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       ...(concreteInstance ? { templateInstanceId: concreteInstance.node_id } : {}) });
   });
   const inspect = useCanvasCallback((node: ProjectedNode, trigger: HTMLElement) => {
+    if (node.presentation === 'model') {
+      onInspect?.({ modelId, sessionId, graphId: graph.graph_id, trigger, boundary: { kind: 'boundary', owner: interfaces.outer, endpoints: [] } }); return;
+    }
     if (node.record) nativeInspect(records.get(node.record.id)!, trigger);
     else setInspection({ nodeId: node.id, trigger });
   });
@@ -336,7 +359,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     if (options.scope) leaveIsolation();
     focusContext(null); fitPending.current = true;
     restorePending.current = undefined;
-    change({ expanded: graph.nodes.filter((n) => n.kind === 'group' && !n.parent_id).map((n) => n.id), repetitions: {}, exhaustive: false, stateScope: undefined, scope: undefined });
+    change({ modelCollapsed: false, expanded: graph.nodes.filter((n) => n.kind === 'group' && !n.parent_id).map((n) => n.id), repetitions: {}, exhaustive: false, stateScope: undefined, scope: undefined });
   });
   const focusLayer = useCanvasCallback(() => {
     if (!instance) return;
@@ -372,16 +395,31 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     cancelAnimationFrame(focusFrame.current);
     if (target) setFocused(target); else focusFrame.current = requestAnimationFrame(() => setFocused(null));
   });
-  const pin = useCanvasCallback((id: string, trigger: HTMLElement) => { view.update({ edge: id, browser: { ...view.browser, selectedFamily: null } }); setInspection({ edgeId: id, trigger }); });
+  const pin = useCanvasCallback((id: string, trigger: HTMLElement) => { view.update({ edge: id, boundary: undefined, browser: { ...view.browser, selectedFamily: null } }); setInspection({ edgeId: id, trigger }); });
+  const selectPort = useCanvasCallback((endpoint: { node_id: string; port_id: string }) => {
+    const node = projected.get(endpoint.node_id), port = node?.ports.find((p) => p.id === endpoint.port_id);
+    if (!node || !port) return;
+    selectBoundary({ kind: 'boundary', owner: { kind: node.presentation === 'model' ? 'model' : node.record ? 'source' : 'presentation', id: node.record?.id ?? node.id },
+      endpoints: port.endpoints });
+  });
+  const boundaryPorts = useMemo(() => view.boundary ? result.layout?.projection.nodes.flatMap((n) => n.ports.filter((p) =>
+    p.endpoints.some((e) => view.boundary!.endpoints.some((s) => endpointKey(s) === endpointKey(e)))).map((p) => ({ node_id: n.id, port_id: p.id }))) ?? [] : [], [view.boundary, result.layout]);
   const lineHit = useMemo(() => connectionHitResolver(result.layout?.projection.edges ?? [], result.layout?.routes ?? []), [result.layout]);
   const emphasis = useMemo(() => {
     const projection = result.layout?.projection;
     if (!projection) return new Set<string>();
+    if (!temporary && !focused && boundaryPorts.length) return new Set(boundaryPorts.flatMap((port) => connectionSet(projection, { port })));
     const target = temporary ?? focused ?? { edgeId: pinned ?? '' };
-    return new Set('edgeIds' in target ? projection.edges.filter((edge) => target.edgeIds.includes(edge.id)).map((edge) => edge.id) : connectionSet(projection, target));
-  }, [focused, pinned, result.layout, temporary]);
-  const emphasizedPorts = useMemo(() => new Set(result.layout?.projection.edges.filter((e) => emphasis.has(e.id)).flatMap((e) => [endpointKey(e.source), endpointKey(e.target)])), [emphasis, result.layout]);
-  const interaction = useMemo(() => ({ emphasized: emphasis, ports: emphasizedPorts, zoom, lineHit, hover, focus: keyboardFocus, pin }), [emphasis, emphasizedPorts, hover, keyboardFocus, lineHit, pin, zoom]);
+    return new Set('edgeIds' in target ? target.edgeIds.flatMap((edgeId) => connectionSet(projection, { edgeId })) : connectionSet(projection, target));
+  }, [focused, pinned, result.layout, temporary, boundaryPorts]);
+  const emphasizedPorts = useMemo(() => {
+    const ports = new Set(result.layout?.projection.edges.filter((e) => emphasis.has(e.id)).flatMap((e) => [endpointKey(e.source), endpointKey(e.target)]));
+    const target = temporary ?? focused;
+    if (target && 'port' in target) ports.add(endpointKey(target.port));
+    if (!target) boundaryPorts.forEach((port) => ports.add(endpointKey(port)));
+    return ports;
+  }, [emphasis, result.layout, temporary, focused, boundaryPorts]);
+  const interaction = useMemo(() => ({ emphasized: emphasis, ports: emphasizedPorts, zoom, lineHit, hover, focus: keyboardFocus, pin, selectPort }), [emphasis, emphasizedPorts, hover, keyboardFocus, lineHit, pin, selectPort, zoom]);
   // Keep shape annotations and row geometry on the same completed layout while
   // a preference change is awaiting the worker.
   const cardDimensions = Boolean(result.options?.dimensions);
@@ -499,7 +537,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     const expanded = withAncestors(mapped, new Set(base.expanded));
     // Exact expanded instances are already visible alongside repetition windows.
     // Preserve those windows and let the shared toggle change only this component.
-    view.update({ expanded: [...expanded], stateScope: undefined });
+    view.update({ expanded: [...expanded], modelCollapsed: false, stateScope: undefined });
     toggleComponent(view, graph, { id: mapped, kind: source.kind, label: source.label, record: source,
       sourceIds: [mapped], ports: [], expanded: base.exhaustive || base.expanded.includes(mapped) }, windowSize);
     if (outside) { centerPending.current = id; restorePending.current = undefined; }
@@ -513,7 +551,14 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const exploreFamily = useCanvasCallback(() => { if (selectedFamily) openShared(selectedFamily.id); });
   const clearFamily = useCanvasCallback(() => view.update({ browser: { ...view.browser, selectedFamily: null } }));
   const inspectSelected = useCanvasCallback((trigger: HTMLElement) => {
-    if (selectedEdge) setInspection({ edgeId: selectedEdge.id, trigger });
+    if (view.boundary) {
+      const common = shared && !concreteInstance && template && anchorInstance;
+      const node = common ? [...projected.values()].find((n) => n.record?.id === view.boundary!.owner.id)?.record : undefined;
+      const role = common ? anchorInstance.nodes.find((m) => m.node_id === view.boundary!.owner.id)?.role : undefined;
+      onInspect?.({ modelId, sessionId, graphId: graph.graph_id, trigger, boundary: view.boundary,
+        ...(node ? { node } : {}), ...(common ? { structureOnly: { label: template.label, role: role ?? 'interface' } } : {}) });
+    }
+    else if (selectedEdge) setInspection({ edgeId: selectedEdge.id, trigger });
     else if (selectedRecord) nativeInspect(selectedRecord, trigger);
   });
   const centerEdge = useCanvasCallback(() => {
@@ -535,7 +580,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     else { const info = instanceOf(graph, item.id); if (info?.instance.node_id === item.id) chooseInstance(item.id); else reveal(item.id); }
   });
   const expandAll = useCanvasCallback(() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id), exhaustive: true, stateScope: undefined }); });
-  const collapseAll = useCanvasCallback(() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: [], repetitions: {}, exhaustive: false, stateScope: undefined }); });
+  const collapseAll = useCanvasCallback(() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: [], modelCollapsed: true, repetitions: {}, exhaustive: false, stateScope: undefined }); });
   const toggleSelected = useCanvasCallback(() => { if (selectedCard) toggle(selectedCard.id); });
   const preferences = useCanvasCallback((patch: Partial<ProjectionOptions>) => {
     if (patch.dimensions !== undefined) {
@@ -546,7 +591,18 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   });
   const zoomIn = useCanvasCallback(() => { cameraState.cancel(); void flow.zoomIn(); });
   const zoomOut = useCanvasCallback(() => { cameraState.cancel(); void flow.zoomOut(); });
-  const controlSelection: ControlSelection | undefined = selectedEdge ? {
+  const centerBoundary = useCanvasCallback(() => {
+    if (!view.boundary) return;
+    const boundary = view.boundary;
+    if (boundary.owner.kind !== 'model') centerInLayout(boundary.owner.id);
+    else { if (options.scope) leaveIsolation(true); fit(); }
+    selectBoundary(boundary);
+  });
+  const controlSelection: ControlSelection | undefined = view.boundary ? {
+    edge: false, label: view.boundary.endpoints.length ? 'Interface ports' : 'Model',
+    detail: view.boundary.endpoints.map((p) => `${records.get(p.node_id)?.label ?? p.node_id} · ${p.port_id}`).join(', '),
+    inspect: inspectSelected, center: centerBoundary, clear: clearSelection,
+  } : selectedEdge ? {
     edge: true,
     label: `${projected.get(selectedEdge.source.node_id)?.label ?? 'Source'} → ${projected.get(selectedEdge.target.node_id)?.label ?? 'Destination'}`,
     detail: `${selectedEdge.source.port_id} → ${selectedEdge.target.port_id} · ${selectedEdge.originalEdgeIds.join(', ')}`,
@@ -568,13 +624,14 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     explore: selected !== options.scope ? exploreSelected : undefined,
   } : undefined;
   return <ArchitectureWorkspace browser={<ArchitectureBrowser graph={graph} view={view} searchRef={browserSearch}
-    select={selectSource} selectFamily={selectFamily} toggle={toggleBrowser} exploreStack={exploreStack} />}>
+    select={selectSource} selectBoundary={selectBoundary} selectFamily={selectFamily} toggle={toggleBrowser} exploreStack={exploreStack} />}>
     <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
     data-template-id={shared?.templateId ?? ''} data-template-instance-id={shared?.instanceId ?? ''}
     data-scope-id={concreteInstance?.node_id ?? options.scope ?? ''} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
     data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options || !result.error && !cameraState.ready}
     data-source-node-ids={JSON.stringify(sourceNodeIds)} data-represented-edge-ids={JSON.stringify(result.layout?.edgeIds ?? [])}>
     {notice && <p role="status">{notice}</p>}
+    {!!result.layout?.projection.notices?.length && <p role="status">{result.layout.projection.notices.join(' ')}</p>}
     <ArchitectureControls shared={shared && template ? { template, instanceId: shared.instanceId, choose: chooseSharedInstance } : undefined}
       family={selectedFamily ? { label: selectedFamily.label, explore: exploreFamily, clear: clearFamily } : undefined}
       returnContext={!scope && view.history.length ? back : undefined} graph={graph} focus={focusId} stack={stack} options={options} picker={picker}

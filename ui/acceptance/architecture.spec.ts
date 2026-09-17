@@ -10,11 +10,21 @@ import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import type { Graph } from '../src/architecture-explorer/graph';
 import { projectGraph } from '../src/architecture-explorer/projection';
-import { assertTraceability } from '../tests/architecture-invariants';
+import { assertTraceability, assertInterfaceCoverage } from '../tests/architecture-invariants';
 import { installProbe } from './probe';
 import { installArchitectureProbe } from './architecture-probe';
 import { nativeCamera } from '../tests/native-camera';
 import { fanoutPoint } from '../tests/architecture-pointer';
+
+// Independently expected component set for the four reviewed producer fixtures.
+// Their passive declarations are verified by the conservation oracle, not by
+// importing the runtime classification as the expected result.
+const componentsOf = (graph: Graph) => graph.nodes.filter((node) => !['input', 'output'].includes(node.kind) &&
+  !(node.kind === 'context' && !node.ports.length && node.references.some((r) => r.kind === 'tokenizer')));
+const visibleCount = (graph: Graph) => {
+  const nodes = componentsOf(graph), roots = nodes.filter((n) => !n.parent_id);
+  return nodes.length + (roots.length === 1 && roots[0]!.kind === 'group' ? 0 : 1);
+};
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
 const python = `${repo}backend/.venv/bin/python`;
@@ -330,16 +340,16 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill(' ');
     await graphAction(page, 'Show all operations');
     const ids = await page.getByRole('tree', { name: 'Model components', exact: true }).locator('[data-node-id]').evaluateAll((options) => options.map((o) => (o as HTMLElement).dataset.nodeId));
-    expect(new Set(ids)).toEqual(new Set(graph.nodes.map((n) => n.id)));
+    expect(new Set(ids)).toEqual(new Set(componentsOf(graph).map((n) => n.id)));
     await page.keyboard.press('Escape');
     await graphAction(page, 'Show all operations');
-    await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
     await recordGraph(page, info, 'exhaustive-graph', graph);
     // Visible routes compose boundary forwarding. Every original edge remains
     // traceable even though one route may represent several source segments.
-    expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((n) => n.id));
+    expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((n) => n.id));
     expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((e) => e.id));
-    const roots = new Set(graph.nodes.filter((n) => !n.parent_id).map((n) => n.id));
+    assertInterfaceCoverage(graph, projectGraph(graph, { expanded: [], exhaustive: true }));
     for (const repetition of graph.repetitions) {
       const last = repetition.instances.at(-1)!;
       await findComponent(page, last.node_id);
@@ -457,15 +467,16 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     }
     await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
     await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
-    await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
     await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).toBeChecked();
     await page.keyboard.press('Escape');
     if (family === 'vjepa2') expect(observed.some((p) => p.endsWith('/tokenize'))).toBe(false);
     await graphAction(page, 'Collapse all');
-    await expect(canvas).toHaveAttribute('data-visible-nodes', String(roots.size));
-    expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(
-      graph.edges.filter((edge) => roots.has(edge.source.node_id) && roots.has(edge.target.node_id)).map((edge) => edge.id));
+    await expect(canvas).toHaveAttribute('data-visible-nodes', '1');
+    for (const node of graph.nodes.filter((n) => ['input', 'output'].includes(n.kind))) {
+      await expect(page.locator(`.architecture-browser-row[data-node-id=${JSON.stringify(node.id)}]`)).toHaveCount(0);
+    }
     await page.getByRole('button', { name: 'Center selected', exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   });
@@ -475,7 +486,7 @@ test('complete local reference [qwen3] exhaustive global detail remains reachabl
   const graph = await selectGraph(page);
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   await graphAction(page, 'Show all operations');
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
   const mlp = graph.nodes.find((node) => node.kind === 'group' && node.attributes.some((a) => a.name === 'semantic_role' && a.value === 'mlp'))!;
   const operation = graph.nodes.find((node) => node.parent_id === mlp.id && node.kind === 'operation')!;
   const requests = observed.length;
@@ -483,7 +494,7 @@ test('complete local reference [qwen3] exhaustive global detail remains reachabl
   await page.getByRole('button', { name: 'Center selected', exact: true }).click();
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
   await expect(page.locator(`.react-flow__node[data-id=${JSON.stringify(operation.id)}]`)).toBeInViewport();
-  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((node) => node.id));
   expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
   expect(observed.slice(requests)).toEqual([]);
   await recordGraph(page, info, 'exhaustive-global-detail', graph);
