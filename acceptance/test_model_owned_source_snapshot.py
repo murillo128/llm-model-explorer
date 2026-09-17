@@ -19,12 +19,27 @@ def test_capture_public_project_sources() -> None:
     if not destination:
         pytest.skip("source snapshot belongs to external acceptance evidence")
     root = Path(__file__).resolve().parents[1]
-    tracked = subprocess.run(
-        ["git", "ls-files", "-z"], cwd=root, check=True, capture_output=True
-    ).stdout.decode().split("\0")
+    tracked = (
+        subprocess.run(["git", "ls-files", "-z"], cwd=root, check=True, capture_output=True)
+        .stdout.decode()
+        .split("\0")
+    )
     suffixes = {
-        ".py", ".json", ".yaml", ".yml", ".ts", ".tsx", ".md", ".sh",
-        ".toml", ".lock", ".txt", ".mjs", ".js", ".css", ".html",
+        ".py",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".ts",
+        ".tsx",
+        ".md",
+        ".sh",
+        ".toml",
+        ".lock",
+        ".txt",
+        ".mjs",
+        ".js",
+        ".css",
+        ".html",
     }
     output = Path(destination) / "model-owned-source-snapshot.zip"
     output.parent.mkdir(parents=True, exist_ok=True)
