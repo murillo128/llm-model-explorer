@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
-import { openShared, findComponent, graphAction } from './architecture-controls';
+import type { Locator, Page } from '@playwright/test';
+import { openShared, findComponent, selectComponent, graphAction } from './architecture-controls';
 import { makeProjectionFixture } from './architecture-projection-fixture';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
@@ -21,6 +21,35 @@ async function state(page: Page) {
     expanded: [...document.querySelectorAll('.architecture-node[data-expanded="true"]')].map((e) => e.parentElement?.getAttribute('data-id')),
     inspection: document.querySelector('output')?.textContent,
   }));
+}
+async function controlGeometry(node: Locator) {
+  return node.evaluate((element) => {
+    const heading = element.querySelector('.architecture-node-heading')!;
+    return {
+      dpr: devicePixelRatio, viewport: [innerWidth, innerHeight],
+      camera: document.querySelector('.react-flow__viewport')?.getAttribute('style'),
+      heading: heading.getBoundingClientRect().toJSON(), overflow: getComputedStyle(heading).overflow,
+      controls: [...heading.querySelectorAll<HTMLButtonElement>('.architecture-expand, .architecture-navigate, .architecture-info')].map((button) => {
+        const rect = button.getBoundingClientRect();
+        const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
+        const hit = (x: number, y: number) => document.elementFromPoint(x, y)?.closest('button') === button;
+        return { rect: rect.toJSON(), name: button.className, zIndex: getComputedStyle(button).zIndex,
+          centerHit: hit(x, y), roundedHit: hit(Math.round(x * devicePixelRatio) / devicePixelRatio, Math.round(y * devicePixelRatio) / devicePixelRatio) };
+      }),
+    };
+  });
+}
+function assertUsableControls(geometry: Awaited<ReturnType<typeof controlGeometry>>) {
+  expect(geometry.controls).toHaveLength(3);
+  for (const [i, control] of geometry.controls.entries()) {
+    expect(control.rect.width * geometry.dpr).toBeGreaterThan(10);
+    expect(control.rect.height * geometry.dpr).toBeGreaterThan(10);
+    expect(control.centerHit, control.name).toBe(true);
+    expect(control.roundedHit, control.name).toBe(true);
+    expect(control.rect.x).toBeGreaterThanOrEqual(i ? geometry.controls[i - 1]!.rect.right : geometry.heading.x);
+    expect(control.rect.right).toBeLessThanOrEqual(geometry.heading.right);
+    expect(control.rect.bottom).toBeLessThanOrEqual(geometry.heading.bottom);
+  }
 }
 async function selectOnly(page: Page, id: string) {
   const before = await state(page), node = card(page, id);
@@ -82,7 +111,7 @@ test('real double-clicks toggle once, preserve zoom and leave leaf inspection ex
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('nested expansion and exact hidden selection survive parent controls, explorer switching and Back', async ({ page }) => {
+test('nested expansion and exact hidden selection survive parent controls, explorer switching and Back', async ({ page }, info) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('components'); await ready(page);
   await findComponent(page, 'layer-3'); await ready(page);
   await card(page, 'layer-3').locator('.architecture-navigate').click(); await ready(page);
@@ -90,9 +119,32 @@ test('nested expansion and exact hidden selection survive parent controls, explo
   await card(page, 'layer-3.attention').locator('.architecture-node-label').dblclick(); await ready(page);
   await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   await card(page, 'layer-3.attention.Q').locator('.architecture-node-label').click();
+  const overview = await controlGeometry(card(page, 'layer-3'));
+  // Fit is an overview, not a promise of pointer-sized header controls. Establish
+  // usable geometry explicitly, then restore the exact child selection without centering it.
+  await findComponent(page, 'layer-3'); await ready(page);
+  await selectComponent(page, 'layer-3.attention.Q');
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('');
+  const usable = await controlGeometry(card(page, 'layer-3'));
+  assertUsableControls(usable);
+  await info.attach('native-control-geometry', { body: JSON.stringify({ overview, usable }, null, 2), contentType: 'application/json' });
+  await page.screenshot({ path: info.outputPath('usable-parent-controls.png') });
+  // Observe native dispatch without invoking handlers or changing actionability.
+  await page.evaluate(() => {
+    const events: string[] = [];
+    Object.assign(window, { cardPointerEvents: events });
+    for (const type of ['click', 'dblclick']) document.addEventListener(type, (event) => {
+      const target = (event.target as Element).closest('.architecture-expand, .architecture-navigate, .architecture-info');
+      if (target) events.push(`${event.type}:${target.classList.item(2)}:${event.isTrusted}`);
+    }, { capture: true });
+  });
   const before = await state(page);
   const position = (await card(page, 'layer-3').boundingBox())!;
   await card(page, 'layer-3').locator('.architecture-expand').dblclick(); await ready(page);
+  expect(await page.evaluate(() => (window as unknown as { cardPointerEvents: string[] }).cardPointerEvents))
+    .toEqual(['click:architecture-expand:true', 'click:architecture-expand:true', 'dblclick:architecture-expand:true']);
+  await expect(panel(page)).toHaveAttribute('data-scope-id', before.scope!);
+  await expect(page.locator('output')).toBeEmpty();
   await expect(card(page, 'layer-3.attention')).toHaveCount(0);
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-3.attention.Q');
   await expect(card(page, 'layer-3').locator('.architecture-node')).toHaveAttribute('data-selected', 'false');
@@ -104,11 +156,14 @@ test('nested expansion and exact hidden selection survive parent controls, explo
   await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click();
   await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click(); await ready(page);
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-3.attention.Q');
-  // Preserve the retained overview camera, where header controls can be smaller
-  // than a device pixel on narrow screens; reopen through the keyboard control.
+  // Keyboard reopening independently preserves the retained camera and hidden selection.
   await card(page, 'layer-3').locator('.architecture-expand').focus();
   await page.keyboard.press('Enter'); await ready(page);
   await expect(card(page, 'layer-3.attention').locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
+  expect((await state(page)).camera).toBe(contracted.camera);
+  // Return to the overview explicitly so viewport culling cannot hide the child
+  // whose retained selection and subsequent scope/Back behavior we inspect.
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   await expect(card(page, 'layer-3.attention.Q').locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
   const restored = await state(page);
   await card(page, 'layer-3.attention').locator('.architecture-navigate').click(); await ready(page);

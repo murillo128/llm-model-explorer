@@ -24,16 +24,30 @@ export async function fanoutPoint(page: Page, edges: Locator[], expected: Locato
       const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
       return Math.hypot(point.x - a.x - t * dx, point.y - a.y - t * dy);
     }
-    for (const { segments } of routes) for (const [a, b] of segments) for (const fraction of [0.5, 0.25, 0.75]) {
-      const point = { x: a.x + (b.x - a.x) * fraction, y: a.y + (b.y - a.y) * fraction };
-      if (point.x < 1 || point.x > innerWidth - 1 || point.y < 1 || point.y > innerHeight - 1) continue;
-      const distances = routes.map((route) => ({ id: route.id, distance: Math.min(...route.segments.map((segment) => distance(point, segment))) }));
-      const represented = distances.filter((route) => route.distance < 0.01).map((route) => route.id).sort();
-      if (JSON.stringify(represented) !== JSON.stringify([...expectedIds].sort())) continue;
-      // Exclusive samples stay clear of other branches' 12 CSS pixel hit corridors.
-      if (distances.some((route) => !expectedIds.includes(route.id) && route.distance < 7)) continue;
-      const hitId = document.elementFromPoint(point.x, point.y)?.closest('.architecture-connection')?.getAttribute('data-edge-id');
-      if (hitId && expectedIds.includes(hitId)) return { ...point, hitId };
+    for (const { segments } of routes) for (const [a, b] of segments) {
+      // A long SVG segment may contain both the trunk and a short exclusive tail.
+      // Sample each interval between real route junctions; fixed fractions of the
+      // entire segment can all land on the trunk despite a reachable branch.
+      const dx = b.x - a.x, dy = b.y - a.y, lengthSquared = dx * dx + dy * dy;
+      if (!lengthSquared) continue;
+      const cuts = new Set([0, 1]);
+      for (const route of routes) for (const segment of route.segments) for (const p of segment) {
+        const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared;
+        if (t > 0 && t < 1 && distance(p, [a, b]) < 0.01) cuts.add(t);
+      }
+      const ordered = [...cuts].sort((a, b) => a - b);
+      const samples = ordered.slice(1).flatMap((end, i) => [0.5, 0.25, 0.75].map((t) => ordered[i]! + (end - ordered[i]!) * t));
+      for (const fraction of samples) {
+        const point = { x: a.x + dx * fraction, y: a.y + dy * fraction };
+        if (point.x < 1 || point.x > innerWidth - 1 || point.y < 1 || point.y > innerHeight - 1) continue;
+        const distances = routes.map((route) => ({ id: route.id, distance: Math.min(...route.segments.map((segment) => distance(point, segment))) }));
+        const represented = distances.filter((route) => route.distance < 0.01).map((route) => route.id).sort();
+        if (JSON.stringify(represented) !== JSON.stringify([...expectedIds].sort())) continue;
+        // Exclusive samples stay clear of other branches' 12 CSS pixel hit corridors.
+        if (distances.some((route) => !expectedIds.includes(route.id) && route.distance < 7)) continue;
+        const hitId = document.elementFromPoint(point.x, point.y)?.closest('.architecture-connection')?.getAttribute('data-edge-id');
+        if (hitId && expectedIds.includes(hitId)) return { ...point, hitId };
+      }
     }
     return null;
   }, { ids, expectedIds });
