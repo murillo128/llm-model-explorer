@@ -41,6 +41,63 @@ function overlap(a: readonly [Point, Point], b: readonly [Point, Point]) {
   return Math.min(Math.max(a[0][axis], a[1][axis]), Math.max(b[0][axis], b[1][axis])) -
     Math.max(Math.min(a[0][axis], a[1][axis]), Math.min(b[0][axis], b[1][axis]));
 }
+function properIntersection(a: readonly [Point, Point], b: readonly [Point, Point]) {
+  const horizontalA = Math.abs(a[0].y - a[1].y) < tolerance, horizontalB = Math.abs(b[0].y - b[1].y) < tolerance;
+  if (horizontalA && horizontalB) return Math.abs(a[0].y - b[0].y) < tolerance && overlap(a, b) > tolerance;
+  if (!horizontalA && !horizontalB) return Math.abs(a[0].x - b[0].x) < tolerance && overlap(a, b) > tolerance;
+  const horizontal = horizontalA ? a : b, vertical = horizontalA ? b : a;
+  const x = vertical[0].x, y = horizontal[0].y;
+  return x > Math.min(horizontal[0].x, horizontal[1].x) + tolerance &&
+    x < Math.max(horizontal[0].x, horizontal[1].x) - tolerance &&
+    y > Math.min(vertical[0].y, vertical[1].y) + tolerance &&
+    y < Math.max(vertical[0].y, vertical[1].y) - tolerance;
+}
+function boundaryRoutes(layout: Layout, nodeId: string, side: 'left' | 'right', portIds?: string[]) {
+  const edges = new Map(layout.projection.edges.map((edge) => [edge.id, edge]));
+  const wanted = portIds && new Set(portIds);
+  return layout.routes.flatMap((route) => {
+    const edge = edges.get(route.id), endpoint = edge && (side === 'left' ? edge.source : edge.target);
+    if (!edge || !endpoint || endpoint.node_id !== nodeId || wanted && !wanted.has(endpoint.port_id)) return [];
+    return [{ edge, route }];
+  });
+}
+function assertNoBoundaryCrossings(layout: Layout, nodeId: string, side: 'left' | 'right', portIds: string[]) {
+  const routed = boundaryRoutes(layout, nodeId, side, portIds), failures: string[] = [];
+  for (let i = 0; i < routed.length; i++) for (let j = i + 1; j < routed.length; j++) {
+    const a = routed[i]!, b = routed[j]!;
+    if (endpointKey(a.edge.source) === endpointKey(b.edge.source)) continue; // Genuine fan-out may share its source trunk.
+    if (segments(a.route.sections).some((one) => segments(b.route.sections).some((two) => properIntersection(one, two)))) {
+      failures.push(`${a.edge.id} crosses ${b.edge.id}`);
+    }
+  }
+  expect(failures, `Independent signals must not cross the ${side} boundary of ${nodeId}`).toEqual([]);
+}
+function assertBoundaryOrder(layout: Layout, nodeId: string, side: 'left' | 'right', portIds: string[]) {
+  const nodes = new Map(layout.projection.nodes.map((node) => [node.id, node]));
+  const positions = new Map(layout.ports.map((port) => [endpointKey({ node_id: port.nodeId, port_id: port.portId }), port]));
+  const inside = (id: string) => {
+    for (let node = nodes.get(id); node; node = node.parentId ? nodes.get(node.parentId) : undefined) if (node.id === nodeId) return true;
+    return false;
+  };
+  const groups = new Map<string, { anchorY: number; interiorYs: number[] }>();
+  for (const { edge } of boundaryRoutes(layout, nodeId, side, portIds)) {
+    const boundary = side === 'left' ? edge.source : edge.target, other = side === 'left' ? edge.target : edge.source;
+    const anchor = positions.get(endpointKey(boundary)), interior = positions.get(endpointKey(other));
+    if (!anchor || !interior || !inside(interior.nodeId)) continue;
+    const current = groups.get(boundary.port_id) ?? { anchorY: anchor.absoluteY, interiorYs: [] };
+    current.interiorYs.push(interior.absoluteY); groups.set(boundary.port_id, current);
+  }
+  const median = (values: number[]) => {
+    const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
+  };
+  const ordered = [...groups.values()].sort((a, b) => median(a.interiorYs) - median(b.interiorYs));
+  for (let i = 1; i < ordered.length; i++) expect(ordered[i]!.anchorY).toBeGreaterThanOrEqual(ordered[i - 1]!.anchorY - tolerance);
+}
+function stableLayout(layout: Layout) {
+  return { boxes: layout.boxes, ports: layout.ports, routes: layout.routes, edgeIds: layout.edgeIds,
+    width: layout.width, height: layout.height, projection: layout.projection };
+}
 function geometry(layout: Layout) {
   const nodes = new Map(layout.projection.nodes.map((n) => [n.id, n]));
   const ports = new Map(layout.ports.map((p) => [endpointKey({ node_id: p.nodeId, port_id: p.portId }), p]));
@@ -118,7 +175,130 @@ function layerStages(layout: Layout, graph: Graph, id: string) {
   horizontal(layout, [`${id}.input-norm`, `${id}.attention`, `${id}.residual-1`, `${id}.post-norm`, mlp.id, `${id}.residual-2`]);
 }
 
+function invertedDeclarationFixture(): Graph {
+  const port = (id: string, direction: 'input' | 'output') => ({ id, label: id, direction, shape: [] });
+  const input = (id: string) => ({ id, parent_id: 'model', label: id, kind: 'input' as const, ports: [port('out', 'output')], parameter_ids: [], references: [], attributes: [], provenance: [] });
+  const output = (id: string) => ({ id, parent_id: 'model', label: id, kind: 'output' as const, ports: [port('in', 'input')], parameter_ids: [], references: [], attributes: [], provenance: [] });
+  const model = { id: 'model', label: 'Model', kind: 'group' as const, children: ['input-b', 'input-a', 'output-b', 'output-a', 'operation'], ports: [], parameter_ids: [], references: [], attributes: [], provenance: [] };
+  const operation = { id: 'operation', parent_id: 'model', label: 'Operation', kind: 'operation' as const, operation: 'identity',
+    ports: [port('a', 'input'), port('b', 'input'), port('a-out', 'output'), port('b-out', 'output')], parameter_ids: [], references: [], attributes: [], provenance: [] };
+  return { graph_id: 'inverted-declaration-fixture', scope: 'language_model', coverage: 'complete', symbols: [], parameters: [], repetitions: [], diagnostics: [],
+    nodes: [input('input-b'), input('input-a'), output('output-b'), output('output-a'), model, operation], edges: [
+      { id: 'input-a-edge', source: { node_id: 'input-a', port_id: 'out' }, target: { node_id: 'operation', port_id: 'a' }, kind: 'data', provenance: [] },
+      { id: 'input-b-edge', source: { node_id: 'input-b', port_id: 'out' }, target: { node_id: 'operation', port_id: 'b' }, kind: 'data', provenance: [] },
+      { id: 'output-a-edge', source: { node_id: 'operation', port_id: 'a-out' }, target: { node_id: 'output-a', port_id: 'in' }, kind: 'data', provenance: [] },
+      { id: 'output-b-edge', source: { node_id: 'operation', port_id: 'b-out' }, target: { node_id: 'output-b', port_id: 'in' }, kind: 'data', provenance: [] },
+    ] };
+}
+
+function twoLevelBoundaryFixture(): Graph {
+  const port = (id: string, direction: 'input' | 'output') => ({ id, label: id, direction, shape: [] });
+  const input = (id: string) => ({ id, parent_id: 'model', label: id, kind: 'input' as const, ports: [port('out', 'output')], parameter_ids: [], references: [], attributes: [], provenance: [] });
+  const model = { id: 'model', label: 'Model', kind: 'group' as const, children: ['input-b', 'input-a', 'layer'], ports: [], parameter_ids: [], references: [], attributes: [], provenance: [] };
+  const layer = { id: 'layer', parent_id: 'model', label: 'Layer', kind: 'group' as const, children: ['operation'], ports: [port('b', 'input'), port('a', 'input')], parameter_ids: [], references: [], attributes: [], provenance: [] };
+  const operation = { id: 'operation', parent_id: 'layer', label: 'Operation', kind: 'operation' as const, operation: 'identity',
+    ports: [port('a', 'input'), port('b', 'input')], parameter_ids: [], references: [], attributes: [], provenance: [] };
+  return { graph_id: 'two-level-boundary-fixture', scope: 'language_model', coverage: 'complete', symbols: [], parameters: [], repetitions: [], diagnostics: [],
+    nodes: [input('input-b'), input('input-a'), model, layer, operation], edges: [
+      { id: 'input-b-to-layer', source: { node_id: 'input-b', port_id: 'out' }, target: { node_id: 'layer', port_id: 'b' }, kind: 'data', provenance: [] },
+      { id: 'layer-b-to-operation', source: { node_id: 'layer', port_id: 'b' }, target: { node_id: 'operation', port_id: 'b' }, kind: 'data', provenance: [] },
+      { id: 'input-a-to-layer', source: { node_id: 'input-a', port_id: 'out' }, target: { node_id: 'layer', port_id: 'a' }, kind: 'data', provenance: [] },
+      { id: 'layer-a-to-operation', source: { node_id: 'layer', port_id: 'a' }, target: { node_id: 'operation', port_id: 'a' }, kind: 'data', provenance: [] },
+    ] };
+}
+
+function nestedBoundaryOrderingFixture(): Graph {
+  const graph = interfaceFixture('dense', true);
+  const model = graph.nodes.find((node) => node.id === 'model')!;
+  if (model.kind !== 'group') throw new Error('Fixture model must be a group');
+  const embedding = graph.nodes.find((node) => node.id === 'Embedding')!;
+  const head = graph.nodes.find((node) => node.id === 'LM head')!;
+  const output = graph.nodes.find((node) => node.id === 'logits')!;
+  const inputIds = graph.nodes.filter((node) => node.kind === 'input').map((node) => node.id);
+  const layer = { id: 'layer', parent_id: 'model', label: 'Layer', kind: 'group' as const, children: [...inputIds, 'Embedding', 'LM head', 'logits'], ports: [],
+    parameter_ids: [], references: [], attributes: [], provenance: [] };
+  for (const node of graph.nodes) if (inputIds.includes(node.id)) node.parent_id = 'layer';
+  model.children = model.children.filter((id) => !inputIds.includes(id) && !['Embedding', 'LM head', 'logits'].includes(id)); model.children.push('layer');
+  embedding.parent_id = 'layer'; head.parent_id = 'layer'; output.parent_id = 'layer';
+  graph.nodes.push(layer);
+  const fanout = { id: 'fanout', parent_id: 'layer', label: 'Fan-out consumer', kind: 'operation' as const, operation: 'identity', ports: [{ id: 'in', label: 'in', direction: 'input' as const, shape: [] }],
+    parameter_ids: [], references: [], attributes: [], provenance: [] };
+  layer.children.push(fanout.id); graph.nodes.push(fanout);
+  graph.edges.push({ id: 'fanout-edge', source: { node_id: 'auxiliary_2', port_id: 'out' }, target: { node_id: fanout.id, port_id: 'in' }, kind: 'data', provenance: [] });
+  const rootPort = (id: string, direction: 'input' | 'output') => ({ id, label: id, direction, shape: [] });
+  const rootInput = (id: string) => ({ id, parent_id: 'model', label: id, kind: 'input' as const, ports: [rootPort('out', 'output')], parameter_ids: [], references: [], attributes: [], provenance: [] });
+  const rootA = rootInput('outer-a'), rootB = rootInput('outer-b');
+  const rootConsumer = { id: 'outer-consumer', parent_id: 'model', label: 'Outer consumer', kind: 'operation' as const, operation: 'identity', ports: [rootPort('a', 'input'), rootPort('b', 'input')],
+    parameter_ids: [], references: [], attributes: [], provenance: [] };
+  model.children.unshift(rootA.id, rootB.id, rootConsumer.id); graph.nodes.push(rootA, rootB, rootConsumer);
+  graph.edges.push(
+    { id: 'outer-a-edge', source: { node_id: rootA.id, port_id: 'out' }, target: { node_id: rootConsumer.id, port_id: 'a' }, kind: 'data', provenance: [] },
+    { id: 'outer-b-edge', source: { node_id: rootB.id, port_id: 'out' }, target: { node_id: rootConsumer.id, port_id: 'b' }, kind: 'data', provenance: [] });
+  graph.graph_id = 'nested-boundary-ordering-fixture'; return graph;
+}
+
 describe('generated horizontal graph geometry', () => {
+  it('preserves routed order at an expanded model boundary without remapping interface identities', async () => {
+    const graph = invertedDeclarationFixture();
+    const layout = await layoutGraph(graph, { expanded: ['model'], showUnused: true });
+    const ports = layout.projection.nodes.find((node) => node.id === 'model')!.ports;
+    const inputs = ports.filter((port) => port.interfaces?.length && port.direction === 'input').map((port) => port.id);
+    const outputs = ports.filter((port) => port.interfaces?.length && port.direction === 'output').map((port) => port.id);
+    geometry(layout); distinguishSignals(layout);
+    assertBoundaryOrder(layout, 'model', 'left', inputs); assertNoBoundaryCrossings(layout, 'model', 'left', inputs);
+    assertBoundaryOrder(layout, 'model', 'right', outputs); assertNoBoundaryCrossings(layout, 'model', 'right', outputs);
+    expect(boundaryRoutes(layout, 'model', 'left', inputs)).toHaveLength(2); expect(boundaryRoutes(layout, 'model', 'right', outputs)).toHaveLength(2);
+    expect(new Set(layout.projection.edges.filter((edge) => inputs.includes(edge.source.port_id)).flatMap((edge) => edge.paths.flatMap((path) => path.map((source) => source.source.node_id))))).toEqual(new Set(['input-a', 'input-b']));
+    expect(new Set(layout.projection.edges.filter((edge) => outputs.includes(edge.target.port_id)).flatMap((edge) => edge.paths.flatMap((path) => path.map((source) => source.target.node_id))))).toEqual(new Set(['output-a', 'output-b']));
+  });
+
+  it('keeps nested boundary order independently, preserves fan-out and is deterministic', async () => {
+    const graph = nestedBoundaryOrderingFixture();
+    const first = await layoutGraph(graph, { expanded: ['model', 'layer'], showUnused: true });
+    const second = await layoutGraph(graph, { expanded: ['model', 'layer'], showUnused: true });
+    const modelPorts = first.projection.nodes.find((node) => node.id === 'model')!.ports.filter((port) => port.id.includes('outer-a') || port.id.includes('outer-b')).map((port) => port.id);
+    const layerPorts = first.projection.nodes.find((node) => node.id === 'layer')!.ports.filter((port) => port.id.includes('auxiliary_2') || port.id.includes('auxiliary_3')).map((port) => port.id);
+    geometry(first); distinguishSignals(first);
+    assertBoundaryOrder(first, 'model', 'left', modelPorts); assertBoundaryOrder(first, 'layer', 'left', layerPorts);
+    assertNoBoundaryCrossings(first, 'model', 'left', modelPorts); assertNoBoundaryCrossings(first, 'layer', 'left', layerPorts);
+    expect(boundaryRoutes(first, 'model', 'left', modelPorts)).toHaveLength(2);
+    expect(boundaryRoutes(first, 'layer', 'left', layerPorts)).toHaveLength(3);
+    const fanout = first.projection.edges.filter((edge) => edge.source.node_id === 'layer' && edge.source.port_id.includes('auxiliary_2'));
+    expect(fanout).toHaveLength(2); expect(new Set(fanout.map((edge) => endpointKey(edge.source))).size).toBe(1);
+    expect(fanout.flatMap((edge) => edge.paths.flatMap((path) => path.map((source) => source.source.node_id)))).toEqual(['auxiliary_2', 'auxiliary_2']);
+    expect(stableLayout(second)).toEqual(stableLayout(first));
+  });
+
+  it('keeps the same signals ordered across two expanded hierarchy boundaries', async () => {
+    const graph = twoLevelBoundaryFixture();
+    const first = await layoutGraph(graph, { expanded: ['model', 'layer'], showUnused: true });
+    const second = await layoutGraph(graph, { expanded: ['model', 'layer'], showUnused: true });
+    const signals = new Set(['input-a', 'input-b']);
+    const model = first.projection.nodes.find((node) => node.id === 'model')!;
+    const layer = first.projection.nodes.find((node) => node.id === 'layer')!;
+    const modelPorts = model.ports.filter((port) => port.interfaces?.some((id) => signals.has(id))).map((port) => port.id);
+    const layerPorts = layer.ports.filter((port) => port.interfaces?.some((id) => signals.has(id))).map((port) => port.id);
+    const boundaryEvidence = (nodeId: string, side: 'left' | 'right', portIds: string[]) => {
+      const node = first.projection.nodes.find((candidate) => candidate.id === nodeId)!;
+      return new Set(boundaryRoutes(first, nodeId, side, portIds).flatMap(({ edge }) => {
+        const endpoint = side === 'left' ? edge.source : edge.target;
+        const signal = node.ports.find((port) => port.id === endpoint.port_id)?.interfaces?.find((id) => signals.has(id));
+        return signal ? [{ signal, path: edge.paths[0]! }] : [];
+      }));
+    };
+    geometry(first); distinguishSignals(first);
+    assertBoundaryOrder(first, 'model', 'left', modelPorts); assertNoBoundaryCrossings(first, 'model', 'left', modelPorts);
+    assertBoundaryOrder(first, 'layer', 'left', layerPorts); assertNoBoundaryCrossings(first, 'layer', 'left', layerPorts);
+    expect(boundaryRoutes(first, 'model', 'left', modelPorts)).toHaveLength(2);
+    expect(boundaryRoutes(first, 'layer', 'left', layerPorts)).toHaveLength(2);
+    const modelEvidence = boundaryEvidence('model', 'left', modelPorts), layerEvidence = boundaryEvidence('layer', 'left', layerPorts);
+    expect(new Set([...modelEvidence].map(({ signal }) => signal))).toEqual(signals);
+    expect(new Set([...layerEvidence].map(({ signal }) => signal))).toEqual(signals);
+    expect(new Map([...modelEvidence].map(({ signal, path }) => [signal, path[0]!.source.node_id]))).toEqual(new Map([['input-a', 'input-a'], ['input-b', 'input-b']]));
+    expect(new Map([...layerEvidence].map(({ signal, path }) => [signal, path.at(-1)!.target.port_id]))).toEqual(new Map([['input-a', 'a'], ['input-b', 'b']]));
+    expect(stableLayout(second)).toEqual(stableLayout(first));
+  });
+
   it.each([false, true])('routes complete isolated interfaces without overlapping signals (dimensions=%s)', async (dimensions) => {
     const graph = interfaceFixture('hybrid', true);
     const declared = graph.nodes.find((n) => n.id === 'language')!.ports;
@@ -127,7 +307,8 @@ describe('generated horizontal graph geometry', () => {
       geometry(layout); distinguishSignals(layout);
       for (const direction of ['input', 'output']) {
         const ordered = layout.ports.filter((p) => p.nodeId === 'language' && p.side === (direction === 'input' ? 'left' : 'right')).sort((a, b) => a.y - b.y);
-        expect(ordered.map((p) => p.portId)).toEqual(declared.filter((p) => p.direction === direction).map((p) => p.id));
+        if (!expanded.length) expect(ordered.map((p) => p.portId)).toEqual(declared.filter((p) => p.direction === direction).map((p) => p.id));
+        else assertNoBoundaryCrossings(layout, 'language', direction === 'input' ? 'left' : 'right', ordered.map((p) => p.portId));
         for (let i = 1; i < ordered.length; i++) expect(ordered[i]!.y - ordered[i - 1]!.y).toBeGreaterThanOrEqual(20);
       }
     }

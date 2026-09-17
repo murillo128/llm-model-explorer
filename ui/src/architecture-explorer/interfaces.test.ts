@@ -152,17 +152,22 @@ describe('source declarations become exact container interfaces', () => {
 
   it('retains every port with generated geometry for many interfaces', async () => {
     const graph = interfaceFixture('hybrid', true);
-    for (const dimensions of [false, true]) {
-      const layout = await layoutGraph(graph, { expanded: [], exhaustive: true, dimensions });
-      assertInterfaceCoverage(graph, layout.projection);
+    for (const modelCollapsed of [true, false]) for (const dimensions of [false, true]) {
+      const layout = await layoutGraph(graph, { expanded: [], exhaustive: !modelCollapsed, modelCollapsed, dimensions });
+      if (!modelCollapsed) assertInterfaceCoverage(graph, layout.projection);
       const model = layout.projection.nodes.find((n) => n.presentation === 'model')!;
       expect(model.ports).toHaveLength(23);
       const box = layout.boxes.find((b) => b.id === model.id)!;
       for (const port of layout.ports.filter((p) => p.nodeId === model.id)) expect(port.x).toBe(port.side === 'left' ? 0 : box.width);
       const positions = layout.ports.filter((p) => p.nodeId === model.id && p.side === 'left').map((p) => p.y).sort((a,b) => a-b);
       for (let i=1;i<positions.length;i++) expect(positions[i]! - positions[i-1]!).toBeGreaterThanOrEqual(20);
-      const ordered = layout.ports.filter((p) => p.nodeId === model.id && p.side === 'left').sort((a,b) => a.y-b.y).map((p) => p.portId);
-      expect(ordered).toEqual(model.ports.filter((p) => p.direction === 'input').map((p) => p.id));
+      const ordered = layout.ports.filter((p) => p.nodeId === model.id && p.side === 'left').sort((a,b) => a.y-b.y)
+        .flatMap((p) => model.ports.find((port) => port.id === p.portId)?.interfaces ?? []);
+      const expected = graph.nodes.filter((node) => node.kind === 'input').map((node) => node.id);
+      const declared = model.ports.filter((p) => p.direction === 'input').flatMap((p) => p.interfaces ?? []);
+      expect(declared).toHaveLength(expected.length); expect(new Set(declared)).toEqual(new Set(expected));
+      if (modelCollapsed) expect(ordered).toEqual(declared);
+      else expect(new Set(ordered)).toEqual(new Set(declared));
       for (const edge of layout.projection.edges) {
         const route = layout.routes.find((r) => r.id === edge.id)!;
         for (const endpoint of [edge.source, edge.target]) {

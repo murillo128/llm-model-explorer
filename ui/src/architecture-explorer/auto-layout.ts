@@ -5,6 +5,7 @@ import type { Box, Graph, Layout, Point, PortPosition, Route } from './graph';
 import { formatShape } from './graph';
 import { cardMetrics, cardSummary } from './card-summary';
 import { endpointKey, projectGraph } from './projection';
+import type { ProjectedNode } from './projection';
 import type { ProjectionOptions } from './projection';
 
 export const groupHeaderHeight = 64;
@@ -177,31 +178,74 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
       width: label.width ?? 0, height: label.height ?? 0, lines: labelLines.get(edge.id) ?? [] })) });
   }
   if (routes.length !== projection.edges.length) throw new Error('Layout did not route every connection. Collapse groups and retry.');
-  // Hierarchical ELK layouts may reorder compound ports even under FIXED_ORDER.
-  // Keep its spaced slots and child geometry, assign those slots in source order,
-  // and reconnect only incident route ends through the existing boundary gutter.
+  // Hierarchical ELK layouts may assign compound ports a different slot than
+  // the connected interior endpoint. Preserve its spaced slots, but order
+  // interface ports by the already-routed geometry inside the container. This
+  // keeps the boundary assignment non-inverting without changing identities.
   const moved = new Map<string, { from: Point; to: Point; fraction: number }>();
   const byEndpoint = new Map(ports.map((p) => [endpointKey({ node_id: p.nodeId, port_id: p.portId }), p]));
+  const byRoute = new Map(routes.map((route) => [route.id, route]));
+  const byNode = new Map(projection.nodes.map((node) => [node.id, node]));
+  const inside = (nodeId: string, ancestorId: string) => {
+    for (let node = byNode.get(nodeId); node; node = node.parentId ? byNode.get(node.parentId) : undefined) {
+      if (node.id === ancestorId) return true;
+    }
+    return false;
+  };
+  const interiorYs = new Map<string, number[]>();
+  const recordInterior = (nodeId: string, port: ProjectedNode['ports'][number], y: number | undefined) => {
+    if (y === undefined || !Number.isFinite(y)) return;
+    const key = endpointKey({ node_id: nodeId, port_id: port.id });
+    interiorYs.set(key, [...(interiorYs.get(key) ?? []), y]);
+  };
+  for (const edge of projection.edges) {
+    const route = byRoute.get(edge.id);
+    for (const endpoint of [edge.source, edge.target]) {
+      const node = byNode.get(endpoint.node_id), port = node?.ports.find((candidate) => candidate.id === endpoint.port_id);
+      if (!node || !port?.interfaces?.length || !node.expanded) continue;
+      const other = endpointKey(edge.source) === endpointKey(endpoint) ? edge.target : edge.source;
+      const otherPosition = byEndpoint.get(endpointKey(other));
+      if (otherPosition && inside(otherPosition.nodeId, node.id)) recordInterior(node.id, port, otherPosition.absoluteY);
+      else if (route) {
+        // An unusual presentation alias may not expose the opposite endpoint
+        // as a visible port. Use the first routed point beyond this boundary
+        // as a conservative local fallback.
+        const boundary = byEndpoint.get(endpointKey(endpoint));
+        if (!boundary) continue;
+        const point = route.sections.flatMap((section) => section).find((candidate) =>
+          Math.abs(candidate.x - boundary.absoluteX) > 0.001 || Math.abs(candidate.y - boundary.absoluteY) > 0.001);
+        recordInterior(node.id, port, point?.y);
+      }
+    }
+  }
+  const median = (values: number[]) => {
+    const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
+  };
   for (const node of projection.nodes) {
-    if (!node.expanded || !node.ports.some((p) => p.interfaces?.length)) continue;
+    if (!node.expanded || !node.ports.some((port) => port.interfaces?.length)) continue;
     for (const side of ['left', 'right'] as const) {
-      const positions = node.ports.map((p) => byEndpoint.get(endpointKey({ node_id: node.id, port_id: p.id }))).filter((p): p is PortPosition => p?.side === side);
-      const slots = positions.map((p) => p.y).sort((a, b) => a - b);
-      if (positions.every((p, i) => p.y === slots[i])) continue;
-      // Keep the new short entry legs off the old horizontal routing tracks.
+      const positions = node.ports.map((port) => byEndpoint.get(endpointKey({ node_id: node.id, port_id: port.id })))
+        .filter((position): position is PortPosition => position?.side === side);
+      const slots = positions.map((position) => position.y).sort((a, b) => a - b);
+      const ordered = positions.map((position, index) => {
+        const values = interiorYs.get(endpointKey({ node_id: node.id, port_id: position.portId })) ?? [];
+        return { position, index, key: values.length ? median(values) : position.absoluteY };
+      }).sort((a, b) => Math.abs(a.key - b.key) > 0.001 ? a.key - b.key : a.index - b.index);
+      if (ordered.every((entry, index) => Math.abs(entry.position.y - slots[index]!) < 0.001)) continue;
+      // Keep new short entry legs off the old horizontal routing tracks.
       // Otherwise a permutation could make two distinct signals share a line.
       const offset = 0.5;
-      positions.forEach((port, i) => {
-        const delta = slots[i]! + offset - port.y;
+      ordered.forEach((entry, index) => {
+        const { position } = entry, delta = slots[index]! + offset - position.y;
         if (!delta) return;
-        const from = { x: port.absoluteX, y: port.absoluteY };
-        port.y += delta; port.absoluteY += delta;
-        moved.set(endpointKey({ node_id: node.id, port_id: port.portId }), { from, to: { x: port.absoluteX, y: port.absoluteY }, fraction: (i + 1) / (positions.length + 1) });
+        const from = { x: position.absoluteX, y: position.absoluteY };
+        position.y += delta; position.absoluteY += delta;
+        moved.set(endpointKey({ node_id: node.id, port_id: position.portId }), { from, to: { x: position.absoluteX, y: position.absoluteY }, fraction: (index + 1) / (ordered.length + 1) });
       });
     }
   }
   const near = (a: Point, b: Point) => Math.abs(a.x - b.x) < 0.001 && Math.abs(a.y - b.y) < 0.001;
-  const byRoute = new Map(routes.map((r) => [r.id, r]));
   for (const edge of projection.edges) {
     const route = byRoute.get(edge.id)!;
     for (const endpoint of [edge.source, edge.target]) {
