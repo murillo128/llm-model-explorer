@@ -29,7 +29,7 @@ For a newly discovered model/snapshot that was not prepared at startup, a new va
 
 ## Graph document and identity
 
-`ArchitectureGraph` is an object with required `graph_id`, `scope`, `coverage`, `symbols`, `nodes`, `edges`, `repetitions`, `parameters`, and `diagnostics` fields. Arrays may be empty except `nodes`, which must contain the supported scope's structure. `scope` is `language_model` or `visual_encoder_predictor`. There is no universal text-tokenizer or language-head requirement.
+`ArchitectureGraph` is an object with required `graph_id`, `scope`, `coverage`, `symbols`, `nodes`, `edges`, `repetitions`, `parameters`, and `diagnostics` fields. Arrays may be empty except `nodes`, which must contain the supported scope's structure. `scope` is `language_model`, `visual_encoder_predictor`, or `model_defined`. The last denotes an author-supplied JSON graph, not source-verified semantics; its required origin context identifies that distinction and retains the author's declared scope as metadata. There is no universal text-tokenizer or language-head requirement.
 
 `graph_id` is an opaque URL-safe analysis identity, stable for the same checkpoint content and semantic producer/schema revisions. It is not the raw internal checkpoint fingerprint. Model/session IDs, local paths, viewport settings, and timestamps are not graph-identity inputs. The public `model_id` lives in the response envelope, not in the cached graph, so relocating a checkpoint with a directory-name fallback does not corrupt reusable content.
 

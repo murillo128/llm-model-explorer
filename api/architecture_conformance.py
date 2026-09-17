@@ -508,6 +508,8 @@ def fixtures():
     case('partial-architecture', [set_('graph/coverage', 'partial')], True)
     case('visual-no-tokenizer', [set_('graph/scope', 'visual_encoder_predictor'), set_('graph/nodes/5/references', [])], True,
          context_edits=[set_('tokenizer_available', False)])
+    case('model-defined-no-tokenizer', [set_('graph/scope', 'model_defined'), set_('graph/nodes/5/references', [])], True,
+         context_edits=[set_('tokenizer_available', False)])
     case('explicit-partial-inventory', valid=True, context_edits=[set_('inventory/coverage', 'partial'),
         set_('inventory/diagnostics', [dict(code='excluded_quantized', message='Packed parameters remain descriptive.')])])
     for reason in ('unsupported_architecture', 'analysis_failed', 'restart_required', 'unsupported_size', 'cache_unavailable'):
