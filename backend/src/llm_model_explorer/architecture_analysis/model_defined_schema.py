@@ -62,6 +62,15 @@ class DefinitionParameter(r.Record):
     shape: r.ArchitectureShape
 
 
+class DefinitionTemplate(r.Record):
+    """Author-declared correspondence; provenance and runtime IDs are backend-owned."""
+
+    id: r.ArchitectureId
+    label: r.ArchitectureName
+    component_role: Literal["attention", "mlp"]
+    instances: Annotated[list[r.ArchitectureTemplateInstance], Field(min_length=2)]
+
+
 class ModelDefinition(r.Record):
     """Version 1 uses explicit instances, local IDs and complete native tensor names.
 
@@ -80,6 +89,7 @@ class ModelDefinition(r.Record):
     edges: list[DefinitionEdge] = Field(default_factory=list)
     parameters: list[DefinitionParameter] = Field(default_factory=list)
     repetitions: list[r.ArchitectureRepetition] = Field(default_factory=list)
+    templates: list[DefinitionTemplate] = Field(default_factory=list)
 
     @field_validator("schema_version", mode="before")
     @classmethod

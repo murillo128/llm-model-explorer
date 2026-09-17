@@ -12,6 +12,7 @@ from typing import Any
 from . import records as r
 from .core import AnalysisInput, AnalysisResult, GraphBuilder, Producer, unavailable
 from .model_defined_schema import MAX_DEFINITION_BYTES, ModelDefinition
+from .model_defined_templates import bind_templates
 from .validation import MAX_BYTES, GraphError, preflight, require
 
 
@@ -29,7 +30,7 @@ class ModelDefinedProducer(Producer):
 
 
 def producer_for(definition: ModelDefinition) -> Producer:
-    return ModelDefinedProducer("model-defined-json", "1", definition.architecture_revision)
+    return ModelDefinedProducer("model-defined-json", "2", definition.architecture_revision)
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -197,7 +198,8 @@ def analyze_definition(
             inputs, producer_for(definition), "model_defined", byte_limit=byte_limit
         )
         build_definition(definition, inputs, builder)
-        return AnalysisResult(builder.finish(), None)
+        graph = bind_templates(definition, builder.finish(), builder)
+        return AnalysisResult(graph, None)
     except GraphError as exc:
         if exc.code == "unsupported_size":
             return unavailable(
