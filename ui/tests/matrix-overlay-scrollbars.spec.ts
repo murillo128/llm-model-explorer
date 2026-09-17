@@ -49,6 +49,8 @@ for (const dpr of [1, 2]) test.describe(`overlay scrolling DPR ${dpr}`, () => {
         await expect(bar).toHaveAttribute('aria-valuenow', await bar.getAttribute('aria-valuemax') ?? '');
         await bar.press('Home');
         await expect.poll(async () => (await state(page)).scroll[axis]).toBe(0);
+        // Native scroll updates before the animation-frame camera refresh.
+        await expect.poll(async () => (await state(page)).view).toEqual(before.view);
       }
       await expect.poll(async () => (await state(page)).view).toEqual(before.view);
       const after = await state(page);

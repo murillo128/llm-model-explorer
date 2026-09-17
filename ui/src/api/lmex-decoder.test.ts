@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import fixtures from '../../../api/fixtures/conformance.json';
 import embeddings from '../../../api/fixtures/embeddings.json';
 import analysis from '../../../api/fixtures/embedding-analysis.json';
+import { prepareWireCheck } from './testing/wire-conformance';
 import { LmexDecoder } from './lmex-decoder';
 import { ApiFailure } from './errors';
 import { validateSchema } from './validation';
@@ -25,31 +26,6 @@ function unaligned(hex: string): Uint8Array {
   return storage.subarray(1);
 }
 
-function check(fixture: typeof fixtures.wire_cases[number] | typeof embeddings.wire_cases[number] | typeof analysis.wire_cases[number], chunks: Iterable<Uint8Array>): void {
-  const expected = fixture.expected;
-  let offset = 0;
-  const data = Buffer.from(expected.data_hex ?? '', 'hex');
-  const decoder = new LmexDecoder({ onData: (bytes, position) => {
-    expect(position).toBe(offset);
-    if (expected.outcome === 'complete') expect(Buffer.from(bytes)).toEqual(data.subarray(offset, offset + bytes.length));
-    offset += bytes.length;
-  } });
-  let result;
-  try {
-    for (const chunk of chunks) decoder.push(chunk);
-    result = decoder.finish();
-  } catch (error) {
-    if (expected.outcome !== 'reject') throw error;
-    expect(error).toBeInstanceOf(ApiFailure);
-    return;
-  }
-  expect(expected.outcome).not.toBe('reject');
-  expect(result.kind).toBe(expected.outcome === 'error' ? 'backend' : expected.outcome);
-  if (result.kind === 'complete') {
-    expect(result.metadata).toEqual(expected.metadata);
-    expect(offset).toBe(data.length);
-  }
-}
 function* lengths(bytes: Uint8Array, sizes: number[]) {
   let offset = 0;
   for (let i = 0; offset < bytes.length; i++) {
@@ -63,14 +39,15 @@ describe('shared wire conformance', () => {
   for (const fixture of [...fixtures.wire_cases, ...embeddings.wire_cases, ...analysis.wire_cases]) {
     it(`${fixture.name}: coalesced, every split, single bytes, Fibonacci and seeded random chunks`, () => {
       const bytes = unaligned(fixture.wire_hex);
-      check(fixture, [bytes]);
-      for (let split = 0; split <= bytes.length; split++) check(fixture, [bytes.subarray(0, split), bytes.subarray(split)]);
-      check(fixture, lengths(bytes, [1]));
-      check(fixture, lengths(bytes, [1, 2, 3, 5, 8, 13]));
+      const check = prepareWireCheck(fixture);
+      check([bytes]);
+      for (let split = 0; split <= bytes.length; split++) check([bytes.subarray(0, split), bytes.subarray(split)]);
+      check(lengths(bytes, [1]));
+      check(lengths(bytes, [1, 2, 3, 5, 8, 13]));
       let seed = 11;
       for (let run = 0; run < 5; run++) {
         const sizes = Array.from({ length: 23 }, () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed % 97 + 1; });
-        check(fixture, lengths(bytes, sizes));
+        check(lengths(bytes, sizes));
       }
     }, 30_000);
   }

@@ -30,7 +30,7 @@ fi
 # acceptance/ is not covered by backend-ci's backend/** path filter.
 backend/.venv/bin/ruff check --config backend/pyproject.toml acceptance
 backend/.venv/bin/ruff format --check --config backend/pyproject.toml acceptance
-"$python_bin" -m pytest acceptance -ra -o junit_family=legacy --junitxml="$LMEX_EVIDENCE_DIR/network.xml"
+"$python_bin" -m pytest acceptance -ra --durations=25 -o junit_family=legacy --junitxml="$LMEX_EVIDENCE_DIR/network.xml"
 
 (
   cd ui
