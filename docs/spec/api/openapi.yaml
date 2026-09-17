@@ -1972,6 +1972,7 @@ components:
           enum:
           - language_model
           - visual_encoder_predictor
+          - model_defined
         coverage:
           type: string
           enum:

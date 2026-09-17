@@ -50,3 +50,14 @@ it('cancels unmounted requests even when a transport ignores abort', async () =>
   await waitFor(() => expect(retrieve).toHaveBeenCalledOnce());
   view.unmount(); expect(retrieve.mock.calls[0]![2]!.aborted).toBe(true);
 });
+
+it('marks model-owned graphs without claiming source verification', async () => {
+  const { props, retrieve } = setup();
+  const owned = validateSchema('ArchitectureResponse', {
+    ...fixture.response, graph: { ...fixture.response.graph, scope: 'model_defined' },
+  });
+  retrieve.mockResolvedValue(owned);
+  render(<ArchitectureExplorer {...props} />);
+  expect(await screen.findByRole('note')).toHaveTextContent('equivalence to model code is not verified');
+  expect(screen.getByText(`Graph for ${session.model_id}`)).toBeInTheDocument();
+});

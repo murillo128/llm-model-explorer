@@ -837,7 +837,7 @@ export interface components {
         ArchitectureGraph: {
             graph_id: components["schemas"]["ArchitectureId"];
             /** @enum {string} */
-            scope: "language_model" | "visual_encoder_predictor";
+            scope: "language_model" | "visual_encoder_predictor" | "model_defined";
             /** @enum {string} */
             coverage: "complete" | "partial";
             symbols: components["schemas"]["ArchitectureSymbol"][];

@@ -53,6 +53,7 @@ function SessionArchitectureExplorer(props: Props) {
     {response.diagnostics.map((d, i) => <p key={i}>{d.message}</p>)}
   </div>;
   return <>
+    {response.graph.scope === 'model_defined' && <p role="note">Model-supplied architecture. Structure and weight bindings are validated; equivalence to model code is not verified.</p>}
     {response.diagnostics.map((d, i) => <p key={i} role="status">{d.message}</p>)}
     <ArchitectureCanvas key={JSON.stringify([session.id, response.model_id, response.graph.graph_id])} graph={response.graph}
       modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspected(null)} onInspect={(value) => { setInspected(value); onInspect?.(value); }} />

@@ -448,3 +448,11 @@ Connection interaction tests must actually hover/focus source ports, destination
 Visual acceptance uses the established neutral/amber language and verifies readable labels, visible direction, non-overlapping nodes/labels, and distinguishable multi-signal routing at representative desktop widths. Compare the surrounding application before and after with only the Architecture panel interior allowed to change; the application shell, Tensor Explorer, Tokenizer Explorer, and shared Matrix Explorer presentation must not acquire geometry, typography, color, or interaction regressions from Architecture-specific work.
 
 Integrated tests use the built UI, real HTTP backend, and the repository's existing browser/WebGL2 harness. Verify that architecture failures do not break existing tensor/tokenizer workflows and that absence of a tokenizer on V-JEPA does not trigger phantom tokenization calls. A structural graph fixture proves UI behavior, not actual checkpoint support; reference evidence is governed by [analysis validation](../backend/architecture-analysis.md#validation-and-evidence).
+
+## Model-supplied provenance
+
+For a graph with transport scope `model_defined`, retain a visible notice that
+its structure was supplied by the checkpoint author. Structural and inventory
+validation do not establish equivalence to the implementation. The notice remains
+visible when exploring a component, without adding sport-specific behavior or
+changing source-graph navigation. Other graph scopes retain their current UI.
