@@ -10,6 +10,12 @@ export interface ModelInterface {
 }
 export interface BoundarySelection {
   kind: 'boundary'; owner: BoundaryOwner; endpoints: Endpoint[];
+  templatePort?: TemplatePortTarget;
+}
+/** Presentation identity within verified correspondence, independent of any
+ * concrete instance's endpoints. It remains usable in structure-only mode. */
+export interface TemplatePortTarget {
+  kind: 'template-port'; templateId: string; nodeRole: string; portRole: string;
 }
 const key = (p: Endpoint) => JSON.stringify([p.node_id, p.port_id]);
 const cache = new WeakMap<Graph, ReturnType<typeof buildInterfaceIndex>>();

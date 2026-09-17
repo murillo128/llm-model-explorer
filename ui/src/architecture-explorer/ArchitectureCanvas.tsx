@@ -30,7 +30,7 @@ import { connectionHitResolver } from './connection-hit';
 import { componentScope } from './scope';
 import { cardDoubleClick, cardExpandable, cardNavigation, cardSelection } from './card-actions';
 import { backFromComponent, enterComponent, expandComponent, projectionOptions, returnToModel, snapshotView } from './scope-navigation';
-import { bindTemplateLayout, commonNode, enterSharedStructure, remapNode, templateGraph } from './shared-structure';
+import { bindTemplateLayout, bindTemplatePortSelection, commonNode, enterSharedStructure, remapNode, templateGraph } from './shared-structure';
 import type { ConnectionEdge } from './Connection';
 import type { EmphasisTarget } from './connection-context';
 import { interfaceIndex } from './interfaces';
@@ -235,8 +235,11 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       return port ? [{ node_id: port.node_id, port_id: port.port_id }] : [];
     }) : [];
     const owner = boundary && remapNode(boundary.owner.id, previousInstance, target);
-    view.update({ shared: next, selected: nextSelected, selectionMode: id ? 'source' : 'structure',
-      boundary: boundary && owner && rebound.length ? { kind: 'boundary', owner: { kind: 'source', id: owner }, endpoints: rebound } : undefined });
+    const nextBoundary: BoundarySelection | undefined = boundary?.templatePort
+      ? bindTemplatePortSelection(graph, template, anchorInstance, id ? target : null, boundary.templatePort)
+      : boundary && owner && rebound.length ? { kind: 'boundary', owner: { kind: 'source', id: owner }, endpoints: rebound } : undefined;
+    view.update({ shared: next, selected: nextBoundary ? nextBoundary.owner.kind === 'source' ? nextBoundary.owner.id : null : nextSelected,
+      selectionMode: id ? 'source' : 'structure', boundary: nextBoundary });
     setInspection(null); setTemporary(null); setFocused(null);
   });
   const rememberAnchor = useCanvasCallback((id: string) => {
@@ -399,11 +402,18 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const selectPort = useCanvasCallback((endpoint: { node_id: string; port_id: string }) => {
     const node = projected.get(endpoint.node_id), port = node?.ports.find((p) => p.id === endpoint.port_id);
     if (!node || !port) return;
+    if (port.templatePort && template && anchorInstance) {
+      const boundary = bindTemplatePortSelection(graph, template, anchorInstance, concreteInstance, port.templatePort);
+      if (boundary) selectBoundary(boundary);
+      return;
+    }
     selectBoundary({ kind: 'boundary', owner: { kind: node.presentation === 'model' ? 'model' : node.record ? 'source' : 'presentation', id: node.record?.id ?? node.id },
       endpoints: port.endpoints });
   });
   const boundaryPorts = useMemo(() => view.boundary ? result.layout?.projection.nodes.flatMap((n) => n.ports.filter((p) =>
-    p.endpoints.some((e) => view.boundary!.endpoints.some((s) => endpointKey(s) === endpointKey(e)))).map((p) => ({ node_id: n.id, port_id: p.id }))) ?? [] : [], [view.boundary, result.layout]);
+    view.boundary!.templatePort ? p.templatePort?.templateId === view.boundary!.templatePort.templateId &&
+      p.templatePort.nodeRole === view.boundary!.templatePort.nodeRole && p.templatePort.portRole === view.boundary!.templatePort.portRole
+      : p.endpoints.some((e) => view.boundary!.endpoints.some((s) => endpointKey(s) === endpointKey(e)))).map((p) => ({ node_id: n.id, port_id: p.id }))) ?? [] : [], [view.boundary, result.layout]);
   const lineHit = useMemo(() => connectionHitResolver(result.layout?.projection.edges ?? [], result.layout?.routes ?? []), [result.layout]);
   const emphasis = useMemo(() => {
     const projection = result.layout?.projection;
@@ -556,7 +566,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       const node = common ? [...projected.values()].find((n) => n.record?.id === view.boundary!.owner.id)?.record : undefined;
       const role = common ? anchorInstance.nodes.find((m) => m.node_id === view.boundary!.owner.id)?.role : undefined;
       onInspect?.({ modelId, sessionId, graphId: graph.graph_id, trigger, boundary: view.boundary,
-        ...(node ? { node } : {}), ...(common ? { structureOnly: { label: template.label, role: role ?? 'interface' } } : {}) });
+        ...(node ? { node } : {}), ...(common ? { structureOnly: { label: template.label, role: view.boundary.templatePort?.portRole ?? role ?? 'interface' } } : {}) });
     }
     else if (selectedEdge) setInspection({ edgeId: selectedEdge.id, trigger });
     else if (selectedRecord) nativeInspect(selectedRecord, trigger);
@@ -594,13 +604,14 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const centerBoundary = useCanvasCallback(() => {
     if (!view.boundary) return;
     const boundary = view.boundary;
-    if (boundary.owner.kind !== 'model') centerInLayout(boundary.owner.id);
+    if (boundary.owner.kind !== 'model') centerInLayout(boundaryPorts[0]?.node_id ?? boundary.owner.id);
     else { if (options.scope) leaveIsolation(true); fit(); }
     selectBoundary(boundary);
   });
   const controlSelection: ControlSelection | undefined = view.boundary ? {
-    edge: false, label: view.boundary.endpoints.length ? 'Interface ports' : 'Model',
-    detail: view.boundary.endpoints.map((p) => `${records.get(p.node_id)?.label ?? p.node_id} · ${p.port_id}`).join(', '),
+    edge: false, label: view.boundary.endpoints.length || view.boundary.templatePort ? 'Interface ports' : 'Model',
+    detail: view.boundary.templatePort ? `Shared interface · ${view.boundary.templatePort.portRole}` :
+      view.boundary.endpoints.map((p) => `${records.get(p.node_id)?.label ?? p.node_id} · ${p.port_id}`).join(', '),
     inspect: inspectSelected, center: centerBoundary, clear: clearSelection,
   } : selectedEdge ? {
     edge: true,

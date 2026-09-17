@@ -5,6 +5,7 @@ import type { ProjectionOptions } from './projection';
 import { instanceOf, patternSummary } from './presentation';
 import { componentLabel } from './browser-model';
 import type { Template } from './shared-structure';
+import { interfaceIndex } from './interfaces';
 
 type Repetition = Graph['repetitions'][number];
 export interface NavigationItem { id: string; label: string; kind: 'node' | 'stack' }
@@ -59,6 +60,8 @@ export function ArchitectureControls(props: Props) {
   const current = stack?.instances.findIndex((i) => i.node_id === props.instanceId) ?? -1;
   const window = stack && options.repetitions?.[stack.id];
   const visible = stack?.instances.filter((i) => props.visibleInstances.includes(i.node_id)) ?? [];
+  const outside = popover === 'options' && props.isolation && !props.shared ? graph.nodes.filter((node) =>
+    !props.isolation!.nodeIds.has(node.id) && interfaceIndex(graph).eligible(node.id)) : [];
   return <div className="architecture-controls" ref={controls} onKeyDown={(event) => {
     if (popover && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
   }} onBlur={(event) => {
@@ -156,9 +159,9 @@ export function ArchitectureControls(props: Props) {
         {options.stateScope && <p>State dependencies only; other flows are filtered</p>}
         {selection && <p>{selection.detail}</p>}
         {props.isolation && !props.shared && <details onToggle={(event) => setOutsideOpen(event.currentTarget.open)}>
-          <summary>Outside component: {graph.nodes.length - props.isolation.nodeIds.size} source records · {props.isolation.excludedEdges.length} connections</summary>
-          <p>All source interfaces and connections remain in the model. Choose a record to reveal it in model context, then Inspect for its complete interface.</p>
-          {outsideOpen && graph.nodes.filter((node) => !props.isolation!.nodeIds.has(node.id)).map((node) =>
+          <summary>Outside component: {outside.length} components · {props.isolation.excludedEdges.length} connections</summary>
+          <p>Choose a component to reveal it in model context. Declared interfaces remain available through their owner ports and interface search.</p>
+          {outsideOpen && outside.map((node) =>
             <p key={node.id}><button onClick={() => choose(node.id)}>{componentLabel(node, graph)}</button> <code>{node.id}</code></p>)}
         </details>}
         <p>Graph: {graph.graph_id}</p>

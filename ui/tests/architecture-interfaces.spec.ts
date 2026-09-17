@@ -125,3 +125,66 @@ test('concrete shared ports inspect original declarations after nonzero instance
   await expect(page.getByRole('dialog').getByLabel('Inspect parameter')).toHaveCount(0);
   expect(requests).toEqual([]);
 });
+
+test('outside-component navigation excludes declarations and tools but retains real components', async ({ page }) => {
+  await page.goto(`${harness}?fixture=interface-hybrid`); await ready(page);
+  await findComponent(page, 'language');
+  await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready(page);
+  const options = await viewOptions(page);
+  await options.getByText('Graph details', { exact: true }).click();
+  await options.locator('summary').filter({ hasText: 'Outside component:' }).click();
+  const outside = options.locator('details').filter({ has: page.locator(':scope > summary').filter({ hasText: 'Outside component:' }) });
+  for (const name of ['Token IDs', 'positions', 'mask', 'current_mask', 'logits', 'Tokenizer capability']) {
+    await expect(outside.getByRole('button', { name, exact: true })).toHaveCount(0);
+  }
+  await expect(outside.getByRole('button')).toHaveCount(1);
+  await outside.getByRole('button', { name: 'LM head', exact: true }).click(); await ready(page);
+  await expect(page.locator(panel)).toHaveAttribute('data-scope-id', '');
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'LM head');
+});
+
+test('neutral shared port stays pinned after blur and restoration, then binds to the chosen instance', async ({ page }) => {
+  const requests: string[] = []; page.on('request', (r) => { if (/\/sessions\//.test(r.url())) requests.push(r.url()); });
+  await page.goto(`${harness}?fixture=templates&native-inspection`); await ready(page);
+  await openShared(page, 'shared-full-attention'); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  const port = page.locator('.architecture-port[data-node-id="layer-0.attention"][data-port-id="positions"]');
+  const emphasized = page.locator('.architecture-connection[data-emphasized="true"]');
+  const before = await camera(page), layouts = await page.locator(panel).getAttribute('data-layout-count');
+  await port.focus(); await port.press('Enter');
+  await expect(emphasized).toHaveCount(2);
+  const pinned = await emphasized.evaluateAll((edges) => edges.map((e) => e.getAttribute('data-edge-id')).sort());
+  await page.getByRole('button', { name: 'Fit view', exact: true }).focus();
+  await ready(page);
+  await expect(emphasized).toHaveCount(2);
+  expect(await camera(page)).toBe(before);
+  await expect(page.locator(panel)).toHaveAttribute('data-layout-count', layouts!);
+  await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('root.positions');
+  await expect(page.getByRole('dialog')).toContainText('No instance selected');
+  await expect(page.getByRole('dialog')).not.toContainText('positions:out');
+  await expect(page.getByRole('dialog').getByLabel('Inspect parameter')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Close inspection' }).click();
+  await page.getByRole('button', { name: 'Toggle explorer' }).click();
+  await page.getByRole('button', { name: 'Toggle explorer' }).click(); await ready(page);
+  await expect(page.locator(panel)).toHaveAttribute('data-template-instance-id', '');
+  await expect(emphasized).toHaveCount(2);
+  expect(await emphasized.evaluateAll((edges) => edges.map((e) => e.getAttribute('data-edge-id')).sort())).toEqual(pinned);
+  const restoredLayouts = await page.locator(panel).getAttribute('data-layout-count'), restoredCamera = await camera(page);
+  for (const instance of ['layer-2.attention', '', 'layer-0.attention', 'layer-2.attention']) {
+    await page.getByLabel('Shared structure instance', { exact: true }).selectOption(instance); await ready(page);
+    await expect(emphasized).toHaveCount(2);
+    await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+    if (instance) {
+      await expect(page.getByRole('dialog')).toContainText(`${instance} · group`);
+      await expect(page.getByRole('dialog')).toContainText('positions:out → model:positions');
+    } else {
+      await expect(page.getByRole('dialog')).toContainText('root.positions');
+      await expect(page.getByRole('dialog')).not.toContainText('positions:out');
+    }
+    await page.getByRole('button', { name: 'Close inspection' }).click();
+    expect(await camera(page)).toBe(restoredCamera);
+    await expect(page.locator(panel)).toHaveAttribute('data-layout-count', restoredLayouts!);
+  }
+  expect(requests).toEqual([]);
+});

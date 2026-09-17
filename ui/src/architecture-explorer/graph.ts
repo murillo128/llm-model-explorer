@@ -89,6 +89,14 @@ export class GraphViews {
       view.selected = null; view.edge = null; view.notice = 'The selected tool capability is no longer a model component.';
     }
     if (view.boundary && !view.boundary.endpoints.every((p) => graph.nodes.some((n) => n.id === p.node_id && n.ports.some((port) => port.id === p.port_id)))) view.boundary = undefined;
+    if (view.boundary?.templatePort) {
+      const target = view.boundary.templatePort, template = graph.templates?.find((t) => t.id === target.templateId);
+      if (view.shared?.templateId !== target.templateId || !template?.instances.every((instance) =>
+        instance.nodes.some((n) => n.role === target.nodeRole && ids.has(n.node_id)) && instance.ports.some((p) => p.role === target.portRole &&
+          graph.nodes.some((n) => n.id === p.node_id && n.ports.some((port) => port.id === p.port_id))))) {
+        view.boundary = undefined; view.notice = 'Shared interface correspondence changed; the port selection was cleared.';
+      }
+    }
     view.browser.families = view.browser.families.filter((id) => graph.templates?.some((t) => t.id === id));
     if (!graph.templates?.some((t) => t.id === view.browser.selectedFamily)) view.browser.selectedFamily = null;
     const expanded = view.expanded.filter((id) => interfaces.eligible(id) && (ids.has(id) || id.startsWith('mlp:') && ids.has(id.slice(4))));

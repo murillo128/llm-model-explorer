@@ -2,6 +2,7 @@ import type { Graph, GraphNode, GraphView, Layout } from './graph';
 import { snapshotView } from './scope-navigation';
 import { endpointKey } from './projection';
 import { interfaceIndex, resolveInterfaceEndpoints } from './interfaces';
+import type { BoundarySelection, TemplatePortTarget } from './interfaces';
 
 export type Template = NonNullable<Graph['templates']>[number];
 export type TemplateInstance = Template['instances'][number];
@@ -40,6 +41,17 @@ export function commonNode(node: GraphNode, role: string, label?: string): Graph
     attributes: node.attributes.map((a) => ({ ...a, provenance: [] })) };
 }
 
+export function bindTemplatePortSelection(graph: Graph, template: Template, anchor: TemplateInstance,
+  chosen: TemplateInstance | null, target: TemplatePortTarget): BoundarySelection | undefined {
+  if (target.templateId !== template.id) return undefined;
+  const instance = chosen ?? anchor;
+  const owner = instance.nodes.find((n) => n.role === target.nodeRole);
+  const port = instance.ports.find((p) => p.role === target.portRole);
+  if (!owner || !port) return undefined;
+  return { kind: 'boundary', templatePort: target, owner: { kind: chosen ? 'source' : 'presentation', id: owner.node_id },
+    endpoints: chosen ? resolveInterfaceEndpoints(graph, [{ node_id: port.node_id, port_id: port.port_id }]) : [] };
+}
+
 /** Geometry and presentation identities stay fixed; only exact source references change.
  * Always bind from the original layout, so switching cannot retain prior generations. */
 export function bindTemplateLayout(layout: Layout, graph: Graph, template: Template,
@@ -68,12 +80,16 @@ export function bindTemplateLayout(layout: Layout, graph: Graph, template: Templ
       return { ...node, label: chosen ? record.label : common.label, record: chosen ? record : common,
         sourceIds: chosen ? node.sourceIds.map((id) => nodes.get(id)!) : [],
         ports: node.ports.map((p) => {
+          const sourcePort = from.ports.find((m) => m.node_id === node.id && m.port_id === p.id) ??
+            from.ports.find((m) => p.endpoints.some((e) => endpointKey(e) === endpointKey(m)));
           const endpoints = chosen ? resolveInterfaceEndpoints(graph, p.endpoints.map((e) => {
             const target = ports.get(endpointKey(e));
             if (!target) throw new Error('Shared structure port correspondence is no longer available.');
             return target;
           })) : [];
           return { ...p, label: chosen ? record.ports.find((port) => port.id === p.id)?.label ?? p.label : p.id,
+            ...(sourcePort ? { templatePort: { kind: 'template-port' as const, templateId: template.id,
+              nodeRole: roles.get(node.id)!, portRole: sourcePort.role } } : {}),
             interfaces: [...new Set(endpoints.filter((e) => interfaces.declarations.has(e.node_id)).map((e) => e.node_id))], endpoints };
         }) };
     }),

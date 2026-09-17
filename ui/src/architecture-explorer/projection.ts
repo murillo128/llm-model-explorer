@@ -3,6 +3,7 @@ import type { Graph, GraphNode } from './graph';
 import { deriveMlpGroups } from './derived-groups';
 import { componentScope } from './scope';
 import { projectInterfaces } from './interface-projection';
+import type { TemplatePortTarget } from './interfaces';
 
 export type Endpoint = components['schemas']['ArchitectureEdge']['source'];
 type SourceEdge = Graph['edges'][number];
@@ -13,6 +14,7 @@ export interface ProjectedPort {
   endpoints: Endpoint[];
   interfaces?: string[];
   interfaceLabel?: string;
+  templatePort?: TemplatePortTarget;
 }
 export interface ProjectedNode {
   id: string; parentId?: string; kind: GraphNode['kind']; label: string;

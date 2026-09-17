@@ -5,7 +5,7 @@ import { validateArchitecture } from '../api/architecture-validation';
 import { layoutGraph } from './auto-layout';
 import { GraphViews } from './graph';
 import { connectionSet, projectGraph } from './projection';
-import { bindTemplateLayout, enterSharedStructure, remapNode, templateGraph } from './shared-structure';
+import { bindTemplateLayout, bindTemplatePortSelection, enterSharedStructure, remapNode, templateGraph } from './shared-structure';
 import { backFromComponent, enterComponent, projectionOptions, returnToModel, snapshotView } from './scope-navigation';
 
 it('uses an independently authored complete correspondence; ordinary projections ignore optional annotations', () => {
@@ -89,4 +89,47 @@ it('resolves external declaration metadata for a nonzero shared instance without
   const neutral = bindTemplateLayout(layout, graph, template, first!, null);
   expect(neutral.projection.nodes.flatMap((n) => n.ports).every((p) => !p.endpoints.length && !p.interfaces?.length)).toBe(true);
   expect(graph).toEqual(before);
+});
+
+it('retains a source-free template port identity through snapshots, blur targets and exact instance binding', async () => {
+  const graph = makeTemplateFixture(), template = graph.templates![0]!, [first, second] = template.instances;
+  const layout = await layoutGraph(templateGraph(graph, first!), { scope: first!.node_id,
+    expanded: first!.nodes.map((n) => n.node_id), showUnused: true });
+  const neutral = bindTemplateLayout(layout, graph, template, first!, null);
+  const port = neutral.projection.nodes.find((n) => n.id === first!.node_id)!.ports.find((p) => p.id === 'positions')!;
+  expect(port.endpoints).toEqual([]);
+  expect(port.templatePort).toEqual({ kind: 'template-port', templateId: template.id, nodeRole: 'root', portRole: 'root.positions' });
+  const selection = bindTemplatePortSelection(graph, template, first!, null, port.templatePort!)!;
+  expect(selection.owner.kind).toBe('presentation'); expect(selection.endpoints).toEqual([]);
+  const view = new GraphViews().get('fixture', graph);
+  enterSharedStructure(view, template, null); view.update({ selected: null, boundary: selection });
+  const snapshot = snapshotView(view);
+  view.update({ boundary: undefined }); view.update(snapshot);
+  expect(view.boundary).toEqual(selection); expect(view.selected).toBeNull(); expect(view.shared?.instanceId).toBeNull();
+  const selected = neutral.projection.nodes.flatMap((n) => n.ports.filter((p) =>
+    p.templatePort?.portRole === view.boundary!.templatePort!.portRole).map((p) => ({ node_id: n.id, port_id: p.id })));
+  expect(selected).toEqual([{ node_id: first!.node_id, port_id: 'positions' }]);
+  expect(connectionSet(neutral.projection, { port: selected[0]! })).toHaveLength(2);
+  for (const instance of [second!, first!]) {
+    const concrete = bindTemplatePortSelection(graph, template, first!, instance, selection.templatePort!)!;
+    expect(concrete.owner).toEqual({ kind: 'source', id: instance.node_id });
+    expect(concrete.endpoints).toEqual([{ node_id: instance.node_id, port_id: 'positions' }, { node_id: 'positions', port_id: 'out' }]);
+    expect(concrete.templatePort).toEqual(selection.templatePort);
+    const rebound = bindTemplateLayout(layout, graph, template, first!, instance);
+    expect(rebound.boxes).toBe(layout.boxes); expect(rebound.ports).toBe(layout.ports); expect(rebound.routes).toBe(layout.routes);
+  }
+});
+
+it('clears stale shared port roles on restoration instead of selecting another port or instance', () => {
+  const graph = makeTemplateFixture(), template = graph.templates![0]!, views = new GraphViews();
+  const view = views.get('fixture', graph);
+  enterSharedStructure(view, template, null);
+  view.update({ selected: null, boundary: bindTemplatePortSelection(graph, template, template.instances[0]!, null,
+    { kind: 'template-port', templateId: template.id, nodeRole: 'root', portRole: 'root.positions' }) });
+  expect(views.get('fixture', graph).boundary?.templatePort?.portRole).toBe('root.positions');
+  const changed = structuredClone(graph);
+  changed.templates![0]!.instances[1]!.ports = changed.templates![0]!.instances[1]!.ports.filter((p) => p.role !== 'root.positions');
+  const restored = views.get('fixture', changed);
+  expect(restored.boundary).toBeUndefined(); expect(restored.selected).toBeNull(); expect(restored.shared?.instanceId).toBeNull();
+  expect(restored.notice).toContain('port selection was cleared');
 });
