@@ -12,6 +12,9 @@ import type { Graph } from '../src/architecture-explorer/graph';
 import { projectGraph } from '../src/architecture-explorer/projection';
 import { assertTraceability, assertInterfaceCoverage } from '../tests/architecture-invariants';
 import { installProbe } from './probe';
+import { HarnessTiming } from './harness-timing';
+
+let timing: HarnessTiming;
 import { installArchitectureProbe } from './architecture-probe';
 import { nativeCamera } from '../tests/native-camera';
 import { fanoutPoint } from '../tests/architecture-pointer';
@@ -277,6 +280,7 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
 }
 
 test.beforeEach(async ({ page }, info) => {
+  timing = new HarnessTiming();
   const family = /\[(\w+)\]/.exec(info.title)![1]!;
   const reference = info.title.startsWith('complete local reference');
   const supplied = process.env.LMEX_ARCHITECTURE_REFERENCES;
@@ -296,25 +300,31 @@ test.beforeEach(async ({ page }, info) => {
     await info.attach('actual-reference-inventory', { body: JSON.stringify(selected.report), contentType: 'application/json' });
     args = ['-m', 'llm_model_explorer', '--model-root', dirname(selected.directory), '--cache-dir', join(root, 'cache'), '--port', String(port), '--cors-origin', origin];
   } else {
+    const fixtureStarted = performance.now();
     execFileSync(python, ['-m', 'acceptance.architecture_fixtures', join(root, 'models'), ...(family === 'templates' ? ['--templates'] : [])], { cwd: repo });
+    timing.fixtureGenerationMs = performance.now() - fixtureStarted;
     modelId = family;
     args = ['-m', 'acceptance.server', '--root', root, '--port', String(port), '--origin', origin];
   }
+  timing.spawned = performance.now();
   service = spawn(python, args, { cwd: repo, env: { ...process.env, HF_HUB_OFFLINE: '1', TOKENIZERS_PARALLELISM: 'false' }, stdio: ['ignore', 'pipe', 'pipe'] });
   service.stdout!.on('data', (data) => { log += data; }); service.stderr!.on('data', (data) => { log += data; });
   await expect.poll(async () => {
     if (service.exitCode !== null) throw new Error(log);
     try { return (await fetch(`${backend}/models`)).status; } catch { return 0; }
   }, { timeout: reference ? 300_000 : 30_000 }).toBe(200);
+  timing.ready = performance.now();
   page.on('request', (r) => { if (r.url().startsWith(backend)) observed.push(new URL(r.url()).pathname); });
-  await page.addInitScript(installProbe);
+  await page.addInitScript(installProbe, { capturePixels: false });
   await page.addInitScript(installArchitectureProbe);
-  await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
   await page.goto('/');
+  timing.bodyStarted = performance.now();
 });
 
 test.afterEach(async ({ page }, info) => {
   if (info.status === 'skipped') return;
+  timing.teardownStarted = performance.now();
+  const probe = !page.isClosed() ? await page.evaluate(() => (window as any).__acceptance?.metrics() ?? null) : null;
   await info.attach('backend-log', { body: log ?? '', contentType: 'text/plain' });
   await page.close();
   if (service?.exitCode === null) {
@@ -322,6 +332,8 @@ test.afterEach(async ({ page }, info) => {
     try { await once(service, 'exit'); } finally { clearTimeout(timer); }
   }
   if (root) rmSync(root, { recursive: true });
+  await timing.attach(info, log, probe);
+  expect(probe).toMatchObject({ capturePixels: false, framebufferReadbacks: 0 });
 });
 
 for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3', 'qwen35', 'vjepa2']) {

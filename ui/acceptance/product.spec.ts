@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Test-only browser observer and JSON evidence. */
-import { test, expect } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
+import { HarnessTiming } from './harness-timing';
+
+const test = base.extend<{ capturePixels: boolean }>({ capturePixels: [false, { option: true }] });
+let timing: HarnessTiming;
 import { integratedCard } from '../tests/viewer-panel';
 import type { Page, TestInfo } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
@@ -66,7 +70,8 @@ function luminance(rgb: number[]) {
   return .2126 * linear[0]! + .7152 * linear[1]! + .0722 * linear[2]!;
 }
 
-test.beforeEach(async ({ page }, testInfo) => {
+test.beforeEach(async ({ page, capturePixels }, testInfo) => {
+  timing = new HarnessTiming();
   log = '';
   const ports = acceptancePorts(testInfo.project.name);
   backend = `http://127.0.0.1:${ports.backend}`;
@@ -88,6 +93,7 @@ test.beforeEach(async ({ page }, testInfo) => {
       '--cache-dir', referenceRoot, '--port', String(ports.backend), '--cors-origin', uiOrigin,
       '--device', process.env.LMEX_REFERENCE_DEVICE ?? 'cpu'];
   }
+  timing.spawned = performance.now();
   service = spawn(`${repo}backend/.venv/bin/python`, command, {
     cwd: repo, env: { ...process.env, HF_HUB_OFFLINE: '1', TOKENIZERS_PARALLELISM: 'false' },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -98,20 +104,19 @@ test.beforeEach(async ({ page }, testInfo) => {
     if (service.exitCode !== null) throw new Error(log);
     try { return (await fetch(`${backend}/models`)).status; } catch { return 0; }
   }, { timeout: 30_000 }).toBe(200);
+  timing.ready = performance.now();
   page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') log += `\nBrowser: ${message.text()}`; });
   page.on('pageerror', (error) => { log += `\nPage: ${error.message}`; });
-  await page.addInitScript(installProbe);
-  // Layout/capture cases inspect DOM, numeric readouts and screenshots. Full
-  // framebuffer readback on every streamed draw is reserved for pixel oracles.
-  if (isReference || testInfo.title.startsWith('polish ') || testInfo.title.startsWith('expanded model coverage')) {
-    await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
-  }
+  await page.addInitScript(installProbe, { capturePixels });
   await page.goto('/');
   await expect(page.getByTestId('backend-url')).toHaveText(backend);
+  timing.bodyStarted = performance.now();
 });
 
-test.afterEach(async ({ page }, testInfo) => {
+test.afterEach(async ({ page, capturePixels }, testInfo) => {
   if (testInfo.status === 'skipped') return;
+  timing.teardownStarted = performance.now();
+  const probe = !page.isClosed() ? await page.evaluate(() => (window as any).__acceptance?.metrics() ?? null) : null;
   if (!page.isClosed() && testInfo.status !== testInfo.expectedStatus) {
     await testInfo.attach('resource-state', { body: JSON.stringify(await metrics(page)), contentType: 'application/json' });
   }
@@ -123,7 +128,17 @@ test.afterEach(async ({ page }, testInfo) => {
     try { await once(service, 'exit'); } finally { clearTimeout(timer); }
   }
   if (referenceRoot) { rmSync(referenceRoot, { recursive: true }); referenceRoot = undefined; }
+  await timing.attach(testInfo, log, probe);
+  expect(probe?.capturePixels).toBe(capturePixels);
+  if (capturePixels) {
+    expect(probe?.framebufferReadbacks).toBeGreaterThan(0);
+    expect(probe?.pixelQueries).toBeGreaterThan(0);
+  } else expect(probe?.framebufferReadbacks).toBe(0);
 });
+
+// This is the only probe-pixel consumer, including its profile/magnifier helpers.
+test.describe(() => {
+  test.use({ capturePixels: true });
 
 test('production UI renders before producer completes; native geometry, inspection and cleanup', async ({ page, context }, testInfo) => {
   await page.setViewportSize({ width: 1000, height: 500 });
@@ -253,6 +268,8 @@ test('production UI renders before producer completes; native geometry, inspecti
   await page.getByRole('button', { name: 'Session options', exact: true }).click();
   await page.getByRole('button', { name: 'Close session', exact: true }).click();
   await idle();
+});
+
 });
 
 test('live tokenizer uses real Unicode IDs/spans and suppresses delayed old responses', async ({ page }, testInfo) => {
