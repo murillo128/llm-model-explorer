@@ -4,8 +4,8 @@ import type { ProjectedNode } from './projection';
 export const cardSelection = (node: ProjectedNode) => node.record?.id ?? node.id;
 
 export const cardExpandable = (node: ProjectedNode) => node.kind === 'group' && Boolean(
-  node.record?.kind === 'group' && node.record.children.length ||
-  node.presentation === 'mlp' && node.sourceIds.length || node.repetitionId && node.instances?.length);
+  node.record?.kind === 'group' && node.record.children.length && (node.componentCount ?? node.record.children.length) ||
+  node.presentation === 'model' && node.componentCount || node.presentation === 'mlp' && node.sourceIds.length || node.repetitionId && node.instances?.length);
 
 export const cardDoubleClick = (node: ProjectedNode) =>
   cardExpandable(node) ? node.expanded ? 'collapse' : 'expand' : undefined;

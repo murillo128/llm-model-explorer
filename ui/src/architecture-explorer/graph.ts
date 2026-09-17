@@ -4,6 +4,8 @@ import { projectGraph } from './projection';
 import { componentScope } from './scope';
 import { projectionOptions } from './scope-navigation';
 import { sharedContext, type SharedStructure } from './shared-structure';
+import { interfaceIndex, interfaceSelection } from './interfaces';
+import type { BoundarySelection } from './interfaces';
 
 export type Graph = components['schemas']['ArchitectureGraph'];
 export type GraphNode = components['schemas']['ArchitectureNode'];
@@ -14,7 +16,7 @@ export interface PortPosition extends Point { nodeId: string; portId: string; ab
 export interface Route { id: string; sections: Point[][]; junctions: Point[]; labels?: { x: number; y: number; width: number; height: number; lines: string[] }[] }
 export interface Layout { boxes: Box[]; ports: PortPosition[]; routes: Route[]; projection: Projection; edgeIds: string[]; width: number; height: number; milliseconds: number }
 export type GraphSnapshot = Pick<GraphView, 'selected' | 'selectionMode' | 'dimensions' | 'edge' | 'focus' | 'activeStack' | 'repetitions' |
-  'exhaustive' | 'showUnused' | 'showContext' | 'deriveMlp' | 'stateScope' | 'expanded' | 'viewport' | 'scope' | 'shared'>;
+  'exhaustive' | 'showUnused' | 'showContext' | 'deriveMlp' | 'stateScope' | 'expanded' | 'viewport' | 'scope' | 'shared' | 'boundary' | 'modelCollapsed'>;
 export class GraphView {
   private revision = 0;
   private readonly listeners = new Set<() => void>();
@@ -39,6 +41,8 @@ export class GraphView {
   history: GraphSnapshot[] = [];
   globalView: GraphSnapshot | undefined;
   selected: string | null = null;
+  boundary: BoundarySelection | undefined;
+  modelCollapsed = false;
   selectionMode: 'source' | 'structure' = 'source';
   dimensions = false;
   edge: string | null = null;
@@ -78,14 +82,29 @@ export class GraphViews {
     this.views.delete(key); this.views.set(key, view);
     while (this.views.size > 8) this.views.delete(this.views.keys().next().value!);
     const ids = new Set(graph.nodes.map((n) => n.id));
+    const interfaces = interfaceIndex(graph);
+    const declaration = view.selected && interfaces.declarations.get(view.selected)?.[0];
+    if (declaration) { view.boundary = interfaceSelection(declaration); view.selected = declaration.owner.kind === 'source' ? declaration.owner.id : null; view.edge = null; }
+    if (view.selected && interfaces.tools.has(view.selected)) {
+      view.selected = null; view.edge = null; view.notice = 'The selected tool capability is no longer a model component.';
+    }
+    if (view.boundary && !view.boundary.endpoints.every((p) => graph.nodes.some((n) => n.id === p.node_id && n.ports.some((port) => port.id === p.port_id)))) view.boundary = undefined;
+    if (view.boundary?.templatePort) {
+      const target = view.boundary.templatePort, template = graph.templates?.find((t) => t.id === target.templateId);
+      if (view.shared?.templateId !== target.templateId || !template?.instances.every((instance) =>
+        instance.nodes.some((n) => n.role === target.nodeRole && ids.has(n.node_id)) && instance.ports.some((p) => p.role === target.portRole &&
+          graph.nodes.some((n) => n.id === p.node_id && n.ports.some((port) => port.id === p.port_id))))) {
+        view.boundary = undefined; view.notice = 'Shared interface correspondence changed; the port selection was cleared.';
+      }
+    }
     view.browser.families = view.browser.families.filter((id) => graph.templates?.some((t) => t.id === id));
     if (!graph.templates?.some((t) => t.id === view.browser.selectedFamily)) view.browser.selectedFamily = null;
-    const expanded = view.expanded.filter((id) => ids.has(id) || id.startsWith('mlp:') && ids.has(id.slice(4)));
+    const expanded = view.expanded.filter((id) => interfaces.eligible(id) && (ids.has(id) || id.startsWith('mlp:') && ids.has(id.slice(4))));
     if (expanded.length !== view.expanded.length) view.expanded = expanded;
     const repetitions = Object.entries(view.repetitions).filter(([id]) => graph.repetitions.some((r) => r.id === id));
     if (repetitions.length !== Object.keys(view.repetitions).length) view.repetitions = Object.fromEntries(repetitions);
     if (view.activeStack && !graph.repetitions.some((r) => r.id === view.activeStack)) view.activeStack = null;
-    if (view.focus && !ids.has(view.focus) && !(view.focus.startsWith('mlp:') && ids.has(view.focus.slice(4)))) view.focus = null;
+    if (view.focus && (!interfaces.eligible(view.focus) || !ids.has(view.focus) && !(view.focus.startsWith('mlp:') && ids.has(view.focus.slice(4))))) view.focus = null;
     if (view.stateScope && !ids.has(view.stateScope)) view.stateScope = undefined;
     if (view.shared) {
       try { sharedContext(graph, view.shared); }

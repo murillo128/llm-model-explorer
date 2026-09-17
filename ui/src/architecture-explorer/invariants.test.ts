@@ -174,8 +174,8 @@ describe('reusable exhaustive and focused source assertions', () => {
   });
 
   it('catches loss of a duplicate signal even when every source-edge ID is still accounted for', () => {
-    const graph = fixture(); graph.edges.push({ ...structuredClone(graph.edges[0]!), id: 'parallel-path' });
-    graph.edges.push({ ...structuredClone(graph.edges.find((edge) => edge.target.node_id === 'embedding')!), id: 'parallel-exit' });
+    const graph = fixture(); graph.edges.push({ ...structuredClone(graph.edges.find((e) => e.target.node_id === 'layer-0.attention' && e.target.port_id === 'x')!), id: 'parallel-path' });
+    graph.edges.push({ ...structuredClone(graph.edges.find((edge) => edge.source.node_id === 'layer-0.attention' && edge.source.port_id === 'x')!), id: 'parallel-exit' });
     const projected = projectGraph(graph, { expanded: [], exhaustive: true });
     assertTraceability(graph, projected, true);
     const edge = projected.edges.find((item) => item.paths.length > 1)!;

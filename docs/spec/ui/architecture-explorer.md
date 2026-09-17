@@ -75,7 +75,7 @@ unchanged. No toggle implicitly Fits view. Only explicit **Center** reveals a
 hidden selection by opening required ancestors and its exact repetition window,
 without opening its own children or every sibling.
 
-Search filters the full received graph by real label, public containment/module
+Search filters eligible components from the full received graph by real label, public containment/module
 path, exact identity and supported description source key. It includes collapsed
 interiors and verified families/instances, grouped under Model and Shared with
 paths and stack/instance context to distinguish equal names. Results are a flat
@@ -140,7 +140,79 @@ does not recognize additional attention patterns or reconstruct missing math.
 Search includes description source keys so concise labels retain access by the
 original operation path.
 
-Declared interfaces remain inspectable when unconsumed branches are filtered. Determine consumption from source connectivity, with an explicit reversible filter. State focus shows existing prior/next dependencies owned by the selected instance, keeps K/V distinct and identifies excluded flows. Exhaustive expansion restores original operations and interfaces without a representative or layer-count limit.
+Declared interfaces remain inspectable when unconsumed branches are filtered. Determine consumption from source connectivity, with an explicit reversible filter. State focus shows existing prior/next dependencies owned by the selected instance, keeps K/V distinct and identifies excluded flows. Exhaustive expansion restores original operations and interfaces without a representative or layer-count limit. Interfaces converted to boundary ports and excluded tool capabilities never return as cards or component rows.
+
+## Declarative interfaces on container boundaries
+
+Distinguish passive interface values from computations with one source-backed
+presentation index shared by projection, browser/search and inspection. An input
+leaf is convertible when it has output ports only, no incoming edges, parameters,
+resource references or formula, and only data edges. An output leaf is convertible
+when it has one receiving input, at most one incoming data edge, no outgoing edge,
+parameters, resource references or formula, and zero or one unused output
+descriptor. The latter includes dense logits declarations: retain that unused
+port in inspection without inventing a forwarding operation or duplicate output.
+Optional operation identifiers, roles and descriptive attributes do not alone
+make a declaration computational. Actual operations/groups and state/context
+records remain components, regardless of names such as positions, mask or logits.
+Unknown shapes stay unknown. Ambiguous records remain visible and inspectable
+with an explicit presentation notice; never silently discard their evidence.
+
+A converted declaration belongs to its source parent, or to the model boundary
+when it is a source root. Reuse the sole remaining source root group only when
+it covers all retained components after excluding declarations and tool-only
+leaves. Otherwise show a marked presentation-only **Model** container around
+retained roots in source order. It represents the graph's described scope and
+coverage, not a claim of complete multimodal/checkpoint support. Its identity is
+not a source ID or module path and has no parameter binding. Language model and
+an external LM head stay separate children; visual encoder/predictor models acquire
+no text interfaces. Use the browser's Model heading for the presentation boundary,
+without a fictional module or an Inputs/Outputs subtree. Real containment,
+repetition, concrete instances and parameter identities are unchanged.
+
+Inputs sit on the left; terminal outputs on the right. Names come from declaration
+and port descriptors, shapes from exact endpoints. Reuse an existing container
+port only through verified original edges and same-endpoint group forwarding;
+never merge different signals by label/shape or pass through a computation. New
+boundary ports are presentation aliases retaining original endpoints and full
+node/edge provenance. Keep expanded boundary anchors and internal producer/consumer
+routes, and collapsed named ports with their hidden path metadata. A boundary
+input may source an internal route and a boundary output may receive one. Absorbed
+forwarding retains source paths as port evidence. Preserve directed path
+multiplicity, fan-out, residual bypasses, different masks and separate K/V states.
+Unconnected interfaces stay named and inspectable without fabricated connections.
+Unused-branch filtering does not remove converted port names or metadata access.
+
+Isolated components use their exact declared interface (or an operation's actual
+ports). Passive external declarations resolve there without duplicate external
+cards. Genuine external computational/state/context dependencies retain compact
+context aliases. Exit/re-entry remains external and wholly external bypasses stay
+excluded. Verified shared-instance correspondence also rebinds interface metadata;
+structure-only views never invent a concrete instance or offer weights.
+
+Converted declarations never appear as independent Model, Shared or component
+search rows. Interface-name/ID/source-key queries return the owner once, annotated
+with matched ports. Selection records a typed owner/port target and changes no
+camera, expansion, scope, layout or retrieval; explicit Center retains its normal
+reveal behavior. Ports are not expandable children. Normalize saved declaration
+selection to owner/port, clear removed tool selections with an explanation and
+invalidate stale port targets on graph replacement. Search clearing, scope/Back,
+explorer/pane switches and exhaustive display cannot resurrect removed entries.
+
+Hover/focus follows exact transparent connection chains and stops at operations;
+activation pins the port connection set for explicit inspection. Unconnected ports
+remain selectable. The single existing modal exposes original declarations,
+complete port descriptors, attributes, diagnostics and connection provenance;
+container inspection includes its converted interfaces. Source-free presentation
+boundaries identify themselves truthfully. No interface action starts numerical
+work. Keep live focus restoration, camera and resource lifetime guards.
+
+Reserve side rows/gutters for names and hit targets; grow containers vertically
+for large interfaces and use existing graph pan/zoom. Long labels have full
+hover/focus disclosure. Show dimensions controls shape annotations, never names
+or connections. Interaction does not move geometry. Deterministic conservation
+checks and desktop/constrained-width browser checks must verify these properties
+alongside surviving computation, source identity and independent graph coverage.
 
 ## Optional isolated component exploration
 
@@ -166,7 +238,7 @@ real model/stack/instance location. Nested isolation is bounded navigation histo
 on one canvas. **Back** restores the preceding scope's camera, expansion,
 repetition window, filters and valid node/connection selection. **View in model**
 returns to the global graph and intentionally reveals and centers the selected
-concrete component. Search and the browser cover all received records. Selecting outside the current
+concrete component. Search and the browser cover all eligible components; declarative interface queries resolve to their owning boundary ports. Selecting outside the current
 scope records exact identity without leaving isolation; explicit View in model
 or Explore component remains available. Center or expansion of an outside-scope
 component deliberately returns to Model before acting and retains the isolated
@@ -354,7 +426,14 @@ Resource references are semantic: model scope, modules, parameters, and an optio
 
 ## Language and V-JEPA presentation
 
-For language models, show tokenization as a distinct context block before the neural model when applicable. It explains the source of token IDs and preserves the tokenizer reference; it does not execute tokenization or require a new cross-explorer action. When the source graph provides tokenizer capability only as context and no computational ports/edges, the UI may show a clearly contextual association but must not fabricate a data-flow edge, port, or claim that the tokenizer produced positions or masks. Other Qwen modalities remain labelled context, outside detailed language coverage.
+A standalone tokenizer capability is auxiliary tooling, not a model component.
+Exclude its card and browser/search row only when its source is a portless,
+parameterless `context` leaf with only tokenizer references and no incident edge,
+formula or operation. Keep its source descriptor unchanged. A connected context,
+state, real visual encoder or operation is not excluded because it references a
+tokenizer. Do not add an input-preparation card, fabricate a tokenization edge,
+or change Tokenizer Explorer or cross-explorer navigation. Other Qwen modalities
+retain their supplied context and coverage limitations.
 
 For the selected V-JEPA 2 model, use symbolic visual input, patch preparation, encoder, context/target selection inputs, predictor, and representation outputs. Both stacks expand in the same global canvas. No text-tokenizer error, vocabulary head, video player, upload selector, preprocessing control, action planner, or training graph is introduced. Native matrix/vector weights use the same modal; higher-rank parameters retain explicit shape/limitation information.
 

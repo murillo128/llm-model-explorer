@@ -102,7 +102,12 @@ for (const reference of references) test(`full-size ${reference.name}: all insta
   expect(metrics.renderedNodes).toBeLessThan(metrics.nodes);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   await graphAction(page, 'Collapse all');
-  await expect(graph).toHaveAttribute('data-visible-nodes', '3');
+  await expect(graph).toHaveAttribute('data-visible-nodes', '1');
+  // Collapse retains the previous camera; the sole boundary may be virtualized
+  // outside it until the user explicitly fits the new overview.
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  await expect(page.locator('.architecture-node[data-presentation="model"]')).toHaveCount(1);
+  await expect(page.locator('.react-flow__node[data-id="output"]')).toHaveCount(0);
   // Selection stays concrete even while its ancestors hide it; Center selected reveals it again.
   await page.getByRole('button', { name: 'Center selected' }).click();
   await expect(page.getByRole('button', { name: 'Select full_attention operation 31', exact: true }).last()).toBeVisible();

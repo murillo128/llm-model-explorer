@@ -10,11 +10,21 @@ import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import type { Graph } from '../src/architecture-explorer/graph';
 import { projectGraph } from '../src/architecture-explorer/projection';
-import { assertTraceability } from '../tests/architecture-invariants';
+import { assertTraceability, assertInterfaceCoverage } from '../tests/architecture-invariants';
 import { installProbe } from './probe';
 import { installArchitectureProbe } from './architecture-probe';
 import { nativeCamera } from '../tests/native-camera';
 import { fanoutPoint } from '../tests/architecture-pointer';
+
+// Independently expected component set for the four reviewed producer fixtures.
+// Their passive declarations are verified by the conservation oracle, not by
+// importing the runtime classification as the expected result.
+const componentsOf = (graph: Graph) => graph.nodes.filter((node) => !['input', 'output'].includes(node.kind) &&
+  !(node.kind === 'context' && !node.ports.length && node.references.some((r) => r.kind === 'tokenizer')));
+const visibleCount = (graph: Graph) => {
+  const nodes = componentsOf(graph), roots = nodes.filter((n) => !n.parent_id);
+  return nodes.length + (roots.length === 1 && roots[0]!.kind === 'group' ? 0 : 1);
+};
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
 const python = `${repo}backend/.venv/bin/python`;
@@ -216,18 +226,26 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
       // Explicit Fit includes every context endpoint. Sample real pointer hits
       // only after culling has exposed the complete generated scope geometry.
       await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready();
-      const connections = page.locator('.architecture-connection[data-source-node^="external:"]');
+      const connections = page.locator('.architecture-connection');
       const targets = await connections.evaluateAll((elements) => elements.map((element) => ({
         source: element.getAttribute('data-source-node')!, port: element.getAttribute('data-source-port')!,
+        target: element.getAttribute('data-target-node')!, targetPort: element.getAttribute('data-target-port')!,
         id: element.getAttribute('data-edge-id')!,
       })));
-      const fanout = targets.find((item) => targets.filter((other) => item.source === other.source && item.port === other.port).length > 1);
+      // The external producer may first enter the expanded component's exact
+      // boundary port; its internal branches still belong to that same signal.
+      const fanout = targets.filter((item) => item.source.startsWith('external:')).map((input) => ({
+        input, branches: targets.filter((other) => input.target === component.id
+          ? other.source === input.target && other.port === input.targetPort
+          : other.source === input.source && other.port === input.port),
+      })).find((item) => item.branches.length > 1);
       if (family === 'qwen3') expect(fanout, 'Dense Attention/MLP inputs retain their genuine shared fan-out').toBeTruthy();
       if (fanout) {
-        const branches = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(fanout.source)}][data-source-port=${JSON.stringify(fanout.port)}]`);
+        const source = fanout.branches[0]!;
+        const branches = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(source.source)}][data-source-port=${JSON.stringify(source.port)}]`);
         const branchList = await branches.all();
-        const expected = (await branches.evaluateAll((elements) => elements.map((element) => element.getAttribute('data-edge-id')!))).sort();
-        const port = page.locator(`.architecture-port[data-node-id=${JSON.stringify(fanout.source)}][data-port-id=${JSON.stringify(fanout.port)}]`);
+        const expected = [...new Set([fanout.input.id, ...fanout.branches.map((item) => item.id)])].sort();
+        const port = page.locator(`.architecture-port[data-node-id=${JSON.stringify(fanout.input.source)}][data-port-id=${JSON.stringify(fanout.input.port)}]`);
         await port.locator('.architecture-port-dot').hover();
         await expect.poll(() => page.locator('.architecture-connection[data-emphasized="true"]').evaluateAll((elements) => elements.map((e) => e.getAttribute('data-edge-id')!).sort())).toEqual(expected);
         if (reference && info.project.name === 'dpr1' && ['qwen3', 'vjepa2'].includes(family)) {
@@ -248,7 +266,7 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
         width, graph: graph.graph_id, scope: component.id, sourceNodes: graph.nodes.length,
         visibleNodes: Number(await canvas.getAttribute('data-visible-nodes')), visibleEdges: Number(await canvas.getAttribute('data-visible-edges')),
         layoutMs: Number(await canvas.getAttribute('data-layout-ms')), initialCamera: camera,
-        component: await root.boundingBox(), boundaryFanout: fanout ? targets.filter((item) => item.source === fanout.source).length : 0,
+        component: await root.boundingBox(), boundaryFanout: fanout?.branches.length ?? 0,
         resources: await graphObservation(page),
       }), contentType: 'application/json' });
       await page.mouse.move(0, 0);
@@ -330,16 +348,16 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill(' ');
     await graphAction(page, 'Show all operations');
     const ids = await page.getByRole('tree', { name: 'Model components', exact: true }).locator('[data-node-id]').evaluateAll((options) => options.map((o) => (o as HTMLElement).dataset.nodeId));
-    expect(new Set(ids)).toEqual(new Set(graph.nodes.map((n) => n.id)));
+    expect(new Set(ids)).toEqual(new Set(componentsOf(graph).map((n) => n.id)));
     await page.keyboard.press('Escape');
     await graphAction(page, 'Show all operations');
-    await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
     await recordGraph(page, info, 'exhaustive-graph', graph);
     // Visible routes compose boundary forwarding. Every original edge remains
     // traceable even though one route may represent several source segments.
-    expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((n) => n.id));
+    expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((n) => n.id));
     expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((e) => e.id));
-    const roots = new Set(graph.nodes.filter((n) => !n.parent_id).map((n) => n.id));
+    assertInterfaceCoverage(graph, projectGraph(graph, { expanded: [], exhaustive: true }));
     for (const repetition of graph.repetitions) {
       const last = repetition.instances.at(-1)!;
       await findComponent(page, last.node_id);
@@ -457,15 +475,16 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     }
     await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
     await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
-    await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
     await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).toBeChecked();
     await page.keyboard.press('Escape');
     if (family === 'vjepa2') expect(observed.some((p) => p.endsWith('/tokenize'))).toBe(false);
     await graphAction(page, 'Collapse all');
-    await expect(canvas).toHaveAttribute('data-visible-nodes', String(roots.size));
-    expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(
-      graph.edges.filter((edge) => roots.has(edge.source.node_id) && roots.has(edge.target.node_id)).map((edge) => edge.id));
+    await expect(canvas).toHaveAttribute('data-visible-nodes', '1');
+    for (const node of graph.nodes.filter((n) => ['input', 'output'].includes(n.kind))) {
+      await expect(page.locator(`.architecture-browser-row[data-node-id=${JSON.stringify(node.id)}]`)).toHaveCount(0);
+    }
     await page.getByRole('button', { name: 'Center selected', exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   });
@@ -475,7 +494,7 @@ test('complete local reference [qwen3] exhaustive global detail remains reachabl
   const graph = await selectGraph(page);
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   await graphAction(page, 'Show all operations');
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
   const mlp = graph.nodes.find((node) => node.kind === 'group' && node.attributes.some((a) => a.name === 'semantic_role' && a.value === 'mlp'))!;
   const operation = graph.nodes.find((node) => node.parent_id === mlp.id && node.kind === 'operation')!;
   const requests = observed.length;
@@ -483,7 +502,7 @@ test('complete local reference [qwen3] exhaustive global detail remains reachabl
   await page.getByRole('button', { name: 'Center selected', exact: true }).click();
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
   await expect(page.locator(`.react-flow__node[data-id=${JSON.stringify(operation.id)}]`)).toBeInViewport();
-  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((node) => node.id));
   expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
   expect(observed.slice(requests)).toEqual([]);
   await recordGraph(page, info, 'exhaustive-global-detail', graph);

@@ -5,13 +5,13 @@ import { instanceOf } from './presentation';
 
 export function projectionOptions(view: GraphSnapshot): ProjectionOptions {
   return { expanded: view.expanded, repetitions: view.repetitions, dimensions: view.dimensions,
-    exhaustive: view.exhaustive, showUnused: view.showUnused, showContext: view.showContext, deriveMlp: view.deriveMlp,
+    exhaustive: view.exhaustive, showUnused: view.showUnused, showContext: view.showContext, deriveMlp: view.deriveMlp, modelCollapsed: view.modelCollapsed,
     ...(view.stateScope ? { stateScope: view.stateScope } : {}), ...(view.scope ? { scope: view.scope } : {}) };
 }
 
 /** Copy only small view state. Neither source records nor geometry enter history. */
 export function snapshotView(view: GraphSnapshot, viewport = view.viewport): GraphSnapshot {
-  return { selected: view.selected, selectionMode: view.selectionMode, dimensions: view.dimensions, edge: view.edge, focus: view.focus,
+  return { selected: view.selected, boundary: view.boundary, modelCollapsed: view.modelCollapsed, selectionMode: view.selectionMode, dimensions: view.dimensions, edge: view.edge, focus: view.focus,
     activeStack: view.activeStack, expanded: [...view.expanded],
     repetitions: Object.fromEntries(Object.entries(view.repetitions).map(([id, window]) => [id, { ...window }])),
     exhaustive: view.exhaustive, showUnused: view.showUnused, showContext: view.showContext,
@@ -28,7 +28,7 @@ export function enterComponent(view: GraphView, graph: Graph, id: string, viewpo
   const expanded = view.expanded.filter((id) => scope.members.has(id) || id.startsWith('mlp:') && scope.members.has(id.slice(4)));
   const instance = instanceOf(graph, scope.derived?.parentId ?? id);
   // A concrete child leaves shared geometry; Back retains the verified shared snapshot.
-  view.update({ scope: id, shared: undefined, selected: id, selectionMode: 'source', edge: null, focus: id, activeStack: instance?.repetition.id ?? null,
+  view.update({ scope: id, shared: undefined, selected: id, boundary: undefined, selectionMode: 'source', edge: null, focus: id, activeStack: instance?.repetition.id ?? null,
     expanded: [...new Set([...expanded, id])], exhaustive: false, stateScope: undefined,
     deriveMlp: scope.derived ? true : view.deriveMlp, viewport: undefined });
 }

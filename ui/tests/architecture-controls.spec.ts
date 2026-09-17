@@ -35,6 +35,10 @@ function assertTransportProjection(graph: Graph, layout: Layout, exhaustive = fa
     const source = graph.edges.find((e) => e.id === item.id)!;
     expect(item).toEqual(source); return source;
   }));
+  if (projection.boundaryPaths) projection.boundaryPaths = projection.boundaryPaths.map((path) => path.map((item) => {
+    const source = graph.edges.find((e) => e.id === item.id)!;
+    expect(item).toEqual(source); return source;
+  }));
   assertTraceability(graph, projection, exhaustive);
 }
 test.beforeEach(async ({ page }) => {

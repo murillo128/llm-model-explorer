@@ -57,7 +57,15 @@ test('cold fit waits for current geometry, then selection, menus, hover and resi
   expect(await page.evaluate(() => window.cameraProbe.events.filter((e) => e.event.endsWith('requested')))).toEqual([]);
   await releaseSizes(page); await ready(page);
   const before = await sample(page), count = await page.evaluate(() => window.cameraProbe.events.length);
-  await page.locator('.architecture-node-label').first().click();
+  const visibleCard = await page.locator('.architecture-node-label').evaluateAll((labels) => {
+    const flow = document.querySelector('.architecture-flow')!.getBoundingClientRect();
+    return labels.find((label) => {
+      const r = label.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+      return x > flow.left && x < flow.right && y > flow.top && y < flow.bottom && label.contains(document.elementFromPoint(x, y));
+    })?.closest('.react-flow__node')?.getAttribute('data-id');
+  });
+  expect(visibleCard).toBeTruthy();
+  await page.locator(`.react-flow__node[data-id=${JSON.stringify(visibleCard)}] .architecture-node-label`).click();
   // The compact narrow canvas can clip the first source port. Hover an on-screen
   // port without revealing or centering it, which would invalidate this oracle.
   const visiblePort = await page.locator('.architecture-port').evaluateAll((ports) => {

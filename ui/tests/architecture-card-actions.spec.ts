@@ -104,7 +104,10 @@ test('nested expansion and exact hidden selection survive parent controls, explo
   await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click();
   await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click(); await ready(page);
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-3.attention.Q');
-  await card(page, 'layer-3').locator('.architecture-expand').dblclick(); await ready(page);
+  // Preserve the retained overview camera, where header controls can be smaller
+  // than a device pixel on narrow screens; reopen through the keyboard control.
+  await card(page, 'layer-3').locator('.architecture-expand').focus();
+  await page.keyboard.press('Enter'); await ready(page);
   await expect(card(page, 'layer-3.attention').locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
   await expect(card(page, 'layer-3.attention.Q').locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
   const restored = await state(page);
@@ -139,12 +142,12 @@ test('contracting after Show all operations leaves sibling detail visible and re
   const graph = makeProjectionFixture({ count: 4 });
   const children = graph.nodes.filter((n) => n.parent_id === 'layer-3.attention');
   const before = await state(page);
-  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length - 4));
   await graphAction(page, 'Toggle selected group'); await ready(page);
-  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length - children.length));
+  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length - 4 - children.length));
   expect(Number((await state(page)).count)).toBe(Number(before.count) + 1);
   await graphAction(page, 'Toggle selected group'); await ready(page);
-  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(graph.nodes.length - 4));
   expect(Number((await state(page)).count)).toBe(Number(before.count) + 2);
   await expect(page.locator('output')).toBeEmpty();
   await expect(page.getByRole('dialog')).toHaveCount(0);

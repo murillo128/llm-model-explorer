@@ -58,7 +58,10 @@ describe('card actions preserve presentation and concrete target identity', () =
     const isolated = projectGraph(graph, { expanded: ['layer-3.attention'], scope: 'layer-3.attention' });
     const external = isolated.nodes.find((node) => node.presentation === 'external')!;
     expect(cardNavigation(external, 'layer-3.attention', false).target).toBeUndefined();
-    const context = overview.nodes.find((node) => node.kind === 'context')!;
+    expect(overview.nodes.some((node) => node.id === 'tokenizer')).toBe(false);
+    const contextual = structuredClone(graph);
+    contextual.nodes.find((node) => node.id === 'tokenizer')!.ports.push({ id: 'context', label: 'context', direction: 'output', shape: [] });
+    const context = projectGraph(contextual, { expanded: ['model'] }).nodes.find((node) => node.kind === 'context')!;
     expect(cardNavigation(context, undefined, false).target).toBeUndefined();
   });
 });
