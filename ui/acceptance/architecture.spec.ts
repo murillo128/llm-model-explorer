@@ -226,18 +226,26 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
       // Explicit Fit includes every context endpoint. Sample real pointer hits
       // only after culling has exposed the complete generated scope geometry.
       await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready();
-      const connections = page.locator('.architecture-connection[data-source-node^="external:"]');
+      const connections = page.locator('.architecture-connection');
       const targets = await connections.evaluateAll((elements) => elements.map((element) => ({
         source: element.getAttribute('data-source-node')!, port: element.getAttribute('data-source-port')!,
+        target: element.getAttribute('data-target-node')!, targetPort: element.getAttribute('data-target-port')!,
         id: element.getAttribute('data-edge-id')!,
       })));
-      const fanout = targets.find((item) => targets.filter((other) => item.source === other.source && item.port === other.port).length > 1);
+      // The external producer may first enter the expanded component's exact
+      // boundary port; its internal branches still belong to that same signal.
+      const fanout = targets.filter((item) => item.source.startsWith('external:')).map((input) => ({
+        input, branches: targets.filter((other) => input.target === component.id
+          ? other.source === input.target && other.port === input.targetPort
+          : other.source === input.source && other.port === input.port),
+      })).find((item) => item.branches.length > 1);
       if (family === 'qwen3') expect(fanout, 'Dense Attention/MLP inputs retain their genuine shared fan-out').toBeTruthy();
       if (fanout) {
-        const branches = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(fanout.source)}][data-source-port=${JSON.stringify(fanout.port)}]`);
+        const source = fanout.branches[0]!;
+        const branches = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(source.source)}][data-source-port=${JSON.stringify(source.port)}]`);
         const branchList = await branches.all();
-        const expected = (await branches.evaluateAll((elements) => elements.map((element) => element.getAttribute('data-edge-id')!))).sort();
-        const port = page.locator(`.architecture-port[data-node-id=${JSON.stringify(fanout.source)}][data-port-id=${JSON.stringify(fanout.port)}]`);
+        const expected = [...new Set([fanout.input.id, ...fanout.branches.map((item) => item.id)])].sort();
+        const port = page.locator(`.architecture-port[data-node-id=${JSON.stringify(fanout.input.source)}][data-port-id=${JSON.stringify(fanout.input.port)}]`);
         await port.locator('.architecture-port-dot').hover();
         await expect.poll(() => page.locator('.architecture-connection[data-emphasized="true"]').evaluateAll((elements) => elements.map((e) => e.getAttribute('data-edge-id')!).sort())).toEqual(expected);
         if (reference && info.project.name === 'dpr1' && ['qwen3', 'vjepa2'].includes(family)) {
@@ -258,7 +266,7 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
         width, graph: graph.graph_id, scope: component.id, sourceNodes: graph.nodes.length,
         visibleNodes: Number(await canvas.getAttribute('data-visible-nodes')), visibleEdges: Number(await canvas.getAttribute('data-visible-edges')),
         layoutMs: Number(await canvas.getAttribute('data-layout-ms')), initialCamera: camera,
-        component: await root.boundingBox(), boundaryFanout: fanout ? targets.filter((item) => item.source === fanout.source).length : 0,
+        component: await root.boundingBox(), boundaryFanout: fanout?.branches.length ?? 0,
         resources: await graphObservation(page),
       }), contentType: 'application/json' });
       await page.mouse.move(0, 0);
