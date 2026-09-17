@@ -108,7 +108,9 @@ def configuration(inputs: AnalysisInput) -> Config | None:
     spatial, temporal, ff = values["spatial"], values["temporal"], values["ff"]
     hidden, pred_layers = values["hidden"], values["pred_layers"]
     proj, knots = values["proj"], values["knots"]
-    assert all(isinstance(v, int) for v in (ec, fc, d, heads, spatial, temporal, ff, hidden, pred_layers, proj, knots))
+    assert ec is not None and fc is not None and d is not None and heads is not None
+    assert spatial is not None and temporal is not None and ff is not None
+    assert hidden is not None and pred_layers is not None and proj is not None and knots is not None
     entity_cards = _cards(e["entity_categorical_cardinalities"], padding)
     frame_cards = _cards(e["frame_categorical_cardinalities"], padding)
     edrop = _float(e["dropout"], zero=True)
@@ -129,9 +131,12 @@ def configuration(inputs: AnalysisInput) -> Config | None:
     }
     for key, width in widths.items():
         names = schema[key]
-        if not isinstance(names, list) or len(names) != width or len(set(names)) != width:
-            return None
-        if not all(isinstance(name, str) and name for name in names):
+        if (
+            not isinstance(names, list)
+            or len(names) != width
+            or not all(isinstance(name, str) and name for name in names)
+            or len(set(names)) != width
+        ):
             return None
     if raw.get("checkpoint_scope") not in (None, "partial_structural_fixture"):
         return None
