@@ -26,49 +26,17 @@ Edges mean verified data dependencies. Constants are checked against configurati
 
 Groups describe model hierarchy and actual instances. Every repeated layer retains identity, sequence index, parameters, and any structural exceptions. The backend emits the full semantic instance graph; repetition metadata enables compact presentation without asking the browser to reconstruct unknown computation. A description of a representative layer never substitutes for bindings of all instances.
 
-Reviewed dense Qwen3/Llama, hybrid Qwen3.5 and V-JEPA encoder/predictor layers
-emit explicit Attention and MLP groups. Membership is authored in the packaged
-mathematical description: head preparation, Q/K normalization, rotary treatment,
-gating, state updates, activations and projections stay in their actual component.
-Layer norms and residual additions outside that component remain in the layer.
-Reuse an existing component group rather than wrapping it again. Every crossing
-uses an exact group port; preserve auxiliary/unused interfaces, fan-out and each
-symbolic state independently. No operation or tensor binding changes merely to
-introduce a boundary.
+Reviewed dense Qwen3/Llama, hybrid Qwen3.5, V-JEPA encoder/predictor layers, and the bounded BDB-2025 structured encoder emit explicit Attention and MLP groups where those components exist. Membership is authored in the packaged mathematical description: head preparation, Q/K normalization, rotary treatment, gating, state updates, activations and projections stay in their actual component. Layer norms and residual additions outside that component remain in the layer. Reuse an existing component group rather than wrapping it again. Every crossing uses an exact group port; preserve auxiliary/unused interfaces, fan-out and each symbolic state independently. No operation or tensor binding changes merely to introduce a boundary.
 
-Use the API's optional `semantic_role` annotation for component/operation roles
-and concise source-backed labels. Retain semantic source keys in description
-provenance (`rule: Semantic source key in the reviewed packaged description`)
-so inspection and cross-revision comparisons do not depend on display labels.
-The bounded role mapping in a packaged description names its authored operations;
-it does not infer membership from checkpoint tensor prefixes. A composite that
-does not correspond to a framework module must have description-derived
-provenance and no invented module reference. Semantic document changes bump the
-affected description revision and use ordinary startup/cache validation; all
-graph-local hashes may change while logical tensor identities remain unchanged.
+Use the API's optional `semantic_role` annotation for component/operation roles and concise source-backed labels. Retain semantic source keys in description provenance (`rule: Semantic source key in the reviewed packaged description`) so inspection and cross-revision comparisons do not depend on display labels. The bounded role mapping in a packaged description names its authored operations; it does not infer membership from checkpoint tensor prefixes. A composite that does not correspond to a framework module must have description-derived provenance and no invented module reference. Semantic document changes bump the affected description revision and use ordinary startup/cache validation; all graph-local hashes may change while logical tensor identities remain unchanged.
 
 ## Optional component equivalence annotations
 
-Packaged descriptions may opt into the API's verified shared structures. Open
-candidate collection explicitly while constructing a known Attention or MLP
-component, and assign relative roles from that description's authored construction
-keys. Do not discover candidates by scanning checkpoint prefixes, display labels,
-or frontend patterns. Dense Attention/MLP, hybrid full/linear Attention and MLP,
-and each V-JEPA stack are separately declared families within one loaded model
-and reviewed description. The complete semantic comparison required by the API
-must still pass; a common name never proves correspondence.
+Packaged descriptions may opt into the API's verified shared structures. Open candidate collection explicitly while constructing a known Attention or MLP component, and assign relative roles from that description's authored construction keys. Do not discover candidates by scanning checkpoint prefixes, display labels, or frontend patterns. Dense Attention/MLP, hybrid full/linear Attention and MLP, and each V-JEPA stack are separately declared families within one loaded model and reviewed description. The complete semantic comparison required by the API must still pass; a common name never proves correspondence.
 
-Keep this metadata path removable. A singleton or unverified candidate remains an
-ordinary component, and optional budget exhaustion cannot consume source graph
-records or downgrade mathematical coverage. Construction and validation use one
-bounded graph index and component-local mappings, not another full checkpoint or
-graph. Never read weights, execute operations or infer weight equality to decide
-a family. Parameter bindings and logical tensor identities stay attached to the
-real instance, including verified aliases and unavailable inspections.
+Keep this metadata path removable. A singleton or unverified candidate remains an ordinary component, and optional budget exhaustion cannot consume source graph records or downgrade mathematical coverage. Construction and validation use one bounded graph index and component-local mappings, not another full checkpoint or graph. Never read weights, execute operations or infer weight equality to decide a family. Parameter bindings and logical tensor identities stay attached to the real instance, including verified aliases and unavailable inspections.
 
-The current annotation definition is `exact-component-roles-1`. The analyzer core
-revision and generated graph-schema revision invalidate structured startup cache
-entries; numeric artifact keys and logical tensor identities are unchanged.
+The current annotation definition is `exact-component-roles-1`. The analyzer core revision and generated graph-schema revision invalidate structured startup cache entries; numeric artifact keys and logical tensor identities are unchanged.
 
 ## Dense language reference coverage
 
@@ -94,6 +62,20 @@ No text tokenizer, vocabulary head, target/EMA teacher, training loss, classifie
 
 Patch-projection parameters may have rank above two. Preserve their full shapes and bindings; mark numeric modal inspection unsupported at that rank. Do not flatten, slice, or hide them to make a matrix fit. Native rank-1/rank-2 weights use the existing inspection path.
 
+## BDB-2025 NFL world-model coverage
+
+The bounded project-local family is selected only by `model_type: nfl_world_model`, architecture `BDB2025LeWorldModel`, the reviewed nested encoder/predictor/SIGReg configuration, and compatible tensor geometry. This is one reviewed structured world-model family, not generic JEPA or world-model discovery. Structure-changing unknown fields, contradictory dimensions, or unexpected storage fail closed.
+
+Represent the model-facing structured entity and frame tensors and their masks, numeric value-plus-availability projections, categorical embedding sums, learned play token, and input normalization/masking. The spatial Transformer operates over one play token plus entity tokens at the same observed instant and is non-causal across those same-time tokens. The shared temporal Transformer operates over play/entity trajectories with absolute sinusoidal positions and must be explicitly causal: state at time `t` cannot depend on future tracking observations.
+
+After the causal encoder, represent selection of the last valid play latent `z_t`. The horizon predictor embeds physical `delta_t_s`, concatenates that time embedding with the repeated current latent, applies its configured residual MLP blocks, predicts a latent delta, adds it to the repeated state, and masks invalid horizons. The live path therefore exposes predicted future latent representations, not manually chosen football labels or coordinate forecasts.
+
+`BDB2025LeWorldModel` also owns a training objective using the same encoder on a causal target prefix, masked next-embedding MSE, and SIGReg. Architecture Explorer may show target-prefix/target representations as explicit training-only context and show MSE/SIGReg relationships, but those nodes must remain visibly separated from the reusable inference path. They must not imply that future observations are inputs to live inference, and static analysis must not execute the shared encoder a second time merely to construct the graph.
+
+The API's existing `visual_encoder_predictor` scope remains the historical transport identifier for bounded non-language encoder/predictor graphs. For this NFL family it does not assert visual input. Structured input nodes and graph attributes are authoritative. No sport-specific frontend contract, tokenizer, video preprocessing, NFL data loader, probe, live-game execution, or training runtime is introduced by this description.
+
+A full generated checkpoint can achieve complete parameter coverage. The small project fixture may intentionally contain only representative matrices; when its configuration explicitly declares the partial structural fixture, the analyzer may retain the verified full topology while unresolved expected bindings make coverage partial. Missing weights are never silently synthesized, and random synthetic values are never scientific evidence.
+
 ## Parameter binding and provenance
 
 A mathematical parameter can bind to one complete native tensor, a documented tied alias, a region of a fused tensor, or several packed/scaling tensors. Preserve both logical geometry and physical storage geometry without conflating them. Quantization scales are storage metadata, not extra neural layers; an integer cast is not dequantization.
@@ -110,10 +92,10 @@ Maintain small, distributable deterministic local fixtures for positive and nega
 
 For actual reference acceptance, operators must supply the complete approved local variants. Record checkpoint repository/revision (or explain absent upstream revision), content fingerprint, selected file inventory and bytes, quantization metadata, reference-code revisions, and analyzer/description revisions. Keep weights and large generated graphs out of Git. Missing local models may be reported as SKIP by ordinary fixture CI, but do not count as actual-model validation; full reference acceptance remains pending until the required evidence exists. Source review, fixtures, and actual-checkpoint observations must remain distinguishable.
 
-Integrated acceptance must validate all three new references and preserve existing SmolLM2 workflows. Record cold/warm startup, hashing, graph generation/cache lookup, graph node/edge counts, layout time, and peak memory on an identified environment. Do not claim numerical equivalence, inference correctness, universal model support, or hardware throughput from static tests. Browser inspection of native 1D/2D weights must still verify exact source values.
+Integrated acceptance continues to validate the original three new external references and preserve existing SmolLM2 workflows. The bounded BDB-2025 family is fixture-validated separately unless an operator supplies an explicit project checkpoint for additional evidence; synthetic random weights establish structure and inspection plumbing only. Record cold/warm startup, hashing, graph generation/cache lookup, graph node/edge counts, layout time, and peak memory on an identified environment for any claim that includes an actual supplied checkpoint. Do not claim numerical equivalence, inference correctness, universal model support, or hardware throughput from static tests. Browser inspection of native 1D/2D weights must still verify exact source values.
 
 ## Maintenance and reference sources
 
 Maintain bounded family/variant descriptions, selected storage mappings, graph validation, and their tests. New checkpoints within a checked variant may need only validation; changed operations or storage layout may need description changes. Unknown variants return partial/unavailable rather than executing arbitrary code. A third-party conversion's name alone is never proof of compatibility.
 
-Reference implementations are the relevant `configuration_*` and `modeling_*` files in [Hugging Face Transformers](https://github.com/huggingface/transformers/tree/main/src/transformers/models), specifically `llama`, `qwen3`, `qwen3_5`, and `vjepa2`. Model/configuration sources are the [selected Qwen3 variant](https://huggingface.co/JunHowie/Qwen3-0.6B-GPTQ-Int4), [selected Qwen3.5 variant](https://huggingface.co/AxionML/Qwen3.5-0.8B-NVFP4), and [selected V-JEPA 2 variant](https://huggingface.co/facebook/vjepa2-vitl-fpc64-256). These are research entry points, not pinned acceptance evidence or a guarantee of installed-library support. Implementation evidence must identify exact reviewed revisions and retain applicable licenses when reusing code.
+Reference implementations are the relevant `configuration_*` and `modeling_*` files in [Hugging Face Transformers](https://github.com/huggingface/transformers/tree/main/src/transformers/models), specifically `llama`, `qwen3`, `qwen3_5`, and `vjepa2`, plus the reviewed BDB-2025 model implementation and exporter in `murillo128/nfl-world-model`. Model/configuration sources are the [selected Qwen3 variant](https://huggingface.co/JunHowie/Qwen3-0.6B-GPTQ-Int4), [selected Qwen3.5 variant](https://huggingface.co/AxionML/Qwen3.5-0.8B-NVFP4), [selected V-JEPA 2 variant](https://huggingface.co/facebook/vjepa2-vitl-fpc64-256), and the explicitly versioned BDB-2025 source revision recorded by its packaged description. These are research entry points, not a guarantee of installed-library support. Implementation evidence must identify exact reviewed revisions and retain applicable licenses when reusing code.
