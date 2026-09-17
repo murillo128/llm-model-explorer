@@ -180,19 +180,23 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
   // Hierarchical ELK layouts may reorder compound ports even under FIXED_ORDER.
   // Keep its spaced slots and child geometry, assign those slots in source order,
   // and reconnect only incident route ends through the existing boundary gutter.
-  const moved = new Map<string, { from: Point; to: Point }>();
+  const moved = new Map<string, { from: Point; to: Point; fraction: number }>();
   const byEndpoint = new Map(ports.map((p) => [endpointKey({ node_id: p.nodeId, port_id: p.portId }), p]));
   for (const node of projection.nodes) {
     if (!node.expanded || !node.ports.some((p) => p.interfaces?.length)) continue;
     for (const side of ['left', 'right'] as const) {
       const positions = node.ports.map((p) => byEndpoint.get(endpointKey({ node_id: node.id, port_id: p.id }))).filter((p): p is PortPosition => p?.side === side);
       const slots = positions.map((p) => p.y).sort((a, b) => a - b);
+      if (positions.every((p, i) => p.y === slots[i])) continue;
+      // Keep the new short entry legs off the old horizontal routing tracks.
+      // Otherwise a permutation could make two distinct signals share a line.
+      const offset = 0.5;
       positions.forEach((port, i) => {
-        const delta = slots[i]! - port.y;
+        const delta = slots[i]! + offset - port.y;
         if (!delta) return;
         const from = { x: port.absoluteX, y: port.absoluteY };
         port.y += delta; port.absoluteY += delta;
-        moved.set(endpointKey({ node_id: node.id, port_id: port.portId }), { from, to: { x: port.absoluteX, y: port.absoluteY } });
+        moved.set(endpointKey({ node_id: node.id, port_id: port.portId }), { from, to: { x: port.absoluteX, y: port.absoluteY }, fraction: (i + 1) / (positions.length + 1) });
       });
     }
   }
@@ -209,7 +213,11 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
         if (!near(points[0]!, move.from)) return section;
         const next = points[1];
         points[0] = move.to;
-        if (next && next.x !== move.to.x && next.y !== move.to.y) points.splice(1, 0, { x: next.x, y: move.to.y });
+        if (next && next.x !== move.to.x && next.y !== move.to.y) {
+          const delta = next.x - move.from.x;
+          const x = move.from.x + Math.sign(delta) * Math.min(16, Math.abs(delta)) * move.fraction;
+          points.splice(1, 0, { x, y: move.to.y }, { x, y: move.from.y });
+        }
         return reverse ? points.reverse() : points;
       });
     }
