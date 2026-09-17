@@ -11,6 +11,7 @@ from time import perf_counter
 
 from .architecture_analysis import AnalysisInput, DescriptionRegistry, register_dense_descriptions
 from .architecture_analysis.core import AnalysisResult
+from .architecture_analysis.nfl_world_model import register_nfl_world_model
 from .architecture_analysis.qwen35 import register_qwen35
 from .architecture_analysis.validation import MAX_BYTES, BindingContext, GraphError
 from .architecture_analysis.vjepa2 import register_vjepa2
@@ -53,6 +54,7 @@ class ArchitectureService:
         register_dense_descriptions(self.registry)
         register_qwen35(self.registry)
         register_vjepa2(self.registry)
+        register_nfl_world_model(self.registry)
         self._prepared: dict[tuple[str, str], Prepared] = {}
         self._stop = stop if stop is not None else threading.Event()
 
