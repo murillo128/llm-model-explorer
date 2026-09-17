@@ -3,7 +3,10 @@ import { viewOptions, graphAction, graphPreference, findComponent } from './arch
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
 const panel = '[aria-label="Architecture graph"]';
-const ready = async (page: import('@playwright/test').Page) => expect(page.locator(panel)).toHaveAttribute('aria-busy', 'false');
+const ready = async (page: import('@playwright/test').Page) => {
+  await expect(page.locator(panel)).toHaveAttribute('aria-busy', 'false');
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+};
 const camera = (page: import('@playwright/test').Page) => page.locator('.react-flow__viewport').getAttribute('style');
 
 for (const kind of ['dense', 'hybrid', 'visual'] as const) test(`${kind}: declarations stay as ports across browser, dimensions, collapse and restore`, async ({ page }, info) => {
@@ -43,8 +46,8 @@ for (const kind of ['dense', 'hybrid', 'visual'] as const) test(`${kind}: declar
 
 test('boundary hover/focus/pinning preserves layout and source connections; explicit isolation retains ports', async ({ page }) => {
   await page.goto(`${harness}?fixture=interface-hybrid`); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   const port = page.locator('.architecture-port[data-node-id="presentation:model"]').filter({ has: page.locator('.architecture-port-dot') }).nth(1);
-  await port.scrollIntoViewIfNeeded();
   const before = await camera(page), layouts = await page.locator(panel).getAttribute('data-layout-count');
   await port.hover();
   await expect(page.locator('.architecture-connection[data-emphasized="true"]')).toHaveCount(2);
