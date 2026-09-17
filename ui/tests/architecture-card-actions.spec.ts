@@ -104,7 +104,10 @@ test('nested expansion and exact hidden selection survive parent controls, explo
   await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click();
   await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click(); await ready(page);
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-3.attention.Q');
-  await card(page, 'layer-3').locator('.architecture-expand').dblclick(); await ready(page);
+  // Preserve the retained overview camera, where header controls can be smaller
+  // than a device pixel on narrow screens; reopen through the keyboard control.
+  await card(page, 'layer-3').locator('.architecture-expand').focus();
+  await page.keyboard.press('Enter'); await ready(page);
   await expect(card(page, 'layer-3.attention').locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
   await expect(card(page, 'layer-3.attention.Q').locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
   const restored = await state(page);

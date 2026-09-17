@@ -21,7 +21,10 @@ test('compact summaries retain values, exact port hits and bounded geometry at e
       const count = await graph.getAttribute('data-layout-count');
       for (const portId of ['x', 'out']) {
         const port = card(id).locator(`[data-port-id="${portId}"].architecture-port`);
-        await port.hover(); await expect(port).toHaveAttribute('data-emphasized', String(id === 'norm' ? portId === 'out' : portId === 'x'));
+        await port.hover(); await expect(port).toHaveAttribute('data-emphasized', 'true');
+        // Unconnected ports remain interactive but must never invent a route.
+        await expect(page.locator('.architecture-connection[data-emphasized="true"]')).toHaveCount(
+          (id === 'norm' ? portId === 'out' : portId === 'x') ? 1 : 0);
         // Actual hit test: summary rows must never occlude a port's pointer target.
         expect(await port.evaluate((element) => {
           const b = element.getBoundingClientRect(); return element.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2));
