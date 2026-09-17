@@ -14,12 +14,22 @@ export PATH="$PWD/backend/.venv/bin:$PATH"
 uv sync --locked --project backend --python 3.12
 uv venv "$RUNNER_TEMP/model-json-api" --python 3.12
 uv pip install --python "$RUNNER_TEMP/model-json-api/bin/python" -r api/requirements.txt
+python - <<'PY'
+from pathlib import Path
+path = Path('backend/src/llm_model_explorer/architecture_service.py')
+source = path.read_text()
+old = '"Model-supplied architecture.json is invalid or unsupported; no fallback was used."'
+new = '("Model-supplied architecture.json is invalid or unsupported; "\n                         "no fallback was used.")'
+assert source.count(old) == 1
+path.write_text(source.replace(old, new))
+PY
 python backend/scripts/generate_architecture_records.py
 PYTHONPATH=backend/src python -m llm_model_explorer.architecture_analysis.model_defined_schema > docs/spec/backend/architecture-definition.schema.json
 npm ci --prefix ui
 npm run api:generate --prefix ui
 "$RUNNER_TEMP/model-json-api/bin/python" api/validate_contract.py --write
 mapfile -t pyfiles < <(grep -E '^backend/.*\.py$' "$support/.transfer/paths.txt")
+ruff format --config backend/pyproject.toml "${pyfiles[@]}"
 ruff check --fix --config backend/pyproject.toml "${pyfiles[@]}"
 ruff format --config backend/pyproject.toml "${pyfiles[@]}"
 (cd backend && ruff check . && ruff format --check . && mypy)
