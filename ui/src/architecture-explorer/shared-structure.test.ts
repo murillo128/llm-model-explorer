@@ -37,7 +37,7 @@ it('reuses all geometry and hit identities while rebinding exact node, port, edg
     const node = chosen.projection.nodes.find((n) => n.id === mapping.node_id)!;
     expect(node.record).toBe(graph.nodes.find((n) => n.id === target.node_id));
     expect(node.sourceIds).toEqual([target.node_id]);
-    expect(node.ports.every((p) => p.endpoints.every((e) => e.node_id === target.node_id))).toBe(true);
+    for (const port of node.ports) expect(port.endpoints).toContainEqual({ node_id: target.node_id, port_id: port.id });
   }
   expect(new Set(chosen.edgeIds)).toEqual(new Set(second!.edges.map((e) => e.edge_id)));
   expect(chosen.projection.edges.flatMap((e) => e.paths.flat()).every((e) => graph.edges.includes(e))).toBe(true);
@@ -70,4 +70,23 @@ it('restores ordinary and nested context and clears unavailable correspondence o
   enterSharedStructure(replaced, template, null);
   const removed = views.get('model', { ...graph, graph_id: 'replacement', templates: [] });
   expect(removed.shared).toBeUndefined(); expect(removed.notice).toContain('correspondence changed');
+});
+
+it('resolves external declaration metadata for a nonzero shared instance without changing geometry', async () => {
+  const graph = makeTemplateFixture(), before = structuredClone(graph), template = graph.templates![0]!;
+  const [first, second] = template.instances;
+  const layout = await layoutGraph(templateGraph(graph, first!), { scope: first!.node_id,
+    expanded: first!.nodes.map((n) => n.node_id), showUnused: true });
+  const chosen = bindTemplateLayout(layout, graph, template, first!, second!);
+  const port = chosen.projection.nodes.find((n) => n.id === first!.node_id)!.ports.find((p) => p.id === 'positions')!;
+  const isolated = projectGraph(graph, { scope: second!.node_id, expanded: [second!.node_id], showUnused: true });
+  const expected = isolated.nodes.find((n) => n.id === second!.node_id)!.ports.find((p) => p.id === 'positions')!;
+  expect(port.endpoints).toEqual(expected.endpoints);
+  expect(port.interfaces).toEqual(['positions']);
+  expect(port.endpoints).toContainEqual({ node_id: 'positions', port_id: 'out' });
+  expect(port.endpoints).toContainEqual({ node_id: second!.node_id, port_id: 'positions' });
+  expect(chosen.boxes).toBe(layout.boxes); expect(chosen.ports).toBe(layout.ports); expect(chosen.routes).toBe(layout.routes);
+  const neutral = bindTemplateLayout(layout, graph, template, first!, null);
+  expect(neutral.projection.nodes.flatMap((n) => n.ports).every((p) => !p.endpoints.length && !p.interfaces?.length)).toBe(true);
+  expect(graph).toEqual(before);
 });

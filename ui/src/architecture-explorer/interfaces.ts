@@ -133,3 +133,13 @@ export function interfaceIndex(graph: Graph) {
 export function interfaceSelection(item: ModelInterface): BoundarySelection {
   return { kind: 'boundary', owner: item.owner, endpoints: [item.endpoint] };
 }
+
+/** Resolve concrete ports against the full graph, including declarations outside
+ * an isolated/template subgraph. Follow only the index's exact group forwarding. */
+export function resolveInterfaceEndpoints(graph: Graph, endpoints: Endpoint[]): Endpoint[] {
+  const index = interfaceIndex(graph), resolved = new Map(endpoints.map((p) => [key(p), p]));
+  for (const endpoint of endpoints) for (const item of index.signals.get(key(endpoint)) ?? []) {
+    resolved.set(key(item.endpoint), item.endpoint);
+  }
+  return [...resolved.values()];
+}

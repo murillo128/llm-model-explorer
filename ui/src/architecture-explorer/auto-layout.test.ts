@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { makeProjectionFixture } from '../../tests/architecture-projection-fixture';
 import { makeExplicitFixture } from '../../tests/architecture-explicit-fixture';
 import { summaryFixture } from '../../tests/architecture-summary-fixture';
+import { interfaceFixture } from '../../tests/architecture-interface-fixture';
 import { groupHeaderHeight, layerGap } from './auto-layout';
 import { deriveMlpGroups } from './derived-groups';
 import type { Box, Graph, Layout, Point } from './graph';
@@ -118,6 +119,20 @@ function layerStages(layout: Layout, graph: Graph, id: string) {
 }
 
 describe('generated horizontal graph geometry', () => {
+  it.each([false, true])('routes complete isolated interfaces without overlapping signals (dimensions=%s)', async (dimensions) => {
+    const graph = interfaceFixture('hybrid', true);
+    const declared = graph.nodes.find((n) => n.id === 'language')!.ports;
+    for (const expanded of [[], ['language']]) {
+      const layout = await layoutGraph(graph, { scope: 'language', expanded, showUnused: true, dimensions });
+      geometry(layout); distinguishSignals(layout);
+      for (const direction of ['input', 'output']) {
+        const ordered = layout.ports.filter((p) => p.nodeId === 'language' && p.side === (direction === 'input' ? 'left' : 'right')).sort((a, b) => a.y - b.y);
+        expect(ordered.map((p) => p.portId)).toEqual(declared.filter((p) => p.direction === direction).map((p) => p.id));
+        for (let i = 1; i < ordered.length; i++) expect(ordered[i]!.y - ordered[i - 1]!.y).toBeGreaterThanOrEqual(20);
+      }
+    }
+  });
+
   it.each([false, true])('reserves group-owned summary space above children and boundary ports (dimensions=%s)', async (dimensions) => {
     const graph = summaryFixture(), group = graph.nodes[0]!;
     group.parameter_ids = ['norm-weight'];

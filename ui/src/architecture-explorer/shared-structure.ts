@@ -1,6 +1,7 @@
 import type { Graph, GraphNode, GraphView, Layout } from './graph';
 import { snapshotView } from './scope-navigation';
 import { endpointKey } from './projection';
+import { interfaceIndex, resolveInterfaceEndpoints } from './interfaces';
 
 export type Template = NonNullable<Graph['templates']>[number];
 export type TemplateInstance = Template['instances'][number];
@@ -44,6 +45,7 @@ export function commonNode(node: GraphNode, role: string, label?: string): Graph
 export function bindTemplateLayout(layout: Layout, graph: Graph, template: Template,
   from: TemplateInstance, chosen: TemplateInstance | null): Layout {
   const to = chosen ?? from;
+  const interfaces = interfaceIndex(graph);
   const records = new Map(graph.nodes.map((n) => [n.id, n]));
   const sourceEdges = new Map(graph.edges.map((e) => [e.id, e]));
   const nodeTargets = new Map(to.nodes.map((m) => [m.role, m.node_id]));
@@ -65,13 +67,15 @@ export function bindTemplateLayout(layout: Layout, graph: Graph, template: Templ
       const common = commonNode(record, roles.get(node.id)!, node.id === from.node_id ? template.label : undefined);
       return { ...node, label: chosen ? record.label : common.label, record: chosen ? record : common,
         sourceIds: chosen ? node.sourceIds.map((id) => nodes.get(id)!) : [],
-        ports: node.ports.map((p) => ({ ...p, label: chosen ? record.ports.find((port) => port.id === p.id)?.label ?? p.label : p.id,
-          ...(p.interfaces ? { interfaces: chosen ? p.interfaces.map((id) => nodes.get(id)!) : [] } : {}),
-          endpoints: chosen ? p.endpoints.map((e) => {
+        ports: node.ports.map((p) => {
+          const endpoints = chosen ? resolveInterfaceEndpoints(graph, p.endpoints.map((e) => {
             const target = ports.get(endpointKey(e));
             if (!target) throw new Error('Shared structure port correspondence is no longer available.');
             return target;
-          }) : [] })) };
+          })) : [];
+          return { ...p, label: chosen ? record.ports.find((port) => port.id === p.id)?.label ?? p.label : p.id,
+            interfaces: [...new Set(endpoints.filter((e) => interfaces.declarations.has(e.node_id)).map((e) => e.node_id))], endpoints };
+        }) };
     }),
     edges: layout.projection.edges.map((edge) => ({ ...edge,
       originalEdgeIds: chosen ? edge.originalEdgeIds.map(mappedEdge) : [],

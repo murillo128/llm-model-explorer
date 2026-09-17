@@ -8,6 +8,26 @@ import { GraphViews } from './graph';
 import { layoutGraph } from './auto-layout';
 
 describe('source declarations become exact container interfaces', () => {
+  it.each([false, true])('preserves every expanded isolated boundary, including disconnected ports (many=%s)', (many) => {
+    const graph = interfaceFixture('hybrid', many), before = semanticSnapshot(graph);
+    const projection = projectGraph(graph, { scope: 'language', expanded: ['language'], showUnused: true });
+    const owner = projection.nodes.find((n) => n.id === 'language')!;
+    const declared = graph.nodes.find((n) => n.id === 'language')!.ports;
+    expect(owner.ports.map((p) => p.id)).toEqual(declared.map((p) => p.id));
+    for (const port of declared) expect(owner.ports.find((p) => p.id === port.id)).toMatchObject({
+      ...port, endpoints: expect.arrayContaining([{ node_id: 'language', port_id: port.id }]),
+    });
+    const output = { node_id: 'language', port_id: 'out' };
+    const routes = projection.edges.filter((e) => connectionSet(projection, { port: output }).includes(e.id));
+    expect(routes).toHaveLength(2);
+    expect(routes.flatMap((e) => e.paths.flat()).map((e) => e.id).sort()).toEqual(
+      graph.edges.filter((e) => e.source.node_id === 'language' && e.source.port_id === 'out' ||
+        e.target.node_id === 'language' && e.target.port_id === 'out').map((e) => e.id).sort());
+    if (many) expect(connectionSet(projection, { port: { node_id: 'language', port_id: 'auxiliary_17' } })).toEqual([]);
+    assertTraceability(graph, projection);
+    expect(semanticSnapshot(graph)).toEqual(before);
+  });
+
   it.each(['dense', 'hybrid', 'visual'] as const)('preserves %s computations and every source record', (kind) => {
     const graph = interfaceFixture(kind), before = semanticSnapshot(graph), index = interfaceIndex(graph);
     const expected = kind === 'visual' ? ['video', 'context_indices', 'target_indices', 'representations'] : ['Token IDs', 'positions', 'mask', 'current_mask', 'logits'];

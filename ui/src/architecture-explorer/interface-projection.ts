@@ -62,6 +62,12 @@ export function projectInterfaces(graph: Graph, base: Projection, options: Proje
   };
   const ownerOf = (item: ModelInterface) => options.scope ? nearest(item.owner.id) ?? nearest(options.scope)
     : visible.get(item.owner.id) ?? nearest(item.owner.id);
+  // Isolation exposes the source component's complete interface, independently
+  // of external declarations or whether a port has a routed connection.
+  const isolated = options.scope ? visible.get(options.scope) : undefined;
+  if (isolated?.record) for (const port of isolated.record.ports) portAt(isolated, { node_id: isolated.id, port_id: port.id });
+  const expandedBoundary = (endpoint: Endpoint) => visible.get(endpoint.node_id)?.expanded &&
+    (endpoint.node_id === options.scope || Boolean(index.signals.get(key(endpoint))?.length));
   // Complete declared interfaces remain available even without visible edges.
   for (const item of index.interfaces) {
     if (options.scope && !base.scope?.nodeIds.includes(item.node.id)) continue;
@@ -88,7 +94,7 @@ export function projectInterfaces(graph: Graph, base: Projection, options: Proje
       }
     }
     const direct = visible.get(original.node_id);
-    if (direct?.expanded && index.signals.has(key(original))) {
+    if (direct && expandedBoundary(original)) {
       portAt(direct, original); return original;
     }
     return fallback;
@@ -97,7 +103,7 @@ export function projectInterfaces(graph: Graph, base: Projection, options: Proje
     const cuts = [0];
     for (let i = 1; i < path.length; i++) {
       const ep = path[i]!.source;
-      if (visible.get(ep.node_id)?.expanded && index.signals.get(key(ep))?.length) cuts.push(i);
+      if (expandedBoundary(ep)) cuts.push(i);
     }
     cuts.push(path.length);
     for (let at = 1; at < cuts.length; at++) {

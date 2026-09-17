@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { viewOptions, graphAction, graphPreference, findComponent } from './architecture-controls';
+import { viewOptions, graphAction, graphPreference, findComponent, openShared } from './architecture-controls';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
 const panel = '[aria-label="Architecture graph"]';
@@ -76,4 +76,52 @@ test('many interfaces stay targetable without document overflow', async ({ page 
   const ports = await page.locator('.architecture-port').evaluateAll((items) => items.map((e) => ({ label: e.getAttribute('aria-label'), top: (e as HTMLElement).style.top })));
   expect(ports.length).toBeGreaterThanOrEqual(23);
   expect(new Set(ports.map((p) => p.label)).size).toBe(ports.length);
+});
+
+test('expanded isolation retains computational output and disconnected boundary hit targets', async ({ page }) => {
+  await page.goto(`${harness}?fixture=interface-hybrid-many`); await ready(page);
+  await findComponent(page, 'language');
+  await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  await expect(page.locator('.react-flow__node[data-id="Embedding"]')).toHaveCount(1);
+  const before = await camera(page), layouts = await page.locator(panel).getAttribute('data-layout-count');
+  for (const [id, connections] of [['out', 2], ['auxiliary_17', 0]] as const) {
+    const port = page.locator(`.architecture-port[data-node-id="language"][data-port-id="${id}"]`);
+    await port.focus(); await port.press('Enter');
+    await expect(port).toHaveAttribute('data-emphasized', 'true');
+    await expect(page.locator('.architecture-connection[data-emphasized="true"]')).toHaveCount(connections);
+    await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+    await expect(page.getByRole('dialog')).toContainText(id);
+    await page.getByRole('button', { name: 'Close inspection' }).click();
+    expect(await camera(page)).toBe(before);
+    await expect(page.locator(panel)).toHaveAttribute('data-layout-count', layouts!);
+  }
+});
+
+test('concrete shared ports inspect original declarations after nonzero instance rebinding', async ({ page }) => {
+  const requests: string[] = []; page.on('request', (r) => { if (/\/sessions\//.test(r.url())) requests.push(r.url()); });
+  await page.goto(`${harness}?fixture=templates&native-inspection`); await ready(page);
+  await openShared(page, 'shared-full-attention'); await ready(page);
+  await page.getByLabel('Shared structure instance', { exact: true }).selectOption('layer-2.attention'); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  const before = await camera(page), layouts = await page.locator(panel).getAttribute('data-layout-count');
+  const port = page.locator('.architecture-port[data-node-id="layer-0.attention"][data-port-id="positions"]');
+  await port.focus(); await port.press('Enter');
+  for (const instance of ['layer-2.attention', 'layer-0.attention', 'layer-2.attention']) {
+    await page.getByLabel('Shared structure instance', { exact: true }).selectOption(instance); await ready(page);
+    await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Interface inspection' });
+    await expect(dialog).toContainText(`${instance} · group`);
+    await expect(dialog).toContainText('positions · input');
+    await expect(dialog).toContainText('positions:out → model:positions');
+    await expect(dialog.getByLabel('Inspect parameter')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Close inspection' }).click();
+    expect(await camera(page)).toBe(before);
+    await expect(page.locator(panel)).toHaveAttribute('data-layout-count', layouts!);
+  }
+  await page.getByLabel('Shared structure instance', { exact: true }).selectOption(''); await ready(page);
+  await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+  await expect(page.getByRole('dialog')).not.toContainText('positions:out');
+  await expect(page.getByRole('dialog').getByLabel('Inspect parameter')).toHaveCount(0);
+  expect(requests).toEqual([]);
 });

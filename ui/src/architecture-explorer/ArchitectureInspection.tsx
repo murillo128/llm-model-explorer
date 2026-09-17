@@ -8,7 +8,7 @@ import type { ArchitectureSelection } from './ArchitectureCanvas';
 import { formatShape } from './graph';
 import type { Graph } from './graph';
 import { ownParameters } from './card-summary';
-import { interfaceIndex } from './interfaces';
+import { interfaceIndex, resolveInterfaceEndpoints } from './interfaces';
 
 type S = components['schemas'];
 function Provenance({ records }: { records: S['ArchitectureProvenance'][] }) {
@@ -108,7 +108,7 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
 function InterfaceDetails({ graph, selected }: { graph: Graph; selected: ArchitectureSelection }) {
   if (selected.structureOnly) return null;
   const index = interfaceIndex(graph), boundary = selected.boundary;
-  const ids = new Set(boundary?.endpoints.map((p) => p.node_id) ?? []);
+  const ids = new Set(resolveInterfaceEndpoints(graph, boundary?.endpoints ?? []).map((p) => p.node_id));
   const owner = boundary?.owner.id ?? selected.node?.id;
   const interfaces = index.interfaces.filter((item) => ids.size ? ids.has(item.node.id) : item.owner.id === owner);
   const nodes = new Map(interfaces.map((item) => [item.node.id, item.node]));
