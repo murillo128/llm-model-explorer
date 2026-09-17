@@ -30,7 +30,7 @@ explain how to generate inspectable weights without committing model payloads.
 
 Required top-level fields are `schema_version: 1`, `architecture_revision`,
 `name`, `scope`, and a nonempty `nodes` array. Optional `symbols`, `edges`,
-`parameters`, and `repetitions` default to empty arrays. `coverage` defaults to
+`parameters`, `repetitions`, and `templates` default to empty arrays. `coverage` defaults to
 `complete`; `partial` requires `incomplete_reason`. Complete is a declaration of
 coverage within the author's scope, not an independent semantic certification.
 Missing required storage always downgrades the resulting graph to partial.
@@ -63,6 +63,52 @@ reference is valid only when the selected model actually has that capability.
 chosen by the author and can change with every experiment without changing the
 Explorer. Python may generate the JSON in the model's development/export
 environment, but Explorer does not import or execute checkpoint Python.
+
+## Declared Shared structures
+
+`templates` is an additive, optional version-1 extension. Existing definitions
+without it remain valid. Readers predating this extension reject the new field;
+update Explorer before using it. The model-defined producer revision is bumped
+so old prepared artifacts cannot conceal the new import behavior. The HTTP graph
+contract is unchanged.
+
+Each family declares `id`, `label`, `component_role` (`attention` or `mlp`), and
+at least two ordered `instances`. Each instance declares its source group
+`node_id` plus four exhaustive role-mapping arrays:
+
+- `nodes`: `{role, node_id}` for the group and every descendant;
+- `ports`: `{role, node_id, port_id}` for all their ports, including unused ones;
+- `edges`: `{role, edge_id}` for exactly the internal edges and group forwarding;
+- `parameters`: `{role, parameter_id}` for all referenced logical parameters,
+  including parameter resource references.
+
+These are file-local references. The importer maps each reference to its own
+runtime record, never to the first instance's weights. Family `revision` and
+`provenance` are backend-assigned and cannot be supplied by the author. Root
+groups declare `attributes: [{"name": "semantic_role", "value": "attention"}]`
+or the equivalent `mlp` role. Grouping never implies weight tying.
+
+The same conservative correspondence validator used for packaged descriptions
+checks full closure, unique roles/targets, source scope/order, ordered containment,
+operations, formulas, descriptions, attributes, port shapes and edge directions.
+Separate Q/K/V branches and prior/next state ports must correspond exactly. It
+checks declared structural equivalence, **not** source-code equivalence. The
+model-supplied origin notice remains visible. Unknown shapes or unequal
+components cannot establish a Shared family. Omit the declaration for components
+whose equivalence cannot be asserted; they remain ordinary inspectable groups.
+
+Repetitions and Shared families are independent annotations. Repetitions enable
+layer windows; templates enable shared-component navigation. Instances follow
+their enclosing repetition order, or sibling order within a common parent when
+no repetition applies. No filename heuristic or automatic family discovery is
+performed. See the complete [Shared example](../../../examples/model-owned-architecture/shared-architecture.json)
+and its [loading instructions](../../../examples/model-owned-architecture/SHARED.md).
+
+Invalid declarations make the supplied architecture unavailable without falling
+back. Valid optional families that do not fit the output metadata budget are
+omitted with `templates_omitted` when diagnostic space permits, otherwise logged;
+the ordinary graph remains intact. Every declaration is still validated even
+when output space is exhausted, so size omission never conceals invalid metadata.
 
 ## Selection, errors and lifecycle
 
