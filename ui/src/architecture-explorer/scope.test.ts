@@ -1,3 +1,5 @@
+import { assertAttentionInputProvenance } from '../../tests/architecture-boundary-provenance';
+import type { BoundarySegment } from '../../tests/architecture-boundary-provenance';
 import { describe, expect, it } from 'vitest';
 import { assertTraceability } from '../../tests/architecture-invariants';
 import { makeProjectionFixture } from '../../tests/architecture-projection-fixture';
@@ -37,6 +39,31 @@ describe('isolated component projection', () => {
       expect(JSON.stringify(graph)).toBe(before);
       expect(projectGraph(graph, { expanded: ['model', 'layer-3'], scope: undefined })).toEqual(global);
     });
+
+  it('conserves ordered split Attention paths and rejects broken connectivity', () => {
+    const graph = makeProjectionFixture({ count: 4 }), projection = sourcePaths(graph, 'layer-3.attention');
+    assertTraceability(graph, projection); // Also checks original endpoint/port evidence and source object identity.
+    const segments: BoundarySegment[] = projection.edges.map((edge) => ({
+      source: edge.source, target: edge.target, paths: edge.paths.map((path) => path.map((e) => e.id)),
+    }));
+    assertAttentionInputProvenance(graph, segments);
+    const upstream = segments.findIndex((s) => s.target.node_id === 'layer-3.attention' && s.target.port_id === 'x');
+    const branch = segments.findIndex((s) => s.target.node_id === 'layer-3.attention.Q' && s.target.port_id === 'x');
+    const faults: [string, (broken: BoundarySegment[]) => void][] = [
+      ['missing external segment', (s) => { s.splice(upstream, 1); }],
+      ['missing internal segment', (s) => { s.splice(branch, 1); }],
+      ['wrong boundary port', (s) => { s[upstream]!.target.port_id = 'positions'; }],
+      ['wrong consumer', (s) => { s[branch]!.target.node_id = 'layer-3.attention.K'; }],
+      ['duplicate branch', (s) => { s.push(structuredClone(s[branch]!)); }],
+      ['duplicate source path', (s) => { s[upstream]!.paths.push([...s[upstream]!.paths[0]!]); }],
+      ['unrelated source', (s) => { s[upstream]!.source.node_id = 'external:output:["positions","out"]'; }],
+      ['wrong ordered evidence', (s) => { s[branch]!.paths[0] = [...s[upstream]!.paths[0]!]; }],
+    ];
+    for (const [name, fault] of faults) {
+      const broken = structuredClone(segments); fault(broken);
+      expect(() => assertAttentionInputProvenance(graph, broken), name).toThrow();
+    }
+  });
 
   it('retains true external fan-out, mask/positions and independent K/V states', () => {
     const graph = makeProjectionFixture({ count: 4 }), projection = sourcePaths(graph, 'layer-3.attention');

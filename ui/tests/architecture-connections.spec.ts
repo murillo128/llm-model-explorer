@@ -1,3 +1,4 @@
+import { assertAttentionInputProvenance, normalizationAlias } from './architecture-boundary-provenance';
 import { fanoutPoint } from './architecture-pointer';
 import { openShared, chooseInstance, findComponent, graphAction, graphPreference } from './architecture-controls';
 import { expect, test } from '@playwright/test';
@@ -216,28 +217,41 @@ test('isolated Attention boundaries retain exact fan-out, trunk, branch, endpoin
   await page.getByRole('button', { name: 'Fit view', exact: true }).click();
   const branches = ['Q', 'K', 'V'].map((name) => page.locator(
     `.architecture-connection[data-target-node="layer-3.attention.${name}"][data-target-port="x"]`));
-  const sourceId = (await branches[0]!.getAttribute('data-source-node'))!;
-  const sourcePort = (await branches[0]!.getAttribute('data-source-port'))!;
-  expect(sourceId.startsWith('external:')).toBe(true);
-  const source = makeProjectionFixture({ count: 4 });
-  for (const [i, name] of ['Q', 'K', 'V'].entries()) expect(JSON.parse((await branches[i]!.getAttribute('data-original-edge-ids'))!)).toEqual(originalIds(source, [
-    ['layer-3.input-norm', 'out', 'layer-3.attention', 'x'], ['layer-3.attention', 'x', `layer-3.attention.${name}`, 'x'],
-  ]));
+  // The boundary is explicit; external computation remains a separate segment.
+  const upstream = connection(page, normalizationAlias.node_id, normalizationAlias.port_id, 'layer-3.attention', 'x');
+  const segments = await page.locator('.architecture-connection').evaluateAll((edges) => edges.map((edge) => ({
+    source: { node_id: edge.getAttribute('data-source-node')!, port_id: edge.getAttribute('data-source-port')! },
+    target: { node_id: edge.getAttribute('data-target-node')!, port_id: edge.getAttribute('data-target-port')! },
+    paths: [JSON.parse(edge.getAttribute('data-original-edge-ids')!) as string[]],
+  })));
+  assertAttentionInputProvenance(makeProjectionFixture({ count: 4 }), segments);
+  const all = [upstream, ...branches];
+  // At Fit scale the short K branch shares the endpoint's pointer corridor.
+  // Center the consumer before zooming so the external producer stays in view.
+  await findComponent(page, 'layer-3.attention.K'); await ready(page);
+  await graphAction(page, 'Zoom graph in');
+  await graphAction(page, 'Zoom graph in');
   const before = await stableState(page);
-  await hoverDot(port(page, sourceId, sourcePort)); await emphasized(page, branches); await unchanged(page, before);
+  await hoverDot(port(page, normalizationAlias.node_id, normalizationAlias.port_id));
+  await emphasized(page, all); await unchanged(page, before);
+  await hoverDot(port(page, 'layer-3.attention', 'x')); await emphasized(page, all);
   await capture(page, info, 'isolated-boundary-port');
   const trunk = await fanoutPoint(page, branches, branches);
-  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, branches); await unchanged(page, before);
+  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, all); await unchanged(page, before);
   await capture(page, info, 'isolated-shared-trunk');
   const branch = await fanoutPoint(page, branches, [branches[1]!]);
-  await page.mouse.move(branch.x, branch.y); await emphasized(page, [branches[1]!]);
-  await hoverDot(port(page, 'layer-3.attention.V', 'x')); await emphasized(page, [branches[2]!]);
-  await page.mouse.move(0, 0); await branches[0]!.focus(); await page.keyboard.press('Enter');
+  await page.mouse.move(branch.x, branch.y); await emphasized(page, [upstream, branches[1]!]);
+  await hoverDot(port(page, 'layer-3.attention.V', 'x')); await emphasized(page, [upstream, branches[2]!]);
+  await page.mouse.move(0, 0); await port(page, 'layer-3.attention', 'x').focus(); await emphasized(page, all);
+  await branches[0]!.focus(); await emphasized(page, [upstream, branches[0]!]);
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog', { name: 'Connection inspection', exact: true })).toBeVisible();
-  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape'); await expect(branches[0]!).toBeFocused();
   await page.getByRole('button', { name: 'Fit view', exact: true }).focus();
-  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, branches);
-  await page.mouse.move(0, 0); await emphasized(page, [branches[0]!]); await unchanged(page, before);
+  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, all);
+  await page.mouse.move(0, 0); await emphasized(page, [upstream, branches[0]!]); await unchanged(page, before);
+  await page.getByRole('button', { name: 'Clear connection selection', exact: true }).click();
+  await page.mouse.move(0, 0); await emphasized(page, []); await unchanged(page, before);
 });
 
 test('same-shaped inputs and separate K/V state routes keep exact identity under mouse and keyboard emphasis', async ({ page }) => {
