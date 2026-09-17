@@ -22,6 +22,12 @@ old = '"Model-supplied architecture.json is invalid or unsupported; no fallback 
 new = '("Model-supplied architecture.json is invalid or unsupported; "\n                         "no fallback was used.")'
 assert source.count(old) == 1
 path.write_text(source.replace(old, new))
+path = Path('backend/tests/test_model_defined_architecture.py')
+source = path.read_text()
+source = source.replace('from typing import Any\n', 'from typing import Any, cast\n')
+source = source.replace('return json.loads(EXAMPLE.read_text())', 'return cast(dict[str, Any], json.loads(EXAMPLE.read_text()))')
+source = source.replace('nested = {"x": []}', 'nested: dict[str, Any] = {"x": []}')
+path.write_text(source)
 PY
 python backend/scripts/generate_architecture_records.py
 PYTHONPATH=backend/src python -m llm_model_explorer.architecture_analysis.model_defined_schema > docs/spec/backend/architecture-definition.schema.json
