@@ -28,11 +28,16 @@ PYTHONPATH=backend/src python -m llm_model_explorer.architecture_analysis.model_
 npm ci --prefix ui
 npm run api:generate --prefix ui
 "$RUNNER_TEMP/model-json-api/bin/python" api/validate_contract.py --write
-mapfile -t pyfiles < <(grep -E '^backend/.*\.py$' "$support/.transfer/paths.txt")
-ruff format --config backend/pyproject.toml "${pyfiles[@]}"
-ruff check --fix --config backend/pyproject.toml "${pyfiles[@]}"
-ruff format --config backend/pyproject.toml "${pyfiles[@]}"
-(cd backend && ruff check . && ruff format --check . && mypy)
+(
+  cd backend
+  mapfile -t pyfiles < <(grep -E '^backend/.*\.py$' "$support/.transfer/paths.txt" | sed 's@^backend/@@')
+  ruff format "${pyfiles[@]}"
+  ruff check --fix "${pyfiles[@]}"
+  ruff format "${pyfiles[@]}"
+  ruff check .
+  ruff format --check .
+  mypy
+)
 PYTHONPATH=backend/src python -m pytest backend/tests/test_model_defined_architecture.py backend/tests/test_model_defined_service.py -ra
 npm run api:check --prefix ui
 npm run typecheck --prefix ui
