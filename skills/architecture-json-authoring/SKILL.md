@@ -118,13 +118,21 @@ Descriptions may explain non-obvious semantics, but labels should remain compact
 
 Edges must describe verified data dependencies, not a visually convenient sequence.
 
+Ordinary edges must connect `output → input`. The only exceptions are the group-forwarding cases explicitly defined by the model-owned contract. Every dependency must respect group boundaries and use the declared boundary forwarding mechanism; no edge may skip across a group boundary.
+
+An input port that receives a value is a consumer, not a new producer. If the same value feeds multiple consumers, fan out from the original output rather than forwarding from an input port.
+
+Each exact `source node/source port/target node/target port` tuple must appear only once. A dependency must also have one semantic role: do not represent the same dependency simultaneously as both `data` and `state`.
+
 Keep residual bypasses, parallel branches, masks, conditioning signals, context, prior/next state, and other semantically distinct flows separate. Never merge signals because they have the same shape or a similar label.
 
 When a group is expanded, its internal routes must explain how its boundary inputs become boundary outputs. Do not create a parent formula that contradicts or duplicates the child graph.
 
 Use `data`, `state`, and `context` edge kinds according to their real role. Do not represent a recurrent or state dependency as ordinary serial data merely to simplify layout.
 
-Shapes should be as truthful as the contract permits: constants where known, declared symbols where symbolic, display-only expressions where appropriate, and explicit unknowns when unresolved. Never fabricate a dimension for presentation.
+Reserve `input` and `output` for passive data interfaces. Recurrent K/V caches, optimizer moments, counters, and previous/next state belong on `state` interfaces rather than being modeled as ordinary inputs or outputs.
+
+Shapes should be as truthful as the contract permits: constants where known, declared symbols where symbolic, display-only expressions where appropriate, and explicit unknowns when unresolved. Known dimensions at the two ends of an edge must be compatible. Broadcasting must be declared by the operation itself or represented with an explicit broadcast/expand node; never simulate broadcasting by changing the receiving port to an incompatible shape. Never fabricate a dimension for presentation.
 
 ## Repetitions describe real repeated instances
 
@@ -180,7 +188,7 @@ Only after the concrete graph is correct, add repetition windows and eligible Sh
 
 ### 7. Validate contract and presentation
 
-Validate against the checked-in JSON Schema and repository-native model-defined architecture tests. Then load the actual model in Architecture Explorer and inspect the visual result. Schema validity alone is insufficient.
+Validate both the source `architecture.json` and the materialized package against the checked-in JSON Schema and repository-native model-defined architecture tests. Where available, exercise the same package/import path used by LLM Model Explorer. Then load the actual model in Architecture Explorer and inspect the visual result. JSON Schema validity alone does not demonstrate full importer compatibility or semantic correctness.
 
 ## Review checklist
 
@@ -198,12 +206,17 @@ Before accepting an `architecture.json`, verify all of the following:
 10. Attributes are not a configuration/provenance dump.
 11. Labels are concise, canonical, English, and free of design-history wording.
 12. Real residual, branch, mask, context, state, and conditioning paths are preserved.
-13. Repetitions annotate explicit concrete instances and preserve order/variants.
-14. Shared templates declare exact correspondence and do not imply tied weights.
-15. Unknown information remains explicitly unknown rather than guessed.
-16. The graph passes schema/backend validation and is also understandable when viewed collapsed and expanded in Architecture Explorer.
-17. Matrix/vector buttons resolve to the intended real tensors for representative operations.
-18. The expanded graph does not rely on a giant parent formula to explain computation that should exist as child nodes.
+13. Ordinary edges are `output → input`; only contract-defined group forwarding is used, group boundaries are never skipped, and fan-out originates from the real producer output.
+14. Every exact source-port/target-port connection appears once, and no dependency is represented simultaneously as both `data` and `state`.
+15. Known dimensions at connected endpoints are compatible, and broadcasting is explicit in an operation or node rather than encoded as a false receiver shape.
+16. Passive data interfaces use `input`/`output`; recurrent caches, optimizer moments/counters, and previous/next state use `state`.
+17. Repetitions annotate explicit concrete instances and preserve order/variants.
+18. Shared templates declare exact correspondence and do not imply tied weights.
+19. Unknown information remains explicitly unknown rather than guessed.
+20. Both the source `architecture.json` and materialized package pass the relevant validation/import path; JSON Schema validity is not treated as proof of full compatibility.
+21. The graph is understandable when viewed collapsed and expanded in Architecture Explorer.
+22. Matrix/vector buttons resolve to the intended real tensors for representative operations.
+23. The expanded graph does not rely on a giant parent formula to explain computation that should exist as child nodes.
 
 ## Common failure modes
 
@@ -224,6 +237,16 @@ Before accepting an `architecture.json`, verify all of the following:
 **Fake compactness:** use groups/repetitions for progressive detail instead of deleting real branches or dependencies.
 
 **Shared confused with tied weights:** structural correspondence and parameter identity are separate claims; represent each truth independently.
+
+**Wrong-direction or boundary-skipping edges:** ordinary dependencies are `output → input`; use only contract-defined group forwarding, route through group boundaries, and fan out from the original producer instead of from an input port.
+
+**Duplicate or dual-role dependencies:** emit each exact source/target port tuple once and assign the dependency one real role; do not duplicate it or model it as both `data` and `state`.
+
+**Implicit broadcasting through port shapes:** connected known dimensions must be compatible. Represent broadcasting in the operation or with an explicit node instead of changing the receiver shape to make the edge appear valid.
+
+**State exposed as passive I/O:** recurrent K/V caches, optimizer moments, counters, and previous/next state use `state`, not ordinary `input`/`output` interfaces.
+
+**Source-only validation:** validate the authored source and the materialized package through the real import path when available; passing JSON Schema or a local validator alone does not prove compatibility.
 
 ## Final principle
 
