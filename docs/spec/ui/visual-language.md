@@ -97,11 +97,26 @@ Use semantic buttons and a labelled selector, visible keyboard focus, and an
 expanded-state disclosure. Escape dismisses the panel and returns focus to its
 trigger; moving focus outside also dismisses it.
 
-The fixed bottom bar presents compact inline session state and, when supplied,
+The fixed bottom bar reserves a stable slot for an icon and English connection
+state (Connecting…, Connected, Reconnecting…, Disconnected), alongside distinct
+session/loading/closing state and, when supplied,
 public architecture/model type, humanized decimal model size (for example
 `272.4 MB`), and tokenizer availability. Raw byte counts and parameter counts
-belong in the on-demand details. Loading, empty, error, retry, and storage notices
-remain readable in a bounded workspace notice area, without expanding the chrome.
+belong in the on-demand details. A compact Retry connection control invokes the
+existing catalogue refresh, with duplicate pending retries disabled. The footer
+never wraps; secondary metadata truncates with full disclosure in session options.
+Connection transitions do not shift adjacent metadata or expand the 28px bar.
+Local empty/error/recovery content remains readable when no explorer is usable;
+storage notices and unrelated diagnostics retain their existing placement.
+
+Consequential transient application events use one small shell-owned toast host,
+fixed at the lower-right above the footer and outside explorer transforms. It uses
+neutral surfaces, restrained severity accents, accessible text/live announcements,
+keyboard dismissal and actions only for supported operations. Its bounded stack
+must avoid other fixed controls and never change workspace/card geometry, cameras,
+focus on appearance, or document overflow. Routine connection transitions and model
+warnings never produce toasts. Actionable errors persist until dismissed; brief
+informational outcomes may expire with dismissal paused during hover or focus.
 
 At constrained widths, shorten visible navigation labels to Tensor / Tokenizer
 while retaining their full accessible names. Product identity and secondary

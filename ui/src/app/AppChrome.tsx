@@ -64,12 +64,21 @@ export function AppBar({ state, controller, model, backend }: {
   </header>;
 }
 
-export function AppStatusBar({ state, model }: { state: ShellState; model: ModelSummary | undefined }) {
+export function AppStatusBar({ state, model, onRetry }: { state: ShellState; model: ModelSummary | undefined; onRetry: () => void }) {
   const feedback = state.sessionStatus === 'loading' ? 'Loading session…'
     : state.sessionStatus === 'closing' ? 'Closing session…'
+    : state.sessionStatus === 'failed' ? 'Session unavailable.'
     : state.session ? 'Session active.' : 'Session inactive.';
   return <footer className="app-status-bar" aria-label="Application status">
-    <span role="status" data-state={state.sessionStatus}>{feedback}</span>
+    <div className="connection-slot">
+      <span role="status" aria-live="polite" aria-atomic="true" data-state={state.connection}>
+        <span className="connection-icon" aria-hidden="true">{state.connection === 'connected' ? '●' : '○'}</span>
+        {{ connecting: 'Connecting…', connected: 'Connected', reconnecting: 'Reconnecting…', disconnected: 'Disconnected' }[state.connection]}
+      </span>
+      {(state.connection === 'disconnected' || state.connection === 'reconnecting') && <button type="button"
+        className="connection-retry" aria-label="Retry connection" disabled={state.catalogue === 'loading'} onClick={onRetry}>Retry</button>}
+    </div>
+    <span className="session-status" role="status" title={feedback} data-state={state.sessionStatus}>{feedback}</span>
     {model && <div className="status-metadata metadata">
       {(model.architectures.length > 0 || model.model_type) &&
         <span title={[...model.architectures, model.model_type].filter(Boolean).join(' · ')}>
