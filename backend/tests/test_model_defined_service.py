@@ -5,6 +5,8 @@ import copy
 import json
 import shutil
 import struct
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -102,6 +104,25 @@ def test_sidecar_precedence_native_values_read_only_and_warm_cache(
     ]
     assert actual == [i / 4 for i in range(12)]
     assert before == {p.name: p.read_bytes() for p in directory.iterdir()}
+
+
+def test_installed_validator_accepts_relative_model_directory(tmp_path: Path) -> None:
+    root = tmp_path / "models"
+    root.mkdir()
+    local_model(root)
+    executable = Path(sys.executable).parent / "llm-model-explorer-validate-architecture"
+    result = subprocess.run(
+        [str(executable), "models/owned", "--json"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
+    document = json.loads(result.stdout)
+    assert document["status"] == "valid"
+    assert document["model_id"] == "owned"
+    assert str(tmp_path) not in result.stdout
 
 
 @pytest.mark.parametrize("raw", ["{", '{"schema_version":2}', '{"a":1,"a":2}'])

@@ -23,6 +23,7 @@ from .models import ModelCatalogue
 def validate_directory(directory: Path) -> dict[str, object]:
     """Use the same metadata admission, parser and graph validator as startup."""
     try:
+        directory = directory.resolve(strict=True)
         entry = ModelCatalogue(directory.parent).inspect_directory(directory)
         source = entry.pin()
         inputs = AnalysisInput.from_source(
