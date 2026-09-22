@@ -1,6 +1,5 @@
 import { expect, it } from 'vitest';
 import { makeTemplateFixture } from '../../tests/architecture-template-fixture';
-import { contractInventory } from '../../tests/architecture-fixtures';
 import { validateArchitecture } from '../api/architecture-validation';
 import type { Graph } from './graph';
 import { GraphViews } from './graph';
@@ -28,7 +27,7 @@ function modelDefined(): Graph {
 it('retains Shared families and repetition navigation for model-owned provenance', () => {
   const graph = modelDefined();
   const response = validateArchitecture({ model_id: 'owned', status: 'available', diagnostics: [], graph },
-    { modelId: 'owned', inventory: contractInventory, tokenizerAvailable: true });
+    { modelId: 'owned' });
   expect(response.status).toBe('available');
   const view = new GraphViews().get('owned', graph), template = graph.templates![0]!;
   const second = template.instances[1]!;

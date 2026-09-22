@@ -57,13 +57,13 @@ test('built shell retrieves on demand, supports V-JEPA without tokenization and 
   expect(requests.some((p) => p.endsWith('/tokenize'))).toBe(false);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
 });
-test('malformed graphs stay local and partial inventories remain explicit', async ({ page, context }) => {
+test('malformed architecture responses stay local and partial inventories remain explicit', async ({ page, context }) => {
   await backend(context);
   await context.route('**/architecture', (r) => r.fulfill({ json: { ...contractResponse, graph: { ...contractResponse.graph, nodes: [] } } }));
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(contractResponse.model_id);
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('invalid graph');
+  await expect(page.getByRole('alert')).toContainText('Invalid getArchitecture response');
   await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
   await expect(page.getByRole('button', { name: /linear.weight/ })).toBeVisible();
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(referenceFixture('vjepa2').model_id);

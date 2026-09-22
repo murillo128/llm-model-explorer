@@ -553,3 +553,9 @@ canvas, start numerical work, reset selection/expansion or fit the camera. Band
 height changes are ordinary bounded viewport resizes. Component inspection may
 show the relevant deduplicated findings alongside source evidence, without
 creating another global diagnostic list.
+
+For an unavailable model-owned definition, show each precise safe backend load
+finding with the short high-level status inside the capability card. Preserve
+the record pointer and stage so an author can fix the sidecar without backend
+logs. A client-side schema or protocol rejection displays its bounded
+`ApiFailure` validation message; transport failures retain a generic safe status.

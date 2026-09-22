@@ -196,9 +196,7 @@ def test_cuda_calculation_releases_cached_vram_after_device_tensor(
     monkeypatch.setattr(torch.cuda, "empty_cache", lambda: events.append("empty-cache"))
 
     host: Any = HostValues()
-    header, counts = calculate(
-        host, "tensor_statistics", (1,), "cuda:1", Cancellation()
-    )
+    header, counts = calculate(host, "tensor_statistics", (1,), "cuda:1", Cancellation())
 
     assert header == b"statistics" and counts is None
     assert events == [

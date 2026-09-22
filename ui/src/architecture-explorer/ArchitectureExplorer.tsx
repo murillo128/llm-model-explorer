@@ -27,7 +27,7 @@ export function ArchitectureExplorer(props: Props) {
   return <SessionArchitectureExplorer key={JSON.stringify([props.session.id, props.session.model_id])} {...props} />;
 }
 function SessionArchitectureExplorer(props: Props) {
-  const { client, session, selection, views, tokenizerAvailable, onInspect } = props;
+  const { client, session, selection, views, onInspect } = props;
   const [localDiagnostics] = useState(() => { const store = new ModelDiagnostics(); store.activate(session); return store; });
   const diagnostics = props.diagnostics ?? localDiagnostics;
   const [inspected, setInspected] = useState<ArchitectureSelection | null>(null);
@@ -47,7 +47,7 @@ function SessionArchitectureExplorer(props: Props) {
     void client.listTensors(session.id, request.signal).then(request.guard(async (inventory) => {
       diagnostics.observe(session, 'Tensor inventory', inventory.diagnostics.map((d) => finding(session.model_id, session.id, 'Tensor inventory', d, 'warning')));
       try {
-        const response = await client.getArchitecture(session.id, { modelId: session.model_id, inventory, tokenizerAvailable }, request.signal);
+        const response = await client.getArchitecture(session.id, { modelId: session.model_id }, request.signal);
         if (request.isCurrent()) {
           const graph = response.status === 'available' ? response.graph : undefined;
           const generation = graph?.graph_id ?? session.id;
@@ -64,11 +64,14 @@ function SessionArchitectureExplorer(props: Props) {
         }
       } catch (error) {
         if (request.isCurrent()) fail(error instanceof ApiFailure && error.detail?.code === 'model_content_changed'
-          ? 'Model content changed. Close this session and open a fresh session.' : 'Architecture retrieval failed or returned an invalid graph. Retry retrieval.');
+          ? 'Model content changed. Close this session and open a fresh session.'
+          : error instanceof ApiFailure && error.kind === 'protocol'
+            ? error.message.length <= 240 ? error.message : 'Architecture response failed validation.'
+            : 'Architecture retrieval failed or returned an invalid graph. Retry retrieval.');
       } finally { clearTimeout(timeout); }
     }), request.guard(() => { clearTimeout(timeout); fail('Could not validate the model inventory. Retry retrieval.'); }));
     return () => { clearTimeout(timeout); request.dispose(); detach(); };
-  }, [client, session, selection, tokenizerAvailable, retry, diagnostics]);
+  }, [client, session, selection, retry, diagnostics]);
   const response = result.response;
   const band = <DiagnosticBand store={diagnostics} />;
   if (!response || response.status === 'unavailable') return <div tabIndex={-1} className="architecture-explorer architecture-empty" aria-label="Architecture capability">
@@ -78,6 +81,9 @@ function SessionArchitectureExplorer(props: Props) {
       {result.error ? <div role="alert">{result.error} <button onClick={() => { setResult({}); setRetry(retry + 1); }}>Retry retrieval</button></div>
         : !response ? <p role="status">Retrieving prepared architecture…</p>
         : <div role="status"><p>{unavailable[response.reason]}</p>
+          {response.diagnostics.length > 0 && <ul className="architecture-failure-details">
+            {response.diagnostics.map((diagnostic, index) => <li key={`${diagnostic.code}-${index}`}>{diagnostic.message}</li>)}
+          </ul>}
           {response.requires_restart && response.reason !== 'restart_required' && <p>Restart the backend to prepare this model again.</p>}</div>}
     </div>
   </div>;

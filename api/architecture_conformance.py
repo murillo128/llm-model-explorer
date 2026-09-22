@@ -1,7 +1,8 @@
 """Independent structural/contextual oracles for the published architecture contract.
 
 No application imports, graph execution, checkpoint access, or HTTP implementation.
-Consumers must combine generated schema validation with these semantic cases.
+This test-only oracle checks semantic cases independently of the backend producer;
+browser clients use generated schema validation without duplicating these rules.
 """
 from copy import deepcopy
 import json
