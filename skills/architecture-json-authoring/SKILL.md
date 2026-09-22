@@ -188,7 +188,7 @@ Only after the concrete graph is correct, add repetition windows and eligible Sh
 
 ### 7. Validate contract and presentation
 
-Validate both the source `architecture.json` and the materialized package against the checked-in JSON Schema and repository-native model-defined architecture tests. Where available, exercise the same package/import path used by LLM Model Explorer. Then load the actual model in Architecture Explorer and inspect the visual result. JSON Schema validity alone does not demonstrate full importer compatibility or semantic correctness.
+Validate the materialized package with `llm-model-explorer-validate-architecture <model-directory> [--json]` from the installed Explorer backend. This is the canonical graph and binding validator; a successful exit proves the package passes the same static import path used by cold startup. Use `--json` in model-repository CI. JSON Schema checks remain useful while editing, but cannot prove checkpoint bindings. Keep model-specific profile, runtime inventory and exporter correspondence checks local. Then load the actual model in Architecture Explorer and inspect the visual result. No static validator proves equivalence to `forward()`.
 
 ## Review checklist
 

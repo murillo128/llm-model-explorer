@@ -2,8 +2,10 @@ import type { ReactNode } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import fixture from '../../../api/fixtures/architecture.json';
+import diagnosticCases from '../../../api/fixtures/model-defined-diagnostics.json';
 import { validateSchema } from '../api/validation';
 import { ApiClient } from '../api/client';
+import { ApiFailure } from '../api/errors';
 import { Lifetime } from '../app/lifetime';
 import { ArchitectureExplorer } from './ArchitectureExplorer';
 import { ModelDiagnostics } from '../app/model-diagnostics';
@@ -66,4 +68,25 @@ it('marks model-owned graphs without claiming source verification', async () => 
   render(<ArchitectureExplorer {...props} />);
   expect(await screen.findByRole('note', { hidden: true })).toHaveTextContent('equivalence to model code is not verified');
   expect(screen.getByText(`Graph for ${session.model_id}`)).toBeInTheDocument();
+});
+
+it.each(diagnosticCases)('shows the exact $name load finding beside the capability status', async (item) => {
+  const { props, retrieve } = setup();
+  retrieve.mockResolvedValue({
+    status: 'unavailable', model_id: session.model_id,
+    reason: item.code === 'unsupported_size' ? 'unsupported_size' : 'analysis_failed',
+    requires_restart: true, diagnostics: [{ code: item.code, message: item.message }],
+  });
+  render(<ArchitectureExplorer {...props} />);
+  expect(await screen.findByText(item.code === 'unsupported_size'
+    ? 'This architecture exceeds the supported response size.'
+    : 'Architecture preparation failed for this model.')).toBeInTheDocument();
+  expect((await screen.findAllByText(item.message)).length).toBeGreaterThan(0);
+});
+
+it('shows the bounded protocol validation failure', async () => {
+  const { props, retrieve } = setup();
+  retrieve.mockRejectedValue(new ApiFailure('protocol', 'Invalid ArchitectureResponse schema'));
+  render(<ArchitectureExplorer {...props} />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Invalid ArchitectureResponse schema');
 });

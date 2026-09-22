@@ -1,6 +1,5 @@
 import { expect, it } from 'vitest';
 import { makeTemplateFixture } from '../../tests/architecture-template-fixture';
-import { contractInventory } from '../../tests/architecture-fixtures';
 import { validateArchitecture } from '../api/architecture-validation';
 import { layoutGraph } from './auto-layout';
 import { GraphViews } from './graph';
@@ -10,7 +9,7 @@ import { backFromComponent, enterComponent, projectionOptions, returnToModel, sn
 
 it('uses an independently authored complete correspondence; ordinary projections ignore optional annotations', () => {
   const graph = makeTemplateFixture();
-  validateArchitecture({ model_id: 'fixture', status: 'available', diagnostics: [], graph }, { modelId: 'fixture', inventory: contractInventory, tokenizerAvailable: true });
+  validateArchitecture({ model_id: 'fixture', status: 'available', diagnostics: [], graph }, { modelId: 'fixture' });
   const ordinary = structuredClone(graph); delete ordinary.templates;
   for (const options of [{ expanded: ['model'] }, { expanded: [], exhaustive: true }, { expanded: ['layer-2.attention'], scope: 'layer-2.attention' }]) {
     expect(projectGraph(graph, options)).toEqual(projectGraph(ordinary, options));

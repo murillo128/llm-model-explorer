@@ -11,10 +11,14 @@ from time import perf_counter
 
 from .architecture_analysis import AnalysisInput, DescriptionRegistry, register_dense_descriptions
 from .architecture_analysis.core import AnalysisResult, Scope
-from .architecture_analysis.model_defined import analyze_definition, parse_definition, producer_for
+from .architecture_analysis.model_defined import (
+    ModelDefinedValidator,
+    diagnostic_for_model_error,
+    producer_for,
+)
 from .architecture_analysis.model_defined_schema import MAX_DEFINITION_BYTES
 from .architecture_analysis.qwen35 import register_qwen35
-from .architecture_analysis.validation import MAX_BYTES, BindingContext, GraphError
+from .architecture_analysis.validation import MAX_BYTES, BindingContext, GraphError, model_finding
 from .architecture_analysis.vjepa2 import register_vjepa2
 from .artifacts import ArchitectureArtifactSpec, ArtifactStore
 from .execution import BlockingWork
@@ -120,9 +124,22 @@ class ArchitectureService:
             inputs = AnalysisInput.from_source(
                 source, tokenizer_available=entry.summary.tokenizer_available
             )
-            raw_definition = source.architecture_definition(max_bytes=MAX_DEFINITION_BYTES)
+            try:
+                raw_definition = source.architecture_definition(max_bytes=MAX_DEFINITION_BYTES)
+            except ModelError as exc:
+                if exc.code == "unsupported_size":
+                    model_supplied = True
+                    raise model_finding(
+                        "unsupported_size", "resource", "", "Definition exceeds the 8 MiB limit."
+                    ) from exc
+                raise
             model_supplied = raw_definition is not None
-            definition = parse_definition(raw_definition) if raw_definition is not None else None
+            validator = (
+                ModelDefinedValidator.from_bytes(raw_definition)
+                if raw_definition is not None
+                else None
+            )
+            definition = validator.definition if validator is not None else None
             selected = None if model_supplied else self.registry.select(inputs)
             key = (model_id, source.fingerprint)
             if selected is None and definition is None:
@@ -151,7 +168,7 @@ class ArchitectureService:
                 analysis_options={},
             )
             # Reserve the exact response envelope, including JSON-escaped model ID.
-            budget = MAX_BYTES - len(self._prefix(model_id)) - 1
+            budget = self.response_budget(model_id)
             stamp = perf_counter()
             try:
                 reader = self.store.lookup_graph(spec, inputs.bindings)
@@ -168,8 +185,8 @@ class ArchitectureService:
                 stamp = perf_counter()
                 try:
                     result = (
-                        analyze_definition(definition, inputs, byte_limit=budget)
-                        if definition is not None
+                        validator.validate(inputs, byte_limit=budget)
+                        if validator is not None
                         else self.registry.analyze(inputs, byte_limit=budget)
                     )
                 finally:
@@ -209,19 +226,13 @@ class ArchitectureService:
                     if isinstance(exc, (GraphError, ModelError)) and exc.code == "unsupported_size"
                     else "analysis_failed"
                 )
+                failure = unavailable(model_id, reason, "Architecture preparation failed.")
+                if model_supplied and isinstance(exc, GraphError):
+                    failure["diagnostics"] = [diagnostic_for_model_error(exc).document()]
                 self._prepared[(model_id, source.fingerprint)] = Prepared(
                     None,
                     None,
-                    unavailable(
-                        model_id,
-                        reason,
-                        (
-                            "Model-supplied architecture.json is invalid or unsupported; "
-                            "no fallback was used."
-                        )
-                        if model_supplied
-                        else "Architecture preparation failed.",
-                    ),
+                    failure,
                 )
         finally:
             logger.info(
@@ -241,6 +252,11 @@ class ArchitectureService:
         response = unavailable(model_id, result.reason or "analysis_failed", "Analysis failed.")
         response["diagnostics"] = [d.document() for d in result.diagnostics]
         return response
+
+    @staticmethod
+    def response_budget(model_id: str) -> int:
+        """Leave room for the architecture response envelope around a graph."""
+        return MAX_BYTES - len(ArchitectureService._prefix(model_id)) - 1
 
     @staticmethod
     def _prefix(model_id: str) -> bytes:

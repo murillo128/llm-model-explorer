@@ -33,7 +33,9 @@ Required top-level fields are `schema_version: 1`, `architecture_revision`,
 `parameters`, `repetitions`, and `templates` default to empty arrays. `coverage` defaults to
 `complete`; `partial` requires `incomplete_reason`. Complete is a declaration of
 coverage within the author's scope, not an independent semantic certification.
-Missing required storage always downgrades the resulting graph to partial.
+Every declared parameter must name an admitted checkpoint tensor with its exact
+native shape. An absent or contradictory declared binding makes the supplied
+definition unavailable.
 
 Nodes have file-local IDs, kinds, labels, ports, optional parent/group children,
 parameter references, explanatory descriptions/formulas and scalar metadata.
@@ -50,7 +52,7 @@ packed decoders, arbitrary slices, or user-supplied storage descriptions. Reuse
 one parameter ID across nodes for shared weights. A fused QKV matrix can be
 referenced as a complete native parameter and followed by declared split
 operations. Native rank above two retains its descriptor with unavailable matrix
-inspection; absent storage is unresolved, not fabricated. Existing packaged
+inspection; storage is never fabricated. Existing packaged
 quantized descriptions retain their existing behavior when no JSON is supplied.
 
 The backend generates graph-scoped IDs from the pinned content and producer
@@ -136,6 +138,23 @@ prepared state only and never reruns analysis. A malformed sidecar cannot reuse
 an old graph or fall back to a packaged interpretation. Definitions are read-only.
 
 ## Validation and maintenance
+
+The installable backend exposes
+`llm-model-explorer-validate-architecture <model-directory> [--json]` as the
+canonical authoring validator. It admits the local config and Safetensors
+inventory, reads the fixed-name sidecar, and runs the same bounded parser,
+graph construction, relationship, template and binding validation as cold
+startup. Exit status 0 means the supplied package passed those checks; nonzero
+returns a bounded diagnostic. `--json` emits deterministic structured output
+for model-repository CI. This validates static import compatibility, not model
+execution or correspondence to `forward()`.
+
+Model-owned validation diagnostics use stable codes and concise safe messages.
+When known, the message names `architecture.json` plus a JSON pointer and the
+JSON, schema, graph, binding, template or resource stage. Startup stores the same
+finding in its unavailable response, and GET only retrieves that prepared state.
+Unexpected internal failures stay generic. Neither command nor response exposes
+local paths, source fragments, traceback text or tensor values.
 
 The runtime schema records and checked-in JSON Schema must stay synchronized;
 tests regenerate and compare the schema and validate the worked example. Changes

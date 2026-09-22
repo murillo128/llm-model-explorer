@@ -62,7 +62,7 @@ it('admits the authored V-JEPA browser fixture with ordered 24/12 stacks and sep
     assertUnique(family.id, instance.node_id, 'parameters', instance.parameters, (record) => record.parameter_id);
   }
   expect(() => validateArchitecture({ model_id: modelId, status: 'available', graph, diagnostics: [] }, {
-    modelId, tokenizerAvailable: false, inventory: { tensors: [], coverage: 'complete', diagnostics: [] },
+    modelId,
   })).not.toThrow();
   expect(graph.repetitions.map((repetition) => repetition.instances.length)).toEqual([24, 12]);
   expect(graph.templates?.map((family) => [family.label, family.instances.length])).toEqual([

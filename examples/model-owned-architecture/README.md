@@ -34,6 +34,17 @@ save_file(
 shutil.copyfile("examples/model-owned-architecture/architecture.json", out / "architecture.json")
 ```
 
+Validate the complete package before starting Explorer:
+
+```sh
+llm-model-explorer-validate-architecture /tmp/lmex-models/example-owned-architecture
+llm-model-explorer-validate-architecture /tmp/lmex-models/example-owned-architecture --json
+```
+
+The command checks the declared graph and exact Safetensors names/shapes without
+executing model code or loading numeric tensors. Model repositories should call
+this command in CI and keep only their own model-specific checks locally.
+
 Restart the backend with `/tmp/lmex-models` as `--model-root` and a separate cache
 root. The model does not need a recognized architecture class or tokenizer. The
 graph is marked **model-supplied**, and both native parameters can be inspected.

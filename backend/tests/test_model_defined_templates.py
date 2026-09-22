@@ -196,7 +196,10 @@ def test_invalid_declarations_fail_closed(edit: str) -> None:
         value["repetitions"] = []
     result = analyze(value)
     assert result.status == "unavailable", edit
-    assert result.diagnostics[0].code == "invalid_model_definition"
+    assert result.diagnostics[0].code == (
+        "template_duplicate_id" if edit == "duplicate_family" else "template_invalid"
+    )
+    assert result.diagnostics[0].message.startswith("architecture.json#/templates/")
 
 
 def test_unknown_leaf_and_incompatible_parameter_geometry_cannot_establish_equivalence() -> None:
@@ -211,7 +214,7 @@ def test_unknown_leaf_and_incompatible_parameter_geometry_cannot_establish_equiv
     assert analyze(value).status == "unavailable"
 
 
-def test_partial_storage_keeps_real_binding_availability() -> None:
+def test_missing_declared_storage_invalidates_shared_definition() -> None:
     source = inventory()
     physical = dict(source.bindings.physical)
     missing = "blocks.1.attn.k.weight"
@@ -221,12 +224,9 @@ def test_partial_storage_keeps_real_binding_availability() -> None:
         parse_definition(EXAMPLE.read_bytes()),
         replace(source, bindings=BindingContext(physical, numeric, False)),
     )
-    assert result.status == "partial"
-    assert result.graph is not None and result.graph.templates is not None
-    assert len(result.graph.templates) == 2
-    parameter = next(p for p in result.graph.parameters if p.name == missing)
-    assert parameter.inspection.status == "unavailable"
-    assert parameter.binding == "unresolved" and parameter.storage == []
+    assert result.status == "unavailable"
+    assert result.diagnostics[0].code == "binding_missing_tensor"
+    assert "#/parameters/" in result.diagnostics[0].message
 
 
 def test_nonconsecutive_repetition_and_sibling_order() -> None:
@@ -292,11 +292,11 @@ def test_budget_does_not_hide_invalid_templates(caplog: pytest.LogCaptureFixture
     assert analyze(value, byte_limit=limit).status == "unavailable"
 
 
-def test_producer_revision_invalidates_pre_extension_cache() -> None:
+def test_producer_revision_invalidates_prior_model_defined_cache() -> None:
     definition = parse_definition(EXAMPLE.read_bytes())
     current = producer_for(definition)
-    old = replace(current, revision="1")
-    assert current.revision == "2"
+    old = replace(current, revision="2")
+    assert current.revision == "3"
     assert current.graph_id("unchanged-checkpoint", "model_defined") != old.graph_id(
         "unchanged-checkpoint", "model_defined"
     )

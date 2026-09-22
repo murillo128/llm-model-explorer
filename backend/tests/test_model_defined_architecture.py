@@ -96,6 +96,15 @@ def test_unknown_operations_need_no_model_family_adapter() -> None:
     assert any(n.operation == "experimental_relational_update" for n in result.graph.nodes)
 
 
+def test_present_but_empty_operation_is_not_reported_as_missing() -> None:
+    value = document()
+    value["nodes"][3]["operation"] = ""
+    with pytest.raises(GraphError) as error:
+        definition(value)
+    assert error.value.code == "schema_invalid_field"
+    assert "#/nodes/3/operation" in str(error.value)
+
+
 def test_schema_is_reproducible_and_example_is_not_a_runtime_graph() -> None:
     expected = json.loads(
         (ROOT / "docs/spec/backend/architecture-definition.schema.json").read_text()
@@ -141,14 +150,13 @@ def test_bounds_before_graph_construction() -> None:
     assert result.status == "unavailable" and result.reason == "unsupported_size"
 
 
-def test_missing_storage_is_partial_not_invented() -> None:
+def test_missing_declared_storage_is_invalid() -> None:
     original = inputs()
     binding = BindingContext({}, {}, False)
     result = analyze_definition(definition(), replace(original, bindings=binding))
-    assert result.status == "partial"
-    assert result.graph is not None
-    assert all(p.inspection.status == "unavailable" for p in result.graph.parameters)
-    assert all(not p.storage for p in result.graph.parameters)
+    assert result.status == "unavailable"
+    assert result.diagnostics[0].code == "binding_missing_tensor"
+    assert "#/parameters/0" in result.diagnostics[0].message
 
 
 def test_wrong_native_geometry_is_unavailable() -> None:

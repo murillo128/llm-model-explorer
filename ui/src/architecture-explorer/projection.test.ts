@@ -18,11 +18,10 @@ describe('source-preserving visible projection', () => {
   it.each([
     {}, { variants: ['full_attention', 'linear_attention', 'full_attention'] },
     { count: 5, secondStack: 2, hiddenSize: 29 }, { count: 2, repetitions: false, partial: true },
-  ] satisfies ProjectionFixtureOptions[])('validates authored fixtures against the actual API contract: %j', (options) => {
+  ] satisfies ProjectionFixtureOptions[])('accepts authored fixtures under the generated API schema: %j', (options) => {
     const graph = makeProjectionFixture(options);
     expect(() => validateArchitecture({ model_id: 'authored-model', status: 'available', diagnostics: [], graph }, {
-      modelId: 'authored-model', tokenizerAvailable: !options.secondStack,
-      inventory: { tensors: [], coverage: 'partial', diagnostics: [] },
+      modelId: 'authored-model',
     })).not.toThrow();
     expect(new Set(graph.nodes.map((n) => n.id)).size).toBe(graph.nodes.length);
     expect(new Set(graph.parameters.map((p) => p.id)).size).toBe(graph.parameters.length);

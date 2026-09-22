@@ -10,8 +10,8 @@ from unittest.mock import Mock
 import pytest
 from test_model_defined_service import prepare
 
-from llm_model_explorer import architecture_service
 from llm_model_explorer.architecture_analysis.core import DescriptionRegistry
+from llm_model_explorer.architecture_analysis.model_defined import ModelDefinedValidator
 from llm_model_explorer.model_files import ModelError
 from llm_model_explorer.settings import Settings
 from llm_model_explorer.tensor_source import ModelSource
@@ -60,7 +60,7 @@ def test_shared_cold_warm_cache_and_nonzero_tensor_values(
         service, catalogue = prepare(settings)
         source = catalogue.pin("shared")
         cold = service.lookup(source)
-        patch.setattr(architecture_service, "analyze_definition", forbidden)
+        patch.setattr(ModelDefinedValidator, "validate", forbidden)
         warm, warm_catalogue = prepare(settings)
         assert warm.lookup(warm_catalogue.pin("shared")) == cold
         forbidden.assert_not_called()

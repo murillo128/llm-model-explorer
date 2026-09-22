@@ -12,7 +12,7 @@ import { validateArchitecture } from '../api/architecture-validation';
 const ep = (node_id: string, port_id: string) => ({ node_id, port_id });
 const sourcePaths = (graph: Graph, scope: string) => projectGraph(graph, { scope, expanded: [scope], showUnused: true });
 const validate = (graph: Graph) => validateArchitecture({ status: 'available', model_id: 'fixture', diagnostics: [], graph },
-  { modelId: 'fixture', inventory: { tensors: [], coverage: 'complete', diagnostics: [] }, tokenizerAvailable: false });
+  { modelId: 'fixture' });
 
 describe('isolated component projection', () => {
   it.each(['layer-3', 'layer-3.attention', 'layer-3.attention.core', 'mlp:layer-3.gate'])(

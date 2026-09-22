@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from . import records as r
 from .model_defined_schema import DefinitionTemplate, ModelDefinition
 from .template_validation import TemplateIndex, validate_template_instances
-from .validation import GraphError, serialized_size, unique, validate_graph
+from .validation import GraphError, model_finding, serialized_size, validate_graph
 
 if TYPE_CHECKING:
     from .core import GraphBuilder
@@ -110,15 +110,33 @@ def bind_templates(
 ) -> r.ArchitectureGraph:
     if not definition.templates:
         return graph
-    unique(definition.templates)
+    seen_ids: set[str] = set()
+    for position, declared in enumerate(definition.templates):
+        if declared.id in seen_ids:
+            raise model_finding(
+                "template_duplicate_id",
+                "template",
+                f"#/templates/{position}/id",
+                "Duplicate template identity.",
+            )
+        seen_ids.add(declared.id)
     index = TemplateIndex(graph)
     seen: set[str] = set()
     retained: list[r.ArchitectureTemplate] = []
     remaining = builder.byte_limit - serialized_size(graph.document(), builder.byte_limit)
     remaining -= len(',"templates":[]')
     omitted = False
-    for declared in definition.templates:
-        template, size = _bind_template(declared, index, builder, seen, remaining, bool(retained))
+    for position, declared in enumerate(definition.templates):
+        try:
+            template, size = _bind_template(
+                declared, index, builder, seen, remaining, bool(retained)
+            )
+        except GraphError as exc:
+            if exc.code == "unsupported_size":
+                raise
+            raise model_finding(
+                "template_invalid", "template", f"#/templates/{position}", str(exc)
+            ) from exc
         if template is None:
             omitted = True
         else:

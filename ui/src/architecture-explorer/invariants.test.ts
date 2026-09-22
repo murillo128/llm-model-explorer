@@ -10,7 +10,7 @@ const ep = (node_id: string, port_id: string) => ({ node_id, port_id });
 const fixture = () => makeProjectionFixture({ variants: ['full_attention', 'linear_attention', 'full_attention'], hiddenSize: 29 });
 function validate(graph: Graph) {
   validateArchitecture({ status: 'available', model_id: 'oracle', diagnostics: [], graph }, {
-    modelId: 'oracle', tokenizerAvailable: true, inventory: { tensors: [], coverage: 'partial', diagnostics: [] },
+    modelId: 'oracle',
   });
 }
 

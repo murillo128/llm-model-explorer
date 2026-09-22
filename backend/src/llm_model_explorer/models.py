@@ -103,6 +103,10 @@ class ModelCatalogue:
         # Settings has already resolved/validated root. Construction performs no I/O.
         self._root = root
 
+    def inspect_directory(self, directory: Path) -> CatalogueEntry:
+        """Admit one exact local package without scanning sibling models."""
+        return self._inspect(directory)
+
     def _inspect(self, directory: Path) -> CatalogueEntry:
         confined(self._root, directory)
         # Capture config/index before parsing, so a race cannot pin stale descriptors.

@@ -3,7 +3,7 @@ import { openShared, findComponent, graphAction, graphPreference, viewOptions } 
 import { test, expect } from '@playwright/test';
 import type { Page, TestInfo } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { once } from 'node:events';
@@ -30,6 +30,7 @@ const visibleCount = (graph: Graph) => {
 };
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
+const diagnosticCases = JSON.parse(readFileSync(join(repo, 'api/fixtures/model-defined-diagnostics.json'), 'utf8')) as { name: string; code: string; message: string }[];
 const python = `${repo}backend/.venv/bin/python`;
 let service: ReturnType<typeof spawn>;
 let root: string;
@@ -302,6 +303,9 @@ test.beforeEach(async ({ page }, info) => {
   } else {
     const fixtureStarted = performance.now();
     execFileSync(python, ['-m', 'acceptance.architecture_fixtures', join(root, 'models'), ...(family === 'templates' ? ['--templates'] : [])], { cwd: repo });
+    if (info.title.includes('shows the precise model-owned load failure')) {
+      writeFileSync(join(root, 'models', family, 'architecture.json'), '{"nodes":1,"nodes":2}');
+    }
     timing.fixtureGenerationMs = performance.now() - fixtureStarted;
     modelId = family;
     args = ['-m', 'acceptance.server', '--root', root, '--port', String(port), '--origin', origin];
@@ -334,6 +338,20 @@ test.afterEach(async ({ page }, info) => {
   if (root) rmSync(root, { recursive: true });
   await timing.attach(info, log, probe);
   expect(probe).toMatchObject({ capturePixels: false, framebufferReadbacks: 0 });
+});
+
+test('deterministic production [smollm2] shows the precise model-owned load failure', async ({ page }) => {
+  const finding = diagnosticCases.find((item) => item.name === 'duplicate_json_key')!;
+  const response = page.waitForResponse((r) => r.url().startsWith(backend) &&
+    r.url().endsWith('/architecture') && r.request().method() === 'GET');
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(modelId);
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  const body = await (await response).json();
+  expect(body).toMatchObject({ status: 'unavailable', reason: 'analysis_failed',
+    diagnostics: [{ code: finding.code, message: finding.message }] });
+  await expect(page.getByText('Architecture preparation failed for this model.')).toBeVisible();
+  await expect(page.locator('.architecture-capability-state').getByText(finding.message)).toBeVisible();
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveCount(0);
 });
 
 for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3', 'qwen35', 'vjepa2']) {
