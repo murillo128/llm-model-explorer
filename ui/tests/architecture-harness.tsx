@@ -11,7 +11,7 @@ import { summaryFixture } from './architecture-summary-fixture';
 import { GraphViews } from '../src/architecture-explorer/graph';
 import { contractResponse, referenceFixture } from './architecture-fixtures';
 import { makeProjectionFixture } from './architecture-projection-fixture';
-import { makeTemplateFixture } from './architecture-template-fixture';
+import { makeTemplateFixture, makeVjepaBrowserFixture } from './architecture-template-fixture';
 import { makeExplicitFixture } from './architecture-explicit-fixture';
 import '../src/app/styles.css';
 
@@ -32,6 +32,7 @@ function fixture(name: string) {
     if (name === 'templates-absent') delete graph.templates;
     return { model_id: name, status: 'available' as const, diagnostics: [], graph };
   }
+  if (name === 'browser-vjepa') return { model_id: name, status: 'available' as const, diagnostics: [], graph: makeVjepaBrowserFixture() };
   if (name === 'components-large') return { model_id: name, status: 'available' as const, diagnostics: [], graph: makeExplicitFixture({ count: 48 }) };
   if (name === 'components') return { model_id: name, status: 'available' as const, diagnostics: [], graph: makeExplicitFixture() };
   if (name === 'mixed-stacks') return { model_id: 'mixed-stacks', status: 'available' as const, diagnostics: [],
@@ -47,6 +48,20 @@ function fixture(name: string) {
   return referenceFixture(name);
 }
 
+function configuredFixture(name: string) {
+  const response = structuredClone(fixture(name));
+  const params = new URLSearchParams(location.search);
+  if (params.has('inert')) {
+    response.graph.nodes[1]!.label = '<img src=x onerror=alert(1)>';
+    response.graph.nodes.find((node) => node.id === 'linear0')!.ports.find((port) => port.id === 'out')!.shape =
+      [{ kind: 'expression', text: 'window.alert(1)', symbols: [] }];
+  }
+  const longBrowserNode = params.has('long-browser')
+    ? response.graph.nodes.find((node) => node.id.endsWith('layer-31.attention.Q')) : undefined;
+  if (longBrowserNode) longBrowserNode.label = 'Q projection with an intentionally long public component name that must remain fully available';
+  return response;
+}
+
 function Harness() {
   const [views] = useState(() => new GraphViews());
   const [name, setName] = useState(() => new URLSearchParams(location.search).get('fixture') ?? 'contract');
@@ -54,18 +69,10 @@ function Harness() {
   const [inspection, setInspection] = useState('');
   const [native, setNative] = useState<ArchitectureSelection | null>(null);
   const [context] = useState(() => ({ client: new ApiClient({ backendBaseUrl: 'http://127.0.0.1:1' }), session: { id: 'fixture-session', model_id: name }, sessionId: 'fixture-session', selection: new Lifetime(), selectedTensor: null, reportStatus: () => {} }));
-  const [response, setResponse] = useState(() => {
-    const response = structuredClone(fixture(name));
-    if (location.search.includes('inert')) {
-      response.graph.nodes[1]!.label = '<img src=x onerror=alert(1)>';
-      response.graph.nodes.find((node) => node.id === 'linear0')!.ports.find((port) => port.id === 'out')!.shape =
-        [{ kind: 'expression', text: 'window.alert(1)', symbols: [] }];
-    }
-    return response;
-  });
+  const [response, setResponse] = useState(() => configuredFixture(name));
   return <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-    <div><select aria-label="Fixture" value={name} onChange={(e) => { setName(e.target.value); setResponse(fixture(e.target.value)); }}>
-      {['overview-compact', 'overview-synthetic', 'overview-wide', 'overview-fanout', 'overview-training', 'interface-dense', 'interface-hybrid', 'interface-hybrid-many', 'interface-visual', 'interface-many', 'contract', 'summaries', 'empty-group', 'templates', 'templates-absent', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'components', 'components-large', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
+    <div><select aria-label="Fixture" value={name} onChange={(e) => { setName(e.target.value); setResponse(configuredFixture(e.target.value)); }}>
+      {['overview-compact', 'overview-synthetic', 'overview-wide', 'overview-fanout', 'overview-training', 'interface-dense', 'interface-hybrid', 'interface-hybrid-many', 'interface-visual', 'interface-many', 'contract', 'summaries', 'empty-group', 'templates', 'templates-absent', 'browser-vjepa', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'components', 'components-large', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
     </select><button onClick={() => setShown(!shown)}>Toggle explorer</button><output style={{ display: 'block', height: 20, overflow: 'hidden' }}>{inspection}</output></div>
     <div contentEditable suppressContentEditableWarning aria-label="Untransformed prompt">Prompt remains outside graph camera</div>
     {shown && <ArchitectureCanvas key={name} graph={response.graph} modelId={response.model_id} sessionId="fixture-session"
