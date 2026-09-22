@@ -16,7 +16,7 @@ export function AppBar({ state, controller, model, backend }: {
   return <header className="app-bar">
     <span className="product-name" title="LLM Model Explorer">LLM Model Explorer</span>
     <nav className="explorer-nav" aria-label="Explorers">
-      {(['Tensor Explorer', 'Tokenizer Explorer', 'Architecture Explorer'] as const).map((name) =>
+      {(['Architecture Explorer', 'Tokenizer Explorer', 'Tensor Explorer'] as const).map((name) =>
         <button key={name} type="button" className="explorer-link" aria-label={name}
           aria-current={state.explorer === name ? 'page' : undefined}
           onClick={() => controller.switchExplorer(name)}>

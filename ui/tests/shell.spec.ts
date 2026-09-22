@@ -12,8 +12,14 @@ async function assetHashes() {
   ]));
 }
 async function mockConfig(page: Page, body = '{"backend_base_url":"https://backend.example/"}', status = 200) {
-  await page.route('**/models', (route) => route.fulfill({ json: { models: [] } }));
+  const requests: string[] = [];
+  await page.route('https://backend.example/**', (route) => {
+    const path = new URL(route.request().url()).pathname;
+    requests.push(path);
+    return path === '/models' ? route.fulfill({ json: { models: [] } }) : route.fulfill({ status: 404 });
+  });
   await page.route('**/runtime-config.json', (route) => route.fulfill({ status, contentType: 'application/json', body }));
+  return requests;
 }
 
 // Both browser viewports verify runtime deployment values against the same production assets.
@@ -43,26 +49,50 @@ test('one production build accepts two deployed backend URLs', async ({ page }, 
   await testInfo.attach('neutral shell', { path: testInfo.outputPath('neutral-shell.png'), contentType: 'image/png' });
 });
 
-test('keyboard navigation has visible focus and switches explorer slots', async ({ page }) => {
-  await mockConfig(page);
+test('explorer navigation order, keyboard traversal and selection survive shell updates', async ({ page }, testInfo) => {
+  const requests = await mockConfig(page);
   await page.goto('/');
-  await expect(page.getByRole('navigation')).toBeVisible();
+  const navigation = page.getByRole('navigation', { name: 'Explorers' });
+  await expect(navigation).toBeVisible();
+  expect(await navigation.getByRole('button').evaluateAll((buttons) =>
+    buttons.map((button) => button.getAttribute('aria-label')))).toEqual([
+    'Architecture Explorer', 'Tokenizer Explorer', 'Tensor Explorer',
+  ]);
+  const architecture = page.getByRole('button', { name: 'Architecture Explorer', exact: true });
+  const tokenizer = page.getByRole('button', { name: 'Tokenizer Explorer', exact: true });
+  const tensor = page.getByRole('button', { name: 'Tensor Explorer', exact: true });
+  await expect(tensor).toHaveAttribute('aria-current', 'page');
+  await expect(architecture).not.toHaveAttribute('aria-current');
   await page.keyboard.press('Tab');
   const skip = page.getByRole('link', { name: 'Skip to workspace' });
   await expect(skip).toBeFocused();
   await expect(skip).toBeInViewport();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Tensor Explorer', exact: true })).toBeFocused();
-  await page.keyboard.press('Tab');
-  const tokenizer = page.getByRole('button', { name: 'Tokenizer Explorer', exact: true });
-  await expect(tokenizer).toBeFocused();
-  expect(await tokenizer.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
+  await expect(architecture).toBeFocused();
+  expect(await architecture.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('button', { name: 'Tokenizer Explorer', exact: true })).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByText('Open a model session to use this explorer.')).toBeVisible();
+  await expect(architecture).toHaveAttribute('aria-current', 'page');
+  await page.keyboard.press('Tab');
+  await expect(tokenizer).toBeFocused();
+  await page.keyboard.press('Enter');
   await expect(tokenizer).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByText('Open a model session to use this explorer.')).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(tensor).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(tensor).toHaveAttribute('aria-current', 'page');
+  await architecture.click();
+  await page.getByRole('button', { name: 'Refresh models', exact: true }).click();
+  await expect(page.getByText('No models available on this backend.')).toBeVisible();
+  await expect(architecture).toHaveAttribute('aria-current', 'page');
+  expect(requests).toEqual(['/models', '/models']);
+  expect(await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight])).toEqual([
+    testInfo.project.use.viewport!.width, testInfo.project.use.viewport!.height,
+  ]);
+  await page.screenshot({ path: testInfo.outputPath('explorer-navigation.png') });
   await page.reload();
-  await expect(page.getByRole('navigation')).toBeVisible();
+  await expect(navigation).toBeVisible();
+  await expect(tensor).toHaveAttribute('aria-current', 'page');
   await page.keyboard.press('Tab');
   await page.keyboard.press('Enter');
   await expect(page.getByRole('main')).toBeFocused();
