@@ -1,5 +1,6 @@
 import { memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
+import type { ReactNode } from 'react';
 import type { Node, NodeProps } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './architecture.css';
@@ -33,7 +34,7 @@ import { backFromComponent, enterComponent, expandComponent, projectionOptions, 
 import { bindTemplateLayout, bindTemplatePortSelection, commonNode, enterSharedStructure, remapNode, templateGraph } from './shared-structure';
 import type { ConnectionEdge } from './Connection';
 import type { EmphasisTarget } from './connection-context';
-import { interfaceIndex, interfaceNotices } from './interfaces';
+import { interfaceIndex } from './interfaces';
 import type { BoundarySelection } from './interfaces';
 import { initialViewport, overviewExpansion, visibleBounds } from './overview';
 
@@ -45,6 +46,7 @@ export interface ArchitectureSelection {
   templateInstanceId?: string;
 }
 interface CanvasProps {
+  notices?: ReactNode;
   graph: Graph; modelId: string; sessionId: string; view: GraphView;
   onInspect?: ((selection: ArchitectureSelection) => void) | undefined;
   onDismissInspection?: (() => void) | undefined;
@@ -119,7 +121,7 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
 const nodeTypes = { architecture: OperationNode }, edgeTypes = { connection: Connection };
 
 export function ArchitectureCanvas(props: CanvasProps) { return <ReactFlowProvider><Canvas {...props} /></ReactFlowProvider>; }
-function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspection }: CanvasProps) {
+function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspection, notices }: CanvasProps) {
   const flow = useReactFlow<CanvasNode>();
   const options = useGraphView(view);
   const { selected, selectionMode, focus: focusId, edge: pinned, activeStack, shared } = view;
@@ -145,7 +147,6 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     try { return { ...layoutResult, layout: bindTemplateLayout(layoutResult.layout, graph, template, anchorInstance, concreteInstance) }; }
     catch (error) { return { ...layoutResult, layout: undefined, error: error instanceof Error ? error.message : 'Shared structure is unavailable.' }; }
   }, [layoutResult, layoutInput, graph, template, anchorInstance, concreteInstance, sharedActive]);
-  const notices = useMemo(() => layoutInput.graph ? interfaceNotices(layoutInput.graph) : [], [layoutInput]);
   const [retry, setRetry] = useState(0), [zoom, setZoom] = useState(view.viewport?.zoom ?? 1);
   const [panelWidth, setPanelWidth] = useState(1178);
   const panel = useRef<HTMLDivElement>(null), picker = useRef<HTMLButtonElement>(null), browserSearch = useRef<HTMLInputElement>(null);
@@ -662,13 +663,11 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   } : undefined;
   return <ArchitectureWorkspace browser={<ArchitectureBrowser graph={graph} view={view} searchRef={browserSearch}
     select={selectSource} selectBoundary={selectBoundary} selectFamily={selectFamily} toggle={toggleBrowser} exploreStack={exploreStack} />}>
-    <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
+    <div ref={panel} tabIndex={-1} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
     data-template-id={shared?.templateId ?? ''} data-template-instance-id={shared?.instanceId ?? ''}
     data-scope-id={concreteInstance?.node_id ?? options.scope ?? ''} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
     data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options || !result.error && !cameraState.ready}
     data-source-node-ids={JSON.stringify(sourceNodeIds)} data-represented-edge-ids={JSON.stringify(result.layout?.edgeIds ?? [])}>
-    {notice && <p role="status">{notice}</p>}
-    {!!notices.length && <p role="status">{notices.join(' ')}</p>}
     <ArchitectureControls shared={shared && template ? { template, instanceId: shared.instanceId, choose: chooseSharedInstance } : undefined}
       family={selectedFamily ? { label: selectedFamily.label, explore: exploreFamily, clear: clearFamily } : undefined}
       returnContext={!scope && view.history.length ? back : undefined} graph={graph} focus={focusId} stack={stack} options={options} picker={picker}
@@ -683,6 +682,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       stateFocus={!scope && instance ? stateFocus : undefined} toggleSelected={selectedCard && cardExpandable(selectedCard) ? toggleSelected : undefined}
       preferences={preferences} zoomIn={zoomIn} zoomOut={zoomOut}
       filtered={!options.exhaustive && !options.showUnused && !!result.layout?.projection.filteredEdgeIds.length} />
+    {notices}
+    {notice && <p role="status">{notice}</p>}
     {result.error && <div role="alert">{result.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button>{shared && <button onClick={back}>Return to ordinary view</button>}</div>}
     {cameraState.error && <div role="alert">{cameraState.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button></div>}
     <div className="architecture-flow" ref={flowContainer}>

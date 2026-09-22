@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { ModelDiagnosticInformation } from './ModelDiagnostics';
 import { Button } from '../components/Button';
 import type { ModelSummary, SessionController, ShellState } from './session-controller';
 
@@ -49,6 +50,7 @@ export function AppBar({ state, controller, model, backend }: {
         {state.session && <Button disabled={state.sessionStatus === 'closing'} onClick={() => {
           controller.closeSession(); setExpanded(false); trigger.current?.focus();
         }}>Close session</Button>}
+        <h2>Model information</h2>
         <dl className="model-metadata metadata">
           <dt>Backend</dt><dd data-testid="backend-url">{backend}</dd>
           <dt>Session</dt><dd>{state.session?.id ?? 'Inactive'}</dd>
@@ -59,6 +61,7 @@ export function AppBar({ state, controller, model, backend }: {
           {model?.parameter_count !== undefined && <><dt>Parameters</dt><dd>{model.parameter_count.toLocaleString()}</dd></>}
           {model?.size_bytes !== undefined && <><dt>Size (bytes)</dt><dd>{model.size_bytes.toLocaleString()}</dd></>}
         </dl>
+        {expanded && state.session && <ModelDiagnosticInformation store={controller.diagnostics} />}
       </section>
     </div>
   </header>;

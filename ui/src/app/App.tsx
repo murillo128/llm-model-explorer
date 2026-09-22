@@ -76,7 +76,7 @@ function BackendApp({ config, slots }: Required<AppProps>) {
             {context ? <ExplorerContext.Provider key={state.viewRevision} value={context}>
               {Slot ? <Slot {...context} /> : state.explorer === 'Tokenizer Explorer' ?
                 <Suspense fallback={<p role="status">Loading prompt editor…</p>}><TokenizerExplorer {...context} tokenizerAvailable={model?.tokenizer_available ?? true} /></Suspense> :
-                <Suspense fallback={<p role="status">Loading architecture canvas…</p>}><ArchitectureExplorer {...context} views={graphViews} tokenizerAvailable={model?.tokenizer_available ?? false} onInspect={slots.inspectArchitecture} /></Suspense>}
+                <Suspense fallback={<p role="status">Loading architecture canvas…</p>}><ArchitectureExplorer {...context} views={graphViews} diagnostics={controller.diagnostics} tokenizerAvailable={model?.tokenizer_available ?? false} onInspect={slots.inspectArchitecture} /></Suspense>}
               {state.viewStatus !== 'idle' && <p role="status" data-state={state.viewStatus}>{state.viewStatus === 'failed' ? 'Operation failed.' : `Operation ${state.viewStatus}.`}</p>}
             </ExplorerContext.Provider> : !tensor || state.explorer !== 'Tensor Explorer' ?
               <p>{state.session ? 'Select a tensor to inspect.' : 'Open a model session to use this explorer.'}</p> : null}
