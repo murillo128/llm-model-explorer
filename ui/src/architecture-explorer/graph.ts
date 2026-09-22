@@ -35,7 +35,9 @@ export class GraphView {
     return this.projection!;
   }
   // Navigation presentation only; lifetime follows this backend/model/graph view.
-  browser = { query: '', treeScroll: 0, searchScroll: 0, families: [] as string[], selectedFamily: null as string | null };
+  browser = { query: '', treeScroll: 0, searchScroll: 0, families: [] as string[], selectedFamily: null as string | null,
+    sections: { model: true, repetitions: true, shared: true },
+    sectionsBeforeSearch: null as { model: boolean; repetitions: boolean; shared: boolean } | null };
   shared: SharedStructure | undefined;
   notice: string | undefined;
   scope: string | undefined;

@@ -76,11 +76,19 @@ sort away source order, or create a second semantic graph. Components with
 children use folder/component icons, terminal components use block icons, and
 Shared families use overlapping blocks (repeated structure, not weight tying).
 
-The browser header contains a collapse arrow, followed by local search, a
-**Model** hierarchy and a **Shared** family list. Disclosure and selectable names
-are separate controls. Indentation is capped at four levels; full public names,
-paths, exact IDs and concrete instance context remain available on hover/focus.
-The browser owns its vertical scrolling; its header and search stay reachable.
+The browser header contains a collapse arrow, followed by local search and three
+consistently presented, independently collapsible sections: **Model** hierarchy,
+**Repetition windows**, and **Shared** family list. Section disclosure is only
+browser presentation state and never selects, expands, fits, scopes or navigates
+the graph. The presentation-only Model boundary remains separately selectable
+when available; Repetition windows and Shared section labels are not graph nodes.
+Disclosure and selectable names are separate controls. Section and tree state
+remain in the current model/graph view lifetime. Search temporarily exposes its
+Model and Shared results, and clearing it restores the preceding ordinary section
+presentation. Collapsing a section that contains keyboard focus returns focus to
+its disclosure. Indentation is capped at four levels; full public names, paths,
+exact IDs and concrete instance context remain available on hover/focus. The
+browser owns its vertical scrolling; its header and search stay reachable.
 
 Use the Tensor inventory's pane conventions without changing that explorer:
 280 CSS-pixel preferred width, bounded to 200–480 and available width minus the
@@ -106,6 +114,14 @@ retains hidden descendants' expansion and selection; unrelated siblings remain
 unchanged. No toggle implicitly Fits view. Only explicit **Center** reveals a
 hidden selection by opening required ancestors and its exact repetition window,
 without opening its own children or every sibling.
+
+All navigable browser rows share one disclosure gutter, icon box, minimum height,
+padding, text alignment and hover/focus/selection treatment. Leaves reserve the
+gutter without presenting a false disclosure. Repetition rows use a stack icon
+and retain an explicitly named **Explore stack** action. Repetition and Shared
+rows place their actual instance counts in the same muted secondary metadata
+slot beneath the primary name. Empty repetition/template collections retain their
+section and show an honest empty state.
 
 Search filters eligible components from the full received graph by real label, public containment/module
 path, exact identity and supported description source key. It includes collapsed
