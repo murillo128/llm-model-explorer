@@ -180,6 +180,8 @@ test('captures final browser, minimal header, shared instances and nested isolat
 
  test('clearing search restores tree scroll and retains explicit filtered expansion', async ({ page }) => {
   await page.goto(`${harness}?fixture=components-large`); await ready(page);
+  // Scroll a deliberately opened tree; fresh initialization keeps this child closed.
+  await row(page, 'model').locator('.architecture-browser-disclosure').click(); await ready(page);
   const scroller = page.locator('.architecture-browser-scroll');
   await scroller.evaluate((node) => { node.scrollTop = 190; });
   await expect.poll(() => scroller.evaluate((node) => node.scrollTop)).toBe(190);
@@ -192,6 +194,9 @@ test('captures final browser, minimal header, shared instances and nested isolat
 
 test('family selection clears a prior connection inspector without changing graph detail or camera', async ({ page }) => {
   await page.goto(`${harness}?fixture=templates`); await ready(page);
+  // A narrow fresh view can be a single collapsed Model with no visible edges.
+  await row(page, 'model').locator('.architecture-browser-disclosure').click(); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
   const edge = page.locator('.architecture-connection').first();
   await edge.focus(); await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog', { name: 'Connection inspection', exact: true })).toBeVisible();

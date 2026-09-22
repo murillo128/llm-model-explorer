@@ -5,10 +5,12 @@ import { makeProjectionFixture } from '../../tests/architecture-projection-fixtu
 import { makeExplicitFixture } from '../../tests/architecture-explicit-fixture';
 import { summaryFixture } from '../../tests/architecture-summary-fixture';
 import { interfaceFixture } from '../../tests/architecture-interface-fixture';
+import { overviewFixture } from '../../tests/architecture-overview-fixture';
 import { groupHeaderHeight, layerGap } from './auto-layout';
 import { deriveMlpGroups } from './derived-groups';
 import type { Box, Graph, Layout, Point } from './graph';
 import { endpointKey, projectGraph, type ProjectionOptions } from './projection';
+import { cardMetrics, cardSummary } from './card-summary';
 
 const tolerance = 0.01;
 const equals = (a: Point, b: Point) => Math.abs(a.x - b.x) < tolerance && Math.abs(a.y - b.y) < tolerance;
@@ -472,3 +474,16 @@ describe('generated horizontal graph geometry', () => {
     geometry(layout);
   });
 });
+
+it.each([interfaceFixture('dense', true), interfaceFixture('visual'), overviewFixture('training')])(
+  'places visible children below their actual header without reserving a second interface band: $graph_id', async (graph) => {
+    const layout = await layoutGraph(graph, { expanded: graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id), showUnused: true });
+    geometry(layout); distinguishSignals(layout);
+    for (const node of layout.projection.nodes.filter((n) => n.expanded)) {
+      const children = layout.boxes.filter((b) => b.parentId === node.id);
+      const header = cardMetrics(node, cardSummary(node.record, new Map()), false).headerHeight;
+      const top = Math.min(...children.map((b) => b.y));
+      expect(top).toBeGreaterThanOrEqual(header + 16);
+      expect(top, `${node.id} has no route requiring a large empty top band`).toBeLessThanOrEqual(header + 40);
+    }
+  });

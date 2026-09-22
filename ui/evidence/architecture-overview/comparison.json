@@ -1,0 +1,372 @@
+[
+  {
+    "phase": "before",
+    "project": "desktop",
+    "fixture": "interface-visual",
+    "viewport": [
+      1142,
+      771
+    ],
+    "transform": "matrix(1, 0, 0, 1, 166, 56.5)",
+    "invocations": 1,
+    "bounds": [
+      810,
+      658
+    ],
+    "boxes": [
+      {
+        "id": "presentation:model",
+        "x": 24,
+        "y": 24,
+        "absoluteX": 24,
+        "absoluteY": 24,
+        "width": 762,
+        "height": 610
+      },
+      {
+        "id": "encoder",
+        "parentId": "presentation:model",
+        "x": 110,
+        "y": 180,
+        "absoluteX": 134,
+        "absoluteY": 204,
+        "width": 314,
+        "height": 406
+      },
+      {
+        "id": "patch preparation",
+        "parentId": "encoder",
+        "x": 110,
+        "y": 242,
+        "absoluteX": 244,
+        "absoluteY": 446,
+        "width": 180,
+        "height": 140
+      },
+      {
+        "id": "predictor",
+        "parentId": "presentation:model",
+        "x": 472,
+        "y": 422,
+        "absoluteX": 496,
+        "absoluteY": 446,
+        "width": 180,
+        "height": 92
+      }
+    ],
+    "expanded": [
+      "presentation:model",
+      "encoder"
+    ]
+  },
+  {
+    "phase": "before",
+    "project": "desktop",
+    "fixture": "interface-many",
+    "viewport": [
+      1142,
+      771
+    ],
+    "transform": "matrix(0.65, 0, 0, 0.65, 351.3, -206.65)",
+    "invocations": 1,
+    "bounds": [
+      676,
+      1822
+    ],
+    "boxes": [
+      {
+        "id": "model",
+        "x": 24,
+        "y": 24,
+        "absoluteX": 24,
+        "absoluteY": 24,
+        "width": 628,
+        "height": 1774
+      },
+      {
+        "id": "Embedding",
+        "parentId": "model",
+        "x": 172,
+        "y": 1154,
+        "absoluteX": 196,
+        "absoluteY": 1178,
+        "width": 180,
+        "height": 596
+      },
+      {
+        "id": "LM head",
+        "parentId": "model",
+        "x": 392,
+        "y": 1154,
+        "absoluteX": 416,
+        "absoluteY": 1178,
+        "width": 180,
+        "height": 92
+      }
+    ],
+    "expanded": [
+      "model"
+    ]
+  },
+  {
+    "phase": "before",
+    "project": "narrow",
+    "fixture": "interface-visual",
+    "viewport": [
+      388,
+      494
+    ],
+    "transform": "matrix(0.65, 0, 0, 0.65, -69.25, 33.15)",
+    "invocations": 1,
+    "bounds": [
+      810,
+      658
+    ],
+    "boxes": [
+      {
+        "id": "presentation:model",
+        "x": 24,
+        "y": 24,
+        "absoluteX": 24,
+        "absoluteY": 24,
+        "width": 762,
+        "height": 610
+      },
+      {
+        "id": "encoder",
+        "parentId": "presentation:model",
+        "x": 110,
+        "y": 180,
+        "absoluteX": 134,
+        "absoluteY": 204,
+        "width": 314,
+        "height": 406
+      },
+      {
+        "id": "patch preparation",
+        "parentId": "encoder",
+        "x": 110,
+        "y": 242,
+        "absoluteX": 244,
+        "absoluteY": 446,
+        "width": 180,
+        "height": 140
+      },
+      {
+        "id": "predictor",
+        "parentId": "presentation:model",
+        "x": 472,
+        "y": 422,
+        "absoluteX": 496,
+        "absoluteY": 446,
+        "width": 180,
+        "height": 92
+      }
+    ],
+    "expanded": [
+      "presentation:model",
+      "encoder"
+    ]
+  },
+  {
+    "phase": "before",
+    "project": "narrow",
+    "fixture": "interface-many",
+    "viewport": [
+      388,
+      494
+    ],
+    "transform": "matrix(0.65, 0, 0, 0.65, -25.7, -345.15)",
+    "invocations": 1,
+    "bounds": [
+      676,
+      1822
+    ],
+    "boxes": [
+      {
+        "id": "model",
+        "x": 24,
+        "y": 24,
+        "absoluteX": 24,
+        "absoluteY": 24,
+        "width": 628,
+        "height": 1774
+      },
+      {
+        "id": "Embedding",
+        "parentId": "model",
+        "x": 172,
+        "y": 1154,
+        "absoluteX": 196,
+        "absoluteY": 1178,
+        "width": 180,
+        "height": 596
+      },
+      {
+        "id": "LM head",
+        "parentId": "model",
+        "x": 392,
+        "y": 1154,
+        "absoluteX": 416,
+        "absoluteY": 1178,
+        "width": 180,
+        "height": 92
+      }
+    ],
+    "expanded": [
+      "model"
+    ]
+  },
+  {
+    "phase": "after",
+    "project": "desktop",
+    "fixture": "interface-visual",
+    "viewport": [
+      1142,
+      771
+    ],
+    "transform": "matrix(1, 0, 0, 1, 237, -8)",
+    "invocations": 1,
+    "bounds": [
+      668,
+      330
+    ],
+    "boxes": [
+      {
+        "id": "presentation:model",
+        "x": 24,
+        "y": 24,
+        "absoluteX": 24,
+        "absoluteY": 24,
+        "width": 620,
+        "height": 282
+      },
+      {
+        "id": "encoder",
+        "parentId": "presentation:model",
+        "x": 110,
+        "y": 118,
+        "absoluteX": 134,
+        "absoluteY": 142,
+        "width": 180,
+        "height": 140
+      },
+      {
+        "id": "predictor",
+        "parentId": "presentation:model",
+        "x": 330,
+        "y": 118,
+        "absoluteX": 354,
+        "absoluteY": 142,
+        "width": 180,
+        "height": 92
+      }
+    ],
+    "expanded": [
+      "presentation:model"
+    ]
+  },
+  {
+    "phase": "after",
+    "project": "desktop",
+    "fixture": "interface-many",
+    "viewport": [
+      1142,
+      771
+    ],
+    "transform": "matrix(1, 0, 0, 1, 233, -8)",
+    "invocations": 1,
+    "bounds": [
+      676,
+      758
+    ],
+    "boxes": [
+      {
+        "id": "model",
+        "x": 24,
+        "y": 24,
+        "absoluteX": 24,
+        "absoluteY": 24,
+        "width": 628,
+        "height": 710
+      },
+      {
+        "id": "Embedding",
+        "parentId": "model",
+        "x": 172,
+        "y": 90,
+        "absoluteX": 196,
+        "absoluteY": 114,
+        "width": 180,
+        "height": 596
+      },
+      {
+        "id": "LM head",
+        "parentId": "model",
+        "x": 392,
+        "y": 90,
+        "absoluteX": 416,
+        "absoluteY": 114,
+        "width": 180,
+        "height": 92
+      }
+    ],
+    "expanded": [
+      "model"
+    ]
+  },
+  {
+    "phase": "after",
+    "project": "narrow",
+    "fixture": "interface-visual",
+    "viewport": [
+      388,
+      494
+    ],
+    "transform": "matrix(1, 0, 0, 1, 56, -8)",
+    "invocations": 2,
+    "bounds": [
+      276,
+      212
+    ],
+    "boxes": [
+      {
+        "id": "presentation:model",
+        "x": 24,
+        "y": 24,
+        "absoluteX": 24,
+        "absoluteY": 24,
+        "width": 228,
+        "height": 164
+      }
+    ],
+    "expanded": []
+  },
+  {
+    "phase": "after",
+    "project": "narrow",
+    "fixture": "interface-many",
+    "viewport": [
+      388,
+      494
+    ],
+    "transform": "matrix(0.8, 0, 0, 0.8, 102.8, -3.2)",
+    "invocations": 2,
+    "bounds": [
+      228,
+      644
+    ],
+    "boxes": [
+      {
+        "id": "model",
+        "x": 24,
+        "y": 24,
+        "absoluteX": 24,
+        "absoluteY": 24,
+        "width": 180,
+        "height": 596
+      }
+    ],
+    "expanded": []
+  }
+]

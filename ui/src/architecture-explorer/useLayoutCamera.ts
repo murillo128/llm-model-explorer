@@ -8,17 +8,21 @@ import { useCanvasCallback } from './useCanvasCallback';
 /** Commit a layout's camera only after the renderer has consumed its DOM geometry. */
 export function useLayoutCamera<N extends Node>(layout: Layout | undefined, generation: object, current: boolean,
   nodes: N[], container: RefObject<HTMLDivElement | null>, flow: ReactFlowInstance<N>,
-  apply: (fit: (options: FitViewOptions<N>) => Promise<boolean>) => Promise<unknown>, complete: () => void) {
+  apply: (fit: (options: FitViewOptions<N>) => Promise<boolean>, size: { width: number; height: number }) => Promise<unknown>, complete: () => void) {
   const store = useStoreApi<N>();
   const [settled, setSettled] = useState<{ layout: Layout; error?: string }>();
   const cancelled = useRef<object | undefined>(undefined);
-  const run = useCanvasCallback((fit: (options: FitViewOptions<N>) => Promise<boolean>, finish: (error?: string) => void) => {
-    void apply(fit).then(() => finish(), () => finish('Camera initialization failed. Retry or return to the previous view.'));
+  const work = useRef<{ layout: Layout; generation: object; deadline: number; promise?: Promise<string | undefined> }>(undefined);
+  const run = useCanvasCallback((fit: (options: FitViewOptions<N>) => Promise<boolean>, size: { width: number; height: number }, finish: (error?: string) => void) => {
+    void apply(fit, size).then(() => finish(), () => finish('Camera initialization failed. Retry or return to the previous view.'));
   });
   const done = useCanvasCallback(complete);
   const cancel = useCanvasCallback(() => { cancelled.current = generation; });
   useLayoutEffect(() => {
     if (!layout || !current || settled?.layout === layout) return;
+    if (work.current?.layout !== layout || work.current.generation !== generation)
+      work.current = { layout, generation, deadline: performance.now() + 10_000 };
+    const job = work.current;
     let active = true, frame = 0;
     const finish = (error?: string) => {
       if (!active) return;
@@ -27,7 +31,7 @@ export function useLayoutCamera<N extends Node>(layout: Layout | undefined, gene
     const timeout = setTimeout(() => {
       cancelAnimationFrame(frame);
       finish('Camera initialization could not use the current viewport. Retry or return to the previous view.');
-    }, 10_000);
+    }, Math.max(0, job.deadline - performance.now()));
     const attempt = () => {
       if (!active) return;
       if (cancelled.current === generation) { finish(); return; }
@@ -53,7 +57,11 @@ export function useLayoutCamera<N extends Node>(layout: Layout | undefined, gene
         return flow.setViewport(getViewportForBounds(flow.getNodesBounds(targets), state.width, state.height,
           options.minZoom ?? state.minZoom, options.maxZoom ?? state.maxZoom, options.padding ?? 0.1));
       };
-      run(fit, finish);
+      // Selection can replace React Flow node objects while completion is still
+      // pending. Rejoin this generation's action instead of fitting twice or
+      // extending its deadline. Obsolete effects can never commit completion.
+      job.promise ??= new Promise((resolve) => run(fit, { width: state.width, height: state.height }, resolve));
+      void job.promise.then(finish);
     };
     frame = requestAnimationFrame(attempt);
     return () => { active = false; clearTimeout(timeout); cancelAnimationFrame(frame); };

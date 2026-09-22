@@ -1,5 +1,5 @@
 import type { Graph } from './graph';
-import { interfaceIndex } from './interfaces';
+import { interfaceIndex, interfaceNotices } from './interfaces';
 import type { ModelInterface } from './interfaces';
 import type { Endpoint, ProjectedEdge, ProjectedNode, ProjectedPort, Projection, ProjectionOptions } from './projection';
 
@@ -142,5 +142,5 @@ export function projectInterfaces(graph: Graph, base: Projection, options: Proje
   const filtered = base.filteredEdgeIds.filter((id) => !represented.has(id));
   const hidden = graph.edges.filter((e) => !represented.has(e.id) && !filtered.includes(e.id)).map((e) => e.id);
   return { ...base, nodes: shownNodes, edges: shownEdges, hiddenEdgeIds: hidden, filteredEdgeIds: filtered,
-    boundaryPaths: absorbed, notices: [...index.notices].map(([id, message]) => `${records.get(id)!.label}: ${message}`) };
+    boundaryPaths: absorbed, notices: interfaceNotices(graph) };
 }

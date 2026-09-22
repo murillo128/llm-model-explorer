@@ -13,7 +13,7 @@ const toggle = (view: GraphView, id: string) => toggleComponent(view, graph, nod
 
 it('shares selection and expansion immediately between two consumers, with stable selection-only layout inputs', () => {
   const view = new GraphViews().get('model', graph);
-  view.update({ repetitions: { 'decoder-layers': { start: 0, count: 2 } } });
+  view.update({ expanded: ['model'], repetitions: { 'decoder-layers': { start: 0, count: 2 } } });
   function Consumer({ name }: { name: string }) {
     const options = useGraphView(view);
     const layer = projectGraph(graph, options).nodes.find((n) => n.id === 'layer-0')!;
@@ -38,7 +38,7 @@ it('shares selection and expansion immediately between two consumers, with stabl
 
 it('retains nested, derived, sibling and hidden source selection state through contraction and Back', () => {
   const original = JSON.stringify(graph), views = new GraphViews(), view = views.get('model', graph);
-  view.update({ repetitions: { 'decoder-layers': { start: 0, count: 2 } } });
+  view.update({ expanded: ['model'], repetitions: { 'decoder-layers': { start: 0, count: 2 } } });
   for (const id of ['layer-0', 'layer-0.attention', 'mlp:layer-0.gate', 'layer-1']) toggle(view, id);
   selectComponent(view, 'layer-0.attention.Q');
   const expanded = [...view.expanded];
@@ -58,7 +58,7 @@ it('retains nested, derived, sibling and hidden source selection state through c
   expect(JSON.stringify(graph)).toBe(original);
   expect(views.get('other-model', graph).selected).toBeNull();
   const replacement = views.get('model', { ...graph, graph_id: 'replacement' });
-  expect(replacement.selected).toBeNull(); expect(replacement.expanded).toEqual(['model']);
+  expect(replacement.selected).toBeNull(); expect(replacement.expanded).toEqual([]);
 });
 
 it('reveals a range window without choosing a source instance or erasing expanded siblings', () => {
@@ -75,7 +75,7 @@ it('reveals a range window without choosing a source instance or erasing expande
 
 it('toggles current authoritative state even before a consumer receives a replacement projection', () => {
   const view = new GraphViews().get('model', graph);
-  view.update({ repetitions: { 'decoder-layers': { start: 0, count: 2 } } });
+  view.update({ expanded: ['model'], repetitions: { 'decoder-layers': { start: 0, count: 2 } } });
   const collapsed = node(view, 'layer-0');
   toggleComponent(view, graph, collapsed, 2);
   expect(view.expanded).toContain('layer-0');
