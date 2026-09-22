@@ -232,6 +232,8 @@ def invalid_definition(name: str) -> bytes:
         return b"{"
     if name == "duplicate_json_key":
         return b'{"nodes":1,"nodes":2}'
+    if name == "non_finite_constant":
+        return b'{"value":NaN}'
     if name == "unsupported_schema_version":
         value["schema_version"] = 2
     elif name == "missing_operation":
@@ -240,6 +242,10 @@ def invalid_definition(name: str) -> bytes:
         value["nodes"][3]["unexpected"] = "untrusted"
     elif name == "duplicate_ids":
         value["nodes"].append(copy.deepcopy(value["nodes"][0]))
+    elif name == "duplicate_port_ids":
+        value["nodes"][3]["ports"].append(copy.deepcopy(value["nodes"][3]["ports"][0]))
+    elif name == "duplicate_child":
+        value["nodes"][1]["children"].append("projection")
     elif name == "broken_containment":
         value["nodes"][1]["children"].remove("projection")
     elif name == "cycle":
@@ -253,6 +259,17 @@ def invalid_definition(name: str) -> bytes:
         value["edges"][0]["target"]["node_id"] = "projection"
     elif name == "dimension_mismatch":
         value["nodes"][3]["ports"][0]["shape"][1]["value"] = 5
+    elif name == "unsafe_dimension_product":
+        value["nodes"][0]["ports"][0]["shape"] = [
+            {"kind": "constant", "value": 2**53 - 1},
+            {"kind": "constant", "value": 2},
+        ]
+    elif name == "tokenizer_capability":
+        value["nodes"][3]["references"] = [{"kind": "tokenizer"}]
+    elif name == "unknown_shape_symbol":
+        value["nodes"][0]["ports"][0]["shape"][0]["name"] = "missing"
+    elif name == "unknown_parameter_reference":
+        value["nodes"][2]["parameter_ids"].append("absent")
     elif name == "repetition_membership":
         value["repetitions"] = [
             {
@@ -262,7 +279,7 @@ def invalid_definition(name: str) -> bytes:
                 "instances": [{"node_id": "projection", "index": 0, "variant": "default"}],
             }
         ]
-    elif name in {"repetition_order", "template_mapping"}:
+    elif name in {"repetition_order", "duplicate_repetition_instance", "template_mapping"}:
         value["nodes"] += [
             {
                 "id": key,
@@ -275,15 +292,23 @@ def invalid_definition(name: str) -> bytes:
             for key in ("a", "b")
         ]
         value["nodes"][1]["children"] += ["a", "b"]
-        if name == "repetition_order":
+        if name in {"repetition_order", "duplicate_repetition_instance"}:
             value["repetitions"] = [
                 {
                     "id": "layers",
                     "parent_id": "encoder",
                     "label": "Layers",
                     "instances": [
-                        {"node_id": "a", "index": 1, "variant": "default"},
-                        {"node_id": "b", "index": 0, "variant": "default"},
+                        {
+                            "node_id": "a",
+                            "index": 1 if name == "repetition_order" else 0,
+                            "variant": "default",
+                        },
+                        {
+                            "node_id": "b" if name == "repetition_order" else "a",
+                            "index": 0 if name == "repetition_order" else 1,
+                            "variant": "default",
+                        },
                     ],
                 }
             ]

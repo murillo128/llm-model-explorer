@@ -22,6 +22,7 @@ from .validation import (
     GraphError,
     constants,
     preflight,
+    product,
     require,
 )
 from .validation import (
@@ -205,6 +206,18 @@ def _graph_location(message: str, definition: ModelDefinition) -> str:
                 if record.id in seen:
                     return f"#/{collection}/{index}/id"
                 seen.add(record.id)
+        for node_index, node in enumerate(definition.nodes):
+            seen = set()
+            for port_index, port in enumerate(node.ports):
+                if port.id in seen:
+                    return f"#/nodes/{node_index}/ports/{port_index}/id"
+                seen.add(port.id)
+        for repetition_index, repetition in enumerate(definition.repetitions):
+            seen = set()
+            for instance_index, instance in enumerate(repetition.instances):
+                if instance.node_id in seen:
+                    return f"#/repetitions/{repetition_index}/instances/{instance_index}/node_id"
+                seen.add(instance.node_id)
     if message == "Duplicate shape symbol.":
         seen = set()
         for index, symbol in enumerate(definition.symbols):
@@ -257,6 +270,31 @@ def _graph_location(message: str, definition: ModelDefinition) -> str:
                 for ref in node.references
             ):
                 return f"#/nodes/{index}/references"
+    if message == "Tokenizer capability is unavailable.":
+        for node_index, node in enumerate(definition.nodes):
+            for reference_index, reference in enumerate(node.references):
+                if isinstance(reference, r.ArchitectureTokenizerReference):
+                    return f"#/nodes/{node_index}/references/{reference_index}"
+    if message in {"Unsafe dimension.", "Unsafe dimension product."}:
+        for node_index, node in enumerate(definition.nodes):
+            for port_index, port in enumerate(node.ports):
+                shape = constants(port.shape)
+                if shape is None:
+                    continue
+                try:
+                    product(shape)
+                except GraphError as exc:
+                    if str(exc) == message:
+                        return f"#/nodes/{node_index}/ports/{port_index}/shape"
+        for parameter_index, parameter in enumerate(definition.parameters):
+            shape = constants(parameter.shape)
+            if shape is None:
+                continue
+            try:
+                product(shape)
+            except GraphError as exc:
+                if str(exc) == message:
+                    return f"#/parameters/{parameter_index}/shape"
     if message in {"Undeclared shape symbol.", "Undeclared expression symbol."}:
         declared = {symbol.name for symbol in definition.symbols}
         for index, node in enumerate(definition.nodes):
@@ -355,6 +393,9 @@ _GRAPH_CODES = {
     "Parent and child disagree.": "graph_containment_mismatch",
     "Cyclic record linkage.": "graph_containment_cycle",
     "Duplicate child.": "graph_duplicate_child",
+    "Tokenizer capability is unavailable.": "graph_tokenizer_unavailable",
+    "Unsafe dimension.": "graph_unsafe_dimension",
+    "Unsafe dimension product.": "graph_unsafe_dimension_product",
     "Unknown node parameter.": "graph_unknown_parameter",
     "Unknown parameter resource.": "graph_unknown_parameter",
     "Undeclared shape symbol.": "graph_unknown_symbol",
@@ -393,6 +434,11 @@ def diagnostic_for_model_error(
     )
     stage = "template" if code == "template_invalid" else "graph"
     location = _graph_location(message, definition) if definition is not None else ""
+    if message == "Duplicate record identity.":
+        if "/ports/" in location:
+            code = "graph_duplicate_port"
+        elif "/instances/" in location:
+            code = "graph_duplicate_repetition_instance"
     # Only static messages from our validator are exposed. Unknown errors stay generic.
     safe_message = (
         message
