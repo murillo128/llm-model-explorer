@@ -23,6 +23,7 @@ import { displayLabel, instanceOf } from './presentation';
 import { ArchitectureBrowser } from './ArchitectureBrowser';
 import { ArchitectureWorkspace } from './ArchitectureWorkspace';
 import { browserExpansionId } from './browser-model';
+import { CameraDock } from './CameraDock';
 import { ArchitectureControls } from './ArchitectureControls';
 import type { NavigationItem, ControlSelection } from './ArchitectureControls';
 import { Connection, ConnectionInspection } from './Connection';
@@ -671,16 +672,15 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     <ArchitectureControls shared={shared && template ? { template, instanceId: shared.instanceId, choose: chooseSharedInstance } : undefined}
       family={selectedFamily ? { label: selectedFamily.label, explore: exploreFamily, clear: clearFamily } : undefined}
       returnContext={!scope && view.history.length ? back : undefined} graph={graph} focus={focusId} stack={stack} options={options} picker={picker}
-      isolation={scope ? { back, viewInModel: shared && !concreteInstance ? undefined : viewScopeInModel, expand: expandCurrentComponent,
-        nodeIds: scope.members, excludedEdges: result.layout?.projection.scope?.excludedEdgeIds ?? [] } : undefined}
+      isolation={scope ? { back, viewInModel: shared && !concreteInstance ? undefined : viewScopeInModel, expand: expandCurrentComponent } : undefined}
       instanceId={instance?.instance.node_id ?? (stack ? stack.instances[options.repetitions?.[stack.id]?.start ?? 0]?.node_id : undefined)}
       visibleInstances={stack?.instances.filter((i) => projected.has(i.node_id)).map((i) => i.node_id) ?? []}
       breadcrumbs={shared && template ? [{ id: template.id, kind: 'node', label: template.label }] : breadcrumbs}
-      selection={controlSelection} reveal={reveal} navigate={navigate} overview={overview} fit={fit}
+      selection={controlSelection} navigate={navigate} overview={overview}
       chooseInstance={chooseInstance} exploreStack={exploreStack} windowSize={windowSize} expandAll={expandAll} collapseAll={collapseAll}
       focusLayer={!scope && instance ? focusLayer : undefined} focusMlp={!scope && instance && mlps.some((g) => g.parentId === instance.instance.node_id) ? focusMlp : undefined}
       stateFocus={!scope && instance ? stateFocus : undefined} toggleSelected={selectedCard && cardExpandable(selectedCard) ? toggleSelected : undefined}
-      preferences={preferences} zoomIn={zoomIn} zoomOut={zoomOut}
+      preferences={preferences} derivedMlpAvailable={mlps.some((group) => !records.has(group.id))}
       filtered={!options.exhaustive && !options.showUnused && !!result.layout?.projection.filteredEdgeIds.length} />
     {notices}
     {notice && <p role="status">{notice}</p>}
@@ -699,6 +699,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
           onNodesChange={(changes) => { for (const value of changes) if (value.type === 'select' && value.selected) { const node = projected.get(value.id); if (node) select(cardSelection(node)); } }}
           aria-label="Architecture canvas" />
       </ConnectionContext.Provider>
+      <CameraDock zoomIn={zoomIn} zoomOut={zoomOut} fit={fit} />
       {inspection && (activeInspectionEdge || activeInspectionNode) && <ConnectionInspection graph={graph} edge={activeInspectionEdge} node={activeInspectionNode}
         structure={shared && !concreteInstance && activeInspectionEdge ? { source: projected.get(activeInspectionEdge.source.node_id)?.label ?? '', target: projected.get(activeInspectionEdge.target.node_id)?.label ?? '' } : undefined}
         explore={activeInspectionNode?.presentation === 'mlp' && activeInspectionNode.id !== options.scope ? () => isolate(activeInspectionNode.id) : undefined}

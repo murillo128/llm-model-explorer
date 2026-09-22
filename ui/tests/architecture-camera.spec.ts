@@ -109,7 +109,7 @@ test('pending scope camera cannot replace Back, a newer model, or a user camera'
   await pending(page);
   await page.getByLabel('Fixture', { exact: true }).selectOption('templates-absent');
   await resizeWhilePending(page);
-  await graphAction(page, 'Zoom graph in');
+  await graphAction(page, 'Zoom in');
   const user = await sample(page);
   await releaseSizes(page); await ready(page);
   expect((await sample(page)).camera).toEqual(user.camera);

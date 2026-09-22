@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Graph, Layout } from '../src/architecture-explorer/graph';
 import type { ProjectionOptions } from '../src/architecture-explorer/projection';
 import { assertTraceability } from './architecture-invariants';
-import { chooseInstance, findComponent, graphAction, viewOptions } from './architecture-controls';
+import { chooseInstance, findComponent, graphAction, graphPreference, viewOptions } from './architecture-controls';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
 interface ControlProbe { requests: { graph: Graph; options: ProjectionOptions }[]; layouts: Layout[] }
@@ -76,11 +76,12 @@ test('search and overflow preserve the canvas, projection, generated routes, cam
   await search.press('Escape');
   await expect(page.getByRole('searchbox', { name: 'Search components', exact: true })).toBeFocused();
   const options = await viewOptions(page);
-  await expect(options.getByRole('button', { name: 'Show all operations' })).toBeFocused();
+  await expect(options.getByLabel('Show dimensions')).toBeFocused();
   await expect(options.getByLabel('Show dimensions')).not.toBeChecked();
-  for (const name of ['Collapse all', 'Center selection', 'Zoom graph in', 'Zoom graph out']) await expect(options.getByRole('button', { name, exact: true })).toBeVisible();
-  for (const name of ['Unused interfaces', 'Context', 'Group MLP']) await expect(options.getByLabel(name, { exact: true })).toBeVisible();
-  await options.locator('summary').click();
+  await expect(options.getByRole('button')).toHaveCount(0);
+  await expect(options.locator('details')).toHaveCount(0);
+  for (const name of ['Show unused interfaces', 'Show context']) await expect(options.getByLabel(name, { exact: true })).toBeVisible();
+  await expect(options.getByLabel('Group derived MLP blocks')).toHaveCount(0);
   expect(await snapshot(page)).toEqual(before);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'View options', exact: true })).toBeFocused();
@@ -240,7 +241,7 @@ for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack can
     return box !== undefined && box.width > 0 && box.height > 0 && box.x >= panel.x && box.y >= panel.y &&
       box.right <= panel.x + panel.width && box.bottom <= panel.y + panel.height;
   }, panel);
-  for (let i = 0; i < 16 && !await inView(); i++) { await graphAction(page, 'Zoom graph out'); await ready(page); }
+  for (let i = 0; i < 16 && !await inView(); i++) { await graphAction(page, 'Zoom out'); await ready(page); }
   expect(await inView()).toBe(true);
   const navigation = page.locator('[data-id="mlp:encoder.layer-3.gate"] .architecture-navigate');
   // The bounded narrow canvas can expose a distant stack at subpixel scale.
@@ -334,15 +335,73 @@ test('all operations and camera fit remain distinct; popovers stay in the panel 
 });
 
 
-test('partial graphs without repetition retain component navigation and on-demand diagnostics', async ({ page }) => {
+test('partial graphs without repetition retain coverage and component navigation', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('partial'); await ready(page);
   await expect(page.getByText('Partial coverage', { exact: true })).toBeVisible();
   await expect(page.getByRole('combobox', { name: /Expand instance of/ })).toHaveCount(0);
   await findComponent(page, 'unknown-component'); await ready(page);
   await expect(page.getByRole('navigation', { name: 'Architecture focus' })).toContainText('Unknown component');
   const before = await snapshot(page);
-  const options = await viewOptions(page); await options.locator('summary').click();
-  await expect(options).toContainText('Fixture intentionally includes an unresolved component.');
+  const options = await viewOptions(page);
+  await expect(options.getByText('Graph details')).toHaveCount(0);
   expect(await snapshot(page)).toEqual(before);
   await page.keyboard.press('Escape');
+});
+
+
+test('camera dock is unique, fixed while panning and zooming, and has keyboard tooltips', async ({ page }, info) => {
+  const dock = page.getByRole('group', { name: 'Graph camera', exact: true });
+  const bounds = await dock.boundingBox(), before = await snapshot(page);
+  for (const label of ['Zoom in', 'Zoom out', 'Fit view']) {
+    const action = dock.getByRole('button', { name: label, exact: true });
+    await expect(page.getByRole('button', { name: label, exact: true })).toHaveCount(1);
+    await action.focus(); await expect(page.getByRole('tooltip')).toHaveText(label);
+  }
+  expect(await snapshot(page)).toEqual(before);
+  await graphAction(page, 'Zoom in');
+  await expect.poll(async () => (await snapshot(page)).camera).not.toBe(before.camera);
+  const zoomed = await snapshot(page);
+  const flow = (await page.locator('.architecture-flow').boundingBox())!;
+  await page.mouse.move(flow.x + flow.width - 20, flow.y + flow.height - 80);
+  await page.mouse.down(); await page.mouse.move(flow.x + flow.width - 70, flow.y + flow.height - 120, { steps: 4 }); await page.mouse.up();
+  expect((await snapshot(page)).camera).not.toBe(zoomed.camera);
+  expect(await dock.boundingBox()).toEqual(bounds);
+  expect((await snapshot(page)).layouts).toEqual(before.layouts);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const options = await viewOptions(page);
+  await expect(options.getByRole('checkbox')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Model overview', exact: true }).focus();
+  await expect(options).toHaveCount(0);
+  await viewOptions(page); await page.locator('.architecture-flow').click({ position: { x: 8, y: 8 } });
+  await expect(options).toHaveCount(0);
+  await viewOptions(page);
+  await page.screenshot({ path: info.outputPath('controls.png') });
+});
+
+for (const fixture of ['connections', 'components', 'contract']) test(`derived MLP preference follows source eligibility: ${fixture}`, async ({ page }, info) => {
+  await page.goto(`${harness}?fixture=${fixture}`); await ready(page);
+  if (fixture === 'connections') { await chooseInstance(page, 'Decoder layers', 'layer-0'); await ready(page); }
+  const before = await snapshot(page);
+  const options = await viewOptions(page), preference = options.getByLabel('Group derived MLP blocks', { exact: true });
+  if (fixture !== 'connections') {
+    await expect(preference).toHaveCount(0);
+    expect(await snapshot(page)).toEqual(before);
+    return;
+  }
+  expect(before.layouts.at(-1)!.projection.nodes.some((n) => n.presentation === 'mlp')).toBe(true);
+  await expect(preference).toBeChecked();
+  await expect(preference).toHaveAccessibleDescription('Groups recognized, otherwise ungrouped operation patterns for presentation.');
+  await page.keyboard.press('Escape');
+  await graphPreference(page, 'Group derived MLP blocks', false); await ready(page);
+  await viewOptions(page); await expect(preference).toBeVisible(); await expect(preference).not.toBeChecked();
+  await page.keyboard.press('Escape');
+  const off = await snapshot(page);
+  expect(off.layouts.at(-1)!.projection.nodes.some((n) => n.presentation === 'mlp')).toBe(false);
+  await graphPreference(page, 'Group derived MLP blocks', true); await ready(page);
+  const after = await snapshot(page);
+  expect(after.requests.at(-1)!.graph).toEqual(before.requests.at(-1)!.graph);
+  expect(off.requests.at(-1)!.graph).toEqual(before.requests.at(-1)!.graph);
+  expect(after.layouts.at(-1)!.projection).toEqual(before.layouts.at(-1)!.projection);
+  await viewOptions(page);
+  await page.screenshot({ path: info.outputPath('derived-mlp.png') });
 });

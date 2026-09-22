@@ -32,6 +32,10 @@ export function ModelDiagnosticInformation({ store }: { store: ModelDiagnostics 
   const warnings = state.records.filter((d) => d.severity === 'warning').length;
   const errors = state.records.filter((d) => d.severity === 'error').length;
   return <section aria-label="Diagnostics"><h3>Diagnostics <small>{warnings} warnings · {errors} errors</small></h3>
+    {state.graphInformation && <section aria-label="Architecture information">
+      <h4>Architecture</h4><p>Graph: <code>{state.graphInformation.graph_id}</code></p>
+      <p>{state.graphInformation.coverage === 'partial' ? 'Partial architecture coverage' : 'Complete within declared scope'} · {state.graphInformation.scope.replaceAll('_', ' ')}</p>
+    </section>}
     {!state.architectureObserved && <p>Architecture diagnostics have not been retrieved.</p>}
     {!state.records.length && <p>No diagnostics in the capabilities observed so far.</p>}
     <DiagnosticDetails records={state.records} />

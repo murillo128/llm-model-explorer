@@ -70,6 +70,8 @@ test('card notices dismiss and rediscover without graph, camera, layout or reque
   const details = await information(page);
   await expect(details.locator('.diagnostic-list li')).toHaveCount(3);
   await expect(details).toContainText('3 warnings · 0 errors');
+  await expect(details).toContainText(contractResponse.graph.graph_id);
+  await expect(details).toContainText('Partial architecture coverage · model defined');
   await expect(details).toContainText('Interface mapping is ambiguous');
   await page.screenshot({ path: testInfo.outputPath('model-information.png') });
   await page.keyboard.press('Escape');

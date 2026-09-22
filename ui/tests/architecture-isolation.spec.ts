@@ -69,8 +69,8 @@ test.beforeEach(async ({ page }) => {
 test('nested isolation and Back restore exact camera, selected instance, expansion and filters', async ({ page }) => {
   await findComponent(page, 'layer-3'); await ready(page);
   await graphAction(page, 'Toggle selected group'); await ready(page);
-  await graphPreference(page, 'Unused interfaces', true); await ready(page);
-  await graphAction(page, 'Zoom graph in'); await ready(page);
+  await graphPreference(page, 'Show unused interfaces', true); await ready(page);
+  await graphAction(page, 'Zoom in'); await ready(page);
   const before = await state(page), canvas = await page.locator('.react-flow').elementHandle();
   await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready(page);
   await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-3');
@@ -81,7 +81,7 @@ test('nested isolation and Back restore exact camera, selected instance, expansi
   await expect(page.getByRole('navigation', { name: 'Architecture focus' })).toContainText('Decoder layers');
   await expect(page.getByRole('navigation', { name: 'Architecture focus' })).toContainText('Layer 3');
   await expect(page.getByRole('navigation', { name: 'Architecture focus' })).toContainText('Full attention');
-  await graphAction(page, 'Zoom graph out');
+  await graphAction(page, 'Zoom out');
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
   const restoredLayer = await state(page);
   expect(restoredLayer.options).toEqual(layer.options); expect(restoredLayer.camera).toBe(layer.camera);
@@ -219,7 +219,7 @@ test('card navigation resolves the active root, nests exact children, and restor
   await findComponent(page, 'layer-3'); await ready(page);
   await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
   await graphAction(page, 'Toggle selected group'); await ready(page);
-  await graphPreference(page, 'Unused interfaces', true); await ready(page);
+  await graphPreference(page, 'Show unused interfaces', true); await ready(page);
   await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   const layerCard = card(page, 'layer-3'), attention = card(page, 'layer-3.attention');
   const nav = (id: string) => card(page, id).locator('.architecture-navigate');

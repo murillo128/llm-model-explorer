@@ -51,7 +51,7 @@ function SessionArchitectureExplorer(props: Props) {
         if (request.isCurrent()) {
           const graph = response.status === 'available' ? response.graph : undefined;
           const generation = graph?.graph_id ?? session.id;
-          diagnostics.graph(session, session.model_id, generation);
+          diagnostics.graph(session, session.model_id, generation, graph);
           const severity = response.status === 'unavailable' && ['analysis_failed', 'cache_unavailable'].includes(response.reason) ? 'error' : 'warning';
           const records = [...response.diagnostics, ...(graph?.diagnostics ?? [])].map((d) => finding(session.model_id, generation, 'Architecture', d, severity,
             [d.node_id ? `${graph?.nodes.find((n) => n.id === d.node_id)?.label ?? 'Component'} · ${d.node_id}` : '', d.parameter_id].filter(Boolean).join(' · ') || undefined));

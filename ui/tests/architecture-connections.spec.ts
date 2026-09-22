@@ -180,7 +180,7 @@ test('shared fan-out trunk identifies every branch through native trunk, branch 
   await hoverDot(port(page, 'layer-3.input-norm', 'out')); await emphasized(page, fanout);
   await page.mouse.move(0, 0); await emphasized(page, [pinned]);
   await unchanged(page, before);
-  await graphAction(page, 'Zoom graph in');
+  await graphAction(page, 'Zoom in');
   const zoomed = await stableState(page);
   const zoomedTrunk = await fanoutPoint(page, fanout, fanout);
   await page.mouse.move(zoomedTrunk.x, zoomedTrunk.y); await emphasized(page, fanout);
@@ -229,8 +229,8 @@ test('isolated Attention boundaries retain exact fan-out, trunk, branch, endpoin
   // At Fit scale the short K branch shares the endpoint's pointer corridor.
   // Center the consumer before zooming so the external producer stays in view.
   await findComponent(page, 'layer-3.attention.K'); await ready(page);
-  await graphAction(page, 'Zoom graph in');
-  await graphAction(page, 'Zoom graph in');
+  await graphAction(page, 'Zoom in');
+  await graphAction(page, 'Zoom in');
   const before = await stableState(page);
   await hoverDot(port(page, normalizationAlias.node_id, normalizationAlias.port_id));
   await emphasized(page, all); await unchanged(page, before);
@@ -306,7 +306,7 @@ test('residual and MLP inputs stop at operations; pin survives temporary hover, 
   await hoverLine(page, up); await emphasized(page, [up]);
   await page.mouse.move(0, 0); await emphasized(page, [gate]);
   await unchanged(page, before);
-  await graphAction(page, 'Zoom graph in');
+  await graphAction(page, 'Zoom in');
   const zoomed = await stableState(page);
   await hoverLine(page, up); await emphasized(page, [up]);
   await capture(page, info, 'zoomed-line-hover');
@@ -331,6 +331,10 @@ test('residual and MLP inputs stop at operations; pin survives temporary hover, 
 
 test('24-instance compact navigation, first/last identity, MLP/state focus and exhaustive round trip', async ({ page }, info) => {
   await open(page, 'hybrid'); await page.setViewportSize({ width: 1178, height: 900 });
+  // Initial overview opens only the presentation boundary. This scenario
+  // exercises the compact repetition inside the source Language model.
+  await page.locator('[data-node-id="model"] .architecture-browser-disclosure').click(); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   const source = makeProjectionFixture();
   await expect(page.locator('.architecture-node[data-presentation="repetition"]')).toContainText('24');
   await expect(page.locator('.architecture-node[data-presentation="repetition"]')).toContainText('18 linear');
@@ -359,10 +363,10 @@ test('24-instance compact navigation, first/last identity, MLP/state focus and e
   await expect(port(page, 'layer-0.attention', 'current_mask')).toBeAttached();
   await expect(port(page, 'layer-0.attention', 'positions')).toHaveCount(0);
   await expect(port(page, 'layer-0.attention', 'mask')).toHaveCount(0);
-  await graphPreference(page, 'Unused interfaces', true); await ready(page);
+  await graphPreference(page, 'Show unused interfaces', true); await ready(page);
   await expect(port(page, 'layer-0.attention', 'positions')).toBeAttached();
   await expect(page.locator('.architecture-connection[data-target-node="layer-0.attention"][data-target-port="positions"]')).toHaveCount(0);
-  await graphPreference(page, 'Unused interfaces', false); await ready(page);
+  await graphPreference(page, 'Show unused interfaces', false); await ready(page);
   await graphAction(page, 'State dependencies'); await ready(page);
   await expect(page.locator('.architecture-connection[data-kind="data"]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Select Prior conv', exact: true })).toBeVisible();
