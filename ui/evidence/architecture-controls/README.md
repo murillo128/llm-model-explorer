@@ -2,7 +2,10 @@
 
 Issue #197 moves graph commands out of View options. The header retains selection
 and global commands, contextual controls retain stack/instance/focus navigation,
-and a fixed lower-left dock owns zoom and fit. Active filters remain in the
+and a lower-left dock owns zoom and fit. When shell notifications occupy that
+corner, only the dock moves above their measured footprint; dismissal restores
+its normal inset. The graph viewport and shared toast placement stay unchanged.
+Active filters remain in the
 existing header row to preserve narrow canvas height. The preferences panel contains only
 persistent display settings. Derived MLP eligibility comes from the existing
 source-graph detector independently of its enabled state.
@@ -57,3 +60,24 @@ The shared Chromium cache disappeared between projects during the broader run.
 Interrupted checks were rerun with the pinned Chromium headless shell installed
 under a task-local temporary `PLAYWRIGHT_BROWSERS_PATH`; no repository or CI
 configuration changed.
+
+## Notification overlap regression
+
+The production-shell regression in `tests/architecture-notifications.spec.ts`
+reproduces a failed session close with an actionable persistent notification.
+It verifies disjoint toast/dock rectangles and pointer hit targets for every
+camera and notification button, clicks zoom, fit and Retry close, resizes between
+desktop and narrow widths, and dismisses the notification. Dismissal preserves
+the graph element, viewport bounds, camera transform, layout count and requests.
+The [390×844 capture](narrow-camera-notification.png) shows the dock clearing the
+notification while both remain inside the workspace above the status bar.
+
+Focused correction checks, from `ui/`:
+
+```sh
+npm run check
+PLAYWRIGHT_WORKERS=2 UI_TEST_PORT=24327 npx playwright test \
+  tests/architecture-controls.spec.ts tests/architecture-overview.spec.ts \
+  tests/model-diagnostics.spec.ts tests/shell-feedback.spec.ts \
+  tests/architecture-notifications.spec.ts --project=desktop --project=narrow
+```

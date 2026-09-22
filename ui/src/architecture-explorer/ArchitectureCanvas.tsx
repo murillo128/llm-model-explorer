@@ -23,7 +23,7 @@ import { displayLabel, instanceOf } from './presentation';
 import { ArchitectureBrowser } from './ArchitectureBrowser';
 import { ArchitectureWorkspace } from './ArchitectureWorkspace';
 import { browserExpansionId } from './browser-model';
-import { GraphAction } from './GraphAction';
+import { CameraDock } from './CameraDock';
 import { ArchitectureControls } from './ArchitectureControls';
 import type { NavigationItem, ControlSelection } from './ArchitectureControls';
 import { Connection, ConnectionInspection } from './Connection';
@@ -699,11 +699,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
           onNodesChange={(changes) => { for (const value of changes) if (value.type === 'select' && value.selected) { const node = projected.get(value.id); if (node) select(cardSelection(node)); } }}
           aria-label="Architecture canvas" />
       </ConnectionContext.Provider>
-      <div className="architecture-camera-dock" role="group" aria-label="Graph camera">
-        <GraphAction icon="plus" label="Zoom in" onClick={zoomIn} iconOnly />
-        <GraphAction icon="minus" label="Zoom out" onClick={zoomOut} iconOnly />
-        <GraphAction icon="fit" label="Fit view" onClick={fit} iconOnly />
-      </div>
+      <CameraDock zoomIn={zoomIn} zoomOut={zoomOut} fit={fit} />
       {inspection && (activeInspectionEdge || activeInspectionNode) && <ConnectionInspection graph={graph} edge={activeInspectionEdge} node={activeInspectionNode}
         structure={shared && !concreteInstance && activeInspectionEdge ? { source: projected.get(activeInspectionEdge.source.node_id)?.label ?? '', target: projected.get(activeInspectionEdge.target.node_id)?.label ?? '' } : undefined}
         explore={activeInspectionNode?.presentation === 'mlp' && activeInspectionNode.id !== options.scope ? () => isolate(activeInspectionNode.id) : undefined}
