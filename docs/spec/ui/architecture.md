@@ -40,3 +40,27 @@ A source object identifies one immutable descriptor and delivery generation. Rep
 Matrix-only mode omits absent auxiliary panels. Full mode reserves the existing aligned 100-bin uint32 profiles with independent progressive delivery. Geometry, camera, scientific transfer, and inspection semantics remain owned by [rendering.md](rendering.md) and [tensor-explorer.md](tensor-explorer.md). Native cell/row/column callbacks allow semantic linkage without renderer internals; disposal clears selection.
 
 Architecture weight inspection is another consumer of this same composition in a closable modal. It must not fork the renderer, copy its camera into the graph, or impose graph scale on the numeric surface. Graph nodes/resource references remain independent of UI routes so future Tokenizer Explorer or specialized-view links need only UI integration, not redesigned model descriptions.
+
+## Connection and application feedback
+
+The shell footer reports last observed backend reachability independently of session
+existence: Connecting initially, Connected after a response (including HTTP or
+protocol errors), Disconnected after transport failure, and Reconnecting only while
+an actual request is pending after failure. Cancellation and session expiration do
+not imply disconnection. Existing refresh/recovery actions remain explicit; no
+heartbeat, polling, automatic numerical replay, or new backend endpoint is used.
+
+Connection transitions use only the footer. Consequential transport failures may
+produce one dismissible shell toast per request, while the affected explorer keeps
+its local failed/retry state. Failed session close has an explicit retry action;
+expiration retains a visible fresh-session recovery state independently of toasts.
+Capability diagnostics and ordinary stream progress remain local. Safe public copy
+must never interpolate arbitrary backend error text or filesystem paths.
+
+Feedback is fenced by backend, session/selection and request lifetime. Replacing a
+context clears its notifications and timers; obsolete requests cannot publish into
+the replacement. Feedback updates and dismissal preserve explorer consumer,
+renderer and camera identities. A single bounded host displays at most three
+notifications, deduplicates repeat delivery of the same request outcome, keeps
+errors until dismissed, and expires brief informational outcomes only while neither
+hovered nor focused. Notifications never steal focus.

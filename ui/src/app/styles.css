@@ -166,3 +166,16 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .operation-spinner { width: 10px; height: 10px; border: 1px solid var(--ui-border-strong); border-top-color: var(--ui-text); border-radius: 50%; animation: operation-spin 1s linear infinite; }
 @keyframes operation-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .operation-spinner { animation: none; } }
+
+/* Feedback is outside explorer layout/transforms; the footer slot never resizes. */
+.connection-slot { flex: 0 0 190px; display: flex; align-items: center; gap: 8px; }
+.connection-icon { margin-right: 6px; }
+.connection-retry { padding: 0 4px; font: inherit; border: 1px solid var(--ui-border); border-radius: 3px; background: var(--ui-surface); color: var(--ui-text); }
+.session-status { flex: 0 1 120px; overflow: hidden; text-overflow: ellipsis; }
+.status-metadata { overflow: hidden; }
+.toast-host { position: fixed; z-index: 40; right: 16px; bottom: calc(var(--ui-status-bar-height) + 12px); width: min(360px, calc(100vw - 32px)); max-height: calc(100dvh - 112px); overflow: auto; margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; pointer-events: none; }
+.app-toast { pointer-events: auto; padding: 12px; border: 1px solid var(--ui-border-strong); border-radius: 6px; background: var(--ui-surface); box-shadow: var(--ui-shadow-float); font-size: 13px; line-height: 20px; }
+.app-toast[data-severity="error"] { border-left: 3px solid var(--ui-accent); }
+.toast-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.toast-actions button { color: var(--ui-text); background: var(--ui-surface-soft); border: 1px solid var(--ui-border); border-radius: 4px; padding: 4px 8px; font: inherit; }
+@media (max-width: 600px) { .connection-slot { flex-basis: 180px; } .toast-host { right: 8px; width: min(360px, calc(100vw - 16px)); } }
