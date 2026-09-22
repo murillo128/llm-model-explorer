@@ -132,15 +132,11 @@ test('outside-component navigation excludes declarations and tools but retains r
   await page.goto(`${harness}?fixture=interface-hybrid`); await ready(page);
   await findComponent(page, 'language');
   await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready(page);
-  const options = await viewOptions(page);
-  await options.getByText('Graph details', { exact: true }).click();
-  await options.locator('summary').filter({ hasText: 'Outside component:' }).click();
-  const outside = options.locator('details').filter({ has: page.locator(':scope > summary').filter({ hasText: 'Outside component:' }) });
+  const browser = page.getByRole('tree', { name: 'Model components', exact: true });
   for (const name of ['Token IDs', 'positions', 'mask', 'current_mask', 'logits', 'Tokenizer capability']) {
-    await expect(outside.getByRole('button', { name, exact: true })).toHaveCount(0);
+    await expect(browser.locator('[data-browser-name]').filter({ hasText: new RegExp(`^${name}$`) })).toHaveCount(0);
   }
-  await expect(outside.getByRole('button')).toHaveCount(1);
-  await outside.getByRole('button', { name: 'LM head', exact: true }).click(); await ready(page);
+  await findComponent(page, 'LM head'); await ready(page);
   await expect(page.locator(panel)).toHaveAttribute('data-scope-id', '');
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'LM head');
 });

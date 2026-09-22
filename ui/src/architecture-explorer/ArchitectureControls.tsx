@@ -3,9 +3,8 @@ import type { RefObject } from 'react';
 import type { Graph } from './graph';
 import type { ProjectionOptions } from './projection';
 import { instanceOf, patternSummary } from './presentation';
-import { componentLabel } from './browser-model';
 import type { Template } from './shared-structure';
-import { interfaceIndex } from './interfaces';
+import { GraphAction } from './GraphAction';
 
 type Repetition = Graph['repetitions'][number];
 export interface NavigationItem { id: string; label: string; kind: 'node' | 'stack' }
@@ -24,21 +23,20 @@ interface Props {
   graph: Graph; focus: string | null; stack: Repetition | undefined;
   instanceId: string | undefined; visibleInstances: string[]; options: ProjectionOptions;
   breadcrumbs: NavigationItem[]; selection: ControlSelection | undefined;
-  isolation: { back: () => void; viewInModel: (() => void) | undefined; expand: () => void; nodeIds: Set<string>; excludedEdges: string[] } | undefined;
+  isolation: { back: () => void; viewInModel: (() => void) | undefined; expand: () => void } | undefined;
   picker: RefObject<HTMLButtonElement | null>;
-  reveal: (id: string) => void; navigate: (item: NavigationItem) => void;
-  overview: () => void; fit: () => void; expandAll: () => void; collapseAll: () => void;
+  navigate: (item: NavigationItem) => void;
+  overview: () => void; expandAll: () => void; collapseAll: () => void;
   chooseInstance: (id: string) => void; exploreStack: (id: string, start?: number) => void;
   windowSize: number; focusLayer: (() => void) | undefined; focusMlp: (() => void) | undefined;
   stateFocus: (() => void) | undefined; toggleSelected: (() => void) | undefined;
   preferences: (patch: Partial<ProjectionOptions>) => void;
-  zoomIn: () => void; zoomOut: () => void; filtered: boolean;
+  derivedMlpAvailable: boolean; filtered: boolean;
 }
 
 export function ArchitectureControls(props: Props) {
   const { graph, stack, selection, options, picker } = props;
   const [popover, setPopover] = useState<'options' | null>(null);
-  const [outsideOpen, setOutsideOpen] = useState(false);
   const controls = useRef<HTMLDivElement>(null);
   const optionsTrigger = useRef<HTMLButtonElement>(null), popup = useRef<HTMLDivElement>(null);
   const optionsId = useId();
@@ -47,25 +45,21 @@ export function ArchitectureControls(props: Props) {
     if (restore) optionsTrigger.current?.focus();
   };
   useEffect(() => {
-    if (popover === 'options') popup.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    if (popover === 'options') popup.current?.querySelector<HTMLInputElement>('input')?.focus();
     if (!popover) return;
     const outside = (event: PointerEvent) => {
-      if (!controls.current?.contains(event.target as Node)) setPopover(null);
+      if (!popup.current?.contains(event.target as Node) && !optionsTrigger.current?.contains(event.target as Node)) setPopover(null);
     };
     document.addEventListener('pointerdown', outside);
     return () => document.removeEventListener('pointerdown', outside);
   }, [popover]);
-  const run = (action: () => void) => { close(); action(); };
-  const choose = (id: string) => { close(); props.reveal(id); };
   const current = stack?.instances.findIndex((i) => i.node_id === props.instanceId) ?? -1;
   const window = stack && options.repetitions?.[stack.id];
   const visible = stack?.instances.filter((i) => props.visibleInstances.includes(i.node_id)) ?? [];
-  const outside = popover === 'options' && props.isolation && !props.shared ? graph.nodes.filter((node) =>
-    !props.isolation!.nodeIds.has(node.id) && interfaceIndex(graph).eligible(node.id)) : [];
   return <div className="architecture-controls" ref={controls} onKeyDown={(event) => {
     if (popover && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
   }} onBlur={(event) => {
-    if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setPopover(null);
+    if (event.relatedTarget && !popup.current?.contains(event.relatedTarget) && !optionsTrigger.current?.contains(event.relatedTarget)) setPopover(null);
   }}>
     <div className="architecture-toolbar" aria-label="Graph navigation">
       {props.isolation && <span className="architecture-isolated-state">{props.shared ? 'Shared structure' : 'Isolated component'}</span>}
@@ -77,6 +71,11 @@ export function ArchitectureControls(props: Props) {
         </span>)}
       </nav>
       {graph.coverage === 'partial' && <span className="architecture-partial">Partial coverage</span>}
+      {!options.exhaustive && (props.filtered || options.stateScope || options.showContext === false) && <div className="architecture-filter-context" aria-label="Active graph filters">
+        {props.filtered && <span title="Unconsumed interface branches filtered">Unused interfaces hidden</span>}
+        {options.stateScope && <span title="State dependencies only; other flows filtered">State dependencies only</span>}
+        {options.showContext === false && <span>Context hidden</span>}
+      </div>}
       {props.family ? <div className="architecture-selection" aria-label="Graph selection">
         <span title={props.family.label}>{props.family.label}</span><button onClick={props.family.explore}>Explore structure</button>
         <button aria-label="Clear family selection" onClick={() => { picker.current?.focus(); props.family!.clear(); }}>×</button>
@@ -89,11 +88,12 @@ export function ArchitectureControls(props: Props) {
         <button aria-label={selection.edge ? 'Center connection' : 'Center selected'} onClick={selection.center}>Center</button>
         <button aria-label={selection.edge ? 'Clear connection selection' : 'Clear node selection'} onClick={() => { picker.current?.focus(); selection.clear(); }}>×</button>
       </div>}
-      <button onClick={props.fit}>Fit view</button>
-      <button ref={optionsTrigger} aria-expanded={popover === 'options'} aria-controls={optionsId} aria-haspopup="dialog"
-        onClick={() => setPopover(popover === 'options' ? null : 'options')}>View options</button>
+      <GraphAction icon="collapse" label="Collapse all" tooltip="Collapse all components and reframe the model" onClick={props.collapseAll} />
+      <GraphAction icon="expand" label={props.isolation ? 'Show all operations in model' : 'Show all operations'} tooltip="Show every operation and instance in the model" onClick={props.expandAll} />
+      <button className="architecture-settings" title="View options" ref={optionsTrigger} aria-expanded={popover === 'options'} aria-controls={optionsId} aria-haspopup="dialog"
+        onClick={() => setPopover(popover === 'options' ? null : 'options')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 7h8m4 0h4M4 17h3m4 0h9M12 4v6M7 14v6" /></svg> View options</button>
     </div>
-    {(props.isolation || stack || props.returnContext) && <div className="architecture-context-row">
+    {(props.isolation || stack || props.returnContext || props.toggleSelected || props.focusLayer || props.focusMlp || props.stateFocus) && <div className="architecture-context-row">
       <div className="architecture-context-navigation" aria-label={props.isolation ? 'Component navigation' : stack ? 'Stack navigation' : 'Model components'}>
         {props.returnContext && !props.isolation && <button onClick={props.returnContext}>Back</button>}
         {props.isolation ? <>
@@ -132,40 +132,20 @@ export function ArchitectureControls(props: Props) {
             <button aria-label={`Next window ${stack.label}`} disabled={window.start + window.count >= stack.instances.length} onClick={() => props.exploreStack(stack.id, window.start + props.windowSize)}>›</button>
           </>}
         </> : null}
+        {props.toggleSelected && <button onClick={props.toggleSelected}>Toggle selected group</button>}
+        {stack && !props.isolation && <button onClick={() => props.exploreStack(stack.id)}>Explore stack</button>}
+        {props.focusLayer && <button onClick={props.focusLayer}>{options.stateScope ? 'Back to layer' : 'Focus layer'}</button>}
+        {props.focusMlp && <button onClick={props.focusMlp}>Focus MLP</button>}
+        {props.stateFocus && !options.stateScope && <button onClick={props.stateFocus}>State dependencies</button>}
       </div>
     </div>}
     {popover === 'options' && <div ref={popup} className="architecture-control-popover architecture-options" role="dialog" aria-label="View options" id={optionsId}>
-      <div className="architecture-option-actions">
-        <button onClick={() => run(props.expandAll)}>{props.isolation ? 'Show all operations in model' : 'Show all operations'}</button>
-        <button onClick={() => run(props.collapseAll)}>{props.isolation ? 'Collapse model' : 'Collapse all'}</button>
-        <button disabled={!selection} onClick={() => selection && run(selection.center)}>Center selection</button>
-        <button aria-label="Zoom graph in" onClick={props.zoomIn}>Zoom in</button>
-        <button aria-label="Zoom graph out" onClick={props.zoomOut}>Zoom out</button>
-        {props.toggleSelected && <button onClick={() => run(props.toggleSelected!)}>Toggle selected group</button>}
-        {stack && !props.isolation && <button onClick={() => run(() => props.exploreStack(stack.id))}>Explore stack</button>}
-        {props.focusLayer && <button onClick={() => run(props.focusLayer!)}>{options.stateScope ? 'Back to layer' : 'Focus layer'}</button>}
-        {props.focusMlp && <button onClick={() => run(props.focusMlp!)}>Focus MLP</button>}
-        {props.stateFocus && <button onClick={() => run(props.stateFocus!)}>State dependencies</button>}
-      </div>
       <fieldset><legend>Presentation</legend>
         <label><input type="checkbox" checked={options.dimensions === true} onChange={(event) => props.preferences({ dimensions: event.target.checked })} /> Show dimensions</label>
-        <label><input type="checkbox" checked={options.showUnused === true} onChange={(event) => props.preferences({ showUnused: event.target.checked })} /> Unused interfaces</label>
-        <label><input type="checkbox" checked={options.showContext !== false} onChange={(event) => props.preferences({ showContext: event.target.checked })} /> Context</label>
-        <label><input type="checkbox" checked={options.deriveMlp !== false} onChange={(event) => props.preferences({ deriveMlp: event.target.checked })} /> Group MLP</label>
+        <label><input type="checkbox" checked={options.showUnused === true} onChange={(event) => props.preferences({ showUnused: event.target.checked })} /> Show unused interfaces</label>
+        <label><input type="checkbox" checked={options.showContext !== false} onChange={(event) => props.preferences({ showContext: event.target.checked })} /> Show context</label>
+        {props.derivedMlpAvailable && <><label><input aria-describedby={`${optionsId}-mlp`} type="checkbox" checked={options.deriveMlp !== false} onChange={(event) => props.preferences({ deriveMlp: event.target.checked })} /> Group derived MLP blocks</label><p id={`${optionsId}-mlp`}>Groups recognized, otherwise ungrouped operation patterns for presentation.</p></>}
       </fieldset>
-      <details><summary>Graph details</summary>
-        <p>{graph.coverage === 'partial' ? 'Partial architecture coverage' : 'Complete within declared scope'} · {graph.scope.replaceAll('_', ' ')}</p>
-        {props.filtered && <p>Unconsumed interface branches filtered</p>}
-        {options.stateScope && <p>State dependencies only; other flows are filtered</p>}
-        {selection && <p>{selection.detail}</p>}
-        {props.isolation && !props.shared && <details onToggle={(event) => setOutsideOpen(event.currentTarget.open)}>
-          <summary>Outside component: {outside.length} components · {props.isolation.excludedEdges.length} connections</summary>
-          <p>Choose a component to reveal it in model context. Declared interfaces remain available through their owner ports and interface search.</p>
-          {outsideOpen && outside.map((node) =>
-            <p key={node.id}><button onClick={() => choose(node.id)}>{componentLabel(node, graph)}</button> <code>{node.id}</code></p>)}
-        </details>}
-        <p>Graph: {graph.graph_id}</p>
-      </details>
     </div>}
   </div>;
 }

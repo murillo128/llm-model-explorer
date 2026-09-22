@@ -6,9 +6,7 @@ export async function viewOptions(page: Page) {
   return page.getByRole('dialog', { name: 'View options', exact: true });
 }
 export async function graphAction(page: Page, name: string | RegExp) {
-  const options = await viewOptions(page);
-  await options.getByRole('button', { name, exact: true }).click();
-  if (await options.isVisible()) await page.keyboard.press('Escape');
+  await page.getByRole('button', { name, exact: true }).click();
 }
 export async function graphPreference(page: Page, name: string, checked: boolean) {
   const options = await viewOptions(page);

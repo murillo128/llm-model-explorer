@@ -135,22 +135,40 @@ to the existing anchor state, never through independent browser flags.
 
 The minimal canvas header has current Model/component context on the left,
 selected node/connection with applicable **Inspect**, **Explore component** or
-**View in model**, **Center** and clear controls toward the right, and **Fit view**
-and **View options** at the far right. Omit inapplicable selected-item controls.
-No global horizontal component strip, Find component trigger or Shared structures
-dropdown remains. Preserve explicit isolation/shared context, Back and compact
-concrete instance/previous/next/window controls. Repetition entry controls live in
-the browser. Navigation focus and selection remain distinct.
+**View in model**, **Center** and clear controls toward the right. Global
+**Collapse all** and exhaustive **Show all operations** remain directly reachable
+outside **View options**, with descriptive tooltips and accessible names. Each
+action has one primary location. Collapse invokes one collapse-and-reframe
+command after layout; ordinary Fit never expands components.
 
-View options provides exhaustive **Show all operations**, collapse, center
-selection, zoom, dimensions (initially off), context, unused-interface and derived
-MLP preferences, plus applicable group/layer/MLP/state navigation. Fit view changes
-the camera; Show all operations changes visible detail. Unused interfaces refers
-to unconsumed interface branches, not every auxiliary signal. State focus identifies
-its filtered context; partial coverage stays visible and full diagnostics remain
-available on demand. Options dismiss on Escape with focus restored to the trigger
-or when focus moves outside. Controls use neutral/graphite/amber styling, English
-accessible names and visible focus, with bounded overflow at narrow widths.
+A small lower-left camera dock inside the graph viewport contains **Zoom in**,
+**Zoom out** and **Fit view**. It stays outside the camera transform, with full
+English accessible names, hover/focus tooltips and visible focus. It does not
+resize the canvas or cover header, boundary controls, footer or application toasts.
+Center selection remains with the selection actions.
+
+Omit inapplicable selected-item controls. No global component strip or second
+component list in settings remains. Preserve isolation/shared context, Back,
+concrete instance/previous/next/window controls and applicable selected-group,
+stack/layer/MLP/state commands in compact contextual controls. Repetition entry
+controls live in the browser. Navigation focus and selection remain distinct.
+The full source browser and explicit Center/navigation retain outside-scope access.
+In isolation, exhaustive expansion is labeled **Show all operations in model**.
+
+View options contains only persistent **Show dimensions** (initially off),
+**Show unused interfaces**, **Show context** and applicable **Group derived MLP
+blocks** preferences. Preserve their defaults. Show the MLP preference only if
+the source graph has eligible fallback patterns, independently of whether grouping
+is enabled, with an explanation that it groups recognized, otherwise ungrouped
+operation patterns for presentation. Authored MLP groups remain source containers.
+Unused interfaces refers to unconsumed interface branches, not every auxiliary
+signal. Active filters and state/isolation context remain visible. Model information
+provides graph identity, declared scope, complete/partial coverage and full diagnostics.
+Options dismiss on Escape with focus restored to the trigger, outside pointer
+interaction or focus leaving the popover. Opening or closing performs no layout or
+camera work. Header/context overflow stays bounded at narrow widths; preferences
+never become a floating navigation panel. Use neutral/graphite/amber styling,
+English accessible names and visible focus without document scrolling.
 
 Selection, typing, menus, emphasis and inspection preserve the mounted canvas,
 graph retrieval and numeric lifetimes, source/projection records, generated
@@ -507,7 +525,7 @@ failure and retrieval failures are errors; other unavailable capability reasons
 are warnings. Never derive severity from message substrings. Preserve exact safe
 producer messages, codes and node/parameter locations. Deduplicate identical
 response/graph findings without merging different locations. Contextual filters
-and raw Graph details remain distinguishable from diagnostic findings.
+and graph metadata remain distinguishable from diagnostic findings.
 
 Dismissal hides only the inline findings. The current model's observations remain
 in the shell's Model information destination, defined in

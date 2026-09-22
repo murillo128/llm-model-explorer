@@ -34,7 +34,7 @@ test('nested expansion, instance identity, ports, dimensions, keyboard and camer
   await findComponent(page, 'linear1');
   await page.getByRole('button', { name: 'Inspect selected', exact: true }).focus(); await page.keyboard.press('Enter');
   await expect(page.locator('output')).toContainText('linear1');
-  await graphAction(page, 'Zoom graph in');
+  await graphAction(page, 'Zoom in');
   const camera = page.locator('.react-flow__viewport');
   const transform = await camera.getAttribute('style');
   expect(await page.getByLabel('Untransformed prompt').evaluate((e) => getComputedStyle(e).transform)).toBe('none');

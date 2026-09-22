@@ -17,7 +17,8 @@ export function uniqueFindings(records: Diagnostic[]) {
   return [...new Map(records.map((d) => [d.id, d])).values()].sort((a, b) =>
     ({ error: 0, warning: 1, info: 2 }[a.severity] - { error: 0, warning: 1, info: 2 }[b.severity]));
 }
-const empty = { records: [] as Diagnostic[], dismissed: [] as string[], architectureObserved: false, modelSupplied: false };
+type GraphInformation = Pick<S['ArchitectureGraph'], 'graph_id' | 'scope' | 'coverage'>;
+const empty = { graphInformation: undefined as GraphInformation | undefined, records: [] as Diagnostic[], dismissed: [] as string[], architectureObserved: false, modelSupplied: false };
 /** Current observations only. No graphs, numeric resources, connection state or history. */
 export class ModelDiagnostics {
   private state = empty;
@@ -36,8 +37,9 @@ export class ModelDiagnostics {
     this.publish({ records: uniqueFindings([...this.state.records.filter((d) => d.capability !== capability), ...records]),
       ...(capability === 'Architecture' ? { architectureObserved: true, modelSupplied } : {}) });
   }
-  graph(session: object, model: string, generation: string) {
+  graph(session: object, model: string, generation: string, graphInformation?: GraphInformation) {
     if (session !== this.session) return;
+    this.publish({ graphInformation: graphInformation && { graph_id: graphInformation.graph_id, scope: graphInformation.scope, coverage: graphInformation.coverage } });
     if (this.generations.get(model) !== generation) {
       this.dismissed = new Set([...this.dismissed].filter((id) => (JSON.parse(id) as string[])[0] !== model));
       this.generations.delete(model); this.generations.set(model, generation);

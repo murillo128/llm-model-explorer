@@ -72,7 +72,7 @@ test('Collapse all exits isolation, preserves hidden selection and fits final bo
   await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready(page);
   await selectComponent(page, 'layer-2.attention.Q');
   await page.evaluate(() => { window.cameraProbe.events = []; });
-  await graphAction(page, 'Collapse model'); await ready(page);
+  await graphAction(page, 'Collapse all'); await ready(page);
   const state = await sample(page);
   expect(state.nodes).toBe(1);
   expect(state.requested.map((e) => e.event)).toEqual(['setViewport requested']);
@@ -98,7 +98,7 @@ test('user camera movement supersedes pending initialization and a pending globa
     if (action === 'initialize') await page.getByLabel('Fixture', { exact: true }).selectOption('overview-wide');
     else await graphAction(page, 'Collapse all');
     await expect.poll(() => page.evaluate(() => window.cameraProbe.layouts.length)).toBeGreaterThan(0);
-    await graphAction(page, 'Zoom graph in');
+    await graphAction(page, 'Zoom in');
     const user = await sample(page);
     await releaseLayouts(page); await ready(page);
     expect((await sample(page)).camera).toEqual(user.camera);
@@ -177,7 +177,7 @@ test('initial worker failure retries the bounded candidate policy without losing
 
 test('rapid individual expansion supersedes pending collapse framing and keeps the user zoom', async ({ page }) => {
   await page.goto(`${harness}?fixture=overview-compact`); await ready(page);
-  await graphAction(page, 'Zoom graph in');
+  await graphAction(page, 'Zoom in');
   const before = await sample(page);
   await page.evaluate(() => { window.cameraProbe.holdLayout = true; window.cameraProbe.events = []; });
   await graphAction(page, 'Collapse all');
@@ -194,7 +194,7 @@ test('global collapse never turns a structure-only role into a concrete anchor i
   await page.goto(`${harness}?fixture=templates`); await ready(page);
   await openShared(page, 'shared-full-attention'); await ready(page);
   await expect(panel(page)).toHaveAttribute('data-template-instance-id', '');
-  await graphAction(page, 'Collapse model'); await ready(page);
+  await graphAction(page, 'Collapse all'); await ready(page);
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveCount(0);
   expect((await sample(page)).nodes).toBe(1);
 });
@@ -205,7 +205,7 @@ test('global collapse retains a concrete nonzero shared port across explorer reo
   await page.getByLabel('Shared structure instance', { exact: true }).selectOption('layer-2.attention'); await ready(page);
   const port = page.locator('.architecture-port[data-node-id="layer-0.attention"][data-port-id="x"]');
   await port.focus(); await port.press('Enter');
-  await graphAction(page, 'Collapse model'); await ready(page);
+  await graphAction(page, 'Collapse all'); await ready(page);
   await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click();
   await page.getByRole('button', { name: 'Toggle explorer', exact: true }).click(); await ready(page);
   await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
