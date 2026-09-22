@@ -69,3 +69,29 @@ renderer and camera identities. A single bounded host displays at most three
 notifications, deduplicates repeat delivery of the same request outcome, keeps
 errors until dismissed, and expires brief informational outcomes only while neither
 hovered nor focused. Notifications never steal focus.
+
+
+## Model information and diagnostic lifetime
+
+The existing Session options entry exposes on-demand **Model information**, with
+a labelled **Diagnostics** section and compact warning/error count. It is reachable
+without node selection or a rendered graph, includes already-observed architecture
+and tensor-inventory findings with capability, severity, safe source context and
+complete messages, and retains dismissed inline findings. Model-supplied provenance
+has its own explanation. Opening this section never retrieves architecture, tensor
+bytes or tokenizer results. Explicitly distinguish unobserved capabilities from
+observed capabilities with no findings.
+
+Retain only current findings and minimal dismissal identity; never copy semantic
+graphs or keep a historical notification log. Scope observations to the backend
+and exact current model/session lifetime, rejecting late callbacks. Replacing or
+clearing a session clears current observations. Dismissal identity uses model,
+capability, graph/content generation (session generation when no graph identity is
+available), diagnostic code, supplied source location, severity and message. It is
+stable across rerenders, inspector closure, explorer switches and graph expansion.
+New findings and severity escalation remain visible. Graph replacement invalidates
+that model's stale dismissal identities; backend replacement resets the owner.
+No disk persistence is needed. Architecture-specific inline notices remain local
+to Architecture Explorer; inventory/tokenizer recovery and scientific surfaces
+retain their existing behavior. Connection state and transient events continue
+through the separate footer/toast routing above.

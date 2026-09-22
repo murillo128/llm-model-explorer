@@ -48,7 +48,7 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
   const inspection = parameter?.inspection;
   const tensor = inspection?.status === 'available'
     ? inventory.tensors.find((t) => t.id === inspection.tensor_id) : undefined;
-  const diagnostics = selected.structureOnly ? [] : [...graph.diagnostics, ...responseDiagnostics].filter((d) => d.node_id === node?.id || (parameter && d.parameter_id === parameter.id));
+  const diagnostics = selected.structureOnly ? [] : [...new Map([...graph.diagnostics, ...responseDiagnostics].map((d) => [JSON.stringify([d.code, d.node_id, d.parameter_id, d.message]), d])).values()].filter((d) => d.node_id === node?.id || (parameter && d.parameter_id === parameter.id));
   const close = () => { lifetime?.dispose(); onClose(); };
   useLayoutEffect(() => {
     const element = dialog.current!;

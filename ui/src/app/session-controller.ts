@@ -1,6 +1,7 @@
 import { ApiClient } from '../api/client';
 import { ApiFailure } from '../api/errors';
 import type { components } from '../api/generated/types';
+import { ModelDiagnostics, finding } from './model-diagnostics';
 import { Feedback } from './feedback';
 import type { FeedbackState } from './feedback';
 import { Lifetime } from './lifetime';
@@ -51,6 +52,7 @@ export class SessionController {
     tensors: [], inventoryCoverage: 'complete', inventoryDiagnostics: [], inventory: 'idle', selected: null, explorer: 'Tensor Explorer',
     view: new Lifetime(), viewRevision: 0, viewStatus: 'idle', storageAvailable: true,
   };
+  readonly diagnostics = new ModelDiagnostics();
   readonly feedback = new Feedback((state) => this.update(state));
   explorerClient = (view: Lifetime) => this.client.observe(this.feedback.observe(view, true));
   private readonly listeners = new Set<() => void>();
@@ -110,6 +112,7 @@ export class SessionController {
     }));
   };
   private beginSession() {
+    this.diagnostics.activate(null);
     this.feedback.reset();
     this.sessionRequest.dispose();
     this.inventoryRequest.dispose();
@@ -118,6 +121,7 @@ export class SessionController {
     return request;
   }
   private acceptSession(session: Session) {
+    this.diagnostics.activate(session);
     this.remember(session.id);
     this.replaceView({ session, sessionStatus: 'ready', message: '' });
     this.loadInventory();
@@ -159,6 +163,7 @@ export class SessionController {
     const request = this.inventoryRequest = new Lifetime();
     this.replaceView({ selected: null, tensors: [], inventoryCoverage: 'complete', inventoryDiagnostics: [], inventory: 'loading', message: '' });
     void this.feedback.track(request, () => this.client.listTensors(session.id, request.signal)).then(request.guard(({ tensors, coverage, diagnostics }) => {
+      this.diagnostics.observe(session, 'Tensor inventory', diagnostics.map((d) => finding(session.model_id, session.id, 'Tensor inventory', d, 'warning')));
       this.update({ tensors, inventoryCoverage: coverage, inventoryDiagnostics: diagnostics, inventory: 'complete' });
     }), request.guard((error: unknown) => {
       if (isExpired(error)) this.expire();
@@ -178,6 +183,7 @@ export class SessionController {
     else this.update({ viewStatus: status });
   };
   private expire() {
+    this.diagnostics.activate(null);
     this.feedback.reset();
     this.sessionRequest.dispose();
     this.inventoryRequest.dispose();
@@ -194,6 +200,7 @@ export class SessionController {
     this.feedback.reset();
     this.replaceView({ sessionStatus: 'closing', selected: null, message: '' });
     const finish = () => {
+      this.diagnostics.activate(null);
       this.remember(null);
       this.update({ session: null, sessionStatus: 'idle', inventory: 'idle', tensors: [], message: '' });
       this.feedback.notify('Session closed.', 'info');

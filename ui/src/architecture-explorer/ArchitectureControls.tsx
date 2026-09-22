@@ -153,7 +153,7 @@ export function ArchitectureControls(props: Props) {
         <label><input type="checkbox" checked={options.showContext !== false} onChange={(event) => props.preferences({ showContext: event.target.checked })} /> Context</label>
         <label><input type="checkbox" checked={options.deriveMlp !== false} onChange={(event) => props.preferences({ deriveMlp: event.target.checked })} /> Group MLP</label>
       </fieldset>
-      <details><summary>Graph details{graph.diagnostics.length ? ` · ${graph.diagnostics.length} diagnostics` : ''}</summary>
+      <details><summary>Graph details</summary>
         <p>{graph.coverage === 'partial' ? 'Partial architecture coverage' : 'Complete within declared scope'} · {graph.scope.replaceAll('_', ' ')}</p>
         {props.filtered && <p>Unconsumed interface branches filtered</p>}
         {options.stateScope && <p>State dependencies only; other flows are filtered</p>}
@@ -165,7 +165,6 @@ export function ArchitectureControls(props: Props) {
             <p key={node.id}><button onClick={() => choose(node.id)}>{componentLabel(node, graph)}</button> <code>{node.id}</code></p>)}
         </details>}
         <p>Graph: {graph.graph_id}</p>
-        {graph.diagnostics.map((d, i) => <p key={i}>{d.message}</p>)}
       </details>
     </div>}
   </div>;

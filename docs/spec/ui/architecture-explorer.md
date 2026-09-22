@@ -483,8 +483,39 @@ Integrated tests use the built UI, real HTTP backend, and the repository's exist
 
 ## Model-supplied provenance
 
-For a graph with transport scope `model_defined`, retain a visible notice that
-its structure was supplied by the checkpoint author. Structural and inventory
-validation do not establish equivalence to the implementation. The notice remains
-visible when exploring a component, without adding sport-specific behavior or
-changing source-graph navigation. Other graph scopes retain their current UI.
+For transport scope `model_defined`, retain a quiet **Model-supplied** information
+badge below the canvas header, including during component exploration. Its
+keyboard-accessible disclosure and Model information preserve the explanation:
+“Model-supplied architecture. Structure and weight bindings are validated;
+equivalence to model code is not verified.” Never use an unqualified Validated
+badge. This is provenance information, separate from warning/error counts.
+
+## Persistent capability diagnostics
+
+Place architecture response, graph and interface-presentation findings in a compact
+band inside the canvas card, immediately after its header/breadcrumb/actions and
+before its graph body, outside pan/zoom. Loading, unavailable and retrieval-error
+states use the same rounded card shell. No diagnostic text floats above the
+workspace or inside the diagram. Ambiguous interface mappings remain warnings
+with the original affected component and complete message available; they do not
+imply that the entire model is unusable.
+
+Use the shared severity/disclosure presentation in [visual-language.md](visual-language.md#persistent-diagnostic-presentation).
+The current diagnostic API has no severity field: available-graph and inventory
+findings and ambiguous presentation mappings are warnings; typed analysis/cache
+failure and retrieval failures are errors; other unavailable capability reasons
+are warnings. Never derive severity from message substrings. Preserve exact safe
+producer messages, codes and node/parameter locations. Deduplicate identical
+response/graph findings without merging different locations. Contextual filters
+and raw Graph details remain distinguishable from diagnostic findings.
+
+Dismissal hides only the inline findings. The current model's observations remain
+in the shell's Model information destination, defined in
+[UI architecture](architecture.md#model-information-and-diagnostic-lifetime).
+Blocking failures retain an explicit unavailable/failed explanation and any
+applicable recovery action after dismissal. No inspection, details or dismissal
+action may retrieve the graph, mutate source records, invoke layout, remount the
+canvas, start numerical work, reset selection/expansion or fit the camera. Band
+height changes are ordinary bounded viewport resizes. Component inspection may
+show the relevant deduplicated findings alongside source evidence, without
+creating another global diagnostic list.

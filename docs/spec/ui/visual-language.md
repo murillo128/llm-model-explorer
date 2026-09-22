@@ -219,3 +219,21 @@ Do not use a dark terminal-style application shell around the scientific view. D
 React owns composition, semantic HTML, controls, text, and panel layout. The reusable WebGL2 renderer owns exact tensor pixels and shader-based visual transformations. The visual tokens in this document style the application shell; they must not leak into authoritative tensor mathematics.
 
 Semantic interaction colors should reach the renderer as small state/uniform parameters. The renderer derives the final chroma at draw time while continuing to read the same immutable scalar tensor representation. This keeps the visual system consistent with the project's memory and exact scalar-cell invariants.
+
+
+## Persistent diagnostic presentation
+
+Persistent model/capability notices use a restrained band within the affected card,
+between header and body. Pair a small icon with explicit **Info**, **Warning** or
+**Error** text, a safe wrapping message, an accessible **Dismiss** button and
+**View details** disclosure for complete source context. Do not infer severity
+from arbitrary message text or use color alone. Nonblocking notices do not expire.
+
+Several findings share a severity count and highest-priority preview. Bound the
+band to roughly one third of the available card height with internal scrolling;
+expanded complete details must not consume the scientific workspace or cause
+document overflow. Preserve keyboard access to details and dismissal, restore a
+stable local focus target when dismissal removes its button, and announce changed
+findings politely without reannouncing unchanged content on ordinary rerenders.
+Quiet provenance badges are distinct from warning/error counts. This pattern does
+not insert transient rows between Matrix Explorer headers and exact tensor pixels.
