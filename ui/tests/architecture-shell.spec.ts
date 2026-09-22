@@ -88,7 +88,7 @@ test('a delayed architecture response cannot replace a newer model/session', asy
   expect(requests.some((request) => request.endsWith('/tokenize'))).toBe(false);
 });
 
-test('third navigation item leaves model and session controls usable at 280 pixels', async ({ page, context }) => {
+test('architecture navigation leaves model and session controls usable at 280 pixels', async ({ page, context }) => {
   await backend(context); await page.setViewportSize({ width: 280, height: 400 }); await page.goto('/');
   const model = page.getByRole('combobox', { name: 'Model', exact: true });
   const refresh = page.getByRole('button', { name: 'Refresh models', exact: true });

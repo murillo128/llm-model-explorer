@@ -82,8 +82,8 @@ Floating inspection surfaces may use the stronger floating shadow.
 
 ## Global application bar and status bar
 
-One compact global bar owns product identity, Tensor Explorer / Tokenizer Explorer
-navigation, the current model selector, adjacent refresh-model control, session
+One compact global bar owns product identity, the three-explorer navigation, the
+current model selector, adjacent refresh-model control, session
 state, and secondary session actions. The active navigation item is the explorer
 title. Do not repeat it as a large page heading or workspace title. The selector
 is the primary visible model identity; do not repeat the model as a subtitle or
