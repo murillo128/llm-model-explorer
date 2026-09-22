@@ -19,6 +19,25 @@ defined below. The complete model remains the global fallback.
 
 Start compact, using declared repetition records to represent repeated layers as a stack with multiplicity and truthful variant information instead of immediately materializing every instance. Allow expansion of a representative interior, selection of a concrete instance without expanding its siblings, focused exploration of a bounded contiguous set of instances when useful, expansion of chosen instances, and an Expand all action that reveals every instance and required mathematical operation. Compressed before/after ranges must remain explicit when only part of a stack is shown. A representative display must clearly identify its selected instance; inspecting a weight must never silently use layer zero for every repetition.
 
+A fresh backend/model/graph view opens only the outer model boundary and its
+immediate visible components. This is the hierarchy **after** declarative
+interfaces become ports and any presentation-only Model boundary is inserted;
+all expandable child interiors, concrete instances and derived groups stay
+collapsed. Passive interfaces do not count as a component level. Assess this
+candidate's visible layout bounds against the current nonzero graph-body
+viewport. The minimum readable initial scale is **0.8**, with a **16 CSS-pixel
+inset** and a maximum initial scale of **1**. If fitting the candidate requires a
+smaller scale, use the collapsed outer model with its name, declared ports and
+expansion action. Compute at most one candidate and one fallback; never display
+exhaustive detail and then snap closed. Checkpoint size, model names and hidden
+source-node counts do not determine this choice. An unusually large collapsed
+interface remains readable at the minimum scale and accessible through pan/zoom.
+
+Expanded containers reserve their own header/summary, visible descendants and
+necessary port/routing gutters. Boundary port rows occupy side gutters rather
+than an additional empty band above the children. Hidden descendants reserve no
+space. Real labels, hit targets, fan-out and crossing routes retain their room.
+
 Keep actual layer order and variant differences visible when grouped. Repetition means repeated structure, not shared weights, states, parameters, or guaranteed equivalence between variants. Preserve external dependencies across collapsed boundaries through meaningful ports/connections, including bypasses that cross hidden ranges. Collapsing must not erase a skip connection, create a false serial path, or treat distinct hybrid blocks as identical. Expanded topology must be recoverable from the same graph without new analysis.
 
 Expanding a group preserves the acted-on location/context; do not reset the camera or automatically fit the entire graph after every expansion. Maintain camera, expanded groups, focused repetition/instance context, and valid node/connection selection while closing inspection or switching explorers during the browser session, keyed by model and graph identity. Server-restart persistence is not required. Reject late responses and clear invalid selections on session/model/graph replacement.
@@ -30,6 +49,19 @@ calculation. Saved camera restoration, Back and newer scope/model choices take
 precedence over obsolete initialization; user camera interaction supersedes a
 pending initialization. Ordinary resizing, selection, hover and menus do not
 start another fit or layout. Initialization failure is bounded and recoverable.
+Fresh initialization aligns the top of visible diagram bounds to the small
+graph-body inset and centers horizontally when the diagram fits. The renderer's
+actual body excludes the card header and any diagnostic band. Saved camera and
+expansion, ordinary resize and explorer/inspection reopening do not reapply this
+initial policy. Manual Fit view continues to fit all currently visible detail.
+
+The explicit global **Collapse all / Collapse model** command is the exception
+to the no-automatic-fit rule: it exits isolation, collapses to the outer model,
+waits for that layout and fits those final bounds once, with maximum zoom 1.
+It retains valid source selection even when hidden. A newer scope, model,
+expansion or user camera command supersedes pending collapse framing. Ordinary
+card/browser plus/minus actions continue to preserve their anchor and never fit
+the whole graph.
 
 Viewport culling and asynchronous layout are allowed optimizations; discarding graph records or silently reducing detail is not. Bound layout work and provide an explicit recoverable failure rather than an indefinitely frozen canvas. All reference graphs must be usable when fully expanded on the documented acceptance environment. Record actual layout time, memory, and graph size rather than inventing a performance guarantee.
 
@@ -44,11 +76,19 @@ sort away source order, or create a second semantic graph. Components with
 children use folder/component icons, terminal components use block icons, and
 Shared families use overlapping blocks (repeated structure, not weight tying).
 
-The browser header contains a collapse arrow, followed by local search, a
-**Model** hierarchy and a **Shared** family list. Disclosure and selectable names
-are separate controls. Indentation is capped at four levels; full public names,
-paths, exact IDs and concrete instance context remain available on hover/focus.
-The browser owns its vertical scrolling; its header and search stay reachable.
+The browser header contains a collapse arrow, followed by local search and three
+consistently presented, independently collapsible sections: **Model** hierarchy,
+**Repetition windows**, and **Shared** family list. Section disclosure is only
+browser presentation state and never selects, expands, fits, scopes or navigates
+the graph. The presentation-only Model boundary remains separately selectable
+when available; Repetition windows and Shared section labels are not graph nodes.
+Disclosure and selectable names are separate controls. Section and tree state
+remain in the current model/graph view lifetime. Search temporarily exposes its
+Model and Shared results, and clearing it restores the preceding ordinary section
+presentation. Collapsing a section that contains keyboard focus returns focus to
+its disclosure. Indentation is capped at four levels; full public names, paths,
+exact IDs and concrete instance context remain available on hover/focus. The
+browser owns its vertical scrolling; its header and search stay reachable.
 
 Use the Tensor inventory's pane conventions without changing that explorer:
 280 CSS-pixel preferred width, bounded to 200–480 and available width minus the
@@ -74,6 +114,14 @@ retains hidden descendants' expansion and selection; unrelated siblings remain
 unchanged. No toggle implicitly Fits view. Only explicit **Center** reveals a
 hidden selection by opening required ancestors and its exact repetition window,
 without opening its own children or every sibling.
+
+All navigable browser rows share one disclosure gutter, icon box, minimum height,
+padding, text alignment and hover/focus/selection treatment. Leaves reserve the
+gutter without presenting a false disclosure. Repetition rows use a stack icon
+and retain an explicitly named **Explore stack** action. Repetition and Shared
+rows place their actual instance counts in the same muted secondary metadata
+slot beneath the primary name. Empty repetition/template collections retain their
+section and show an honest empty state.
 
 Search filters eligible components from the full received graph by real label, public containment/module
 path, exact identity and supported description source key. It includes collapsed
@@ -103,22 +151,40 @@ to the existing anchor state, never through independent browser flags.
 
 The minimal canvas header has current Model/component context on the left,
 selected node/connection with applicable **Inspect**, **Explore component** or
-**View in model**, **Center** and clear controls toward the right, and **Fit view**
-and **View options** at the far right. Omit inapplicable selected-item controls.
-No global horizontal component strip, Find component trigger or Shared structures
-dropdown remains. Preserve explicit isolation/shared context, Back and compact
-concrete instance/previous/next/window controls. Repetition entry controls live in
-the browser. Navigation focus and selection remain distinct.
+**View in model**, **Center** and clear controls toward the right. Global
+**Collapse all** and exhaustive **Show all operations** remain directly reachable
+outside **View options**, with descriptive tooltips and accessible names. Each
+action has one primary location. Collapse invokes one collapse-and-reframe
+command after layout; ordinary Fit never expands components.
 
-View options provides exhaustive **Show all operations**, collapse, center
-selection, zoom, dimensions (initially off), context, unused-interface and derived
-MLP preferences, plus applicable group/layer/MLP/state navigation. Fit view changes
-the camera; Show all operations changes visible detail. Unused interfaces refers
-to unconsumed interface branches, not every auxiliary signal. State focus identifies
-its filtered context; partial coverage stays visible and full diagnostics remain
-available on demand. Options dismiss on Escape with focus restored to the trigger
-or when focus moves outside. Controls use neutral/graphite/amber styling, English
-accessible names and visible focus, with bounded overflow at narrow widths.
+A small lower-left camera dock inside the graph viewport contains **Zoom in**,
+**Zoom out** and **Fit view**. It stays outside the camera transform, with full
+English accessible names, hover/focus tooltips and visible focus. It does not
+resize the canvas or cover header, boundary controls, footer or application toasts.
+Center selection remains with the selection actions.
+
+Omit inapplicable selected-item controls. No global component strip or second
+component list in settings remains. Preserve isolation/shared context, Back,
+concrete instance/previous/next/window controls and applicable selected-group,
+stack/layer/MLP/state commands in compact contextual controls. Repetition entry
+controls live in the browser. Navigation focus and selection remain distinct.
+The full source browser and explicit Center/navigation retain outside-scope access.
+In isolation, exhaustive expansion is labeled **Show all operations in model**.
+
+View options contains only persistent **Show dimensions** (initially off),
+**Show unused interfaces**, **Show context** and applicable **Group derived MLP
+blocks** preferences. Preserve their defaults. Show the MLP preference only if
+the source graph has eligible fallback patterns, independently of whether grouping
+is enabled, with an explanation that it groups recognized, otherwise ungrouped
+operation patterns for presentation. Authored MLP groups remain source containers.
+Unused interfaces refers to unconsumed interface branches, not every auxiliary
+signal. Active filters and state/isolation context remain visible. Model information
+provides graph identity, declared scope, complete/partial coverage and full diagnostics.
+Options dismiss on Escape with focus restored to the trigger, outside pointer
+interaction or focus leaving the popover. Opening or closing performs no layout or
+camera work. Header/context overflow stays bounded at narrow widths; preferences
+never become a floating navigation panel. Use neutral/graphite/amber styling,
+English accessible names and visible focus without document scrolling.
 
 Selection, typing, menus, emphasis and inspection preserve the mounted canvas,
 graph retrieval and numeric lifetimes, source/projection records, generated
@@ -451,8 +517,39 @@ Integrated tests use the built UI, real HTTP backend, and the repository's exist
 
 ## Model-supplied provenance
 
-For a graph with transport scope `model_defined`, retain a visible notice that
-its structure was supplied by the checkpoint author. Structural and inventory
-validation do not establish equivalence to the implementation. The notice remains
-visible when exploring a component, without adding sport-specific behavior or
-changing source-graph navigation. Other graph scopes retain their current UI.
+For transport scope `model_defined`, retain a quiet **Model-supplied** information
+badge below the canvas header, including during component exploration. Its
+keyboard-accessible disclosure and Model information preserve the explanation:
+“Model-supplied architecture. Structure and weight bindings are validated;
+equivalence to model code is not verified.” Never use an unqualified Validated
+badge. This is provenance information, separate from warning/error counts.
+
+## Persistent capability diagnostics
+
+Place architecture response, graph and interface-presentation findings in a compact
+band inside the canvas card, immediately after its header/breadcrumb/actions and
+before its graph body, outside pan/zoom. Loading, unavailable and retrieval-error
+states use the same rounded card shell. No diagnostic text floats above the
+workspace or inside the diagram. Ambiguous interface mappings remain warnings
+with the original affected component and complete message available; they do not
+imply that the entire model is unusable.
+
+Use the shared severity/disclosure presentation in [visual-language.md](visual-language.md#persistent-diagnostic-presentation).
+The current diagnostic API has no severity field: available-graph and inventory
+findings and ambiguous presentation mappings are warnings; typed analysis/cache
+failure and retrieval failures are errors; other unavailable capability reasons
+are warnings. Never derive severity from message substrings. Preserve exact safe
+producer messages, codes and node/parameter locations. Deduplicate identical
+response/graph findings without merging different locations. Contextual filters
+and graph metadata remain distinguishable from diagnostic findings.
+
+Dismissal hides only the inline findings. The current model's observations remain
+in the shell's Model information destination, defined in
+[UI architecture](architecture.md#model-information-and-diagnostic-lifetime).
+Blocking failures retain an explicit unavailable/failed explanation and any
+applicable recovery action after dismissal. No inspection, details or dismissal
+action may retrieve the graph, mutate source records, invoke layout, remount the
+canvas, start numerical work, reset selection/expansion or fit the camera. Band
+height changes are ordinary bounded viewport resizes. Component inspection may
+show the relevant deduplicated findings alongside source evidence, without
+creating another global diagnostic list.

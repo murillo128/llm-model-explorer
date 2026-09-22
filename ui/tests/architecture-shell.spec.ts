@@ -88,7 +88,7 @@ test('a delayed architecture response cannot replace a newer model/session', asy
   expect(requests.some((request) => request.endsWith('/tokenize'))).toBe(false);
 });
 
-test('third navigation item leaves model and session controls usable at 280 pixels', async ({ page, context }) => {
+test('architecture navigation leaves model and session controls usable at 280 pixels', async ({ page, context }) => {
   await backend(context); await page.setViewportSize({ width: 280, height: 400 }); await page.goto('/');
   const model = page.getByRole('combobox', { name: 'Model', exact: true });
   const refresh = page.getByRole('button', { name: 'Refresh models', exact: true });
@@ -97,5 +97,13 @@ test('third navigation item leaves model and session controls usable at 280 pixe
   expect(a.width).toBeGreaterThanOrEqual(36); expect(a.x + a.width).toBeLessThanOrEqual(b.x);
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
   await model.selectOption(contractResponse.model_id);
-  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '3');
+  const graph = page.getByLabel('Architecture graph', { exact: true });
+  // This small graph body needs the readable collapsed-model fallback.
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  await expect(graph).toHaveAttribute('data-visible-nodes', '1');
+  await expect(graph).toHaveAttribute('data-source-node-ids', '["root"]');
+  await expect(graph).toHaveAttribute('data-node-count', '6');
+  await graphAction(page, 'Show all operations');
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  await expect(graph).toHaveAttribute('data-visible-nodes', '6');
 });

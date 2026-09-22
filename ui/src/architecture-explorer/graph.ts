@@ -6,6 +6,7 @@ import { projectionOptions } from './scope-navigation';
 import { sharedContext, type SharedStructure } from './shared-structure';
 import { interfaceIndex, interfaceSelection } from './interfaces';
 import type { BoundarySelection } from './interfaces';
+import { overviewExpansion } from './overview';
 
 export type Graph = components['schemas']['ArchitectureGraph'];
 export type GraphNode = components['schemas']['ArchitectureNode'];
@@ -34,7 +35,9 @@ export class GraphView {
     return this.projection!;
   }
   // Navigation presentation only; lifetime follows this backend/model/graph view.
-  browser = { query: '', treeScroll: 0, searchScroll: 0, families: [] as string[], selectedFamily: null as string | null };
+  browser = { query: '', treeScroll: 0, searchScroll: 0, families: [] as string[], selectedFamily: null as string | null,
+    sections: { model: true, repetitions: true, shared: true },
+    sectionsBeforeSearch: null as { model: boolean; repetitions: boolean; shared: boolean } | null };
   shared: SharedStructure | undefined;
   notice: string | undefined;
   scope: string | undefined;
@@ -43,6 +46,8 @@ export class GraphView {
   selected: string | null = null;
   boundary: BoundarySelection | undefined;
   modelCollapsed = false;
+  /** One provisional first-level candidate; never restored by scope history. */
+  initialOverview = false;
   selectionMode: 'source' | 'structure' = 'source';
   dimensions = false;
   edge: string | null = null;
@@ -57,6 +62,7 @@ export class GraphView {
   constructor(public expanded: string[] = []) {}
   update(patch: Partial<Omit<GraphView, 'update'>>) {
     if (!Object.entries(patch).some(([key, value]) => Reflect.get(this, key) !== value)) return;
+    if (['expanded', 'repetitions', 'exhaustive', 'scope', 'shared', 'stateScope', 'modelCollapsed'].some((key) => key in patch)) this.initialOverview = false;
     Object.assign(this, patch); this.revision++;
     this.listeners.forEach((listener) => listener());
   }
@@ -75,7 +81,8 @@ export class GraphViews {
       for (const existing of this.views.keys()) if ((JSON.parse(existing) as string[])[0] === model) {
         clearedShared ||= Boolean(this.views.get(existing)?.shared); this.views.delete(existing);
       }
-      view = new GraphView(graph.nodes.filter((n) => n.kind === 'group' && !n.parent_id).map((n) => n.id));
+      view = new GraphView(overviewExpansion(graph));
+      view.initialOverview = true;
       if (clearedShared) view.notice = "Graph changed; the shared structure selection was cleared.";
       this.views.set(key, view);
     }
@@ -109,7 +116,8 @@ export class GraphViews {
     if (view.shared) {
       try { sharedContext(graph, view.shared); }
       catch {
-        const reset = new GraphView(graph.nodes.filter((n) => n.kind === 'group' && !n.parent_id).map((n) => n.id));
+        const reset = new GraphView(overviewExpansion(graph));
+        reset.initialOverview = true;
         reset.notice = 'Shared structure correspondence changed; returned to the model view.';
         this.views.set(key, reset); return reset;
       }
@@ -117,7 +125,8 @@ export class GraphViews {
     if (view.scope) {
       try { componentScope(graph, view.scope); }
       catch {
-        const reset = new GraphView(graph.nodes.filter((n) => n.kind === 'group' && !n.parent_id).map((n) => n.id));
+        const reset = new GraphView(overviewExpansion(graph));
+        reset.initialOverview = true;
         this.views.set(key, reset); return reset;
       }
     }

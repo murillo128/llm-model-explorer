@@ -166,3 +166,40 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .operation-spinner { width: 10px; height: 10px; border: 1px solid var(--ui-border-strong); border-top-color: var(--ui-text); border-radius: 50%; animation: operation-spin 1s linear infinite; }
 @keyframes operation-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .operation-spinner { animation: none; } }
+
+/* Feedback is outside explorer layout/transforms; the footer slot never resizes. */
+.connection-slot { flex: 0 0 190px; display: flex; align-items: center; gap: 8px; }
+.connection-icon { margin-right: 6px; }
+.connection-retry { padding: 0 4px; font: inherit; border: 1px solid var(--ui-border); border-radius: 3px; background: var(--ui-surface); color: var(--ui-text); }
+.session-status { flex: 0 1 120px; overflow: hidden; text-overflow: ellipsis; }
+.status-metadata { overflow: hidden; }
+.toast-host { position: fixed; z-index: 40; right: 16px; bottom: calc(var(--ui-status-bar-height) + 12px); width: min(360px, calc(100vw - 32px)); max-height: calc(100dvh - 112px); overflow: auto; margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; pointer-events: none; }
+.app-toast { pointer-events: auto; padding: 12px; border: 1px solid var(--ui-border-strong); border-radius: 6px; background: var(--ui-surface); box-shadow: var(--ui-shadow-float); font-size: 13px; line-height: 20px; }
+.app-toast[data-severity="error"] { border-left: 3px solid var(--ui-accent); }
+.toast-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.toast-actions button { color: var(--ui-text); background: var(--ui-surface-soft); border: 1px solid var(--ui-border); border-radius: 4px; padding: 4px 8px; font: inherit; }
+@media (max-width: 600px) { .connection-slot { flex-basis: 180px; } .toast-host { right: 8px; width: min(360px, calc(100vw - 16px)); } }
+
+/* Persistent model findings are separate from connection status and toasts. */
+.diagnostic-band { flex: 0 1 auto; min-height: 0; max-height: 32%; overflow: auto; border-bottom: 1px solid var(--ui-border); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+.diagnostic-band:empty { display: none; }
+.diagnostic-notice, .model-supplied { padding: 6px 10px; }
+.diagnostic-notice[data-severity="warning"] { border-left: 3px solid var(--ui-accent); }
+.diagnostic-notice[data-severity="error"] { border-left: 3px solid #a34b45; }
+.diagnostic-notice p, .model-supplied p, .diagnostic-list p { margin: 3px 0; white-space: pre-wrap; }
+.diagnostic-actions { display: flex; align-items: start; gap: 12px; }
+.diagnostic-actions details { flex: 1; min-width: 0; }
+.diagnostic-actions button { flex: none; }
+.diagnostic-list { list-style: none; padding: 0; margin: 4px 0; overflow-wrap: anywhere; }
+.diagnostic-list li { padding: 8px 0; border-bottom: 1px solid var(--ui-border); }
+.diagnostic-list code { font-size: 11px; }
+.model-supplied { color: var(--ui-text-muted); }
+.model-supplied summary, .diagnostic-actions summary { cursor: pointer; }
+.session-options h2, .session-options h3 { margin: 0; font-size: 14px; }
+.session-options h3 small { display: block; font-weight: normal; }
+.architecture-empty { border: 1px solid var(--ui-border); border-radius: 9px; background: var(--ui-surface); }
+.architecture-empty-heading { flex: none; padding: 10px; border-bottom: 1px solid var(--ui-border); font-weight: 600; }
+.architecture-capability-state { padding: 12px; overflow: auto; }
+
+.working-surface:has(.architecture-empty) { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.architecture-explorer:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; }

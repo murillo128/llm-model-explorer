@@ -87,10 +87,40 @@ test('label and body select only for source, expanded, repetition and derived ca
   await selectOnly(page, 'mlp:layer-3.gate'); await selectOnly(page, 'layer-3.gate');
 });
 
-test('real double-clicks toggle once, preserve zoom and leave leaf inspection explicit', async ({ page }) => {
-  const before = await state(page);
+test('real double-clicks toggle once, preserve zoom and leave leaf inspection explicit', async ({ page }, info) => {
+  const target = card(page, 'repeat:layers:0:1');
+  await page.evaluate(() => {
+    const observations: { type: string; target: boolean; flow: DOMRect; card: DOMRect }[] = [];
+    Object.assign(window, { doubleClickGeometry: observations });
+    for (const type of ['click', 'dblclick']) document.addEventListener(type, (event) => {
+      const label = document.querySelector('.react-flow__node[data-id="repeat:layers:0:1"] .architecture-node-label');
+      const flow = document.querySelector('.architecture-flow');
+      const node = label?.closest('.react-flow__node');
+      if (label && flow && node) observations.push({
+        type, target: event.target === label, flow: flow.getBoundingClientRect().toJSON(), card: node.getBoundingClientRect().toJSON(),
+      });
+    }, { capture: true });
+  });
+  const before = await state(page), initialFlow = await panel(page).locator('.architecture-flow').boundingBox();
+  const initialCard = await target.boundingBox();
   await card(page, 'repeat:layers:0:1').locator('.architecture-node-label').dblclick(); await ready(page);
   expect(Number((await state(page)).count)).toBe(Number(before.count) + 1);
+  const nativeEvents = await page.evaluate(() => (window as unknown as { doubleClickGeometry: { type: string; target: boolean; flow: DOMRect; card: DOMRect }[] }).doubleClickGeometry);
+  expect(nativeEvents.map(({ type, target }) => ({ type, target }))).toEqual([
+    { type: 'click', target: true }, { type: 'click', target: true }, { type: 'dblclick', target: true },
+  ]);
+  for (const observation of nativeEvents) {
+    expect(observation.flow).toMatchObject(initialFlow!);
+    expect(observation.card).toMatchObject(initialCard!);
+  }
+  if (info.repeatEachIndex === 0) {
+    await info.attach('stable-double-click-geometry', {
+      body: JSON.stringify({ initialFlow, initialCard, nativeEvents }, null, 2), contentType: 'application/json',
+    });
+    const path = info.outputPath('selected-context-controls.png');
+    await page.screenshot({ path });
+    await info.attach('selected-context-controls', { path, contentType: 'image/png' });
+  }
   await expect(page.locator('output')).toBeEmpty();
   await findComponent(page, 'layer1'); await ready(page);
   const collapsed = await state(page);
@@ -107,6 +137,11 @@ test('real double-clicks toggle once, preserve zoom and leave leaf inspection ex
   const contracted = await state(page);
   expect(Number(contracted.count)).toBe(Number(expanded.count) + 1);
   expect(contracted.camera?.match(/scale\(([^)]+)\)/)?.[1]).toBe(expanded.camera?.match(/scale\(([^)]+)\)/)?.[1]);
+  const selectedFlow = await panel(page).locator('.architecture-flow').boundingBox();
+  const selectedCard = await card(page, 'layer1').boundingBox();
+  await page.getByRole('button', { name: 'Clear node selection', exact: true }).click(); await ready(page);
+  expect(await panel(page).locator('.architecture-flow').boundingBox()).toEqual(selectedFlow);
+  expect(await card(page, 'layer1').boundingBox()).toEqual(selectedCard);
   await expect(page.locator('output')).toBeEmpty();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });

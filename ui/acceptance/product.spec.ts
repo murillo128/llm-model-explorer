@@ -317,7 +317,7 @@ test('live tokenizer uses real Unicode IDs/spans and suppresses delayed old resp
   expect(await metrics(page)).toMatchObject({ uploads: settled.uploads, createdTextures: settled.createdTextures });
   const persisted = await page.evaluate(() => sessionStorage.getItem(Object.keys(sessionStorage)[0]!));
   await page.reload();
-  await expect(page.getByRole('contentinfo').getByRole('status')).toHaveAttribute('data-state', 'ready');
+  await expect(page.getByRole('contentinfo').locator('.session-status')).toHaveAttribute('data-state', 'ready');
   expect(await page.evaluate(() => sessionStorage.getItem(Object.keys(sessionStorage)[0]!))).toBe(persisted);
 });
 
@@ -1159,7 +1159,15 @@ for (const width of [390, 1178, 1440]) test(`architecture safety baseline preser
     for (const row of await page.locator('.architecture-context-row').all()) {
       expect(await row.evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(45);
     }
-    await expect(page.getByRole('button', { name: 'Show all operations', exact: true })).toHaveCount(0);
+    const isolated = Boolean(await canvas.getAttribute('data-scope-id'));
+    const exhaustive = page.getByLabel('Graph navigation', { exact: true }).getByRole('button', {
+      name: isolated ? 'Show all operations in model' : 'Show all operations', exact: true,
+    });
+    await expect(exhaustive).toHaveCount(1);
+    await expect(exhaustive).toBeVisible();
+    await expect(exhaustive).toBeEnabled();
+    await expect(exhaustive).toHaveClass(/architecture-action/);
+    await expect(page.getByRole('dialog', { name: 'View options', exact: true })).toHaveCount(0);
   };
   await expect(page.getByRole('combobox', { name: /Expand instance of/ })).toHaveCount(0);
   await expect(page.locator('.architecture-context-row')).toHaveCount(0);

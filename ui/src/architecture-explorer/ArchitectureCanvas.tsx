@@ -1,5 +1,6 @@
 import { memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
+import type { ReactNode } from 'react';
 import type { Node, NodeProps } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './architecture.css';
@@ -22,6 +23,7 @@ import { displayLabel, instanceOf } from './presentation';
 import { ArchitectureBrowser } from './ArchitectureBrowser';
 import { ArchitectureWorkspace } from './ArchitectureWorkspace';
 import { browserExpansionId } from './browser-model';
+import { CameraDock } from './CameraDock';
 import { ArchitectureControls } from './ArchitectureControls';
 import type { NavigationItem, ControlSelection } from './ArchitectureControls';
 import { Connection, ConnectionInspection } from './Connection';
@@ -35,6 +37,7 @@ import type { ConnectionEdge } from './Connection';
 import type { EmphasisTarget } from './connection-context';
 import { interfaceIndex } from './interfaces';
 import type { BoundarySelection } from './interfaces';
+import { initialViewport, overviewExpansion, visibleBounds } from './overview';
 
 export interface ArchitectureSelection {
   modelId: string; sessionId: string; graphId: string; node?: GraphNode; boundary?: BoundarySelection; trigger: HTMLElement;
@@ -44,6 +47,7 @@ export interface ArchitectureSelection {
   templateInstanceId?: string;
 }
 interface CanvasProps {
+  notices?: ReactNode;
   graph: Graph; modelId: string; sessionId: string; view: GraphView;
   onInspect?: ((selection: ArchitectureSelection) => void) | undefined;
   onDismissInspection?: (() => void) | undefined;
@@ -118,7 +122,7 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
 const nodeTypes = { architecture: OperationNode }, edgeTypes = { connection: Connection };
 
 export function ArchitectureCanvas(props: CanvasProps) { return <ReactFlowProvider><Canvas {...props} /></ReactFlowProvider>; }
-function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspection }: CanvasProps) {
+function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspection, notices }: CanvasProps) {
   const flow = useReactFlow<CanvasNode>();
   const options = useGraphView(view);
   const { selected, selectionMode, focus: focusId, edge: pinned, activeStack, shared } = view;
@@ -153,6 +157,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const anchor = useRef<{ id: string; sourceId?: string | undefined; x: number; y: number } | null>(null);
   const centerPending = useRef<string | null>(null), fitPending = useRef(false), initialized = useRef(false);
   const restorePending = useRef<GraphView['viewport']>(undefined), scopeCameraPending = useRef(false);
+  const collapsePending = useRef<ProjectionOptions | undefined>(undefined);
   const interfaces = useMemo(() => interfaceIndex(graph), [graph]);
   const records = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph]);
   const parameters = useMemo(() => new Map(graph.parameters.map((p) => [p.id, p])), [graph]);
@@ -200,6 +205,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     setInspection(null); setTemporary(null); setFocused(null);
     cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current);
     anchor.current = null; centerPending.current = null; fitPending.current = false;
+    collapsePending.current = undefined;
     restorePending.current = initial ? undefined : view.viewport; scopeCameraPending.current = initial;
   });
   const leaveIsolation = (retain = false) => {
@@ -272,7 +278,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     const start = info.repetition.instances.findIndex((i) => i.node_id === info.instance.node_id);
     select(id); focusContext(info.instance.node_id);
     if (anchor.current) { anchor.current.id = info.instance.node_id; anchor.current.sourceId = info.instance.node_id; }
-    change({ ...base, expanded: [...expanded], repetitions: { ...base.repetitions, [info.repetition.id]: { start, count: 1 } }, stateScope: undefined, scope: undefined });
+    change({ ...base, modelCollapsed: false, expanded: [...expanded], repetitions: { ...base.repetitions, [info.repetition.id]: { start, count: 1 } }, stateScope: undefined, scope: undefined });
   });
   const exploreStack = useCanvasCallback((id: string, start?: number) => {
     const repetition = graph.repetitions.find((r) => r.id === id)!;
@@ -283,7 +289,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     const expanded = withAncestors(repetition.instances[0]!.node_id, new Set(base.expanded));
     for (const item of repetition.instances) expanded.delete(item.node_id);
     focusContext(repetition.parent_id, id);
-    change({ ...base, expanded: [...expanded], exhaustive: false, stateScope: undefined, scope: undefined,
+    change({ ...base, modelCollapsed: false, expanded: [...expanded], exhaustive: false, stateScope: undefined, scope: undefined,
       repetitions: { ...base.repetitions, [id]: { start: Math.max(0, Math.min(repetition.instances.length - 1, start ?? current?.start ?? 0)), count: windowSize } } });
   });
   const toggle = useCanvasCallback((id: string) => {
@@ -323,7 +329,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     if (info) repetitions[info.repetition.id] = { start: info.repetition.instances.findIndex((item) => item.node_id === info.instance.node_id), count: 1 };
     select(id); focusContext(derived ? id : info?.instance.node_id ?? id);
     centerPending.current = id; restorePending.current = undefined;
-    change({ ...base, expanded: [...expanded], repetitions, scope: undefined, stateScope: undefined,
+    change({ ...base, modelCollapsed: false, expanded: [...expanded], repetitions, scope: undefined, stateScope: undefined,
       ...(derived ? { deriveMlp: true, exhaustive: false } : {}) });
   });
   const navigateCard = useCanvasCallback((navigation: ReturnType<typeof cardNavigation>) => {
@@ -363,7 +369,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     if (options.scope) leaveIsolation();
     focusContext(null); fitPending.current = true;
     restorePending.current = undefined;
-    change({ modelCollapsed: false, expanded: graph.nodes.filter((n) => n.kind === 'group' && !n.parent_id).map((n) => n.id), repetitions: {}, exhaustive: false, stateScope: undefined, scope: undefined });
+    change({ modelCollapsed: false, expanded: overviewExpansion(graph), repetitions: {}, exhaustive: false, stateScope: undefined, scope: undefined });
   });
   const focusLayer = useCanvasCallback(() => {
     if (!instance) return;
@@ -384,7 +390,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     observer.observe(element); return () => observer.disconnect();
   }, []);
   const clearInspection = useCanvasCallback(() => setInspection(null));
-  useLayoutRequest(layoutInput, options, retry, view, rememberAnchor, setResult, clearInspection);
+  useLayoutRequest(layoutInput, options, retry, view, rememberAnchor, setResult, clearInspection, flowContainer);
   useEffect(() => () => { cancelAnimationFrame(hoverFrame.current); cancelAnimationFrame(focusFrame.current); }, []);
   const hover = useCanvasCallback((target: EmphasisTarget | null) => {
     cancelAnimationFrame(hoverFrame.current);
@@ -448,12 +454,13 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
         navigation: cardNavigation(record, concreteInstance?.node_id ?? options.scope, sharedActive && !concreteInstance), navigate: navigateCard } };
   }), [activate, diagnosed, graph, inspect, projected, result.layout, selected, toggle, variants, select, options.scope, sharedActive, concreteInstance, navigateCard, parameters, cardDimensions, matrix, selectionMode]);
   const cameraState = useLayoutCamera(layoutResult.layout, options,
-    result.options === options && result.input === layoutInput.graph && !result.error, nodes, flowContainer, flow, async (fitLayout) => {
+    result.options === options && result.input === layoutInput.graph && !result.error, nodes, flowContainer, flow, async (fitLayout, size) => {
       const camera = flow.getViewport();
       const center = centerPending.current && boxes.get(centerPending.current);
       const substitute = anchor.current?.sourceId && [...projected.values()].find((n) => n.sourceIds.includes(anchor.current!.sourceId!));
       const at = anchor.current && (boxes.get(anchor.current.id) ?? (substitute ? boxes.get(substitute.id) : undefined));
-      if (restorePending.current) await flow.setViewport(restorePending.current);
+      if (collapsePending.current === options) await fitLayout({ padding: 0.1, minZoom: 0.00001, maxZoom: 1 });
+      else if (restorePending.current) await flow.setViewport(restorePending.current);
       else if (scopeCameraPending.current) await fitLayout({ padding: 0.1, minZoom: 0.8, maxZoom: 1 });
       else if (fitPending.current) await fitLayout({ padding: 0.1, minZoom: 0.00001, maxZoom: 1,
         ...(!options.scope && focusId && boxes.has(focusId) ? { nodes: flow.getNodes().filter((node) => node.id === focusId) } : {}) });
@@ -461,14 +468,20 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       else if (at && anchor.current) await flow.setViewport({ ...camera, x: anchor.current.x - at.absoluteX * camera.zoom, y: anchor.current.y - at.absoluteY * camera.zoom });
       else if (!initialized.current) {
         if (savedViewport.current) await flow.setViewport(savedViewport.current);
-        else await fitLayout({ padding: 0.06, minZoom: 0.65, maxZoom: 1 });
+        else await flow.setViewport(initialViewport(visibleBounds(result.layout!), size.width, size.height));
       }
     }, () => {
       initialized.current = true; anchor.current = null; centerPending.current = null; fitPending.current = false;
       restorePending.current = undefined; scopeCameraPending.current = false;
+      collapsePending.current = undefined;
     });
+  const cancelCamera = useCanvasCallback(() => {
+    view.update({ initialOverview: false }); cameraState.cancel(); initialized.current = true;
+    anchor.current = null; centerPending.current = null; fitPending.current = false;
+    restorePending.current = undefined; scopeCameraPending.current = false; collapsePending.current = undefined;
+  });
   const fit = useCanvasCallback(() => {
-    cameraState.cancel();
+    cancelCamera();
     let focusNodes: CanvasNode[] | undefined;
     if (!options.scope && focusId && boxes.has(focusId)) focusNodes = flow.getNodes().filter((n) => n.id === focusId);
     void flow.fitView({ ...(focusNodes?.length ? { nodes: focusNodes } : {}), padding: 0.1, minZoom: 0.00001, maxZoom: 1 });
@@ -524,7 +537,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     const presentation = [...projected.values()].find((n) => n.record?.id === selectedRecord.id);
     const box = presentation && boxes.get(presentation.id);
     if (box) {
-      cameraState.cancel();
+      cancelCamera();
       void flow.setCenter(box.absoluteX + box.width / 2, box.absoluteY + box.height / 2, { zoom: flow.getZoom() });
     } else {
       const mapped = browserExpansionId(graph, view, selectedRecord.id);
@@ -576,7 +589,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   });
   const centerEdge = useCanvasCallback(() => {
     if (!selectedEdge) return;
-    cameraState.cancel();
+    cancelCamera();
     void flow.fitView({ nodes: flow.getNodes().filter((n) => n.id === selectedEdge.source.node_id || n.id === selectedEdge.target.node_id), padding: 0.2, minZoom: 0.00001, maxZoom: 1 });
   });
   const centerDerived = useCanvasCallback(() => { if (selected) centerInLayout(selected); });
@@ -592,8 +605,20 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     else if (!scope && mlps.some((g) => g.id === item.id)) focusMlp();
     else { const info = instanceOf(graph, item.id); if (info?.instance.node_id === item.id) chooseInstance(item.id); else reveal(item.id); }
   });
-  const expandAll = useCanvasCallback(() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id), exhaustive: true, stateScope: undefined }); });
-  const collapseAll = useCanvasCallback(() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: [], modelCollapsed: true, repetitions: {}, exhaustive: false, stateScope: undefined }); });
+  const expandAll = useCanvasCallback(() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, modelCollapsed: false, expanded: graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id), exhaustive: true, stateScope: undefined }); });
+  const collapseAll = useCanvasCallback(() => {
+    // A common template role is not a concrete source selection. Bound ports
+    // retain their real endpoints, but shed the shared-only correspondence tag.
+    const boundary = view.selectionMode === 'source' ? view.boundary : undefined;
+    const selection = { selected: view.selectionMode === 'source' ? view.selected : null, selectionMode: 'source' as const,
+      boundary: boundary ? { kind: boundary.kind, owner: boundary.owner, endpoints: boundary.endpoints } : undefined };
+    const base = scope ? leaveIsolation() : options;
+    focusContext(null);
+    anchor.current = null; view.expansionAnchor = undefined; centerPending.current = null;
+    restorePending.current = undefined; scopeCameraPending.current = false; fitPending.current = false;
+    view.update({ ...base, ...selection, scope: undefined, expanded: [], modelCollapsed: true, repetitions: {}, exhaustive: false, stateScope: undefined });
+    collapsePending.current = view.getProjectionOptions();
+  });
   const toggleSelected = useCanvasCallback(() => { if (selectedCard) toggle(selectedCard.id); });
   const preferences = useCanvasCallback((patch: Partial<ProjectionOptions>) => {
     if (patch.dimensions !== undefined) {
@@ -602,8 +627,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     }
     change(patch);
   });
-  const zoomIn = useCanvasCallback(() => { cameraState.cancel(); void flow.zoomIn(); });
-  const zoomOut = useCanvasCallback(() => { cameraState.cancel(); void flow.zoomOut(); });
+  const zoomIn = useCanvasCallback(() => { cancelCamera(); void flow.zoomIn(); });
+  const zoomOut = useCanvasCallback(() => { cancelCamera(); void flow.zoomOut(); });
   const centerBoundary = useCanvasCallback(() => {
     if (!view.boundary) return;
     const boundary = view.boundary;
@@ -639,27 +664,26 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   } : undefined;
   return <ArchitectureWorkspace browser={<ArchitectureBrowser graph={graph} view={view} searchRef={browserSearch}
     select={selectSource} selectBoundary={selectBoundary} selectFamily={selectFamily} toggle={toggleBrowser} exploreStack={exploreStack} />}>
-    <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
+    <div ref={panel} tabIndex={-1} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
     data-template-id={shared?.templateId ?? ''} data-template-instance-id={shared?.instanceId ?? ''}
     data-scope-id={concreteInstance?.node_id ?? options.scope ?? ''} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
     data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options || !result.error && !cameraState.ready}
     data-source-node-ids={JSON.stringify(sourceNodeIds)} data-represented-edge-ids={JSON.stringify(result.layout?.edgeIds ?? [])}>
-    {notice && <p role="status">{notice}</p>}
-    {!!result.layout?.projection.notices?.length && <p role="status">{result.layout.projection.notices.join(' ')}</p>}
     <ArchitectureControls shared={shared && template ? { template, instanceId: shared.instanceId, choose: chooseSharedInstance } : undefined}
       family={selectedFamily ? { label: selectedFamily.label, explore: exploreFamily, clear: clearFamily } : undefined}
       returnContext={!scope && view.history.length ? back : undefined} graph={graph} focus={focusId} stack={stack} options={options} picker={picker}
-      isolation={scope ? { back, viewInModel: shared && !concreteInstance ? undefined : viewScopeInModel, expand: expandCurrentComponent,
-        nodeIds: scope.members, excludedEdges: result.layout?.projection.scope?.excludedEdgeIds ?? [] } : undefined}
+      isolation={scope ? { back, viewInModel: shared && !concreteInstance ? undefined : viewScopeInModel, expand: expandCurrentComponent } : undefined}
       instanceId={instance?.instance.node_id ?? (stack ? stack.instances[options.repetitions?.[stack.id]?.start ?? 0]?.node_id : undefined)}
       visibleInstances={stack?.instances.filter((i) => projected.has(i.node_id)).map((i) => i.node_id) ?? []}
       breadcrumbs={shared && template ? [{ id: template.id, kind: 'node', label: template.label }] : breadcrumbs}
-      selection={controlSelection} reveal={reveal} navigate={navigate} overview={overview} fit={fit}
+      selection={controlSelection} navigate={navigate} overview={overview}
       chooseInstance={chooseInstance} exploreStack={exploreStack} windowSize={windowSize} expandAll={expandAll} collapseAll={collapseAll}
       focusLayer={!scope && instance ? focusLayer : undefined} focusMlp={!scope && instance && mlps.some((g) => g.parentId === instance.instance.node_id) ? focusMlp : undefined}
       stateFocus={!scope && instance ? stateFocus : undefined} toggleSelected={selectedCard && cardExpandable(selectedCard) ? toggleSelected : undefined}
-      preferences={preferences} zoomIn={zoomIn} zoomOut={zoomOut}
+      preferences={preferences} derivedMlpAvailable={mlps.some((group) => !records.has(group.id))}
       filtered={!options.exhaustive && !options.showUnused && !!result.layout?.projection.filteredEdgeIds.length} />
+    {notices}
+    {notice && <p role="status">{notice}</p>}
     {result.error && <div role="alert">{result.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button>{shared && <button onClick={back}>Return to ordinary view</button>}</div>}
     {cameraState.error && <div role="alert">{cameraState.error} <button onClick={() => setRetry(retry + 1)}>Retry layout</button></div>}
     <div className="architecture-flow" ref={flowContainer}>
@@ -668,13 +692,14 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
         <ReactFlow<CanvasNode, ConnectionEdge> nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onlyRenderVisibleElements
           zIndexMode="manual" nodesDraggable={false} nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null}
           minZoom={0.00001} maxZoom={4} defaultViewport={view.viewport ?? { x: 0, y: 0, zoom: 1 }} panOnDrag zoomOnScroll
-          onMoveStart={(event) => { if (event) cameraState.cancel(); }}
+          onMoveStart={(event) => { if (event) cancelCamera(); }}
           onViewportChange={(viewport) => setZoom(viewport.zoom)} onMoveEnd={(_, viewport) => view.update({ viewport })}
           onNodeClick={(event, node) => { event.stopPropagation(); select(cardSelection(node.data.record)); }}
           onNodeDoubleClick={(event, node) => { event.stopPropagation(); activate(node.data.record); }}
           onNodesChange={(changes) => { for (const value of changes) if (value.type === 'select' && value.selected) { const node = projected.get(value.id); if (node) select(cardSelection(node)); } }}
           aria-label="Architecture canvas" />
       </ConnectionContext.Provider>
+      <CameraDock zoomIn={zoomIn} zoomOut={zoomOut} fit={fit} />
       {inspection && (activeInspectionEdge || activeInspectionNode) && <ConnectionInspection graph={graph} edge={activeInspectionEdge} node={activeInspectionNode}
         structure={shared && !concreteInstance && activeInspectionEdge ? { source: projected.get(activeInspectionEdge.source.node_id)?.label ?? '', target: projected.get(activeInspectionEdge.target.node_id)?.label ?? '' } : undefined}
         explore={activeInspectionNode?.presentation === 'mlp' && activeInspectionNode.id !== options.scope ? () => isolate(activeInspectionNode.id) : undefined}

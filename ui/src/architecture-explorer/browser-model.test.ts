@@ -1,9 +1,10 @@
 import { expect, it } from 'vitest';
-import { makeTemplateFixture } from '../../tests/architecture-template-fixture';
+import { makeTemplateFixture, makeVjepaBrowserFixture } from '../../tests/architecture-template-fixture';
 import { browserExpansionId, browserIndex } from './browser-model';
 import { GraphViews } from './graph';
 import { enterSharedStructure } from './shared-structure';
 import { selectComponent } from './component-actions';
+import { validateArchitecture } from '../api/architecture-validation';
 
 it('follows ordered containment even when transport records are shuffled, and searches source keys', () => {
   const graph = makeTemplateFixture(), expected = browserIndex(graph);
@@ -46,4 +47,25 @@ it('keeps neutral common selection distinct from concrete instance zero, without
   selectComponent(view, 'layer-0.attention');
   expect(view.selectionMode).toBe('source'); expect(view.selected).toBe('layer-0.attention');
   expect(view.shared!.instanceId).toBeNull(); expect(view.getProjectionOptions()).toBe(options);
+});
+
+it('admits the authored V-JEPA browser fixture with ordered 24/12 stacks and separate verified families', () => {
+  const graph = makeVjepaBrowserFixture(), modelId = 'authored-vjepa-browser';
+  function assertUnique<T extends { role: string }>(family: string, instance: string, kind: string, records: T[], target: (record: T) => string) {
+    const roles = records.map((record) => record.role), targets = records.map(target);
+    if (new Set(roles).size !== roles.length || new Set(targets).size !== targets.length) throw new Error(`${family} ${instance} ${kind}`);
+  }
+  for (const family of graph.templates ?? []) for (const instance of family.instances) {
+    assertUnique(family.id, instance.node_id, 'nodes', instance.nodes, (record) => record.node_id);
+    assertUnique(family.id, instance.node_id, 'ports', instance.ports, (record) => `${record.node_id}:${record.port_id}`);
+    assertUnique(family.id, instance.node_id, 'edges', instance.edges, (record) => record.edge_id);
+    assertUnique(family.id, instance.node_id, 'parameters', instance.parameters, (record) => record.parameter_id);
+  }
+  expect(() => validateArchitecture({ model_id: modelId, status: 'available', graph, diagnostics: [] }, {
+    modelId, tokenizerAvailable: false, inventory: { tensors: [], coverage: 'complete', diagnostics: [] },
+  })).not.toThrow();
+  expect(graph.repetitions.map((repetition) => repetition.instances.length)).toEqual([24, 12]);
+  expect(graph.templates?.map((family) => [family.label, family.instances.length])).toEqual([
+    ['Encoder attention', 24], ['Encoder MLP', 24], ['Predictor attention', 12], ['Predictor MLP', 12],
+  ]);
 });

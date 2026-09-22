@@ -157,3 +157,64 @@ it('keeps model/session API actions in compact accessible controls and discloses
   expect(options).toHaveFocus();
   expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('');
 });
+
+it('recovers under StrictMode without leaving a disposed recovery attempt in progress', async () => {
+  mockBackend();
+  sessionStorage.setItem(sessionStorageKey(config.backendBaseUrl), sessionA.id);
+  render(<StrictMode><App config={config} /></StrictMode>);
+  await screen.findByText('Session active.');
+  expect(within(screen.getByRole('contentinfo')).getByText('Connected')).toBeVisible();
+});
+
+it('fences late operation failures across model and backend replacement without recreating current consumers for feedback', async () => {
+  const fetcher = mockBackend();
+  const contexts: ExplorerContextValue[] = [];
+  const mounts = vi.fn();
+  function Probe(props: ExplorerContextValue) {
+    useEffect(() => { contexts.push(props); }, [props]);
+    useEffect(() => { mounts(); }, []);
+    return <p>Consumer</p>;
+  }
+  const { rerender } = render(<App config={config} slots={{ tensor: Probe }} />);
+  await chooseAlpha();
+  await userEvent.click(screen.getByRole('button', { name: /left.weight/ }));
+  const stale = contexts.at(-1)!;
+  const pending = deferred<Response>();
+  fetcher.mockReturnValueOnce(pending.promise);
+  let done!: Promise<unknown>;
+  act(() => { done = stale.client.streamTensor(sessionA.id, 'first').done.catch(() => {}); });
+  await userEvent.selectOptions(screen.getByRole('combobox'), models[1]!.id);
+  await screen.findByRole('button', { name: /left.weight/ });
+  await act(async () => { pending.reject(new TypeError('late private failure')); await done; });
+  expect(within(screen.getByRole('list', { name: 'Application notifications' })).queryByRole('listitem')).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: /left.weight/ }));
+  const current = contexts.at(-1)!;
+  const before = mounts.mock.calls.length;
+  fetcher.mockRejectedValueOnce(new TypeError('lost transport'));
+  await act(async () => { await current.client.streamTensor(sessionB.id, 'first').done.catch(() => {}); });
+  expect(within(screen.getByRole('list', { name: 'Application notifications' })).getAllByRole('listitem')).toHaveLength(1);
+  expect(mounts).toHaveBeenCalledTimes(before);
+  await userEvent.click(screen.getByRole('button', { name: 'Dismiss notification' }));
+  expect(mounts).toHaveBeenCalledTimes(before);
+  expect(within(screen.getByRole('contentinfo')).getByText('Disconnected')).toBeVisible();
+  const backendPending = deferred<Response>();
+  fetcher.mockReturnValueOnce(backendPending.promise);
+  act(() => { done = current.client.streamTensor(sessionB.id, 'first').done.catch(() => {}); });
+  rerender(<App config={{ backendBaseUrl: 'https://second.example' }} slots={{ tensor: Probe }} />);
+  await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
+  await act(async () => { backendPending.reject(new TypeError('late backend failure')); await done; });
+  expect(within(screen.getByRole('list', { name: 'Application notifications' })).queryByRole('listitem')).not.toBeInTheDocument();
+  expect(within(screen.getByRole('contentinfo')).getByText('Connected')).toBeVisible();
+});
+
+it('keeps reachable catalogue errors in a safe toast without moving the active workspace notice strip', async () => {
+  const fetcher = mockBackend();
+  render(<App config={config} />);
+  await chooseAlpha();
+  fetcher.mockResolvedValueOnce(json({ code: 'resource_exhausted', message: '/private/path' }, 503));
+  await userEvent.click(screen.getByRole('button', { name: 'Refresh models' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not refresh models');
+  expect(within(screen.getByRole('contentinfo')).getByText('Connected')).toBeVisible();
+  expect(document.querySelector('.workspace-notices')).toBeEmptyDOMElement();
+  expect(document.body.textContent).not.toContain('/private/path');
+});

@@ -82,14 +82,14 @@
 .architecture-connection-details summary { cursor: pointer; }
 
 /* Controls own their disclosures and overflow; the canvas geometry is independent. */
-.architecture-controls { flex-shrink: 0; min-width: 0; max-height: 45%; overflow: auto; }
+.architecture-controls { flex-shrink: 0; min-width: 0; min-height: 77px; max-height: 45%; overflow: auto; }
 .architecture-toolbar { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 8px 5px; overflow-x: auto; }
 .architecture-toolbar > button { flex-shrink: 0; min-height: 28px; }
 .architecture-breadcrumbs { display: flex; align-items: center; flex: 1; min-width: 100px; overflow-x: auto; white-space: nowrap; }
 .architecture-breadcrumbs > span { display: flex; align-items: center; gap: 2px; color: var(--ui-text-muted); }
 .architecture-breadcrumbs button { border-color: transparent; background: transparent; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
 .architecture-breadcrumbs button[aria-current] { font-weight: 600; color: var(--ui-text); }
-.architecture-context-row { display: flex; align-items: center; min-height: 36px; padding: 3px 8px 5px; gap: 10px; border-bottom: 1px solid var(--ui-border); overflow-x: auto; }
+.architecture-context-row { display: flex; align-items: center; min-height: 36px; padding: 0 8px; gap: 10px; border-bottom: 1px solid var(--ui-border); overflow-x: auto; }
 .architecture-context-navigation { display: flex; align-items: center; gap: 5px; min-width: 0; overflow-x: auto; flex: 1; white-space: nowrap; }
 .architecture-context-navigation > * { flex-shrink: 0; }
 .architecture-stack-name { font-size: 12px; font-weight: 600; }
@@ -104,12 +104,7 @@
 .architecture-node[data-presentation="external"] { border-style: dashed; }
 .architecture-control-popover { position: absolute; z-index: 1300; top: 43px; right: 8px; width: min(430px, calc(100% - 16px)); max-height: calc(100% - 54px); overflow: auto; padding: 10px; box-sizing: border-box; border: 1px solid var(--ui-border-strong); border-radius: 6px; background: var(--ui-surface); color: var(--ui-text); box-shadow: var(--ui-shadow-float); }
 .architecture-controls input:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
-.architecture-option-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.architecture-options fieldset { margin: 12px 0; padding: 8px; border: 1px solid var(--ui-border); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .architecture-options label { display: flex; align-items: center; gap: 4px; font-size: 12px; }
-.architecture-options details { font-size: 12px; overflow-wrap: anywhere; }
-.architecture-options summary { cursor: pointer; }
-.architecture-options summary:focus-visible { outline: 2px solid var(--ui-accent); }
 .architecture-controls button:disabled { opacity: 0.45; cursor: default; }
 @media (max-width: 700px) {
   .architecture-context-navigation { flex: 0 0 auto; max-width: none; overflow: visible; }
@@ -129,20 +124,29 @@
 .architecture-browser-search { display: flex; gap: 2px; padding: 8px; flex-shrink: 0; }
 .architecture-browser-search input { width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--ui-border); border-radius: 4px; background: var(--ui-surface); color: var(--ui-text); font: inherit; font-size: 12px; }
 .architecture-browser-scroll { overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 0 6px 8px; flex: 1; }
-.architecture-browser-scroll h3 { margin: 12px 6px 5px; color: var(--ui-text-muted); font-size: 11px; font-weight: 600; }
-.architecture-browser-row { display: flex; align-items: flex-start; min-width: 0; border-radius: 4px; }
+.architecture-browser-section { margin-top: 8px; min-width: 0; }
+.architecture-browser-section-header { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: center; min-height: 28px; margin: 0 2px 3px; }
+.architecture-browser-section-header h3 { min-width: 0; margin: 0; color: var(--ui-text-muted); font-size: 11px; font-weight: 700; line-height: 16px; letter-spacing: 0.1em; text-transform: uppercase; }
+.architecture-browser-section-disclosure, .architecture-browser-section-name { border: 0; border-radius: 3px; background: transparent; color: var(--ui-text-muted); cursor: pointer; }
+.architecture-browser-section-disclosure { display: inline-grid; width: 24px; height: 28px; padding: 0; place-items: center; }
+.architecture-browser-section-disclosure svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; transition: transform 120ms ease; }
+.architecture-browser-section-disclosure[aria-expanded="true"] svg { transform: rotate(90deg); }
+.architecture-browser-section-name { max-width: 100%; padding: 4px; font: inherit; color: inherit; letter-spacing: inherit; text-align: left; text-transform: inherit; }
+.architecture-browser-section-name:hover, .architecture-browser-section-disclosure:hover { background: var(--ui-accent-soft); color: var(--ui-text); }
+.architecture-browser-section-name[data-selected="true"] { background: var(--ui-accent-soft); box-shadow: inset 0 0 0 1px var(--ui-accent); color: var(--ui-text); }
+.architecture-browser-section-body { min-width: 0; }
+.architecture-browser-row { display: flex; align-items: stretch; min-width: 0; min-height: 32px; border-radius: 4px; }
 .architecture-browser-row[data-selected="true"] { background: var(--ui-accent-soft); box-shadow: inset 0 0 0 1px var(--ui-accent); }
-.architecture-browser-row button, .architecture-browser-stacks button, .architecture-browser-search button { background: transparent; border: 0; border-radius: 3px; color: var(--ui-text); cursor: pointer; font: inherit; font-size: 12px; }
-.architecture-browser-row button:hover { background: var(--ui-accent-soft); }
-.architecture-browser-name { display: flex; align-items: flex-start; gap: 6px; padding: 6px 4px; flex: 1; min-width: 0; text-align: left; }
-.architecture-browser-name > svg { flex-shrink: 0; margin-top: 1px; }
-.architecture-browser-name > span:not([role="tooltip"]) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.architecture-browser-name small { display: block; white-space: normal; overflow-wrap: anywhere; color: var(--ui-text-muted); font-size: 10px; line-height: 15px; }
-.architecture-browser-disclosure, .architecture-browser-spacer { width: 24px; height: 28px; flex-shrink: 0; padding: 0; }
+.architecture-browser-row:hover { background: var(--ui-accent-soft); }
+.architecture-browser-row button, .architecture-browser-search button { background: transparent; border: 0; border-radius: 3px; color: var(--ui-text); cursor: pointer; font: inherit; font-size: 12px; }
+.architecture-browser-name { display: flex; align-items: flex-start; gap: 6px; min-height: 32px; padding: 6px 4px; box-sizing: border-box; flex: 1; min-width: 0; text-align: left; }
+.architecture-browser-icon { display: inline-grid; width: 16px; height: 16px; flex: 0 0 16px; margin-top: 1px; place-items: center; }
+.architecture-browser-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; }
+.architecture-browser-primary, .architecture-browser-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.architecture-browser-primary { line-height: 16px; }
+.architecture-browser-meta { display: block; color: var(--ui-text-muted); font-size: 10px; line-height: 14px; }
+.architecture-browser-disclosure, .architecture-browser-spacer { width: 24px; min-height: 32px; height: auto; flex: 0 0 24px; padding: 0; }
 .architecture-browser-empty { margin: 6px; color: var(--ui-text-muted); font-size: 12px; }
-.architecture-browser-stacks { margin: 10px 6px; font-size: 12px; }
-.architecture-browser-stacks summary { cursor: pointer; }
-.architecture-browser-stacks button { display: block; padding: 6px 2px; text-align: left; }
 .architecture-browser-tooltip { display: none; position: fixed; z-index: 1400; bottom: 36px; left: 12px; max-width: min(440px, calc(100vw - 40px)); padding: 8px; white-space: normal; overflow-wrap: anywhere; pointer-events: none; background: var(--ui-surface); border: 1px solid var(--ui-border-strong); border-radius: 4px; box-shadow: var(--ui-shadow-float); font-size: 12px; }
 .architecture-browser-name:hover .architecture-browser-tooltip, .architecture-browser-name:focus-visible .architecture-browser-tooltip { display: block; }
 #architecture-browser :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
@@ -156,3 +160,20 @@
 }
 .working-surface:has(.architecture-workspace) { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 #architecture-browser .inventory-header { padding-inline: 8px; }
+
+/* Commands stay outside preferences; camera controls never enter the transform. */
+.architecture-action { display: inline-flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }
+.architecture-action svg { flex-shrink: 0; }
+.architecture-explorer button:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.architecture-camera-dock { position: absolute; z-index: 6; left: 10px; bottom: 10px; display: flex; gap: 3px; padding: 4px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-surface); box-shadow: var(--ui-shadow-base); }
+.architecture-camera-dock button { width: 32px; height: 32px; }
+.architecture-action-tooltip { position: fixed; z-index: 1500; width: max-content; max-width: 240px; padding: 6px 8px; box-sizing: border-box; border: 1px solid var(--ui-border); border-radius: 4px; background: var(--ui-surface); color: var(--ui-text); box-shadow: var(--ui-shadow-float); font-size: 12px; pointer-events: none; }
+.architecture-filter-context { display: flex; flex-shrink: 0; gap: 8px; white-space: nowrap; color: var(--ui-text-muted); font-size: 11px; }
+.architecture-options fieldset { margin: 0; display: flex; flex-direction: column; gap: 10px; border: 0; }
+.architecture-options fieldset p { margin: 0 0 0 20px; color: var(--ui-text-muted); font-size: 12px; }
+.architecture-options { width: min(300px, calc(100% - 16px)); }
+.architecture-settings { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+@media (max-width: 760px) {
+  .architecture-toolbar > .architecture-action > span { display: none; }
+  .architecture-toolbar > .architecture-action { min-width: 30px; }
+}

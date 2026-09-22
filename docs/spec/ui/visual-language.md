@@ -82,8 +82,8 @@ Floating inspection surfaces may use the stronger floating shadow.
 
 ## Global application bar and status bar
 
-One compact global bar owns product identity, Tensor Explorer / Tokenizer Explorer
-navigation, the current model selector, adjacent refresh-model control, session
+One compact global bar owns product identity, the three-explorer navigation, the
+current model selector, adjacent refresh-model control, session
 state, and secondary session actions. The active navigation item is the explorer
 title. Do not repeat it as a large page heading or workspace title. The selector
 is the primary visible model identity; do not repeat the model as a subtitle or
@@ -97,11 +97,26 @@ Use semantic buttons and a labelled selector, visible keyboard focus, and an
 expanded-state disclosure. Escape dismisses the panel and returns focus to its
 trigger; moving focus outside also dismisses it.
 
-The fixed bottom bar presents compact inline session state and, when supplied,
+The fixed bottom bar reserves a stable slot for an icon and English connection
+state (Connecting…, Connected, Reconnecting…, Disconnected), alongside distinct
+session/loading/closing state and, when supplied,
 public architecture/model type, humanized decimal model size (for example
 `272.4 MB`), and tokenizer availability. Raw byte counts and parameter counts
-belong in the on-demand details. Loading, empty, error, retry, and storage notices
-remain readable in a bounded workspace notice area, without expanding the chrome.
+belong in the on-demand details. A compact Retry connection control invokes the
+existing catalogue refresh, with duplicate pending retries disabled. The footer
+never wraps; secondary metadata truncates with full disclosure in session options.
+Connection transitions do not shift adjacent metadata or expand the 28px bar.
+Local empty/error/recovery content remains readable when no explorer is usable;
+storage notices and unrelated diagnostics retain their existing placement.
+
+Consequential transient application events use one small shell-owned toast host,
+fixed at the lower-right above the footer and outside explorer transforms. It uses
+neutral surfaces, restrained severity accents, accessible text/live announcements,
+keyboard dismissal and actions only for supported operations. Its bounded stack
+must avoid other fixed controls and never change workspace/card geometry, cameras,
+focus on appearance, or document overflow. Routine connection transitions and model
+warnings never produce toasts. Actionable errors persist until dismissed; brief
+informational outcomes may expire with dismissal paused during hover or focus.
 
 At constrained widths, shorten visible navigation labels to Tensor / Tokenizer
 while retaining their full accessible names. Product identity and secondary
@@ -204,3 +219,21 @@ Do not use a dark terminal-style application shell around the scientific view. D
 React owns composition, semantic HTML, controls, text, and panel layout. The reusable WebGL2 renderer owns exact tensor pixels and shader-based visual transformations. The visual tokens in this document style the application shell; they must not leak into authoritative tensor mathematics.
 
 Semantic interaction colors should reach the renderer as small state/uniform parameters. The renderer derives the final chroma at draw time while continuing to read the same immutable scalar tensor representation. This keeps the visual system consistent with the project's memory and exact scalar-cell invariants.
+
+
+## Persistent diagnostic presentation
+
+Persistent model/capability notices use a restrained band within the affected card,
+between header and body. Pair a small icon with explicit **Info**, **Warning** or
+**Error** text, a safe wrapping message, an accessible **Dismiss** button and
+**View details** disclosure for complete source context. Do not infer severity
+from arbitrary message text or use color alone. Nonblocking notices do not expire.
+
+Several findings share a severity count and highest-priority preview. Bound the
+band to roughly one third of the available card height with internal scrolling;
+expanded complete details must not consume the scientific workspace or cause
+document overflow. Preserve keyboard access to details and dismissal, restore a
+stable local focus target when dismissal removes its button, and announce changed
+findings politely without reannouncing unchanged content on ordinary rerenders.
+Quiet provenance badges are distinct from warning/error counts. This pattern does
+not insert transient rows between Matrix Explorer headers and exact tensor pixels.
