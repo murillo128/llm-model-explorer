@@ -46,6 +46,8 @@ for (const kind of ['dense', 'hybrid', 'visual'] as const) test(`${kind}: declar
 
 test('boundary hover/focus/pinning preserves layout and source connections; explicit isolation retains ports', async ({ page }) => {
   await page.goto(`${harness}?fixture=interface-hybrid`); await ready(page);
+  // Exercise both forwarding boundaries after explicitly opening the child.
+  await page.locator('[data-node-id="language"] .architecture-browser-disclosure').click(); await ready(page);
   await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   const port = page.locator('.architecture-port[data-node-id="presentation:model"]').filter({ has: page.locator('.architecture-port-dot') }).nth(1);
   const before = await camera(page), layouts = await page.locator(panel).getAttribute('data-layout-count');

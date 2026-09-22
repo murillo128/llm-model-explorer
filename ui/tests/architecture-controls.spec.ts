@@ -131,6 +131,10 @@ test('browser and canvas disclosure preserve the same multi-instance window and 
   for (const surface of ['canvas', 'browser'] as const) {
     await page.goto(`${harness}?fixture=components`); await ready(page);
     await page.getByRole('button', { name: 'Explore stack Decoder layers', exact: true }).click();
+    await ready(page);
+    // Stack expansion preserves the initial camera; explicitly frame the cards
+    // that this pointer comparison is about to exercise on a narrow viewport.
+    await page.getByRole('button', { name: 'Fit view', exact: true }).click();
     const before = await snapshot(page), options = before.requests.at(-1)!.options;
     const count = page.viewportSize()!.width <= 760 ? 2 : 4;
     expect(options.repetitions).toEqual({ 'decoder-layers': { start: 0, count } });
@@ -155,6 +159,10 @@ test('browser and canvas disclosure preserve the same multi-instance window and 
 
 for (const window of ['compact', 'multi-instance'] as const) test(`browser disclosure reveals only the hidden exact instance and preserves the ${window} window`, async ({ page }) => {
   await page.goto(`${harness}?fixture=components-large`); await ready(page);
+  if (window === 'compact') {
+    // Establish the stack overview explicitly; initial Model policy is covered separately.
+    await page.locator('[data-node-id="model"] .architecture-browser-disclosure').click(); await ready(page);
+  }
   if (window === 'multi-instance') await page.getByRole('button', { name: 'Explore stack Decoder layers', exact: true }).click();
   const before = await snapshot(page), options = before.requests.at(-1)!.options;
   const instanceIds = (layout: Layout) => layout.projection.nodes.filter((node) => /^layer-\d+$/.test(node.id)).map((node) => node.id);
@@ -169,6 +177,9 @@ for (const window of ['compact', 'multi-instance'] as const) test(`browser discl
   expect(instanceIds(opened.layouts.at(-1)!)).toEqual([...visible, 'layer-10']);
   expect(opened.layouts.at(-1)!.projection.nodes.find((node) => node.id === 'layer-10')?.expanded).toBe(true);
   assertTransportProjection(opened.requests.at(-1)!.graph, opened.layouts.at(-1)!);
+  // Bring the acted-on geometry into view before contracting it. Anchoring an
+  // off-screen browser target need not make it visible without an explicit fit.
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
   await disclosure.click();
   const closed = await snapshot(page);
   expect(closed.requests.at(-1)!.options.repetitions).toEqual(options.repetitions);

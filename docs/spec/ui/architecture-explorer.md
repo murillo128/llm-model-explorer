@@ -19,6 +19,25 @@ defined below. The complete model remains the global fallback.
 
 Start compact, using declared repetition records to represent repeated layers as a stack with multiplicity and truthful variant information instead of immediately materializing every instance. Allow expansion of a representative interior, selection of a concrete instance without expanding its siblings, focused exploration of a bounded contiguous set of instances when useful, expansion of chosen instances, and an Expand all action that reveals every instance and required mathematical operation. Compressed before/after ranges must remain explicit when only part of a stack is shown. A representative display must clearly identify its selected instance; inspecting a weight must never silently use layer zero for every repetition.
 
+A fresh backend/model/graph view opens only the outer model boundary and its
+immediate visible components. This is the hierarchy **after** declarative
+interfaces become ports and any presentation-only Model boundary is inserted;
+all expandable child interiors, concrete instances and derived groups stay
+collapsed. Passive interfaces do not count as a component level. Assess this
+candidate's visible layout bounds against the current nonzero graph-body
+viewport. The minimum readable initial scale is **0.8**, with a **16 CSS-pixel
+inset** and a maximum initial scale of **1**. If fitting the candidate requires a
+smaller scale, use the collapsed outer model with its name, declared ports and
+expansion action. Compute at most one candidate and one fallback; never display
+exhaustive detail and then snap closed. Checkpoint size, model names and hidden
+source-node counts do not determine this choice. An unusually large collapsed
+interface remains readable at the minimum scale and accessible through pan/zoom.
+
+Expanded containers reserve their own header/summary, visible descendants and
+necessary port/routing gutters. Boundary port rows occupy side gutters rather
+than an additional empty band above the children. Hidden descendants reserve no
+space. Real labels, hit targets, fan-out and crossing routes retain their room.
+
 Keep actual layer order and variant differences visible when grouped. Repetition means repeated structure, not shared weights, states, parameters, or guaranteed equivalence between variants. Preserve external dependencies across collapsed boundaries through meaningful ports/connections, including bypasses that cross hidden ranges. Collapsing must not erase a skip connection, create a false serial path, or treat distinct hybrid blocks as identical. Expanded topology must be recoverable from the same graph without new analysis.
 
 Expanding a group preserves the acted-on location/context; do not reset the camera or automatically fit the entire graph after every expansion. Maintain camera, expanded groups, focused repetition/instance context, and valid node/connection selection while closing inspection or switching explorers during the browser session, keyed by model and graph identity. Server-restart persistence is not required. Reject late responses and clear invalid selections on session/model/graph replacement.
@@ -30,6 +49,19 @@ calculation. Saved camera restoration, Back and newer scope/model choices take
 precedence over obsolete initialization; user camera interaction supersedes a
 pending initialization. Ordinary resizing, selection, hover and menus do not
 start another fit or layout. Initialization failure is bounded and recoverable.
+Fresh initialization aligns the top of visible diagram bounds to the small
+graph-body inset and centers horizontally when the diagram fits. The renderer's
+actual body excludes the card header and any diagnostic band. Saved camera and
+expansion, ordinary resize and explorer/inspection reopening do not reapply this
+initial policy. Manual Fit view continues to fit all currently visible detail.
+
+The explicit global **Collapse all / Collapse model** command is the exception
+to the no-automatic-fit rule: it exits isolation, collapses to the outer model,
+waits for that layout and fits those final bounds once, with maximum zoom 1.
+It retains valid source selection even when hidden. A newer scope, model,
+expansion or user camera command supersedes pending collapse framing. Ordinary
+card/browser plus/minus actions continue to preserve their anchor and never fit
+the whole graph.
 
 Viewport culling and asynchronous layout are allowed optimizations; discarding graph records or silently reducing detail is not. Bound layout work and provide an explicit recoverable failure rather than an indefinitely frozen canvas. All reference graphs must be usable when fully expanded on the documented acceptance environment. Record actual layout time, memory, and graph size rather than inventing a performance guarantee.
 

@@ -67,8 +67,10 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
       layoutOptions: { ...scopeOptions,
         'elk.portConstraints': node.expanded ? 'FIXED_SIDE' : 'FIXED_POS',
         'elk.spacing.portPort': String(metrics.portGap),
-        'elk.padding': `[top=${height + 16},left=${gutter('input')},bottom=24,right=${gutter('output')}]`,
-        'elk.spacing.portsSurrounding': `[top=${height},left=0,bottom=16,right=0]`,
+        // Boundary rows occupy side gutters, not a duplicate band above children.
+        // Owned parameters/constants still reserve their actual summary height.
+        'elk.padding': `[top=${metrics.headerHeight + 16},left=${gutter('input')},bottom=24,right=${gutter('output')}]`,
+        'elk.spacing.portsSurrounding': `[top=${metrics.headerHeight},left=0,bottom=16,right=0]`,
       },
     });
   }

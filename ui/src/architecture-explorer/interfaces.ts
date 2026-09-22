@@ -136,6 +136,12 @@ export function interfaceIndex(graph: Graph) {
   return index;
 }
 
+/** Available before layout so diagnostics cannot displace a fresh viewport. */
+export function interfaceNotices(graph: Graph) {
+  const records = new Map(graph.nodes.map((n) => [n.id, n]));
+  return [...interfaceIndex(graph).notices].map(([id, message]) => `${records.get(id)!.label}: ${message}`);
+}
+
 export function interfaceSelection(item: ModelInterface): BoundarySelection {
   return { kind: 'boundary', owner: item.owner, endpoints: [item.endpoint] };
 }
