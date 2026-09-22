@@ -97,5 +97,13 @@ test('architecture navigation leaves model and session controls usable at 280 pi
   expect(a.width).toBeGreaterThanOrEqual(36); expect(a.x + a.width).toBeLessThanOrEqual(b.x);
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
   await model.selectOption(contractResponse.model_id);
-  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '3');
+  const graph = page.getByLabel('Architecture graph', { exact: true });
+  // This small graph body needs the readable collapsed-model fallback.
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  await expect(graph).toHaveAttribute('data-visible-nodes', '1');
+  await expect(graph).toHaveAttribute('data-source-node-ids', '["root"]');
+  await expect(graph).toHaveAttribute('data-node-count', '6');
+  await graphAction(page, 'Show all operations');
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  await expect(graph).toHaveAttribute('data-visible-nodes', '6');
 });
