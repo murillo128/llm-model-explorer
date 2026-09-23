@@ -100,6 +100,12 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
       const target = { node_id: node.id, port_id: port.id };
       const active = interaction.ports.has(endpointKey(target));
       const hit = Math.min(20 / interaction.zoom, 23);
+      const labelLeft = position.label.x - position.absoluteX + hit / 2;
+      const labelTop = position.label.y - position.absoluteY + hit / 2;
+      const bridgeLeft = Math.min(hit / 2, labelLeft);
+      const bridgeRight = Math.max(hit / 2, labelLeft + position.label.width);
+      // The transparent region overlaps the label and extends one unit into
+      // the terminal hit box without reaching the next port row.
       return <div key={port.id}>
         <button className="architecture-port nodrag nopan" data-node-id={node.id} data-port-id={port.id}
           data-absolute-x={position.absoluteX} data-absolute-y={position.absoluteY}
@@ -111,10 +117,13 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
           onPointerLeave={() => interaction.hover(null)} onFocus={() => interaction.focus({ port: target })} onBlur={() => interaction.focus(null)}
           onClick={(event) => { event.stopPropagation(); interaction.selectPort?.(target); }} onDoubleClick={(event) => event.stopPropagation()}>
           <span className="architecture-port-dot" />
+          <span className="architecture-port-hit-bridge" aria-hidden="true"
+            style={{ left: bridgeLeft, top: labelTop, width: bridgeRight - bridgeLeft,
+              height: Math.max(labelTop + position.label.height, 1) - labelTop }} />
           <span className="architecture-port-label" data-emphasized={active} data-raised={position.label.raised}
             data-layout-bounds={JSON.stringify(position.label)}
             title={`${port.direction}: ${port.interfaceLabel ?? port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
-            style={{ left: position.label.x - position.absoluteX + hit / 2, top: position.label.y - position.absoluteY + hit / 2,
+            style={{ left: labelLeft, top: labelTop,
               width: position.label.width, height: position.label.height }}>
             {port.interfaceLabel ?? port.label}{data.dimensions && <span className="architecture-port-shape">{formatShape(port.shape)}</span>}
           </span>

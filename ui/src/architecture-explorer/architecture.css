@@ -58,6 +58,7 @@
 .architecture-node[data-expanded="true"] .architecture-node-heading, .architecture-node[data-expanded="true"] > .architecture-node-type, .architecture-node[data-expanded="true"] .architecture-port { pointer-events: auto; }
 .architecture-explorer .architecture-port { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: transparent; border-radius: 50%; display: grid; place-items: center; overflow: visible; z-index: 6; }
 .architecture-port-dot { width: 7px; height: 7px; border: 1px solid var(--ui-text-muted); border-radius: 50%; background: var(--ui-surface); box-sizing: border-box; pointer-events: none; }
+.architecture-port-hit-bridge { position: absolute; pointer-events: auto; }
 .architecture-explorer .architecture-port:hover { background: transparent; }
 .architecture-port[data-emphasized="true"] .architecture-port-dot, .architecture-port:focus-visible .architecture-port-dot { background: var(--ui-accent); border-color: var(--ui-accent); box-shadow: 0 0 0 2px var(--ui-surface), 0 0 0 3px var(--ui-accent); }
 .architecture-port-label[data-emphasized="true"] { color: var(--ui-text); text-decoration: underline; text-decoration-color: var(--ui-accent); text-underline-offset: 3px; }

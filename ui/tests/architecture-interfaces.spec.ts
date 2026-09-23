@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import { viewOptions, graphAction, graphPreference, findComponent, openShared } from './architecture-controls';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
@@ -63,6 +64,76 @@ test('boundary hover/focus/pinning preserves layout and source connections; expl
   await expect(page.locator('.architecture-port[data-node-id="language"][data-port-id="positions"]')).toHaveCount(1);
   await expect(page.locator('.architecture-node[data-presentation="external"]')).toHaveCount(1); // Real LM head.
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
+});
+
+test('raised label to terminal traversal retains exact hover at fit and high zoom', async ({ page }) => {
+  await page.goto(`${harness}?fixture=interface-hybrid`); await ready(page);
+  await page.locator('[data-node-id="language"] .architecture-browser-disclosure').click(); await ready(page);
+  await graphAction(page, 'Fit view'); await ready(page);
+  const emphasized = () => page.locator('.architecture-connection[data-emphasized="true"]')
+    .evaluateAll((edges) => edges.map((edge) => edge.getAttribute('data-edge-id')!).sort());
+  const zoom = () => page.locator('.react-flow__viewport').evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a);
+  const traverse = async (port: Locator) => {
+    const id = await port.getAttribute('data-port-id');
+    const label = port.locator('.architecture-port-label');
+    await expect(label).toHaveAttribute('data-raised', 'true');
+    const text = await label.boundingBox(), terminal = await port.boundingBox();
+    expect(text).toBeTruthy(); expect(terminal).toBeTruthy();
+    const start = { x: text!.x + text!.width / 2, y: text!.y + text!.height / 2 };
+    const end = { x: terminal!.x + terminal!.width / 2, y: terminal!.y + terminal!.height / 2 };
+    await page.mouse.move(start.x, start.y);
+    await expect.poll(emphasized).not.toEqual([]);
+    const connected = await emphasized();
+    for (let step = 1; step <= 16; step++) {
+      const point = { x: start.x + (end.x - start.x) * step / 16, y: start.y + (end.y - start.y) * step / 16 };
+      await page.mouse.move(point.x, point.y);
+      await page.waitForTimeout(100); // Catch the next-frame pointer leave that a fast hover misses.
+      const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('.architecture-port')?.getAttribute('data-port-id') ?? document.elementFromPoint(x, y)?.className, point);
+      expect(await emphasized(), `${id} lost emphasis at step ${step}, zoom ${await zoom()}, ${JSON.stringify({ start, end, point, hit })}`).toEqual(connected);
+    }
+    await page.mouse.move(0, 0);
+    await expect.poll(emphasized).toEqual([]);
+  };
+  const before = await camera(page), layouts = await page.locator(panel).getAttribute('data-layout-count');
+  const input = page.locator('.architecture-port[data-node-id="language"][data-port-id="positions"]');
+  const output = page.locator('.architecture-port[aria-label^="output port"]:has(.architecture-port-label[data-raised="true"])').first();
+  await expect(output).toHaveCount(1);
+  await traverse(input);
+  await traverse(output);
+  expect(await camera(page)).toBe(before);
+  await expect(page.locator(panel)).toHaveAttribute('data-layout-count', layouts!);
+
+  const label = page.locator('.architecture-port[data-node-id="language"][data-port-id="positions"] .architecture-port-label');
+  await label.hover();
+  for (let attempt = 0; attempt < 12 && await zoom() < 3.9; attempt++) await page.mouse.wheel(0, -1000);
+  await expect.poll(zoom).toBeGreaterThan(3.9);
+  const host = await page.locator('.architecture-flow').boundingBox();
+  const highPort = await input.boundingBox();
+  expect(host).toBeTruthy(); expect(highPort).toBeTruthy();
+  const center = highPort!.x + highPort!.width / 2;
+  if (center < host!.x + 12 || center > host!.x + host!.width - 12) {
+    // Narrow fit can zoom the terminal offscreen. Pan the actual graph pane so
+    // the full pointer path is possible before measuring continuity.
+    const shift = host!.x + host!.width * 0.35 - center;
+    const from = { x: shift > 0 ? host!.x + 24 : host!.x + host!.width - 24, y: host!.y + 20 };
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + shift, from.y, { steps: 10 });
+    await page.mouse.up(); await ready(page);
+  }
+  const highCamera = await camera(page);
+  await traverse(input);
+  expect(await camera(page)).toBe(highCamera);
+  // At high zoom the terminal and label are visibly separate. Their gap must
+  // resolve to the same port button instead of the graph pane underneath.
+  const gap = await label.evaluate((element) => {
+    const text = element.getBoundingClientRect(), port = element.closest('button')!.getBoundingClientRect();
+    const x = (port.right + text.left) / 2, y = text.top + text.height / 2;
+    return { width: text.left - port.right, hit: document.elementFromPoint(x, y)?.closest('.architecture-port')?.getAttribute('data-port-id') };
+  });
+  expect(gap.width).toBeGreaterThan(2);
+  expect(gap.hit).toBe('positions');
+  await expect(page.locator(panel)).toHaveAttribute('data-layout-count', layouts!);
 });
 
 test('ordinary operation keeps long opposite labels disjoint and bound to their own terminals', async ({ page }) => {

@@ -294,8 +294,10 @@ clear retain centered alignment. Port rows, header clearance and side gutters
 reserve the label's actual bounded rectangle; layout exposes that rectangle and
 its clearance for routing. Truncated text retains its full hover/focus title.
 The label and terminal share one accessible port control and the same exact
-connection emphasis and activation. Hover, focus and pin restoration are
-presentation-only and never start layout, camera, graph retrieval or tensor work.
+connection emphasis and activation. Its pointer target spans the label-to-terminal
+gap so moving between them preserves emphasis even at high zoom. Hover, focus
+and pin restoration are presentation-only and never start layout, camera, graph
+retrieval or tensor work.
 
 ## Optional isolated component exploration
 
