@@ -195,6 +195,29 @@ def validate_packed_binding(
             "weight_scale_2": ("F32", ()),
             "input_scale": ("F32", ()),
         }
+    elif tensor.storage_format == "bnb-nf4-dq":
+        require(tensor.dtype == "U8", "Unsupported bitsandbytes NF4 representation.")
+        numel = output * inputs
+        absmax_count = (numel + 63) // 64
+        nested_count = (absmax_count + 255) // 256
+        state_name = prefix + ".weight.quant_state.bitsandbytes__nf4"
+        state_record = next((item for item in parameter.storage if item.name == state_name), None)
+        require(
+            state_record is not None
+            and state_record.dtype == "U8"
+            and len(state_record.shape) == 1
+            and 0 < state_record.shape[0] <= 4096,
+            "Invalid bitsandbytes quantization-state storage.",
+        )
+        assert state_record is not None
+        expected = {
+            "weight": ("U8", ((numel + 1) // 2, 1)),
+            "weight.absmax": ("U8", (absmax_count,)),
+            "weight.quant_map": ("F32", (16,)),
+            "weight.nested_absmax": ("F32", (nested_count,)),
+            "weight.nested_quant_map": ("F32", (256,)),
+            "weight.quant_state.bitsandbytes__nf4": ("U8", tuple(state_record.shape)),
+        }
     else:
         raise GraphError("invalid_graph", "Unsupported packed numeric representation.")
     actual = {storage.name: (storage.dtype, tuple(storage.shape)) for storage in parameter.storage}

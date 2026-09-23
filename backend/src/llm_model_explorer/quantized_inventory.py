@@ -1,4 +1,4 @@
-"""Admission and logical bindings for the two reviewed packed layouts.
+"""Admission and logical bindings for reviewed packed layouts.
 
 These rules validate physical groups and bind complete mathematical tensors.
 Numeric decoding stays in quantized_decoding; graph semantics stay in analysis.
@@ -11,6 +11,8 @@ from collections.abc import Mapping, Sequence
 from fnmatch import fnmatchcase
 from typing import Literal, Protocol
 
+from .bnb_config import is_supported_config
+from .bnb_nf4 import NF4_ENCODING, NF4State, validate_group
 from .model_files import FileSnapshot, ModelError, changed, invalid
 from .tensor_source import (
     DTYPES,
@@ -21,7 +23,13 @@ from .tensor_source import (
     safe_integer,
 )
 
-Encoding = Literal["native", "gptq-int4", "nvfp4", "compressed-tensors-w4a16-int4"]
+Encoding = Literal[
+    "native",
+    "gptq-int4",
+    "nvfp4",
+    "compressed-tensors-w4a16-int4",
+    "bnb-nf4-dq",
+]
 _MODULE_NAME = re.compile(r"[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*\Z")
 
 
@@ -93,6 +101,8 @@ def encoding(config: dict[str, object]) -> Encoding:
     ):
         _validate_compressed_tensors_config(config, quant)
         return "compressed-tensors-w4a16-int4"
+    if quant.get("quant_method") == "bitsandbytes" and is_supported_config(quant):
+        return NF4_ENCODING
     raise unsupported()
 
 
@@ -318,6 +328,21 @@ def _compressed_tensors_storage(
     return excluded, logical_shapes
 
 
+def _bnb_nf4_storage_groups(
+    tensors: dict[str, PhysicalTensor], snapshot: FileSnapshot
+) -> tuple[dict[str, tuple[tuple[PhysicalTensor, ...], NF4State]], set[str]]:
+    groups: dict[str, tuple[tuple[PhysicalTensor, ...], NF4State]] = {}
+    excluded: set[str] = set()
+    for tensor in tensors.values():
+        if tensor.name.endswith(".weight") and tensor.dtype == "U8":
+            group, state = validate_group(snapshot, tensors, tensor)
+            groups[tensor.name] = (group, state)
+            excluded.update(item.name for item in group)
+    if not groups:
+        raise invalid("Bitsandbytes NF4 checkpoint has no supported packed storage groups.")
+    return groups, excluded
+
+
 def logical_locations(
     config: dict[str, object], physical: tuple[PhysicalTensor, ...], snapshot: FileSnapshot
 ) -> tuple[TensorLocation, ...]:
@@ -327,12 +352,15 @@ def logical_locations(
         return tuple(native_location(tensor) for tensor in physical)
     tensors = {tensor.name: tensor for tensor in physical}
     logical_shapes: dict[str, tuple[int, int]] = {}
+    bnb_groups: dict[str, tuple[tuple[PhysicalTensor, ...], NF4State]] = {}
     if layout == "gptq-int4":
         excluded = _gptq(tensors)
     elif layout == "nvfp4":
         excluded = nvfp4_storage_names(tensors, config)
-    else:
+    elif layout == "compressed-tensors-w4a16-int4":
         excluded, logical_shapes = _compressed_tensors_storage(tensors, config, snapshot)
+    else:
+        bnb_groups, excluded = _bnb_nf4_storage_groups(tensors, snapshot)
     if not excluded:
         raise invalid("Quantized checkpoint has no supported packed storage groups.")
     locations = []
@@ -347,15 +375,26 @@ def logical_locations(
         "weight_packed",
         "weight_shape",
         "weight_zero_point",
+        "absmax",
+        "quant_map",
+        "nested_absmax",
+        "nested_quant_map",
     }
     for tensor in physical:
         if tensor.name in excluded:
-            packed_suffix = {
-                "gptq-int4": ".qweight",
-                "nvfp4": ".weight",
-                "compressed-tensors-w4a16-int4": ".weight_packed",
-            }[layout]
-            if tensor.name.endswith(packed_suffix):
+            if layout == NF4_ENCODING and tensor.name in bnb_groups:
+                group, state = bnb_groups[tensor.name]
+                name = tensor.name
+                shape = state.shape
+                storage = group
+            else:
+                packed_suffix = {
+                    "gptq-int4": ".qweight",
+                    "nvfp4": ".weight",
+                    "compressed-tensors-w4a16-int4": ".weight_packed",
+                }.get(layout)
+                if packed_suffix is None or not tensor.name.endswith(packed_suffix):
+                    continue
                 prefix = tensor.name.removesuffix(packed_suffix)
                 name = prefix + ".weight"
                 if layout == "gptq-int4":
@@ -364,26 +403,29 @@ def logical_locations(
                 elif layout == "nvfp4":
                     suffixes = (".weight", ".weight_scale", ".weight_scale_2", ".input_scale")
                     shape = (tensor.shape[0], tensor.shape[1] * 2)
-                else:
+                elif layout == "compressed-tensors-w4a16-int4":
                     suffixes = (".weight_packed", ".weight_scale", ".weight_shape")
                     shape = logical_shapes[prefix]
-                locations.append(
-                    TensorLocation(
-                        TensorDescriptor(
-                            id=hashlib.sha256(name.encode("utf-8")).hexdigest(),
-                            name=name,
-                            path=tuple(name.split(".")),
-                            shape=shape,
-                            rank=2,
-                            numel=safe_integer(shape[0] * shape[1]),
-                            storage_dtype=tensor.dtype,
-                            storage_format=layout,
-                        ),
-                        tensor.file,
-                        tensor.offset,
-                        tuple(tensors[prefix + suffix] for suffix in suffixes),
-                    )
+                else:
+                    raise invalid("Unsupported compressed storage layout.")
+                storage = tuple(tensors[prefix + suffix] for suffix in suffixes)
+            locations.append(
+                TensorLocation(
+                    TensorDescriptor(
+                        id=hashlib.sha256(name.encode("utf-8")).hexdigest(),
+                        name=name,
+                        path=tuple(name.split(".")),
+                        shape=shape,
+                        rank=2,
+                        numel=safe_integer(shape[0] * shape[1]),
+                        storage_dtype=tensor.dtype,
+                        storage_format=layout,
+                    ),
+                    tensor.file,
+                    tensor.offset,
+                    storage,
                 )
+            )
             continue
         leaf = tensor.name.rsplit(".", 1)[-1]
         if tensor.dtype not in DTYPES or leaf in auxiliaries:

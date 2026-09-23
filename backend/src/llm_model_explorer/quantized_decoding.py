@@ -9,6 +9,7 @@ import sys
 
 import torch
 
+from .bnb_nf4 import NESTED_BLOCK_SIZE, NF4_BLOCK_SIZE, NF4_ENCODING, parse_state
 from .model_files import FileSnapshot, ModelError, changed
 from .tensor_source import DEFAULT_CHUNK_ELEMENTS, PhysicalTensor, safe_integer
 
@@ -70,6 +71,8 @@ def decode_range(
     weight scale. input_scale belongs to activations, not stored weights.
     Compressed-tensors packs eight offset signed INT4 values per I32 word along
     the input axis; each scale applies to 32 input values in one output row.
+    Bitsandbytes NF4 uses the high nibble for each even global flat index and
+    reconstructs first-level scales from its nested blockwise metadata.
     Independent reference provenance and scalar oracles live in the tests.
     """
     safe_integer(start)
@@ -88,6 +91,9 @@ def decode_range(
         inputs = safe_integer(packed_inputs * 8)
         if inputs % 32:
             raise ModelError("unsupported_representation", "Invalid compressed-tensors group size.")
+    elif encoding == NF4_ENCODING:
+        state = parse_state(snapshot, tensors["bitsandbytes__nf4"])
+        outputs, inputs = state.shape
     else:
         raise ModelError("unsupported_representation", "Unsupported packed tensor encoding.")
     numel = safe_integer(outputs * inputs)
@@ -142,11 +148,22 @@ def decode_range(
             # ModelOpt reconstructs the block scale in float32 before applying
             # it to E2M1 values; keep that evaluation order for rounding parity.
             values = table[codes] * (scales * global_scale)
-        else:
+        elif encoding == "compressed-tensors-w4a16-int4":
             packed = gather("weight_packed", row * (inputs // 8) + column // 8)
             codes = ((packed >> ((column % 8) * 4)) & 15).to(torch.int64) - 8
             scales = gather("weight_scale", row * (inputs // 32) + column // 32).to(torch.float32)
             values = codes.to(torch.float32) * scales
+        else:
+            packed = gather("weight", logical // 2)
+            codes = torch.where(logical.remainder(2) == 0, packed >> 4, packed & 15).to(torch.int64)
+            scale_blocks = logical // NF4_BLOCK_SIZE
+            scale_codes = gather("absmax", scale_blocks).to(torch.int64)
+            nested_blocks = scale_blocks // NESTED_BLOCK_SIZE
+            nested_scales = gather("nested_absmax", nested_blocks).to(torch.float32)
+            nested_codebook = gather("nested_quant_map", scale_codes).to(torch.float32)
+            absmax = nested_codebook * nested_scales + state.nested_offset
+            nf4_codebook = gather("quant_map", codes).to(torch.float32)
+            values = nf4_codebook * absmax
     except torch.OutOfMemoryError as exc:
         raise MemoryError("Insufficient memory for packed tensor conversion.") from exc
     snapshot.check()
