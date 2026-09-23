@@ -61,10 +61,10 @@ def metadata_fixture(root: Path, name: str) -> None:
 def test_registered_descriptions_and_no_tokenizer_session(settings: Settings, family: str) -> None:
     if family in {"dense", "qwen3"}:
         local_fixture(settings.model_root, family == "qwen3")
-        model_id = "dense"
+        model_id = "dense@gptq-int4" if family == "qwen3" else "dense"
     else:
         metadata_fixture(settings.model_root, family)
-        model_id = family
+        model_id = f"{family}@nvfp4" if family == "qwen35" else family
     with TestClient(create_app(settings)) as client:
         models = client.get("/models").json()["models"]
         assert not models[0]["tokenizer_available"]

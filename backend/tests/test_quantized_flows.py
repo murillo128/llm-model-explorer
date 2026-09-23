@@ -12,7 +12,13 @@ import pytest
 import torch
 from cache_helpers import numeric_manifests
 from fastapi.testclient import TestClient
-from quantized_oracles import PackedFixture, Stored, gptq_fixture, nvfp4_fixture
+from quantized_oracles import (
+    PackedFixture,
+    Stored,
+    compressed_tensors_fixture,
+    gptq_fixture,
+    nvfp4_fixture,
+)
 from test_models import mutate_last_byte
 from test_operations import run
 from test_streaming import Frames, forgotten, server
@@ -29,9 +35,13 @@ from llm_model_explorer.settings import Settings
 from llm_model_explorer.tensor_analysis import TensorAnalysis
 
 
-@pytest.fixture(params=["gptq-int4", "nvfp4"])
+@pytest.fixture(params=["gptq-int4", "nvfp4", "compressed-tensors-w4a16-int4"])
 def packed(request: pytest.FixtureRequest) -> PackedFixture:
-    return gptq_fixture() if request.param == "gptq-int4" else nvfp4_fixture()
+    if request.param == "gptq-int4":
+        return gptq_fixture()
+    if request.param == "nvfp4":
+        return nvfp4_fixture()
+    return compressed_tensors_fixture()
 
 
 def tensor_id(packed: PackedFixture) -> str:
@@ -74,11 +84,11 @@ def test_logical_identity_shape_coverage_and_shard_independence(
         assert descriptor.shape == packed.shape
         assert descriptor.rank == 2 and descriptor.numel == len(expected) // 4
         assert descriptor.logical_dtype == "float32"
-        assert descriptor.storage_dtype == ("I32" if packed.encoding == "gptq-int4" else "U8")
+        assert descriptor.storage_dtype == ("U8" if packed.encoding == "nvfp4" else "I32")
         assert descriptor.storage_format == packed.encoding
         inventory = source.inventory()
         assert inventory["coverage"] == "complete" and inventory["diagnostics"] == []
-        assert len(source.physical_tensors()) == 4
+        assert len(source.physical_tensors()) == len(packed.storage)
         chunks = list(source.iter_tensor(descriptor.id, chunk_elements=131))
         assert all(block.numel() <= 131 for block in chunks)
         assert raw(torch.cat(chunks)) == expected

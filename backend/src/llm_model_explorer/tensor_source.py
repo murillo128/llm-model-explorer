@@ -18,7 +18,15 @@ MAX_SAFE_INTEGER = 2**53 - 1
 DEFAULT_CHUNK_ELEMENTS = 256 * 1024
 DTYPES = {"F32": (torch.float32, 4), "F16": (torch.float16, 2), "BF16": (torch.bfloat16, 2)}
 # Storage widths are independent of the supported mathematical conversion paths.
-STORAGE_WIDTHS = {"F32": 4, "F16": 2, "BF16": 2, "I32": 4, "U8": 1, "F8_E4M3": 1}
+STORAGE_WIDTHS = {
+    "F32": 4,
+    "F16": 2,
+    "BF16": 2,
+    "I32": 4,
+    "I64": 8,
+    "U8": 1,
+    "F8_E4M3": 1,
+}
 
 
 @dataclass(frozen=True)

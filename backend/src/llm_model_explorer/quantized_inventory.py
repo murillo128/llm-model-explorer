@@ -5,11 +5,13 @@ Numeric decoding stays in quantized_decoding; graph semantics stay in analysis.
 """
 
 import hashlib
+import re
+import struct
 from collections.abc import Mapping, Sequence
 from fnmatch import fnmatchcase
 from typing import Literal, Protocol
 
-from .model_files import ModelError, invalid
+from .model_files import FileSnapshot, ModelError, changed, invalid
 from .tensor_source import (
     DTYPES,
     PhysicalTensor,
@@ -19,7 +21,8 @@ from .tensor_source import (
     safe_integer,
 )
 
-Encoding = Literal["native", "gptq-int4", "nvfp4"]
+Encoding = Literal["native", "gptq-int4", "nvfp4", "compressed-tensors-w4a16-int4"]
+_MODULE_NAME = re.compile(r"[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*\Z")
 
 
 class StorageMetadata(Protocol):
@@ -84,7 +87,115 @@ def encoding(config: dict[str, object]) -> Encoding:
         ):
             raise unsupported()
         return "nvfp4"
+    if (
+        config.get("model_type") in {"glm4_moe_lite", "kimi_linear"}
+        and quant.get("quant_method") == "compressed-tensors"
+    ):
+        _validate_compressed_tensors_config(config, quant)
+        return "compressed-tensors-w4a16-int4"
     raise unsupported()
+
+
+def _validate_compressed_tensors_config(
+    config: dict[str, object], quant: dict[str, object]
+) -> None:
+    """Admit only the pinned GLM/Kimi compressed-tensors W4A16 config subset."""
+    expected_version = (
+        "0.13.1.a20260219"
+        if config.get("model_type") == "glm4_moe_lite"
+        else "0.12.3.dev20+gd429903"
+    )
+    expected_quant_keys = {
+        "config_groups",
+        "format",
+        "global_compression_ratio",
+        "ignore",
+        "kv_cache_scheme",
+        "quant_method",
+        "quantization_status",
+        "sparsity_config",
+        "transform_config",
+        "version",
+    }
+    if set(quant) != expected_quant_keys:
+        raise unsupported()
+    if (
+        quant["format"] != "pack-quantized"
+        or quant["quant_method"] != "compressed-tensors"
+        or quant["quantization_status"] != "compressed"
+        or quant["global_compression_ratio"] is not None
+        or quant["kv_cache_scheme"] is not None
+        or quant["sparsity_config"] != {}
+        or quant["transform_config"] != {}
+        or quant["version"] != expected_version
+    ):
+        raise unsupported()
+
+    groups = quant["config_groups"]
+    if not isinstance(groups, dict) or set(groups) != {"group_0"}:
+        raise unsupported()
+    group = groups["group_0"]
+    if not isinstance(group, dict) or set(group) != {
+        "format",
+        "input_activations",
+        "output_activations",
+        "targets",
+        "weights",
+    }:
+        raise unsupported()
+    if (
+        group["format"] != "pack-quantized"
+        or group["input_activations"] is not None
+        or group["output_activations"] is not None
+        or group["targets"] != ["Linear"]
+    ):
+        raise unsupported()
+
+    weights = group["weights"]
+    base_weights: dict[str, object] = {
+        "actorder": None,
+        "block_structure": None,
+        "dynamic": False,
+        "group_size": 32,
+        "num_bits": 4,
+        "observer": "mse",
+        "observer_kwargs": {},
+        "strategy": "group",
+        "symmetric": True,
+        "type": "int",
+    }
+    optional_dtype_fields = {"scale_dtype", "zp_dtype"}
+    if not isinstance(weights, dict) or frozenset(weights) not in {
+        frozenset(base_weights),
+        frozenset(base_weights) | optional_dtype_fields,
+    }:
+        raise unsupported()
+    if any(
+        type(weights[key]) is not type(value) or weights[key] != value
+        for key, value in base_weights.items()
+    ):
+        raise unsupported()
+    if any(weights.get(key) is not None for key in optional_dtype_fields):
+        raise unsupported()
+
+    ignored = quant["ignore"]
+    if (
+        not isinstance(ignored, list)
+        or not ignored
+        or any(not isinstance(name, str) or not _MODULE_NAME.fullmatch(name) for name in ignored)
+        or len(set(ignored)) != len(ignored)
+    ):
+        raise unsupported()
+
+    dtypes = [config.get(key) for key in ("dtype", "torch_dtype") if key in config]
+    if (
+        not dtypes
+        or any(
+            not isinstance(value, str) or value not in {"bfloat16", "float16"} for value in dtypes
+        )
+        or len(set(dtypes)) != 1
+    ):
+        raise unsupported()
 
 
 def _expect(
@@ -142,15 +253,86 @@ def nvfp4_storage_names(
     return excluded
 
 
+def _compressed_tensors_storage(
+    tensors: Mapping[str, PhysicalTensor],
+    config: dict[str, object],
+    snapshot: FileSnapshot,
+) -> tuple[set[str], dict[str, tuple[int, int]]]:
+    """Validate packed groups and their serialized logical shape metadata."""
+    quant = config["quantization_config"]
+    assert isinstance(quant, dict)
+    ignored = set(quant["ignore"])
+    configured_dtype = config.get("dtype", config.get("torch_dtype"))
+    scale_dtype = "BF16" if configured_dtype == "bfloat16" else "F16"
+    excluded: set[str] = set()
+    logical_shapes: dict[str, tuple[int, int]] = {}
+
+    for name, packed in tensors.items():
+        if not name.endswith(".weight_packed"):
+            continue
+        prefix = name.removesuffix(".weight_packed")
+        if (
+            packed.dtype != "I32"
+            or len(packed.shape) != 2
+            or min(packed.shape) <= 0
+            or prefix + ".weight" in tensors
+            or prefix in ignored
+        ):
+            raise invalid("Invalid or ignored compressed-tensors packed weight group.")
+        output, packed_input = packed.shape
+        if packed_input % 4:
+            raise invalid("Compressed-tensors input dimension is not group aligned.")
+        inputs = safe_integer(packed_input * 8)
+        if inputs % 32:
+            raise invalid("Compressed-tensors input dimension is not group aligned.")
+        safe_integer(output * inputs * 4)
+
+        scale_name = prefix + ".weight_scale"
+        shape_name = prefix + ".weight_shape"
+        zero_name = prefix + ".weight_zero_point"
+        if zero_name in tensors:
+            raise unsupported()
+        _expect(tensors, scale_name, scale_dtype, (output, inputs // 32))
+        _expect(tensors, shape_name, "I64", (2,))
+
+        shape_tensor = tensors[shape_name]
+        with snapshot.open(shape_tensor.file) as stream:
+            stream.seek(shape_tensor.offset)
+            raw_shape = stream.read(16)
+        if len(raw_shape) != 16:
+            raise changed()
+        declared_output, declared_input = struct.unpack("<qq", raw_shape)
+        if (
+            declared_output != output
+            or declared_input != inputs
+            or declared_output <= 0
+            or declared_input <= 0
+        ):
+            raise invalid("Compressed-tensors logical shape metadata disagrees with its group.")
+        safe_integer(declared_output)
+        safe_integer(declared_input)
+
+        logical_shapes[prefix] = (declared_output, declared_input)
+        excluded.update((name, scale_name, shape_name))
+
+    return excluded, logical_shapes
+
+
 def logical_locations(
-    config: dict[str, object], physical: tuple[PhysicalTensor, ...]
+    config: dict[str, object], physical: tuple[PhysicalTensor, ...], snapshot: FileSnapshot
 ) -> tuple[TensorLocation, ...]:
     layout = encoding(config)
     if layout == "native":
         # Never filter/rename baseline native tensors, including scalars and buffers.
         return tuple(native_location(tensor) for tensor in physical)
     tensors = {tensor.name: tensor for tensor in physical}
-    excluded = _gptq(tensors) if layout == "gptq-int4" else nvfp4_storage_names(tensors, config)
+    logical_shapes: dict[str, tuple[int, int]] = {}
+    if layout == "gptq-int4":
+        excluded = _gptq(tensors)
+    elif layout == "nvfp4":
+        excluded = nvfp4_storage_names(tensors, config)
+    else:
+        excluded, logical_shapes = _compressed_tensors_storage(tensors, config, snapshot)
     if not excluded:
         raise invalid("Quantized checkpoint has no supported packed storage groups.")
     locations = []
@@ -162,23 +344,29 @@ def logical_locations(
         "weight_scale",
         "weight_scale_2",
         "input_scale",
+        "weight_packed",
+        "weight_shape",
+        "weight_zero_point",
     }
     for tensor in physical:
         if tensor.name in excluded:
-            packed_suffix = ".qweight" if layout == "gptq-int4" else ".weight"
+            packed_suffix = {
+                "gptq-int4": ".qweight",
+                "nvfp4": ".weight",
+                "compressed-tensors-w4a16-int4": ".weight_packed",
+            }[layout]
             if tensor.name.endswith(packed_suffix):
                 prefix = tensor.name.removesuffix(packed_suffix)
                 name = prefix + ".weight"
-                suffixes = (
-                    (".qweight", ".qzeros", ".scales", ".g_idx")
-                    if layout == "gptq-int4"
-                    else (".weight", ".weight_scale", ".weight_scale_2", ".input_scale")
-                )
-                shape = (
-                    (tensor.shape[1], tensor.shape[0] * 8)
-                    if layout == "gptq-int4"
-                    else (tensor.shape[0], tensor.shape[1] * 2)
-                )
+                if layout == "gptq-int4":
+                    suffixes: tuple[str, ...] = (".qweight", ".qzeros", ".scales", ".g_idx")
+                    shape = (tensor.shape[1], tensor.shape[0] * 8)
+                elif layout == "nvfp4":
+                    suffixes = (".weight", ".weight_scale", ".weight_scale_2", ".input_scale")
+                    shape = (tensor.shape[0], tensor.shape[1] * 2)
+                else:
+                    suffixes = (".weight_packed", ".weight_scale", ".weight_shape")
+                    shape = logical_shapes[prefix]
                 locations.append(
                     TensorLocation(
                         TensorDescriptor(

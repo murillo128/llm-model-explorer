@@ -44,9 +44,7 @@ def _logical_name(value: object) -> str | None:
     return value
 
 
-def _identity_details(
-    config: dict[str, object], directory: Path
-) -> tuple[str, str, str | None]:
+def _identity_details(config: dict[str, object], directory: Path) -> tuple[str, str, str | None]:
     identity = None
     for key in ("_name_or_path", "name_or_path"):
         candidate = _logical_name(config.get(key))
@@ -203,7 +201,7 @@ class ModelCatalogue:
             size_bytes=size if size <= MAX_SAFE_INTEGER else None,
         )
         physical = tuple(locations[k] for k in sorted(locations))
-        logical = logical_locations(config, physical)
+        logical = logical_locations(config, physical, snapshot)
         snapshot.check()
         return _BaseCandidate(
             CatalogueEntry(summary, snapshot, logical, physical),
@@ -275,9 +273,7 @@ class ModelCatalogue:
             and architectures[0].endswith("ForCausalLM")
         )
 
-    def _compose(
-        self, base: _BaseCandidate, adapter: _AdapterCandidate
-    ) -> CatalogueEntry | None:
+    def _compose(self, base: _BaseCandidate, adapter: _AdapterCandidate) -> CatalogueEntry | None:
         if not self._matches_upstream(base, adapter) or not self._is_causal_lm(base.config):
             return None
         try:

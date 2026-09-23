@@ -1,4 +1,4 @@
-"""Bounded logical float32 reads for the two admitted packed weight layouts.
+"""Bounded logical float32 reads for the admitted packed weight layouts.
 
 Only requested storage elements are gathered through bounded owned file reads.
 Never convert a complete physical array or expose a live file mapping.
@@ -16,6 +16,7 @@ _DTYPES = {
     "I32": (torch.int32, 4),
     "U8": (torch.uint8, 1),
     "F16": (torch.float16, 2),
+    "BF16": (torch.bfloat16, 2),
     "F32": (torch.float32, 4),
     "F8_E4M3": (torch.float8_e4m3fn, 1),
 }
@@ -67,6 +68,8 @@ def decode_range(
     adding one is not modulo 16. The stored g_idx selects groups verbatim.
     NVFP4 uses low-nibble-first E2M1, E4M3 block scales and the per-tensor
     weight scale. input_scale belongs to activations, not stored weights.
+    Compressed-tensors packs eight offset signed INT4 values per I32 word along
+    the input axis; each scale applies to 32 input values in one output row.
     Independent reference provenance and scalar oracles live in the tests.
     """
     safe_integer(start)
@@ -80,6 +83,11 @@ def decode_range(
     elif encoding == "nvfp4":
         outputs, packed_inputs = tensors["weight"].shape
         inputs = safe_integer(packed_inputs * 2)
+    elif encoding == "compressed-tensors-w4a16-int4":
+        outputs, packed_inputs = tensors["weight_packed"].shape
+        inputs = safe_integer(packed_inputs * 8)
+        if inputs % 32:
+            raise ModelError("unsupported_representation", "Invalid compressed-tensors group size.")
     else:
         raise ModelError("unsupported_representation", "Unsupported packed tensor encoding.")
     numel = safe_integer(outputs * inputs)
@@ -105,7 +113,7 @@ def decode_range(
             zeros = ((packed_zeros >> ((row % 8) * 4)) & 15) + 1
             scales = gather("scales", groups * outputs + row).to(torch.float32)
             values = (quantized - zeros).to(torch.float32) * scales
-        else:
+        elif encoding == "nvfp4":
             packed = gather("weight", row * (inputs // 2) + column // 2)
             codes = ((packed >> ((column % 2) * 4)) & 15).to(torch.int64)
             table = torch.tensor(
@@ -134,6 +142,11 @@ def decode_range(
             # ModelOpt reconstructs the block scale in float32 before applying
             # it to E2M1 values; keep that evaluation order for rounding parity.
             values = table[codes] * (scales * global_scale)
+        else:
+            packed = gather("weight_packed", row * (inputs // 8) + column // 8)
+            codes = ((packed >> ((column % 8) * 4)) & 15).to(torch.int64) - 8
+            scales = gather("weight_scale", row * (inputs // 32) + column // 32).to(torch.float32)
+            values = codes.to(torch.float32) * scales
     except torch.OutOfMemoryError as exc:
         raise MemoryError("Insufficient memory for packed tensor conversion.") from exc
     snapshot.check()
