@@ -101,16 +101,23 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
       const active = interaction.ports.has(endpointKey(target));
       const hit = Math.min(20 / interaction.zoom, 23);
       return <div key={port.id}>
-        <span className="architecture-port-label" data-emphasized={active} title={`${port.direction}: ${port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
-          style={{ maxWidth: node.expanded ? data.metrics.portLabelWidth[port.direction] : undefined, top: position.y - 7, ...(position.side === 'left' ? { left: position.x + 9 } : { right: 9 }) }}>{port.interfaceLabel ?? port.label}{data.dimensions && <span className="architecture-port-shape">{formatShape(port.shape)}</span>}</span>
         <button className="architecture-port nodrag nopan" data-node-id={node.id} data-port-id={port.id}
+          data-absolute-x={position.absoluteX} data-absolute-y={position.absoluteY}
           data-emphasized={active} aria-label={`${port.direction} port ${node.label}: ${port.interfaceLabel ?? port.label}`}
+          title={`${port.direction}: ${port.interfaceLabel ?? port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
           aria-description={data.dimensions ? formatShape(port.shape) : undefined}
           style={{ left: position.x, top: position.y, width: hit, height: hit }}
           onPointerDown={(event) => event.stopPropagation()} onPointerEnter={() => interaction.hover({ port: target })}
           onPointerLeave={() => interaction.hover(null)} onFocus={() => interaction.focus({ port: target })} onBlur={() => interaction.focus(null)}
           onClick={(event) => { event.stopPropagation(); interaction.selectPort?.(target); }} onDoubleClick={(event) => event.stopPropagation()}>
           <span className="architecture-port-dot" />
+          <span className="architecture-port-label" data-emphasized={active} data-raised={position.label.raised}
+            data-layout-bounds={JSON.stringify(position.label)}
+            title={`${port.direction}: ${port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
+            style={{ left: position.label.x - position.absoluteX + hit / 2, top: position.label.y - position.absoluteY + hit / 2,
+              width: position.label.width, height: position.label.height }}>
+            {port.interfaceLabel ?? port.label}{data.dimensions && <span className="architecture-port-shape">{formatShape(port.shape)}</span>}
+          </span>
         </button>
         {(['source', 'target'] as const).map((type) => <Handle key={type} type={type} id={`${type}:${port.id}`}
           position={position.side === 'left' ? Position.Left : Position.Right} isConnectable={false}
@@ -443,13 +450,14 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const nodes = useMemo<CanvasNode[]>(() => (result.layout?.boxes ?? []).map((box) => {
     const record = projected.get(box.id)!;
     const summary = cardSummary(record.record, parameters);
+    const raised = new Set(result.layout!.ports.filter((port) => port.nodeId === box.id && port.label.raised).map((port) => port.portId));
     const subtitle = record.summary?.replaceAll('linear attention', 'linear').replaceAll('full attention', 'full') ?? variants.get(record.id)?.replace(/^Instance \d+ · /, '') ?? '';
     return { id: box.id, type: 'architecture', position: { x: box.x, y: box.y },
       ...(box.parentId ? { parentId: box.parentId } : {}), width: box.width, height: box.height,
       style: { width: box.width, height: box.height, pointerEvents: record.expanded ? 'none' : 'auto' }, zIndex: 200,
       selected: selected === cardSelection(record) && (!sharedActive || concreteInstance !== null || selectionMode === 'structure'),
       data: { record, label: displayLabel(record, graph), subtitle,
-        summary, metrics: cardMetrics(record, summary, cardDimensions, Boolean(subtitle || diagnosed.has(box.id))), dimensions: cardDimensions, matrix,
+        summary, metrics: cardMetrics(record, summary, cardDimensions, Boolean(subtitle || diagnosed.has(box.id)), raised), dimensions: cardDimensions, matrix,
         ports: result.layout!.ports.filter((p) => p.nodeId === box.id), diagnostic: diagnosed.has(box.id), toggle, select, activate, inspect,
         navigation: cardNavigation(record, concreteInstance?.node_id ?? options.scope, sharedActive && !concreteInstance), navigate: navigateCard } };
   }), [activate, diagnosed, graph, inspect, projected, result.layout, selected, toggle, variants, select, options.scope, sharedActive, concreteInstance, navigateCard, parameters, cardDimensions, matrix, selectionMode]);

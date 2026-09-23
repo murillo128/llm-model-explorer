@@ -13,7 +13,8 @@ export type GraphNode = components['schemas']['ArchitectureNode'];
 export type Shape = components['schemas']['ArchitectureShape'];
 export interface Box { id: string; parentId?: string; x: number; y: number; width: number; height: number; absoluteX: number; absoluteY: number }
 export interface Point { x: number; y: number }
-export interface PortPosition extends Point { nodeId: string; portId: string; absoluteX: number; absoluteY: number; side: 'left' | 'right' }
+export interface PortPosition extends Point { nodeId: string; portId: string; absoluteX: number; absoluteY: number; side: 'left' | 'right';
+  label: { x: number; y: number; width: number; height: number; clearance: number; raised: boolean } }
 export interface Route { id: string; sections: Point[][]; junctions: Point[]; labels?: { x: number; y: number; width: number; height: number; lines: string[] }[] }
 export interface Layout { boxes: Box[]; ports: PortPosition[]; routes: Route[]; projection: Projection; edgeIds: string[]; width: number; height: number; milliseconds: number }
 export type GraphSnapshot = Pick<GraphView, 'selected' | 'selectionMode' | 'dimensions' | 'edge' | 'focus' | 'activeStack' | 'repetitions' |

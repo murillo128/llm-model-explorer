@@ -9,7 +9,7 @@ import { overviewFixture } from '../../tests/architecture-overview-fixture';
 import { groupHeaderHeight, layerGap } from './auto-layout';
 import { deriveMlpGroups } from './derived-groups';
 import type { Box, Graph, Layout, Point } from './graph';
-import { endpointKey, projectGraph, type ProjectionOptions } from './projection';
+import { connectionSet, endpointKey, projectGraph, type ProjectionOptions } from './projection';
 import { cardMetrics, cardSummary } from './card-summary';
 
 const tolerance = 0.01;
@@ -487,3 +487,84 @@ it.each([interfaceFixture('dense', true), interfaceFixture('visual'), overviewFi
       expect(top, `${node.id} has no route requiring a large empty top band`).toBeLessThanOrEqual(header + 40);
     }
   });
+
+it.each([interfaceFixture('dense', true), interfaceFixture('hybrid', true), interfaceFixture('visual')])(
+  'keeps internal port label rectangles above their cables with shared metrics: $graph_id', async (graph) => {
+    const parameters = new Map(graph.parameters.map((parameter) => [parameter.id, parameter]));
+    const annotated = new Set([...graph.repetitions.flatMap((r) => r.instances.map((instance) => instance.node_id)),
+      ...graph.diagnostics.flatMap((diagnostic) => diagnostic.node_id ? [diagnostic.node_id] : [])]);
+    for (const dimensions of [false, true]) {
+      const layout = await layoutGraph(graph, { expanded: graph.nodes.filter((node) => node.kind === 'group').map((node) => node.id),
+        showUnused: true, dimensions });
+      expect(layout.ports.some((port) => port.side === 'left' && port.label.raised)).toBe(true);
+      expect(layout.ports.some((port) => port.side === 'right' && port.label.raised)).toBe(true);
+      for (const node of layout.projection.nodes) {
+        const box = layout.boxes.find((candidate) => candidate.id === node.id)!;
+        const positions = layout.ports.filter((port) => port.nodeId === node.id);
+        const raised = new Set(positions.filter((port) => port.label.raised).map((port) => port.portId));
+        const metrics = cardMetrics(node, cardSummary(node.record, parameters), dimensions, annotated.has(node.id), raised);
+        for (const [index, port] of positions.entries()) {
+          const label = port.label, metric = metrics.portLabels[port.portId]!;
+          expect(label).toEqual({ x: port.absoluteX + (port.side === 'left' ? 9 : -9 - metric.width),
+            y: port.absoluteY + metric.top, width: metric.width, height: metric.height,
+            clearance: metric.clearance, raised: metric.raised });
+          if (node.expanded) expect(label.y).toBeGreaterThanOrEqual(box.absoluteY + metrics.headerHeight + 4);
+          if (label.raised) {
+            expect(label.y + label.height + label.clearance).toBeLessThanOrEqual(port.absoluteY);
+            for (const edge of layout.projection.edges.filter((candidate) =>
+              endpointKey(candidate.source) === endpointKey({ node_id: node.id, port_id: port.portId }) ||
+              endpointKey(candidate.target) === endpointKey({ node_id: node.id, port_id: port.portId }))) {
+              const route = layout.routes.find((candidate) => candidate.id === edge.id)!;
+              // The boundary's own cable may bend after leaving the port, but
+              // no section may pass through the displayed label itself.
+              expect(segments(route.sections).some(([a, b]) => crosses(a, b, label)), `${node.id}.${port.portId} / ${edge.id}`).toBe(false);
+            }
+          } else expect(label.y).toBe(port.absoluteY - 8);
+          for (const other of positions.slice(index + 1)) if (other.side === port.side) {
+            expect(label.y + label.height + 4 <= other.label.y || other.label.y + other.label.height + 4 <= label.y,
+              `${node.id}.${port.portId} overlaps ${other.portId}`).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
+it('bounds long labels and dimensions without moving a collapsed external terminal', async () => {
+  const graph = interfaceFixture('hybrid');
+  graph.nodes.find((node) => node.id === 'positions')!.label = 'A very long declared position interface name';
+  const collapsed = await layoutGraph(graph, { expanded: [], dimensions: false });
+  const expanded = await layoutGraph(graph, { expanded: ['model', 'language'], dimensions: true, showUnused: true });
+  expect(collapsed.ports.filter((port) => port.nodeId === 'model').every((port) => !port.label.raised)).toBe(true);
+  expect(expanded.ports.some((port) => port.label.raised && port.label.width === 120)).toBe(true);
+  for (const layout of [collapsed, expanded]) for (const port of layout.ports) {
+    expect(port.label.width).toBeLessThanOrEqual(120);
+    expect(port.label.height).toBe(layout === expanded ? 32 : 16);
+  }
+});
+
+it('keeps equal names, an unused port and isolated forwarding bound to their exact ports', async () => {
+  const graph = interfaceFixture('hybrid', true);
+  graph.nodes.find((node) => node.id === 'positions')!.label = 'Shared name';
+  graph.nodes.find((node) => node.id === 'mask')!.label = 'Shared name';
+  for (const port of graph.nodes.find((node) => node.id === 'language')!.ports.filter((port) => ['positions', 'mask'].includes(port.id))) {
+    port.label = 'Shared name';
+  }
+  const embedding = graph.nodes.find((node) => node.id === 'Embedding')!;
+  embedding.ports.push({ ...embedding.ports[0]!, id: 'unused', label: 'Unused label' });
+  for (const options of [{ expanded: ['model', 'language'], showUnused: true },
+    { scope: 'language', expanded: ['language'], showUnused: true }]) {
+    const layout = await layoutGraph(graph, options);
+    const owner = layout.projection.nodes.find((node) => node.id === 'language')!;
+    const first = owner.ports.find((port) => port.id === 'positions')!, second = owner.ports.find((port) => port.id === 'mask')!;
+    expect(first.interfaceLabel ?? first.label).toBe(second.interfaceLabel ?? second.label);
+    const left = { node_id: owner.id, port_id: first.id }, right = { node_id: owner.id, port_id: second.id };
+    const firstEdges = connectionSet(layout.projection, { port: left });
+    const secondEdges = connectionSet(layout.projection, { port: right });
+    expect(firstEdges.length).toBeGreaterThan(0);
+    expect(secondEdges.length).toBeGreaterThan(0);
+    expect(firstEdges).not.toEqual(secondEdges);
+    const unused = { node_id: embedding.id, port_id: 'unused' };
+    expect(layout.ports.find((port) => port.nodeId === unused.node_id && port.portId === unused.port_id)?.label.width).toBeGreaterThan(0);
+    expect(connectionSet(layout.projection, { port: unused })).toEqual([]);
+  }
+});

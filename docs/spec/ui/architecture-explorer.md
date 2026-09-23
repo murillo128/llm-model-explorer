@@ -287,6 +287,16 @@ or connections. Interaction does not move geometry. Deterministic conservation
 checks and desktop/constrained-width browser checks must verify these properties
 alongside surviving computation, source identity and independent graph coverage.
 
+An expanded boundary label whose visible connection enters the container sits
+above its cable axis with clearance for the full displayed line box, including
+an optional shape annotation. Ordinary labels whose cables leave the text side
+clear retain centered alignment. Port rows, header clearance and side gutters
+reserve the label's actual bounded rectangle; layout exposes that rectangle and
+its clearance for routing. Truncated text retains its full hover/focus title.
+The label and terminal share one accessible port control and the same exact
+connection emphasis and activation. Hover, focus and pin restoration are
+presentation-only and never start layout, camera, graph retrieval or tensor work.
+
 ## Optional isolated component exploration
 
 **Explore component** is an explicit action on a selected source group,
