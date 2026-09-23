@@ -551,6 +551,10 @@ keyboard-accessible disclosure and Model information preserve the explanation:
 “Model-supplied architecture. Structure and weight bindings are validated;
 equivalence to model code is not verified.” Never use an unqualified Validated
 badge. This is provenance information, separate from warning/error counts.
+The disclosure folds its explanation; a separate labelled close action dismisses
+only the inline provenance for the current model/graph generation. Model
+inspection always retains the explanation, declared scope/coverage and source
+provenance, including for a presentation-only outer Model boundary.
 
 ## Persistent capability diagnostics
 
@@ -574,6 +578,15 @@ and graph metadata remain distinguishable from diagnostic findings.
 Dismissal hides only the inline findings. The current model's observations remain
 in the shell's Model information destination, defined in
 [UI architecture](architecture.md#model-information-and-diagnostic-lifetime).
+The warning close action is independent of provenance dismissal. Unchanged
+findings stay dismissed across explorer remounts and equivalent retrievals;
+changed findings or a replacement graph can appear. A component's inspection
+shows only diagnostics explicitly associated with its source component, port or
+selected parameter. Model inspection shows every applicable source and
+interface-presentation finding, including dismissed ones, with original IDs,
+codes, severity and messages. Primary previews use readable component labels;
+the complete technical location remains in details and inspection. When no
+inline provenance or findings remain, omit the band entirely.
 Blocking failures retain an explicit unavailable/failed explanation and any
 applicable recovery action after dismissal. No inspection, details or dismissal
 action may retrieve the graph, mutate source records, invoke layout, remount the

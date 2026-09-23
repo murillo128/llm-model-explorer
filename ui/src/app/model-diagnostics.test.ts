@@ -35,4 +35,23 @@ describe('current model diagnostic identity', () => {
     store.graph(second, 'model', 'graph-1'); store.observe(second, 'Architecture', [warning]);
     expect(store.getSnapshot().dismissed).toContain(warning.id);
   });
+  it('keeps provenance dismissal independent of findings and only for the current graph generation', () => {
+    const store = new ModelDiagnostics(), first = {}, next = {};
+    const graph = { graph_id: 'graph-1', scope: 'model_defined' as const, coverage: 'partial' as const };
+    store.activate(first); store.graph(first, 'model', graph.graph_id, graph);
+    store.observe(first, 'Architecture', [warning], true);
+    store.dismissProvenance();
+    expect(store.getSnapshot().provenanceDismissed).toBe(true);
+    expect(store.getSnapshot().dismissed).toEqual([]);
+    store.dismiss([warning.id]); store.activate(next);
+    store.graph(next, 'model', graph.graph_id, graph);
+    store.observe(next, 'Architecture', [warning], true);
+    expect(store.getSnapshot().provenanceDismissed).toBe(true);
+    expect(store.getSnapshot().dismissed).toContain(warning.id);
+    store.graph(first, 'model', 'stale', { ...graph, graph_id: 'stale' });
+    expect(store.getSnapshot().provenanceDismissed).toBe(true);
+    store.graph(next, 'model', 'graph-2', { ...graph, graph_id: 'graph-2' });
+    expect(store.getSnapshot().provenanceDismissed).toBe(false);
+    expect(store.getSnapshot().dismissed).toEqual([]);
+  });
 });

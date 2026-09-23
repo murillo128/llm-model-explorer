@@ -187,14 +187,16 @@ dd { margin: 0; overflow-wrap: anywhere; }
 
 /* Persistent model findings are separate from connection status and toasts. */
 .diagnostic-band { flex: 0 1 auto; min-height: 0; max-height: 32%; overflow: auto; border-bottom: 1px solid var(--ui-border); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
-.diagnostic-band:empty { display: none; }
 .diagnostic-notice, .model-supplied { padding: 6px 10px; }
 .diagnostic-notice[data-severity="warning"] { border-left: 3px solid var(--ui-accent); }
 .diagnostic-notice[data-severity="error"] { border-left: 3px solid #a34b45; }
 .diagnostic-notice p, .model-supplied p, .diagnostic-list p { margin: 3px 0; white-space: pre-wrap; }
-.diagnostic-actions { display: flex; align-items: start; gap: 12px; }
+.diagnostic-actions, .model-supplied { display: flex; align-items: start; gap: 12px; }
 .diagnostic-actions details { flex: 1; min-width: 0; }
-.diagnostic-actions button { flex: none; }
+.model-supplied details { flex: 1; min-width: 0; }
+.diagnostic-close { flex: none; width: 32px; height: 32px; border: 0; border-radius: 4px; background: transparent; color: var(--ui-text-muted); cursor: pointer; font: inherit; font-size: 20px; line-height: 1; }
+.diagnostic-close:hover { background: var(--ui-surface-soft); color: var(--ui-text); }
+.diagnostic-close:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
 .diagnostic-list { list-style: none; padding: 0; margin: 4px 0; overflow-wrap: anywhere; }
 .diagnostic-list li { padding: 8px 0; border-bottom: 1px solid var(--ui-border); }
 .diagnostic-list code { font-size: 11px; }
