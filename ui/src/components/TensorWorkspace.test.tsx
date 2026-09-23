@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vitest';
 import { TensorWorkspace } from './TensorWorkspace';
+import { readInventoryPreference, writeInventoryPreference } from './inventory-preferences';
 
 function Workspace() {
   return <TensorWorkspace enabled inventory={<p>Tree</p>}><section><p>Science</p></section></TensorWorkspace>;
@@ -47,6 +48,19 @@ it('keeps a user change across remounts when browser storage denies access', asy
   const view = render(<Workspace />);
   await userEvent.click(screen.getByRole('button', { name: 'Collapse inventory' }));
   view.unmount();
+  render(<Workspace />);
+  expect(screen.getByRole('button', { name: 'Expand inventory' })).toBeVisible();
+});
+it.each(['missing', 'stale'])('keeps a failed inventory write ahead of %s readable storage', async (mode) => {
+  const key = 'lmex.tensor-inventory.pane';
+  writeInventoryPreference(key, { visible: true, width: 344 });
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('read-only'); });
+  if (mode === 'missing') vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null);
+  const view = render(<Workspace />);
+  expect(screen.getByRole('heading', { name: 'Inventory' })).toBeVisible();
+  await userEvent.click(screen.getByRole('button', { name: 'Collapse inventory' }));
+  view.unmount();
+  expect(readInventoryPreference(key)).toEqual({ visible: false, width: mode === 'stale' ? 344 : 280 });
   render(<Workspace />);
   expect(screen.getByRole('button', { name: 'Expand inventory' })).toBeVisible();
 });
