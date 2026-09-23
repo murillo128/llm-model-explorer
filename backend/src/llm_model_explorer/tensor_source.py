@@ -55,6 +55,26 @@ class TensorLocation:
     offset: int
     # A complete validated packed group; native locations need no companions.
     storage: tuple[PhysicalTensor, ...] = ()
+    # Composite sources can own tensor locations in a second immutable directory.
+    snapshot: FileSnapshot | None = None
+    # Physical names differ from logical names for validated adapter factors.
+    physical_names: tuple[str, ...] = ()
+
+
+def combined_fingerprint(fingerprints: tuple[str, ...], semantics: str | None) -> str:
+    """Domain-separated, length-framed identity for an ordered source composition."""
+    if not fingerprints:
+        raise ValueError("a model source requires at least one fingerprint")
+    if len(fingerprints) == 1 and semantics is None:
+        return fingerprints[0]
+    if len(fingerprints) != 2 or not semantics:
+        raise ValueError("only the accepted two-source composition is supported")
+    digest = hashlib.sha256(b"llm-model-composition\x00")
+    for value in (*fingerprints, semantics):
+        encoded = value.encode("utf-8")
+        digest.update(len(encoded).to_bytes(8, "little"))
+        digest.update(encoded)
+    return digest.hexdigest()
 
 
 def native_location(storage: PhysicalTensor) -> TensorLocation:
@@ -149,6 +169,8 @@ class ModelSource:
     _snapshot: FileSnapshot
     _locations: tuple[TensorLocation, ...]
     _physical: tuple[PhysicalTensor, ...]
+    _additional_snapshots: tuple[FileSnapshot, ...] = ()
+    _composition_semantics: str | None = None
 
     def physical_tensors(self) -> tuple[PhysicalTensor, ...]:
         """Complete guarded storage inventory for structural analysis, never HTTP."""
@@ -163,7 +185,7 @@ class ModelSource:
             for name in (
                 tuple(item.name for item in location.storage)
                 if location.storage
-                else (location.descriptor.name,)
+                else location.physical_names or (location.descriptor.name,)
             )
         }
         unresolved = [item.name for item in self._physical if item.name not in accounted]
@@ -185,9 +207,18 @@ class ModelSource:
         }
 
     def check_unchanged(self, *, rehash: bool = False) -> None:
-        self._snapshot.check()
-        if rehash and self._snapshot.fingerprint() != self.fingerprint:
-            raise changed()
+        snapshots = (self._snapshot, *self._additional_snapshots)
+        for snapshot in snapshots:
+            snapshot.check()
+        if rehash:
+            actual = combined_fingerprint(
+                tuple(snapshot.fingerprint() for snapshot in snapshots),
+                self._composition_semantics,
+            )
+            for snapshot in snapshots:
+                snapshot.check()
+            if actual != self.fingerprint:
+                raise changed()
 
     def tensors(self) -> tuple[TensorDescriptor, ...]:
         self.check_unchanged()
@@ -195,11 +226,14 @@ class ModelSource:
 
     def configuration(self) -> dict[str, object]:
         """Read only the pinned local configuration; never import model code."""
+        self.check_unchanged()
         with self._snapshot.open("config.json") as stream:
             raw = stream.read(MAX_METADATA_BYTES + 1)
         if len(raw) > MAX_METADATA_BYTES:
             raise ModelError("unsupported_size", "Model metadata exceeds the supported size.")
-        return parse_json(raw)
+        config = parse_json(raw)
+        self.check_unchanged()
+        return config
 
     @contextmanager
     def local_directory(self) -> Iterator[Path]:
@@ -265,6 +299,7 @@ class ModelSource:
     def _iter_ranges(
         self, location: TensorLocation, ranges: Iterable[tuple[int, int]], chunk_elements: int
     ) -> Generator[torch.Tensor, None, None]:
+        snapshot = location.snapshot or self._snapshot
         if location.storage:
             # Import at the source seam to keep storage records usable by the
             # independent decoder without a module initialization cycle.
@@ -274,7 +309,7 @@ class ModelSource:
                 while remaining:
                     count = min(remaining, chunk_elements)
                     yield decode_range(
-                        self._snapshot,
+                        snapshot,
                         location.storage,
                         location.descriptor.storage_format,
                         start,
@@ -287,7 +322,7 @@ class ModelSource:
         dtype, width = DTYPES[location.descriptor.storage_dtype]
         previous: tuple[int, int] | None = None
         values: torch.Tensor | None = None
-        with self._snapshot.open(location.file) as stream:
+        with snapshot.open(location.file) as stream:
             for start, remaining in ranges:
                 while remaining:
                     self.check_unchanged()

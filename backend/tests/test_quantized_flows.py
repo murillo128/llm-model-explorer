@@ -38,14 +38,18 @@ def tensor_id(packed: PackedFixture) -> str:
     return hashlib.sha256(packed.name.encode()).hexdigest()
 
 
+def model_id(packed: PackedFixture) -> str:
+    return f"numeric@{packed.encoding}"
+
+
 def address(client: TestClient, packed: PackedFixture) -> str:
-    session = client.post("/sessions", json={"model_id": "numeric"})
+    session = client.post("/sessions", json={"model_id": model_id(packed)})
     assert session.status_code == 201
     return f"/sessions/{session.json()['id']}/tensors/{tensor_id(packed)}/"
 
 
 async def async_address(client: httpx.AsyncClient, packed: PackedFixture) -> str:
-    session = await client.post("/sessions", json={"model_id": "numeric"})
+    session = await client.post("/sessions", json={"model_id": model_id(packed)})
     assert session.status_code == 201
     return f"/sessions/{session.json()['id']}/tensors/{tensor_id(packed)}/"
 
@@ -62,7 +66,7 @@ def test_logical_identity_shape_coverage_and_shard_independence(
     for split in [False, True]:
         root = tmp_path / str(split)
         packed.write(root, split=split)
-        source = ModelCatalogue(root).pin("numeric")
+        source = ModelCatalogue(root).pin(model_id(packed))
         (descriptor,) = source.tensors()
         descriptors.append(descriptor)
         assert descriptor.id == tensor_id(packed)
@@ -91,7 +95,7 @@ def test_unresolved_physical_records_keep_precise_partial_inventory(
     unknown = Stored(unknown_name, dtype, (2,), struct.pack("<2I", 0, 1))
     fixture = replace(packed, storage=(*packed.storage, unknown))
     fixture.write(settings.model_root, split=True)
-    source = ModelCatalogue(settings.model_root).pin("numeric")
+    source = ModelCatalogue(settings.model_root).pin(model_id(packed))
     assert [descriptor.name for descriptor in source.tensors()] == [packed.name]
     inventory = source.inventory()
     assert inventory["coverage"] == "partial"
@@ -110,7 +114,7 @@ def test_rows_keep_requested_order_duplicates_and_unaligned_chunks(
     tmp_path: Path, packed: PackedFixture
 ) -> None:
     packed.write(tmp_path, split=True)
-    source = ModelCatalogue(tmp_path).pin("numeric")
+    source = ModelCatalogue(tmp_path).pin(model_id(packed))
     rows = (packed.shape[0] - 1, 0, 1, 1, 1, 0)
     width = packed.shape[1] * 4
     expected = packed.expected()
@@ -133,7 +137,7 @@ def test_long_unknown_name_keeps_inventory_diagnostic_within_api_contract(
     unknown = Stored(name, "I32", (1,), struct.pack("<i", 1))
     replace(packed, storage=(*packed.storage, unknown)).write(settings.model_root, split=True)
     with TestClient(create_app(settings)) as client:
-        session = client.post("/sessions", json={"model_id": "numeric"}).json()
+        session = client.post("/sessions", json={"model_id": model_id(packed)}).json()
         response = client.get(f"/sessions/{session['id']}/tensors")
         assert response.status_code == 200
         inventory = response.json()

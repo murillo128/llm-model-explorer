@@ -25,7 +25,7 @@ def packed(request: pytest.FixtureRequest) -> PackedFixture:
 
 def pin(root: Path, fixture: PackedFixture, *, split: bool = False) -> ModelSource:
     directory = fixture.write(root, split=split)
-    return ModelCatalogue(root).pin(directory.name)
+    return ModelCatalogue(root).pin(f"{directory.name}@{fixture.encoding}")
 
 
 def decode(source: ModelSource, packed: PackedFixture, start: int, count: int) -> torch.Tensor:
