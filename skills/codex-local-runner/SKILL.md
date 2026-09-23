@@ -9,11 +9,11 @@ description: Install, repair, and verify the optional repository-scoped GitHub A
 
 Use this skill to provision or repair Skillforge's optional host-side bridge. The public label entrypoint is `.github/workflows/codex-issue-state.yml`; it is the **only** workflow that reacts to `issues:labeled`. It routes:
 
-- `execution-ready` to `.github/workflows/codex-execute-ready.yml`;
+- `execution-ready` to `.github/workflows/codex-execute-ready.yml` for the default/explicit `codex` executor, or `.github/workflows/devin-execute-ready.yml` for explicit `devin`;
 - `review-ready` to `.github/workflows/codex-review-ready.yml`;
 - `completed` / `queued` child events back to the unique active epic parent when its canonical DAG contains that child.
 
-The executor and audit workflows are reusable `workflow_call` workflows. They do not interpret labels themselves. The dispatcher may use a hosted runner for control-plane discovery; only the execution/audit jobs require a repository-scoped self-hosted runner carrying `self-hosted` and `codex`.
+The executor and audit workflows are reusable `workflow_call` workflows. They do not interpret labels themselves. The dispatcher may use a hosted runner for control-plane discovery; only the Codex execution/audit jobs require a repository-scoped self-hosted runner carrying `self-hosted` and `codex`.
 
 The executor never uses the Actions `_work` checkout as project state. It receives a durable clone through `SKILLFORGE_REPO_ROOT`, creates/reuses one persistent worktree and `codex/issue-N` branch, and connects to the **existing Codex App Server control socket used by Desktop Remote Control**. The audit workflow creates a fresh detached review worktree and fresh App Server thread for the exact PR head.
 
@@ -22,6 +22,16 @@ GitHub Actions is authorization/routing/launch infrastructure; the actual model 
 This skill owns runner installation, registration, service configuration, durable-repository environment wiring, App Server prerequisites, repair, optional scaling, and verification. It does not implement issues or modify repository files.
 
 Never execute this skill against the canonical `murillo128/skillforge` template repository itself.
+
+## Executor selection boundary
+
+This skill provisions the Codex host only. Use
+`skills/execution-runner-selection/SKILL.md` and `docs/execution-runners.md` to
+choose an executor independently of its model. Devin runs through its own hosted
+API launcher and VM; it does not require a local `devin` Actions label or access
+to the shared Codex App Server. Keep the Codex runner for independent final audit.
+Do not rename existing runner labels, copy credentials, migrate active sessions,
+edit executor/session lease comments or relabel issues as a provisioning test.
 
 ## Authority and safety
 
@@ -71,7 +81,7 @@ Desktop project grouping is cosmetic: a thread may appear under Recents rather t
 Before changing the host establish:
 
 1. exact repository/default branch and confirm it is not canonical `murillo128/skillforge`;
-2. `.github/workflows/codex-issue-state.yml` exists and is the only `issues:labeled` Codex state router;
+2. `.github/workflows/codex-issue-state.yml` exists and is the only `issues:labeled` state router;
 3. `.github/workflows/codex-execute-ready.yml` and `.github/workflows/codex-review-ready.yml` are reusable `workflow_call` workflows targeting `[self-hosted, codex]` and do not directly interpret label events;
 4. executor path requires `SKILLFORGE_REPO_ROOT`, uses persistent worktrees, and does not use a runner `_work` checkout as implementation state;
 5. durable clone absolute path, exact matching origin, and location outside `_work`;
@@ -82,7 +92,7 @@ Before changing the host establish:
 10. persistent Git/GitHub authentication usable by detached Codex turns;
 11. current runner installations/services/registrations.
 
-The hosted dispatcher may use `actions/checkout` only to read its tiny routing helper. That does **not** relax the executor rule: self-hosted model execution must never treat Actions `_work` as project state.
+The hosted dispatcher may use `actions/checkout` only to read its routing/selection helpers. That does **not** relax the executor rule: self-hosted model execution must never treat Actions `_work` as project state.
 
 ## Idempotent provisioning
 

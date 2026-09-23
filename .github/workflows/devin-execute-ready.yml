@@ -1,0 +1,52 @@
+name: Execute issue with Devin
+
+on:
+  workflow_call:
+    inputs:
+      issue_number:
+        description: Controlling issue number to launch or resume
+        required: true
+        type: string
+      wait_for_existing_turn:
+        description: Wait for an active turn before a scheduler follow-up
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      DEVIN_API_KEY:
+        description: Devin v3 organization service-user credential
+        required: true
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: devin-${{ github.repository }}-issue-${{ inputs.issue_number }}
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Require trusted default-branch launcher
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: test "$GITHUB_REF" = "refs/heads/$DEFAULT_BRANCH"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Launch or resume the issue-owned Devin session
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_ORG_ID: ${{ vars.DEVIN_ORG_ID }}
+          DEVIN_MAX_ACU_LIMIT: ${{ vars.DEVIN_MAX_ACU_LIMIT }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          WAIT_FOR_EXISTING_TURN: ${{ inputs.wait_for_existing_turn }}
+        run: python3 .github/scripts/devin_runner.py

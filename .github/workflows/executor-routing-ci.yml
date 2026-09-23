@@ -1,0 +1,36 @@
+name: Executor routing regression checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/**'
+      - '.github/workflows/*execute-ready.yml'
+      - '.github/workflows/codex-issue-state.yml'
+      - '.github/workflows/codex-review-ready.yml'
+      - '.github/workflows/executor-routing-ci.yml'
+  pull_request:
+    paths:
+      - '.github/scripts/**'
+      - '.github/workflows/*execute-ready.yml'
+      - '.github/workflows/codex-issue-state.yml'
+      - '.github/workflows/codex-review-ready.yml'
+      - '.github/workflows/executor-routing-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-regressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test routing and Devin API doubles (no paid calls)
+        run: python3 -m unittest discover -s .github/scripts -p 'test_executor_routing.py' -v
+      - name: Preserve native Codex lifecycle behavior
+        run: python3 -m unittest discover -s .github/scripts -p 'test_codex_profile.py' -v

@@ -1,4 +1,4 @@
-name: Route Codex issue state
+name: Route issue state and executor
 
 on:
   issues:
@@ -20,19 +20,29 @@ on:
 
 permissions:
   contents: read
-  issues: read
+  issues: write
   pull-requests: read
 
 jobs:
   route:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
     outputs:
       operation: ${{ steps.route.outputs.operation }}
       issue_number: ${{ steps.route.outputs.issue_number }}
       issue_title: ${{ steps.route.outputs.issue_title }}
       wait_for_existing_turn: ${{ steps.route.outputs.wait_for_existing_turn }}
     steps:
+      - name: Require the default-branch dispatcher
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: test "$GITHUB_REF" = "refs/heads/$DEFAULT_BRANCH"
+
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Resolve label transition
         id: route
@@ -105,23 +115,72 @@ jobs:
             esac
           fi
 
+          # Titles are display data, not additional Actions output records.
+          issue_title="$(printf '%s' "$issue_title" | tr '\r\n' '  ')"
           echo "operation=$operation" >> "$GITHUB_OUTPUT"
           echo "issue_number=$issue_number" >> "$GITHUB_OUTPUT"
           echo "issue_title=$issue_title" >> "$GITHUB_OUTPUT"
           echo "wait_for_existing_turn=$wait_for_existing_turn" >> "$GITHUB_OUTPUT"
 
-  execute:
+  select-executor:
     needs: route
     if: needs.route.outputs.operation == 'execute' && needs.route.outputs.issue_number != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    concurrency:
+      group: executor-selection-${{ github.repository }}-${{ needs.route.outputs.issue_number }}
+      cancel-in-progress: false
+    outputs:
+      executor: ${{ steps.select.outputs.executor }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Resolve current issue selection and pin executor ownership
+        id: select
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ needs.route.outputs.issue_number }}
+          WAIT_FOR_EXISTING_TURN: ${{ needs.route.outputs.wait_for_existing_turn }}
+        run: python3 .github/scripts/executor_control.py select
+
+  execute:
+    needs: [route, select-executor]
+    if: needs.select-executor.outputs.executor == 'codex'
+    permissions:
+      contents: read
+      issues: read
     uses: ./.github/workflows/codex-execute-ready.yml
     with:
       issue_number: ${{ needs.route.outputs.issue_number }}
       issue_title: ${{ needs.route.outputs.issue_title }}
       wait_for_existing_turn: ${{ needs.route.outputs.wait_for_existing_turn == 'true' }}
 
+  execute-devin:
+    needs: [route, select-executor]
+    if: needs.select-executor.outputs.executor == 'devin'
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/devin-execute-ready.yml
+    with:
+      issue_number: ${{ needs.route.outputs.issue_number }}
+      wait_for_existing_turn: ${{ needs.route.outputs.wait_for_existing_turn == 'true' }}
+    secrets:
+      DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+
   audit:
     needs: route
     if: needs.route.outputs.operation == 'audit' && needs.route.outputs.issue_number != ''
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     uses: ./.github/workflows/codex-review-ready.yml
     with:
       issue_number: ${{ needs.route.outputs.issue_number }}
