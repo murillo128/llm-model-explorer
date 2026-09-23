@@ -11,6 +11,8 @@ Reviewed primary sources:
 - Selected ModelOpt producer's low-first packing and block * global weight scale:
   https://github.com/NVIDIA/Model-Optimizer/blob/82f1d216d1a9022e60b8e1143a77f36c00b885a4/modelopt/torch/quantization/qtensor/nvfp4_tensor.py
   Activation scaling is a separate export method and absent from dequantize().
+- Compressed-tensors `pack-quantized` signed offset and dense cross-element I32 packing:
+  https://github.com/vllm-project/compressed-tensors/tree/4a696625b7ada2cb857c75f67ce02dc56b381323/src/compressed_tensors/compressors/pack_quantized
 - E2M1/E4M3 sign/exponent/mantissa definitions: OCP MX v1.0, Tables 2 and 5
   https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
   The standard E2M1 sign bit is retained, including -0; ModelOpt's slow Python
@@ -62,10 +64,17 @@ class PackedFixture:
     encoding: str
     shape: tuple[int, int]
     storage: tuple[Stored, ...]
+    config_kind: str | None = None
 
     @property
     def name(self) -> str:
-        return self.storage[0].name.rsplit(".", 1)[0] + ".weight"
+        name = self.storage[0].name
+        prefix = (
+            name.removesuffix(".weight_packed")
+            if self.encoding == "compressed-tensors-w4a16-int4"
+            else name.rsplit(".", 1)[0]
+        )
+        return prefix + ".weight"
 
     def expected(self) -> bytes:
         """Walk output rows and input columns, decoding one scalar at a time."""
@@ -88,19 +97,29 @@ class PackedFixture:
                         0
                     ]
                     value = (weight - zero) * scale
-                else:
+                elif self.encoding == "nvfp4":
                     packed = fields["weight"][row * (inputs // 2) + column // 2]
                     code = (packed >> (4 * (column % 2))) & 15
                     scale = e4m3(fields["weight_scale"][row * (inputs // 16) + column // 16])
                     global_scale = struct.unpack("<f", fields["weight_scale_2"])[0]
                     value = e2m1(code) * f32(scale * global_scale)
+                else:
+                    word = struct.unpack_from(
+                        "<I", fields["weight_packed"], (row * (inputs // 8) + column // 8) * 4
+                    )[0]
+                    signed = ((word >> (4 * (column % 8))) & 15) - 8
+                    scale_bits = struct.unpack_from(
+                        "<H", fields["weight_scale"], (row * (inputs // 32) + column // 32) * 2
+                    )[0]
+                    scale = struct.unpack("<f", struct.pack("<I", scale_bits << 16))[0]
+                    value = signed * scale
                 values.extend(struct.pack("<f", value))
         return bytes(values)
 
     def write(self, root: Path, *, split: bool = False, name: str = "numeric") -> Path:
         directory = root / name
         directory.mkdir(parents=True)
-        kind = "JunHowie" if self.encoding == "gptq-int4" else "AxionML"
+        kind = self.config_kind or ("JunHowie" if self.encoding == "gptq-int4" else "AxionML")
         (directory / "config.json").write_text(json.dumps(config_for(kind)))
         groups = [(entry,) for entry in self.storage] if split else [self.storage]
         mapping: dict[str, str] = {}
@@ -201,4 +220,47 @@ def nvfp4_fixture(*, inputs: int = 64, output: int = 4, input_scale: float = 31.
             Stored(prefix + ".weight_scale_2", "F32", (), struct.pack("<f", 0.1234567)),
             Stored(prefix + ".input_scale", "F32", (), struct.pack("<f", input_scale)),
         ),
+    )
+
+
+def compressed_tensors_fixture(
+    *, kimi: bool = False, inputs: int = 64, output: int = 4
+) -> PackedFixture:
+    """Small CT W4A16 fixture with both 32-column groups and all signed codes."""
+    if inputs <= 0 or inputs % 32 or output <= 0:
+        raise ValueError("compressed-tensors fixtures require positive 32-aligned input width")
+    kind = "Kimi" if kimi else "GLM"
+    prefix = (
+        "model.layers.1.block_sparse_moe.experts.0.w1"
+        if kimi
+        else "model.layers.1.mlp.experts.0.down_proj"
+    )
+
+    packed = bytearray()
+    for row in range(output):
+        for word_index in range(inputs // 8):
+            word = 0
+            for lane in range(8):
+                column = word_index * 8 + lane
+                signed = ((row * 7 + column * 5 + column // 32 * 3) % 16) - 8
+                word |= (signed + 8) << (4 * lane)
+            packed.extend(struct.pack("<I", word))
+
+    scale_values = (0.5, 1.25, 0.03125, 2.0)
+    scales = bytearray()
+    for row in range(output):
+        for group in range(inputs // 32):
+            value = scale_values[(row * 3 + group) % len(scale_values)]
+            bits = struct.unpack("<I", struct.pack("<f", value))[0]
+            scales.extend(struct.pack("<H", bits >> 16))
+
+    return PackedFixture(
+        "compressed-tensors-w4a16-int4",
+        (output, inputs),
+        (
+            Stored(prefix + ".weight_packed", "I32", (output, inputs // 8), bytes(packed)),
+            Stored(prefix + ".weight_scale", "BF16", (output, inputs // 32), bytes(scales)),
+            Stored(prefix + ".weight_shape", "I64", (2,), struct.pack("<2q", output, inputs)),
+        ),
+        config_kind=kind,
     )

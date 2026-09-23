@@ -10,7 +10,14 @@ from unittest.mock import Mock
 
 import pytest
 import torch
-from quantized_oracles import PackedFixture, e2m1, e4m3, gptq_fixture, nvfp4_fixture
+from quantized_oracles import (
+    PackedFixture,
+    compressed_tensors_fixture,
+    e2m1,
+    e4m3,
+    gptq_fixture,
+    nvfp4_fixture,
+)
 
 from llm_model_explorer import quantized_decoding
 from llm_model_explorer.model_files import FileSnapshot, ModelError
@@ -18,9 +25,13 @@ from llm_model_explorer.models import ModelCatalogue
 from llm_model_explorer.tensor_source import DEFAULT_CHUNK_ELEMENTS, ModelSource
 
 
-@pytest.fixture(params=["gptq-int4", "nvfp4"])
+@pytest.fixture(params=["gptq-int4", "nvfp4", "compressed-tensors-w4a16-int4"])
 def packed(request: pytest.FixtureRequest) -> PackedFixture:
-    return gptq_fixture() if request.param == "gptq-int4" else nvfp4_fixture()
+    if request.param == "gptq-int4":
+        return gptq_fixture()
+    if request.param == "nvfp4":
+        return nvfp4_fixture()
+    return compressed_tensors_fixture()
 
 
 def pin(root: Path, fixture: PackedFixture, *, split: bool = False) -> ModelSource:
@@ -62,6 +73,8 @@ def test_unaligned_ranges_and_chunks_preserve_logical_order(
     # Every nibble offset, group/row crossings, the final scalar and empty end.
     ranges = [(offset, 19) for offset in range(16)]
     ranges += [(packed.shape[1] - 3, 11), (127, 131), (total - 1, 1), (total, 0)]
+    if packed.encoding == "compressed-tensors-w4a16-int4":
+        ranges += [(31, 3), (63, 5), (packed.shape[1] - 1, 2)]
     for start, count in ranges:
         if start + count <= total:
             assert (
@@ -240,7 +253,14 @@ def test_concurrent_truncation_invalidates_owned_read(
         if stage == "before_gather":
             # Gather operates on owned bytes, so truncation cannot cause SIGBUS.
             for item in source._physical:
-                if item.name.endswith(".g_idx" if packed.encoding == "gptq-int4" else ".weight"):
+                selected_suffix = (
+                    ".g_idx"
+                    if packed.encoding == "gptq-int4"
+                    else ".weight_packed"
+                    if packed.encoding == "compressed-tensors-w4a16-int4"
+                    else ".weight"
+                )
+                if item.name.endswith(selected_suffix):
                     truncate(source._snapshot.directory / item.file)
                     break
         return original_select(values, dimension, indices)

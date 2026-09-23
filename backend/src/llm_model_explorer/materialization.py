@@ -122,6 +122,7 @@ class LogicalTensorService:
             ("safetensors", "BF16"),
             ("gptq-int4", "I32"),
             ("nvfp4", "U8"),
+            ("compressed-tensors-w4a16-int4", "I32"),
         } or descriptor.logical_dtype != "float32":
             raise ModelError("unsupported_representation", "Unsupported tensor representation.")
         shape = tuple(safe_integer(dimension) for dimension in descriptor.shape)

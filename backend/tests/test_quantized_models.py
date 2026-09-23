@@ -1,8 +1,8 @@
 """Reduced encoding fixtures; provenance is in fixtures/quantized-configs.json.
 
 Payloads are synthetic, not checkpoint acceptance or a quantization decoder oracle.
-The GPTQ [input=128, output=8] and NVFP4 [input=16, output=2] groups
-preserve the reviewed packing axes, dtypes and scale geometry.
+The GPTQ [input=128, output=8], NVFP4 [input=16, output=2] and compressed-tensors
+[output=4, input=64] groups preserve the reviewed packing axes and scale geometry.
 """
 
 import hashlib
@@ -30,14 +30,21 @@ from llm_model_explorer.models import ModelCatalogue
 from llm_model_explorer.settings import Settings
 
 KINDS = ["JunHowie", "AxionML"]
+COMPRESSED_KINDS = ["GLM", "Kimi"]
 PREFIX = "model.layers.0.self_attn.q_proj"
 # Deliberately independent byte-width oracle, not the production dtype registry.
-WIDTHS = {"F32": 4, "F16": 2, "BF16": 2, "I32": 4, "U8": 1, "F8_E4M3": 1}
+WIDTHS = {"F32": 4, "F16": 2, "BF16": 2, "I32": 4, "I64": 8, "U8": 1, "F8_E4M3": 1}
 Storage = tuple[str, str, list[int]]
 
 
 def quantized_id(name: str, kind: str) -> str:
-    return f"{name}@{'gptq-int4' if kind == 'JunHowie' else 'nvfp4'}"
+    layout = {
+        "JunHowie": "gptq-int4",
+        "AxionML": "nvfp4",
+        "GLM": "compressed-tensors-w4a16-int4",
+        "Kimi": "compressed-tensors-w4a16-int4",
+    }[kind]
+    return f"{name}@{layout}"
 
 
 def config_for(kind: str) -> dict[str, Any]:
@@ -54,30 +61,44 @@ def packed_group(kind: str) -> list[Storage]:
             ("scales", "F16", [1, 8]),
             ("g_idx", "I32", [128]),
         ]
-    else:
+    elif kind == "AxionML":
         entries = [
             ("weight", "U8", [2, 8]),
             ("weight_scale", "F8_E4M3", [2, 1]),
             ("weight_scale_2", "F32", []),
             ("input_scale", "F32", []),
         ]
-    prefix = (
-        PREFIX
-        if kind == "JunHowie"
-        else PREFIX.replace("model.layers", "model.language_model.layers")
-    )
+    else:
+        entries = [
+            ("weight_packed", "I32", [2, 8]),
+            ("weight_scale", "BF16", [2, 2]),
+            ("weight_shape", "I64", [2]),
+        ]
+    prefix = {
+        "JunHowie": PREFIX,
+        "AxionML": PREFIX.replace("model.layers", "model.language_model.layers"),
+        "GLM": "model.layers.1.mlp.experts.0.down_proj",
+        "Kimi": "model.layers.1.block_sparse_moe.experts.0.w1",
+    }[kind]
     return [(f"{prefix}.{name}", dtype, shape) for name, dtype, shape in entries]
 
 
-def write_storage(path: Path, entries: list[Storage]) -> None:
+def write_storage(
+    path: Path, entries: list[Storage], *, payloads: dict[str, bytes] | None = None
+) -> None:
     header: dict[str, object] = {}
     offset = 0
+    payload = bytearray()
     for name, dtype, shape in entries:
         end = offset + math.prod(shape) * WIDTHS[dtype]
         header[name] = {"dtype": dtype, "shape": shape, "data_offsets": [offset, end]}
+        data = (payloads or {}).get(name, bytes(end - offset))
+        if len(data) != end - offset:
+            raise ValueError(f"Incorrect fixture payload size for {name}")
+        payload.extend(data)
         offset = end
     path.parent.mkdir(parents=True, exist_ok=True)
-    replace_header(path, header, b"\0" * offset)
+    replace_header(path, header, bytes(payload))
 
 
 def quantized_model(root: Path, kind: str, *, native: bool = True, indexed: bool = False) -> Path:
@@ -85,14 +106,15 @@ def quantized_model(root: Path, kind: str, *, native: bool = True, indexed: bool
     directory.mkdir()
     (directory / "config.json").write_text(json.dumps(config_for(kind)))
     group = packed_group(kind)
+    payloads = {group[2][0]: struct.pack("<qq", 2, 64)} if kind in {"GLM", "Kimi"} else None
     if indexed:
-        write_storage(directory / "parts/a.safetensors", group[:2])
-        write_storage(directory / "parts/b.safetensors", group[2:])
+        write_storage(directory / "parts/a.safetensors", group[:2], payloads=payloads)
+        write_storage(directory / "parts/b.safetensors", group[2:], payloads=payloads)
         mapping = {name: "parts/a.safetensors" for name, _, _ in group[:2]} | {
             name: "parts/b.safetensors" for name, _, _ in group[2:]
         }
     else:
-        write_storage(directory / "model.safetensors", group)
+        write_storage(directory / "model.safetensors", group, payloads=payloads)
         mapping = {name: "model.safetensors" for name, _, _ in group}
     if native:
         weights = [
@@ -100,6 +122,9 @@ def quantized_model(root: Path, kind: str, *, native: bool = True, indexed: bool
             ("model.embed_tokens.weight", "F16", [2, 2], [1.0, -0.0, 0.5, -1.5]),
             ("model.conv.weight", "F32", [1, 1, 2], [0.0, -0.0]),
         ]
+        if kind in {"GLM", "Kimi"}:
+            ignored = config_for(kind)["quantization_config"]["ignore"][0]
+            weights.append((f"{ignored}.weight", "BF16", [2], [0.25, -0.5]))
         write_weights(directory / "native.safetensors", weights)
         mapping.update({name: "native.safetensors" for name, *_ in weights})
     if indexed:
@@ -391,6 +416,199 @@ def test_vjepa_admission_without_tokenizer_or_original_weights(settings: Setting
             assert response.json()["code"] == "unsupported_representation"
 
 
+@pytest.mark.parametrize("kind", COMPRESSED_KINDS)
+@pytest.mark.parametrize("indexed", [False, True])
+def test_compressed_tensors_inventory_keeps_ignored_native_weights_actionable(
+    settings: Settings, kind: str, indexed: bool
+) -> None:
+    quantized_model(settings.model_root, kind, indexed=indexed)
+    catalogue = ModelCatalogue(settings.model_root)
+    source = catalogue.pin(quantized_id("quantized", kind))
+    packed_name = packed_group(kind)[0][0]
+    logical_name = packed_name.removesuffix(".weight_packed") + ".weight"
+    ignored_name = config_for(kind)["quantization_config"]["ignore"][0] + ".weight"
+    descriptors = {item.name: item for item in source.tensors()}
+    assert set(descriptors) == {
+        "model.norm.weight",
+        "model.embed_tokens.weight",
+        "model.conv.weight",
+        ignored_name,
+        logical_name,
+    }
+    logical = descriptors[logical_name]
+    assert logical.shape == (2, 64)
+    assert logical.storage_dtype == "I32"
+    assert logical.storage_format == "compressed-tensors-w4a16-int4"
+    assert logical.id == hashlib.sha256(logical_name.encode()).hexdigest()
+    inventory = source.inventory()
+    assert inventory["coverage"] == "complete" and inventory["diagnostics"] == []
+    assert len(source.physical_tensors()) == 7
+
+    expected = {
+        "model.norm.weight": struct.pack("<2f", 1.5, -2.25),
+        "model.embed_tokens.weight": struct.pack("<4f", 1, -0.0, 0.5, -1.5),
+        "model.conv.weight": struct.pack("<2f", 0, -0.0),
+        ignored_name: struct.pack("<2f", 0.25, -0.5),
+        logical_name: struct.pack("<f", -0.0) * 128,
+    }
+    for name, descriptor in descriptors.items():
+        result = b"".join(chunk.numpy().tobytes() for chunk in source.iter_tensor(descriptor.id))
+        assert result == expected[name]
+
+    with TestClient(create_app(settings)) as client:
+        session = client.post("/sessions", json={"model_id": quantized_id("quantized", kind)})
+        assert session.status_code == 201
+        base = f"/sessions/{session.json()['id']}"
+        inventory_response = client.get(base + "/tensors")
+        assert inventory_response.json() == inventory
+        for tensor in source.tensors():
+            response = client.get(base + f"/tensors/{tensor.id}/data")
+            assert (
+                b"".join(data for frame, data in frames(response.content) if frame == 2)
+                == expected[tensor.name]
+            )
+
+
+@pytest.mark.parametrize("kind", COMPRESSED_KINDS)
+@pytest.mark.parametrize(
+    "defect",
+    [
+        "format",
+        "activation",
+        "target",
+        "bits",
+        "strategy",
+        "group_size",
+        "asymmetric",
+        "dynamic",
+        "scale_dtype",
+        "version",
+        "wildcard_ignore",
+        "extra_quant_key",
+    ],
+)
+def test_compressed_tensors_admission_rejects_unreviewed_configuration(
+    model_root: Path, kind: str, defect: str
+) -> None:
+    directory = quantized_model(model_root, kind)
+    config = config_for(kind)
+    quant = config["quantization_config"]
+    group = quant["config_groups"]["group_0"]
+    weights = group["weights"]
+    if defect == "format":
+        quant["format"] = "other"
+    elif defect == "activation":
+        group["input_activations"] = {"dynamic": False}
+    elif defect == "target":
+        group["targets"] = ["Conv2d"]
+    elif defect == "bits":
+        weights["num_bits"] = 8
+    elif defect == "strategy":
+        weights["strategy"] = "tensor"
+    elif defect == "group_size":
+        weights["group_size"] = 16
+    elif defect == "asymmetric":
+        weights["symmetric"] = False
+    elif defect == "dynamic":
+        weights["dynamic"] = True
+    elif defect == "scale_dtype":
+        weights["scale_dtype"] = "bfloat16"
+        weights["zp_dtype"] = None
+    elif defect == "version":
+        quant["version"] = "future"
+    elif defect == "wildcard_ignore":
+        quant["ignore"] = ["model.layers.*"]
+    else:
+        quant["new_option"] = True
+    (directory / "config.json").write_text(json.dumps(config))
+    assert ModelCatalogue(model_root).discover() == ()
+
+
+@pytest.mark.parametrize("kind", COMPRESSED_KINDS)
+@pytest.mark.parametrize(
+    "defect",
+    [
+        "missing_packed",
+        "missing_scale",
+        "missing_shape",
+        "packed_dtype",
+        "packed_geometry",
+        "scale_dtype",
+        "scale_shape",
+        "shape_dtype",
+        "shape_value",
+        "zero_point",
+        "ignored_packed",
+    ],
+)
+def test_compressed_tensors_groups_require_verified_shape_and_no_zero_point(
+    model_root: Path, kind: str, defect: str
+) -> None:
+    directory = quantized_model(model_root, kind, native=False)
+    group = packed_group(kind)
+    payloads = {group[2][0]: struct.pack("<qq", 2, 32)}
+    if defect == "missing_packed":
+        group.pop(0)
+    elif defect == "missing_scale":
+        group.pop(1)
+    elif defect == "missing_shape":
+        group.pop(2)
+    elif defect == "packed_dtype":
+        group[0] = (group[0][0], "BF16", group[0][2])
+    elif defect == "packed_geometry":
+        group[0] = (group[0][0], "I32", [2, 7])
+    elif defect == "scale_dtype":
+        group[1] = (group[1][0], "F16", group[1][2])
+    elif defect == "scale_shape":
+        group[1] = (group[1][0], group[1][1], [2, 1])
+    elif defect == "shape_dtype":
+        group[2] = (group[2][0], "I32", group[2][2])
+        payloads = {}
+    elif defect == "zero_point":
+        group.append(
+            (group[0][0].removesuffix(".weight_packed") + ".weight_zero_point", "I32", [2, 2])
+        )
+    elif defect == "ignored_packed":
+        config = config_for(kind)
+        config["quantization_config"]["ignore"] = [group[0][0].removesuffix(".weight_packed")]
+        (directory / "config.json").write_text(json.dumps(config))
+    write_storage(directory / "model.safetensors", group, payloads=payloads)
+    assert ModelCatalogue(model_root).discover() == ()
+
+
+@pytest.mark.parametrize("kind", COMPRESSED_KINDS)
+def test_compressed_tensors_orphan_companions_are_non_actionable_partial_records(
+    model_root: Path, kind: str
+) -> None:
+    directory = quantized_model(model_root, kind, native=False)
+    write_weights(directory / "orphan.safetensors", [("orphan.weight_scale", "BF16", [1], [1.0])])
+    source = ModelCatalogue(model_root).pin(quantized_id("quantized", kind))
+    logical_name = packed_group(kind)[0][0].removesuffix(".weight_packed") + ".weight"
+    assert [item.name for item in source.tensors()] == [logical_name]
+    inventory = source.inventory()
+    assert inventory["coverage"] == "partial"
+    assert "orphan.weight_scale" in str(inventory["diagnostics"])
+
+
+@pytest.mark.parametrize("kind", COMPRESSED_KINDS)
+def test_compressed_tensors_shape_mutation_invalidates_source(
+    settings: Settings, kind: str
+) -> None:
+    directory = quantized_model(settings.model_root, kind, native=False)
+    source = ModelCatalogue(settings.model_root).pin(quantized_id("quantized", kind))
+    logical = packed_group(kind)[0][0].removesuffix(".weight_packed") + ".weight"
+    iterator = source.iter_tensor(hashlib.sha256(logical.encode()).hexdigest())
+    next(iterator)
+    mutate_last_byte(directory / "model.safetensors")
+    for operation in [source.tensors, source.inventory, source.physical_tensors]:
+        with pytest.raises(ModelError) as error:
+            operation()
+        assert error.value.code == "model_content_changed"
+    with pytest.raises(ModelError) as error:
+        next(iterator)
+    assert error.value.code == "model_content_changed"
+
+
 @pytest.mark.parametrize("kind", KINDS)
 def test_orphan_native_scales_are_not_numeric_weights(model_root: Path, kind: str) -> None:
     directory = quantized_model(model_root, kind)
@@ -452,9 +670,7 @@ def test_native_baseline_keeps_auxiliary_named_entries(settings: Settings, dtype
 def test_snapshot_change_is_an_http_conflict(settings: Settings, kind: str) -> None:
     directory = quantized_model(settings.model_root, kind)
     with TestClient(create_app(settings)) as client:
-        response = client.post(
-            "/sessions", json={"model_id": quantized_id("quantized", kind)}
-        )
+        response = client.post("/sessions", json={"model_id": quantized_id("quantized", kind)})
         assert response.status_code == 201
         base = f"/sessions/{response.json()['id']}"
         mutate_last_byte(directory / "model.safetensors")
