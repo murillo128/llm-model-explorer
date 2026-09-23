@@ -25,6 +25,7 @@ export function TensorWorkspace({ enabled, inventory, children }: {
   const restore = useRef<HTMLButtonElement>(null);
   const moveFocus = useRef(false);
   const drag = useRef<{ pointer: number; x: number; width: number } | null>(null);
+  const [resizing, setResizing] = useState(false);
   const limit = Math.max(minimum, Math.min(maximum, available - 360 - 16));
   const width = Math.min(preference.width, limit);
   useEffect(() => {
@@ -52,7 +53,7 @@ export function TensorWorkspace({ enabled, inventory, children }: {
     className={enabled ? `tensor-layout${hidden ? ' inventory-hidden' : ''}` : undefined}
     style={{ '--inventory-width': `${width}px`, '--inventory-tooltip-width': `${Math.max(0, available - 40)}px` } as CSSProperties}>
     {enabled && <>
-      <aside id="tensor-inventory" aria-label="Tensor inventory" hidden={hidden}>
+      <aside id="tensor-inventory" className="explorer-card" aria-label="Tensor inventory" hidden={hidden}>
         <div className="inventory-header">
           <h2>Inventory</h2>
           <button type="button" className="inventory-toggle" ref={hide} aria-expanded="true"
@@ -64,7 +65,7 @@ export function TensorWorkspace({ enabled, inventory, children }: {
       </aside>
       <div role="separator" aria-label="Resize tensor inventory" aria-orientation="vertical"
         aria-controls="tensor-inventory" aria-valuemin={minimum} aria-valuemax={limit} aria-valuenow={width}
-        aria-valuetext={`${width} pixels`} tabIndex={0} className="inventory-resizer" hidden={hidden}
+        aria-valuetext={`${width} pixels`} tabIndex={0} className="inventory-resizer" data-resizing={resizing || undefined} hidden={hidden}
         onKeyDown={(event) => {
           const next = { ArrowLeft: width - 16, ArrowRight: width + 16, Home: minimum, End: limit }[event.key];
           if (next !== undefined) { event.preventDefault(); resize(next); }
@@ -74,6 +75,7 @@ export function TensorWorkspace({ enabled, inventory, children }: {
           event.currentTarget.setPointerCapture(event.pointerId);
           event.currentTarget.focus();
           drag.current = { pointer: event.pointerId, x: event.clientX, width };
+          setResizing(true);
           event.preventDefault();
         }}
         onPointerMove={(event) => {
@@ -83,9 +85,11 @@ export function TensorWorkspace({ enabled, inventory, children }: {
           if (drag.current?.pointer === event.pointerId) {
             event.currentTarget.releasePointerCapture(event.pointerId);
             drag.current = null;
+            setResizing(false);
           }
         }}
-        onLostPointerCapture={() => { drag.current = null; }} />
+        onPointerCancel={() => { drag.current = null; setResizing(false); }}
+        onLostPointerCapture={() => { drag.current = null; setResizing(false); }} />
     </>}
     {enabled && hidden && <nav className="inventory-rail" aria-label="Inventory navigation">
       <button type="button" className="inventory-toggle inventory-restore" ref={restore}

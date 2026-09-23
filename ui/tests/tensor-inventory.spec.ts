@@ -47,6 +47,60 @@ async function readableTooltip(page: Page) {
   })).toEqual({ bounded: true, overlapsTitle: true, uncovered: true, textFits: true });
 }
 
+test('inventory card has a compact soft header, ghost collapse control and paint-only divider reveal', async ({ page }, info) => {
+  await openInventory(page);
+  const card = page.getByRole('complementary', { name: 'Tensor inventory' });
+  const collapse = card.getByRole('button', { name: 'Collapse inventory' });
+  const divider = page.getByRole('separator', { name: 'Resize tensor inventory' });
+  const style = await card.evaluate(node => {
+    const title = node.querySelector<HTMLElement>('.inventory-header')!;
+    const button = title.querySelector<HTMLButtonElement>('button')!;
+    const outer = getComputedStyle(node), head = getComputedStyle(title), control = getComputedStyle(button);
+    return { border: outer.borderTopWidth, radius: outer.borderTopLeftRadius, shadow: outer.boxShadow,
+      body: outer.backgroundColor, header: head.backgroundColor, separator: head.borderBottomWidth,
+      height: title.getBoundingClientRect().height, controlBorder: control.borderTopColor,
+      controlBackground: control.backgroundColor, controlShadow: control.boxShadow };
+  });
+  expect(style).toMatchObject({ border: '1px', radius: '9px', body: 'rgb(255, 255, 255)',
+    header: 'rgb(251, 250, 247)', separator: '1px', height: 40,
+    controlBackground: 'rgba(0, 0, 0, 0)', controlShadow: 'none' });
+  expect(style.shadow).not.toBe('none');
+  expect(style.controlBorder).toBe('rgba(0, 0, 0, 0)');
+  const boxes = async () => ({ card: await card.boundingBox(), science: await page.locator('.tensor-layout > .working-surface').boundingBox() });
+  if (page.viewportSize()!.width > 760) {
+    const before = await boxes();
+    expect(await divider.evaluate(node => getComputedStyle(node, '::before').backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    await divider.hover();
+    expect(await divider.evaluate(node => getComputedStyle(node, '::before').backgroundColor)).toBe('rgb(200, 121, 34)');
+    expect(await boxes()).toEqual(before);
+  } else {
+    await expect(divider).toBeHidden();
+    await collapse.click();
+    const restore = page.getByRole('button', { name: 'Expand inventory' });
+    await expect(restore).toBeVisible();
+    await restore.click();
+  }
+  await collapse.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(collapse).toBeFocused();
+  expect(await collapse.evaluate(node => getComputedStyle(node).outlineStyle)).toBe('solid');
+  await collapse.hover();
+  expect(await collapse.evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgb(243, 225, 201)');
+  await page.mouse.move(0, 0);
+  await info.attach('inventory-card', { body: await card.screenshot(), contentType: 'image/png' });
+  if (page.viewportSize()!.width > 760) {
+    const bounds = (await divider.boundingBox())!;
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(bounds.x + bounds.width + 20, bounds.y + bounds.height / 2);
+    await expect(divider).toHaveAttribute('data-resizing', 'true');
+    expect(await divider.evaluate(node => getComputedStyle(node, '::before').backgroundColor)).toBe('rgb(200, 121, 34)');
+    await page.mouse.up();
+    await expect(divider).not.toHaveAttribute('data-resizing');
+  }
+});
+
 test('quiet branches persist explicit keyboard and pointer choices across explorer visits and reload', async ({ page }) => {
   await openInventory(page);
   const branches = page.locator('.tensor-tree details');

@@ -74,7 +74,7 @@ function SessionArchitectureExplorer(props: Props) {
   }, [client, session, selection, retry, diagnostics]);
   const response = result.response;
   const band = <DiagnosticBand store={diagnostics} />;
-  if (!response || response.status === 'unavailable') return <div tabIndex={-1} className="architecture-explorer architecture-empty" aria-label="Architecture capability">
+  if (!response || response.status === 'unavailable') return <div tabIndex={-1} className="architecture-explorer explorer-card architecture-empty" aria-label="Architecture capability">
     <header className="architecture-empty-heading">Architecture</header>
     {band}
     <div className="architecture-capability-state">

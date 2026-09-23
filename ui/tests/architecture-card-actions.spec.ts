@@ -102,9 +102,11 @@ test('real double-clicks toggle once, preserve zoom and leave leaf inspection ex
     }, { capture: true });
   });
   const before = await state(page), initialFlow = await panel(page).locator('.architecture-flow').boundingBox();
+  expect((await panel(page).locator('.architecture-controls').boundingBox())!.height).toBe(40);
   const initialCard = await target.boundingBox();
   await card(page, 'repeat:layers:0:1').locator('.architecture-node-label').dblclick(); await ready(page);
   expect(Number((await state(page)).count)).toBe(Number(before.count) + 1);
+  expect((await panel(page).locator('.architecture-controls').boundingBox())!.height).toBeGreaterThan(40);
   const nativeEvents = await page.evaluate(() => (window as unknown as { doubleClickGeometry: { type: string; target: boolean; flow: DOMRect; card: DOMRect }[] }).doubleClickGeometry);
   expect(nativeEvents.map(({ type, target }) => ({ type, target }))).toEqual([
     { type: 'click', target: true }, { type: 'click', target: true }, { type: 'dblclick', target: true },
