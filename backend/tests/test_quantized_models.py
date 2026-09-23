@@ -36,6 +36,10 @@ WIDTHS = {"F32": 4, "F16": 2, "BF16": 2, "I32": 4, "U8": 1, "F8_E4M3": 1}
 Storage = tuple[str, str, list[int]]
 
 
+def quantized_id(name: str, kind: str) -> str:
+    return f"{name}@{'gptq-int4' if kind == 'JunHowie' else 'nvfp4'}"
+
+
 def config_for(kind: str) -> dict[str, Any]:
     fixtures = json.loads((Path(__file__).parent / "fixtures/quantized-configs.json").read_text())
     result: dict[str, Any] = fixtures[kind]["config"]
@@ -139,7 +143,7 @@ def test_physical_inventory_native_ids_and_exact_bytes(
         * (1024 if kind == "JunHowie" else 32),
     }
     with TestClient(create_app(settings)) as client:
-        session = client.post("/sessions", json={"model_id": "quantized"})
+        session = client.post("/sessions", json={"model_id": quantized_id("quantized", kind)})
         assert session.status_code == 201
         base = f"/sessions/{session.json()['id']}"
         response = client.get(base + "/tensors")
@@ -179,7 +183,7 @@ def test_explicit_partial_for_unknown_native_metadata(model_root: Path, kind: st
     directory = quantized_model(model_root, kind, native=False)
     # No claimed mathematical role for this native storage record.
     write_weights(directory / "unresolved.safetensors", [("unknown.region", "F32", [2], [1, 2])])
-    source = ModelCatalogue(model_root).pin("quantized")
+    source = ModelCatalogue(model_root).pin(quantized_id("quantized", kind))
     assert [tensor.name for tensor in source.tensors()] == [
         packed_group(kind)[0][0].rsplit(".", 1)[0] + ".weight"
     ]
@@ -299,10 +303,10 @@ def test_quantized_snapshot_and_relocation(model_root: Path, kind: str, asset: s
     directory = quantized_model(model_root, kind)
     (directory / "processor_config.json").write_text('{"processor_class":"Unexecuted"}')
     catalogue = ModelCatalogue(model_root)
-    source = catalogue.pin("quantized")
+    source = catalogue.pin(quantized_id("quantized", kind))
     descriptors = source.tensors()
     directory.rename(model_root / "moved")
-    moved = catalogue.pin("moved")
+    moved = catalogue.pin(quantized_id("moved", kind))
     assert moved.fingerprint == source.fingerprint
     assert moved.tensors() == descriptors
     stream = moved.iter_tensor(moved.tensors()[0].id, chunk_elements=1)
@@ -392,7 +396,7 @@ def test_orphan_native_scales_are_not_numeric_weights(model_root: Path, kind: st
     directory = quantized_model(model_root, kind)
     suffix = "scales" if kind == "JunHowie" else "weight_scale_2"
     write_weights(directory / "orphan.safetensors", [(f"orphan.{suffix}", "F32", [], [1])])
-    source = ModelCatalogue(model_root).pin("quantized")
+    source = ModelCatalogue(model_root).pin(quantized_id("quantized", kind))
     inventory = source.inventory()
     assert inventory["coverage"] == "partial"
     assert f"orphan.{suffix}" in str(inventory["diagnostics"])
@@ -448,7 +452,9 @@ def test_native_baseline_keeps_auxiliary_named_entries(settings: Settings, dtype
 def test_snapshot_change_is_an_http_conflict(settings: Settings, kind: str) -> None:
     directory = quantized_model(settings.model_root, kind)
     with TestClient(create_app(settings)) as client:
-        response = client.post("/sessions", json={"model_id": "quantized"})
+        response = client.post(
+            "/sessions", json={"model_id": quantized_id("quantized", kind)}
+        )
         assert response.status_code == 201
         base = f"/sessions/{response.json()['id']}"
         mutate_last_byte(directory / "model.safetensors")

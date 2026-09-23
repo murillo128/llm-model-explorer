@@ -79,8 +79,8 @@ def embedding_model(
     return directory
 
 
-def address(client: TestClient) -> str:
-    response = client.post("/sessions", json={"model_id": "test/tiny"})
+def address(client: TestClient, model_id: str = "test/tiny") -> str:
+    response = client.post("/sessions", json={"model_id": model_id})
     assert response.status_code == 201
     return f"/sessions/{response.json()['id']}/embeddings"
 
@@ -525,8 +525,11 @@ def test_quantized_checkpoint_native_input_rows(
     mapping = {FAMILIES[family][1]: "model.safetensors", "lm_head.weight": "model.safetensors"}
     mapping.update({name: "packed.safetensors" for name, _, _ in packed_group(kind)})
     (directory / "model.safetensors.index.json").write_text(json.dumps({"weight_map": mapping}))
+    variant = "gptq-int4" if kind == "JunHowie" else "nvfp4"
     with TestClient(create_app(settings)) as client:
-        response = client.post(address(client), json={"token_ids": [3, 0, 3]})
+        response = client.post(
+            address(client, f"test/tiny@{variant}"), json={"token_ids": [3, 0, 3]}
+        )
         assert response.status_code == 200
         result = frames(response.content)
         assert result[-1] == (4, b"")
@@ -638,7 +641,7 @@ def test_actionable_packed_table_reuses_logical_rows(settings: Settings, family:
     width = fixture.shape[1] * 4
     expected = b"".join(oracle[token * width : (token + 1) * width] for token in ids)
     with TestClient(create_app(settings)) as client:
-        url = address(client)
+        url = address(client, f"test/tiny@{fixture.encoding}")
         response = client.post(url, json={"token_ids": ids})
         assert response.status_code == 200
         result = frames(response.content)
