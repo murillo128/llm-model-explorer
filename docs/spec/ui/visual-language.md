@@ -247,3 +247,7 @@ stable local focus target when dismissal removes its button, and announce change
 findings politely without reannouncing unchanged content on ordinary rerenders.
 Quiet provenance badges are distinct from warning/error counts. This pattern does
 not insert transient rows between Matrix Explorer headers and exact tensor pixels.
+Inline provenance and findings use separate ghost close controls with comfortable
+targets, hover and visible focus. Disclosure never dismisses a notice. When both
+are dismissed, remove the band and separator so the scientific body reclaims its
+space. Full details remain available through inspection.

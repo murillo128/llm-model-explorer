@@ -56,10 +56,14 @@ function SessionArchitectureExplorer(props: Props) {
           const generation = graph?.graph_id ?? session.id;
           diagnostics.graph(session, session.model_id, generation, graph);
           const severity = response.status === 'unavailable' && ['analysis_failed', 'cache_unavailable'].includes(response.reason) ? 'error' : 'warning';
-          const records = [...response.diagnostics, ...(graph?.diagnostics ?? [])].map((d) => finding(session.model_id, generation, 'Architecture', d, severity,
-            [d.node_id ? `${graph?.nodes.find((n) => n.id === d.node_id)?.label ?? 'Component'} · ${d.node_id}` : '', d.parameter_id].filter(Boolean).join(' · ') || undefined));
+          const records = [...response.diagnostics, ...(graph?.diagnostics ?? [])].map((d) => {
+            const label = d.node_id ? graph?.nodes.find((n) => n.id === d.node_id)?.label ?? 'Component' : undefined;
+            return finding(session.model_id, generation, 'Architecture', d, severity,
+              [d.node_id ? `${label} · ${d.node_id}` : '', d.parameter_id].filter(Boolean).join(' · ') || undefined, label);
+          });
           if (graph) for (const [id, message] of interfaceIndex(graph).notices) records.push(finding(session.model_id, generation, 'Architecture',
-            { code: 'interface_mapping_ambiguous', node_id: id, message }, 'warning', `${graph.nodes.find((n) => n.id === id)!.label} · ${id}`));
+            { code: 'interface_mapping_ambiguous', node_id: id, message }, 'warning', `${graph.nodes.find((n) => n.id === id)!.label} · ${id}`,
+            graph.nodes.find((n) => n.id === id)!.label));
           if (response.status === 'unavailable' && !records.length) records.push(finding(session.model_id, generation, 'Architecture',
             { code: response.reason, message: unavailable[response.reason] }, severity));
           diagnostics.observe(session, 'Architecture', records, graph?.scope === 'model_defined');
@@ -100,6 +104,6 @@ function SessionArchitectureExplorer(props: Props) {
       modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspected(null)} onInspect={(value) => { setInspected(value); onInspect?.(value); }} />
     {inspected && result.inventory && inspected.sessionId === session.id && inspected.modelId === response.model_id && inspected.graphId === response.graph.graph_id &&
       <ArchitectureInspection key={JSON.stringify([inspected.sessionId, inspected.graphId, inspected.node?.id, inspected.boundary, inspected.parameterId, Boolean(inspected.structureOnly)])} context={props}
-        graph={response.graph} diagnostics={response.diagnostics} inventory={result.inventory} selected={inspected} onClose={() => setInspected(null)} />}
+        graph={response.graph} diagnostics={diagnostics.getSnapshot().records} inventory={result.inventory} selected={inspected} onClose={() => setInspected(null)} />}
   </>;
 }
