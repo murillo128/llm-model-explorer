@@ -1,215 +1,377 @@
-"""Bounded Devin v3 launcher. No Actions credentials enter a Devin session.
+"""Local Devin CLI turns in isolated tmux sessions, not Devin Cloud.
 
-A durable pending receipt precedes every non-idempotent API write. Ambiguous
-failures stop for reconciliation instead of creating duplicate paid sessions.
+Actions acknowledges a detached local supervisor. Durable receipts, explicit
+session IDs and real Git worktrees survive the job; no Actions token does.
 """
 
+from contextlib import suppress
+import hashlib
 import json
 import os
+from pathlib import Path
 import re
+import shlex
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
 import time
-from urllib.parse import urlsplit
 
-from executor_control import (ControlError, GitHub, JsonAPI, SESSION_MARKER,
-                              devin_settings, eligible, executor, positive_int,
-                              read_record, require_lease)
+from executor_control import (ControlError, GitHub, SESSION_MARKER, devin_settings,
+                              eligible, executor, read_record, require_lease)
+from local_issue_worktree import (context, durable_path, git, lock, prepare, run,
+                                 verify_repo, verify_worktree)
+
+LOCAL_MARKER = "<!-- skillforge-devin-local:v1 -->"
+TERMINAL = {"finished", "failed"}
 
 
-def identifier(value, name):
-    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,160}", value):
-        raise ControlError(f"Invalid {name}")
+def clean_env(source):
+    denied = {"GH_TOKEN", "GITHUB_TOKEN", "CI", "GITHUB_ACTIONS", "TMUX", "TMUX_PANE",
+              "GIT_ASKPASS", "SSH_ASKPASS", "DEVIN_API_KEY", "DEVIN_ORG_ID", "DEVIN_MAX_ACU_LIMIT"}
+    result = {k: v for k, v in source.items() if k not in denied and
+              not k.startswith(("ACTIONS_", "RUNNER_", "CODEX_", "SKILLFORGE_CODEX_", "GIT_CONFIG_"))}
+    result["RUNNER_TRACKING_ID"] = ""
+    return result
+
+
+def atomic_json(path, value):
+    path = Path(path)
+    fd, temporary = tempfile.mkstemp(prefix=path.name + ".", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as output:
+            json.dump(value, output, sort_keys=True)
+            output.write("\n")
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, path)
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        with suppress(FileNotFoundError):
+            os.unlink(temporary)
+
+
+def read_json(path, *, optional=False):
+    path = Path(path)
+    if optional and not path.exists():
+        return None
+    try:
+        value = json.loads(path.read_text())
+    except (OSError, ValueError):
+        raise ControlError(f"Unreadable local receipt: {path.name}; reconcile before retrying") from None
+    if not isinstance(value, dict):
+        raise ControlError("Local receipt must be an object")
     return value
 
 
 def session_id(value):
-    value = identifier(value, "Devin session ID")
-    return value if value.startswith("devin-") else "devin-" + value
-
-
-def session_url(value):
-    if not isinstance(value, str) or any(c.isspace() for c in value):
-        raise ControlError("Invalid Devin session URL")
-    url = urlsplit(value)
-    if (url.scheme != "https" or url.netloc != "app.devin.ai"
-            or not re.fullmatch(r"/sessions/[A-Za-z0-9_-]+", url.path)
-            or url.query or url.fragment):
-        raise ControlError("Unexpected Devin session URL")
+    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,159}", value):
+        raise ControlError("Missing or invalid exported Devin session ID; never resume the latest session")
     return value
 
 
-def prompt(repo, number):
-    # No issue title/body, shell snippet, credential, or configurable endpoint is
-    # interpolated. The agent reads the live authorized contract via its own SCM.
-    return f"""Execute the controlling issue https://github.com/{repo}/issues/{number}.
-Repository: https://github.com/{repo}. Executor: Devin, not Codex.
-Read AGENTS.md and skills/execution-runner-selection/SKILL.md from the current
-default branch, then the live issue and its canonical top-level comments.
-Use your configured GitHub integration and persistent VM, never an Actions token,
-Codex credentials, local Codex socket, or another executor's worktree.
-Verify exact repository origin, single workflow state and exclusive ownership.
-Keep the existing branch convention codex/issue-{number}; it is a workflow
-identifier, not a request to run Codex. Preserve unfinished work on resume.
-The dispatcher-owned executor/session comments are read-only to you. Never edit,
-delete or duplicate them. Do not spawn other product implementation sessions.
-If execution_mode is epic-dag, use skills/codex-epic-scheduler/SKILL.md; otherwise
-use skills/spec-driven-codex-loop/SKILL.md. Resolve and verify canonical
-codex-execution-context:v1 base/PR target before any implementation edit.
-Only the epic scheduler may activate queued children. Parent settings do not
-propagate to children. Respect dependency edges, holds and max_parallel_workers.
-Implementation must end at a ready PR and review-ready handoff to the independent
-Codex audit. Never merge, enable auto-merge, close issues, mark completed, or
-continue GitHub mutations after review-ready. Follow repository validation gates.
-Do not bypass approvals or silently change model/mode, executor or ownership.
-If required repository access or environment is unavailable, report the precise
-blocker; do not fabricate test results or choose a different executor.
-"""
-
-
-class Devin(JsonAPI):
-    def __init__(self, org, token):
-        self.org = identifier(org, "DEVIN_ORG_ID")
-        if not self.org.startswith("org-"):
-            raise ControlError("DEVIN_ORG_ID must be an organization ID beginning org-")
-        super().__init__(f"https://api.devin.ai/v3/organizations/{self.org}", token)
-
-
-def validate_session(value, org, scope, expected_id=None):
-    if not isinstance(value, dict) or value.get("org_id") != org:
-        raise ControlError("Devin session organization was not confirmed")
+def export_id(path, expected=None):
+    # CLI --export is ATIF; unsupported/missing schemas require reconciliation,
+    # not a guessed private database location or a 'latest session' fallback.
+    value = read_json(path)
     sid = session_id(value.get("session_id"))
-    if expected_id is not None and sid != session_id(expected_id):
-        raise ControlError("Devin returned a different session")
-    if not isinstance(value.get("tags"), list) or scope not in value["tags"]:
-        raise ControlError("Devin session is not bound to this repository and issue")
-    session_url(value.get("url"))
-    if value.get("is_archived"):
-        raise ControlError("Devin session is archived; explicit recovery required")
+    if expected is not None and sid != expected:
+        raise ControlError("Devin exported a different session than the requested resume")
     return sid
 
 
-def busy(value):
-    status, detail = value.get("status"), value.get("status_detail")
-    if status in {"new", "claimed", "resuming"}:
+def process_identity(pid):
+    try:
+        fields = Path(f"/proc/{int(pid)}/stat").read_text().rsplit(") ", 1)[1].split()
+        return fields[19] if fields[0] != "Z" else None
+    except (OSError, ValueError, IndexError, TypeError):
+        return None
+
+
+def tmux_args(socket, *args):
+    return ["tmux", "-L", socket, "-f", "/dev/null", *args]
+
+
+def active(state_dir, record, env):
+    try:
+        with lock(state_dir / "turn.lock", blocking=False):
+            pass
+    except BlockingIOError:
         return True
-    if status == "running":
-        if detail == "waiting_for_approval":
-            raise ControlError("Devin is awaiting approval; the launcher cannot bypass it")
-        if detail in {"finished", "waiting_for_user"}:
-            return False
-        return True  # Unknown running details are not evidence of idleness.
-    if status == "exit" or status == "suspended" and detail == "inactivity":
+    if not record:
         return False
-    raise ControlError("Devin is not safely resumable (error, hold, quota or unknown state)")
+    for name in ("worker", "child"):
+        pid, start = record.get(name + "_pid"), record.get(name + "_start")
+        if pid and start and process_identity(pid) == start:
+            return True
+    panes = run(tmux_args(record["socket"], "list-panes", "-t", "=" + record["session"],
+                          "-F", "#{pane_dead}"), env=env, check=False)
+    return panes.returncode == 0 and any(line == "0" for line in panes.stdout.splitlines())
 
 
-def launch(gh, devin, number, run_id, ceiling, *, wait=False,
-           sleep=time.sleep, clock=time.monotonic, wait_seconds=900):
+def cli_command(binary, job):
+    command = [binary, "--print", "--prompt-file", job["prompt"], "--export", job["export"],
+               "--respect-workspace-trust", "true"]
+    if job.get("session_id"):
+        command += ["--resume", session_id(job["session_id"])]
+    if "model" in job["settings"]:
+        command += ["--model", job["settings"]["model"]]
+    return command
+
+
+def prompt(repo, number):
+    return f"""Execute https://github.com/{repo}/issues/{number} using local Devin CLI.
+You are in the prepared persistent issue worktree on this host, not Devin Cloud.
+Read AGENTS.md and skills/execution-runner-selection/SKILL.md, then the live
+controlling issue and its relevant top-level comments using persistent host auth.
+Respect SKILLFORGE_LOCAL_RUNNER=1, SKILLFORGE_ISSUE_WORKTREE and
+SKILLFORGE_ISSUE_BRANCH. Do not create another worktree or change to the durable
+coordination clone. Preserve unfinished changes on resume. Re-read current state
+and exclusive ownership before editing. Dispatcher-owned executor/local-host and
+session receipts are read-only to you. Never modify, delete or duplicate them.
+If execution_mode is epic-dag use skills/codex-epic-scheduler/SKILL.md; otherwise
+use skills/spec-driven-codex-loop/SKILL.md. Verify canonical
+codex-execution-context:v1, pinned base and PR target before implementation edits;
+reconcile a reused branch according to that skill, never reset valid issue work.
+Only the scheduler activates queued children; preserve dependencies, holds and
+max_parallel_workers. Parent executor/model settings do not propagate to children.
+Use only local tools and persistent host Git/gh credentials. Do not use /handoff,
+--cloud, a cloud VM, the Codex App Server, or another issue's session or worktree.
+Never recover Actions tokens, change host authentication or bypass approvals.
+Finish at a ready PR and review-ready handoff to the independent Codex audit.
+Never merge, enable auto-merge, close issues, mark completed, or mutate GitHub
+after review-ready. A successful CLI exit is not task completion or test evidence.
+Report concrete missing tools/auth/model/test infrastructure; do not switch executor.
+"""
+
+
+def worker(job_path):
+    job = read_json(job_path)
+    state_path = Path(job["state"])
+    env = clean_env(os.environ)
+    with lock(state_path.parent / "turn.lock", blocking=False):
+        record = read_json(state_path)
+        if record.get("run_id") != job["run_id"] or record.get("phase") != "pending":
+            raise ControlError("Turn receipt is not the expected pending launch")
+        child = None
+        try:
+            verify_worktree(Path(job["root"]), job["worktree"], job["repo"], job["branch"])
+            record.update(worker_pid=os.getpid(), worker_start=process_identity(os.getpid()))
+            # Receipt is already pending before Popen; no retry after uncertain launch.
+            atomic_json(state_path, record)
+            env.update(SKILLFORGE_LOCAL_RUNNER="1", SKILLFORGE_EXECUTOR="devin",
+                       SKILLFORGE_ISSUE_WORKTREE=job["worktree"],
+                       SKILLFORGE_ISSUE_BRANCH=job["branch"],
+                       SKILLFORGE_REPO_ROOT_RESOLVED=job["root"],
+                       GITHUB_REPOSITORY=job["repo"], ISSUE_NUMBER=job["number"])
+            with open(job["log"], "ab", buffering=0) as output, open(job["log"], "rb") as mirror:
+                mirror.seek(0, os.SEEK_END)
+                # A log file, not a pipe/PTY, prevents background command children
+                # from holding the supervisor's output stream open after CLI exit.
+                child = subprocess.Popen(cli_command(job["binary"], job), cwd=job["worktree"],
+                                         env=env, stdin=subprocess.DEVNULL,
+                                         stdout=output, stderr=subprocess.STDOUT)
+                def interrupt(signum, frame):
+                    if child.poll() is None:
+                        child.terminate()
+                    raise ControlError("Local supervisor interrupted; reconcile the session before retrying")
+                for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+                    signal.signal(sig, interrupt)
+                record.update(phase="running", child_pid=child.pid,
+                              child_start=process_identity(child.pid))
+                atomic_json(state_path, record)
+                while True:
+                    data = mirror.read(65536)
+                    if data:
+                        # tmux scrollback is convenience; the local log is durable.
+                        with suppress(BrokenPipeError, OSError):
+                            os.write(sys.stdout.fileno(), data)
+                    elif child.poll() is not None:
+                        break
+                    else:
+                        time.sleep(0.1)
+                rc = child.wait()
+                record["exit_code"] = rc
+                record["session_id"] = export_id(job["export"], job.get("session_id"))
+                record["phase"] = "finished" if rc == 0 else "failed"
+        except BaseException as exc:
+            if child is not None and child.poll() is None:
+                child.terminate()
+                try:
+                    child.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait()
+            record.update(phase="needs-reconciliation", error=type(exc).__name__)
+            atomic_json(state_path, record)
+            raise
+        atomic_json(state_path, record)
+        return record["exit_code"]
+
+
+def launch(gh, number, root, worktree_base, state_dir, log_dir, default_branch, run_id,
+           *, wait=False, sleep=time.sleep, clock=time.monotonic, wait_seconds=900):
+    if not re.fullmatch(r"[1-9][0-9]*", str(number)) or not re.fullmatch(r"[1-9][0-9]*", run_id):
+        raise ControlError("Invalid issue number or Actions run ID")
     number = str(number)
-    if not re.fullmatch(r"[1-9][0-9]*", number):
-        raise ControlError("Invalid controlling issue number")
-    run_id = identifier(run_id, "Actions run ID")
-    if not re.fullmatch(r"[1-9][0-9]*", run_id):
-        raise ControlError("Invalid Actions run ID")
-    scope = f"skillforge:{gh.repo}:issue-{number}"
+    root = verify_repo(root, gh.repo)
+    env = clean_env(os.environ)
+    binary = shutil.which("devin", path=env.get("PATH"))
+    if not binary or not shutil.which("tmux", path=env.get("PATH")):
+        raise ControlError("Install/authenticate local Devin CLI and tmux for the runner user first")
+    help_text = run([binary, "--help"], env=env).stdout
+    for flag in ("--print", "--prompt-file", "--export", "--resume", "--respect-workspace-trust"):
+        if flag not in help_text:
+            raise ControlError(f"Installed Devin CLI lacks required capability {flag}")
+    run([binary, "auth", "status"], env=env)
+    # Persistently configured gh must work without the short-lived Actions token.
+    run(["gh", "auth", "status", "--hostname", "github.com"], env=env)
+    state_dir, log_dir = durable_path(state_dir), durable_path(log_dir)
+    state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    log_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    machine = Path("/etc/machine-id").read_text().strip()
+    host = hashlib.sha256(f"{machine}:{os.getuid()}:{root}".encode()).hexdigest()
+    binding = {"transport": "cli-tmux", "host": host}
+    state_path = state_dir / "state.json"
 
     def current():
         issue = gh.issue(number)
         if not eligible(issue, wait):
             return None
         if executor(issue["body"]) != "devin":
-            raise ControlError("Executor selection changed before launch")
+            raise ControlError("Executor selection changed before local launch")
         require_lease(gh, number, "devin")
-        return devin_settings(issue["body"], ceiling)
+        comments = gh.comments(number)
+        if any(SESSION_MARKER in (c.get("body") or "") for c in comments):
+            raise ControlError("Legacy cloud session receipt exists; explicit migration required")
+        _, owner = read_record(comments, LOCAL_MARKER)
+        if owner is not None and owner != binding:
+            raise ControlError("Issue is bound to another local host/user/clone; do not start a replacement")
+        return devin_settings(issue["body"]), context(comments, number), owner
 
-    settings = current()
-    if settings is None:
-        return {"result": "skipped-current-state"}
-    comment, record = read_record(gh.comments(number), SESSION_MARKER)
-    sid = None
-    if record is not None:
-        if (record.get("org_id") != devin.org or record.get("scope") != scope
-                or record.get("settings") != settings):
-            raise ControlError("Session owner/settings changed; explicit idle-session migration required")
-        if record.get("phase") != "ready":
-            raise ControlError("Pending Devin request: reconcile its recorded run before retrying; no duplicate sent")
-        sid = session_id(record.get("session_id"))
-        session_url(record.get("url"))
-        if record.get("last_run_id") == run_id:
-            return {"result": "already-acknowledged", "url": record["url"]}
+    with lock(state_dir / "launch.lock", blocking=False):
+        selected = current()
+        if selected is None:
+            return {"result": "skipped-current-state"}
+        record = read_json(state_path, optional=True)
+        if record and (record.get("repo") != gh.repo or record.get("number") != number
+                       or record.get("host") != host):
+            raise ControlError("Local receipt belongs to a different issue/host")
         deadline = clock() + wait_seconds
-        while True:
-            session = devin.request("GET", f"/sessions/{sid}")
-            validate_session(session, devin.org, scope, sid)
-            if "devin_mode" in settings and session.get("devin_mode") != settings["devin_mode"]:
-                raise ControlError("Session mode differs from the explicit request; no fallback selected")
-            if not busy(session):
-                break
+        while active(state_dir, record, env):
             if not wait:
-                return {"result": "already-active", "url": session["url"]}
+                return {"result": "already-active"}
             if clock() >= deadline:
-                raise ControlError("Existing Devin turn is still active; bounded scheduler wait expired")
+                raise ControlError("Active Devin turn exceeded bounded scheduler wait; retry later")
             sleep(10)
-            refreshed = current()
-            if refreshed is None:
+            selected = current()
+            if selected is None:
                 return {"result": "skipped-current-state"}
-            if refreshed != settings:
-                raise ControlError("Devin settings changed while waiting")
-
-    # Revalidate after polling and immediately before any paid API write.
-    refreshed = current()
-    if refreshed is None:
-        return {"result": "skipped-current-state"}
-    if refreshed != settings:
-        raise ControlError("Devin settings changed before launch")
-    pending = {"phase": "pending", "org_id": devin.org, "scope": scope,
-               "settings": settings, "last_run_id": run_id}
-    if sid:
-        pending.update(session_id=sid, url=record["url"])
-    comment = gh.save_record(number, SESSION_MARKER, pending, comment)
-    if sid:
-        result = devin.request("POST", f"/sessions/{sid}/messages",
-                               {"message": prompt(gh.repo, number)})
-    else:
-        result = devin.request("POST", "/sessions", {
-            "prompt": prompt(gh.repo, number), "title": f"{gh.repo} issue #{number}",
-            "tags": ["skillforge", scope, f"skillforge-run:{run_id}"],
-            "session_links": [f"https://github.com/{gh.repo}/issues/{number}"],
-            "resumable": True, **settings,
-        })
-    sid = validate_session(result, devin.org, scope, sid)
-    # Save the session identity even when mode confirmation fails, so an operator
-    # can reconcile the already-created session without creating another.
-    pending.update(session_id=sid, url=result["url"])
-    comment = gh.save_record(number, SESSION_MARKER, pending, comment)
-    if "devin_mode" in settings and result.get("devin_mode") != settings["devin_mode"]:
-        raise ControlError("Devin did not confirm the requested mode; reconcile the recorded session")
-    gh.save_record(number, SESSION_MARKER, {**pending, "phase": "ready"}, comment)
-    return {"result": "resumed" if record else "created", "url": result["url"]}
+            record = read_json(state_path, optional=True)
+        if record and record.get("phase") not in TERMINAL:
+            raise ControlError("Incomplete local receipt; reconcile logs/session before retrying")
+        if record and record.get("run_id") == run_id:
+            if record["phase"] == "failed":
+                raise ControlError("This Actions run already ended with CLI failure; inspect local logs")
+            return {"result": "already-acknowledged"}
+        if selected[2] is not None and not record:
+            raise ControlError("Local session receipt is missing on the bound host; do not create another session")
+        # Never adopt a pre-existing Codex session as local Devin work.
+        codex_state = state_dir.parent
+        if any((codex_state / name).exists() for name in
+               ("app-server-thread-id", "app-server-client.pid", "codex.pid")):
+            raise ControlError("Codex session state exists; explicit idle ownership transfer required")
+        settings, activation, owner = selected
+        if record is None and git(root, "show-ref", "--verify", "--quiet",
+                                  f"refs/heads/codex/issue-{number}", check=False).returncode == 0:
+            raise ControlError("Unowned local issue branch exists; explicitly reconcile legacy work")
+        if activation:
+            gh.issue(activation["epic_issue"])
+        worktree = prepare(root, worktree_base, gh.repo, number, default_branch, activation)
+        if record and record.get("worktree") != str(worktree):
+            raise ControlError("Recorded session worktree moved; explicit idle migration required")
+        refreshed = current()
+        if refreshed is None:
+            return {"result": "skipped-current-state"}
+        if refreshed != selected:
+            raise ControlError("Issue settings/context/ownership changed during worktree preparation")
+        turn_dir = state_dir / f"run-{run_id}"
+        # Exclusive mkdir refuses replay of even a partially written launch bundle.
+        turn_dir.mkdir(mode=0o700)
+        for name in ("devin_runner.py", "executor_control.py", "local_issue_worktree.py"):
+            shutil.copyfile(Path(__file__).with_name(name), turn_dir / name)
+        (turn_dir / "prompt.txt").write_text(prompt(gh.repo, number))
+        socket = "sf-devin-" + hashlib.sha256(f"{gh.repo}:{number}".encode()).hexdigest()[:20] + "-" + run_id
+        session = f"issue-{number}"
+        if record:
+            session_id(record.get("session_id"))
+            # Only our verified inactive pane, never a user's tmux server.
+            run(tmux_args(record["socket"], "kill-session", "-t", "=" + record["session"]), env=env, check=False)
+        pending = {"phase": "pending", "run_id": run_id, "repo": gh.repo, "number": number,
+                   "host": host, "socket": socket, "session": session,
+                   "worktree": str(worktree), "settings": settings}
+        if record:
+            pending["session_id"] = record["session_id"]
+        job = {**pending, "state": str(state_path), "root": str(root),
+               "branch": f"codex/issue-{number}", "binary": binary,
+               "prompt": str(turn_dir / "prompt.txt"), "export": str(turn_dir / "conversation.json"),
+               "log": str(log_dir / f"issue-{number}-{run_id}-devin.log")}
+        atomic_json(turn_dir / "job.json", job)
+        atomic_json(state_path, pending)
+        if owner is None:
+            gh.save_record(number, LOCAL_MARKER, binding)
+        # The dedicated tmux server and all descendants receive sanitized env.
+        # No shell interpolation of issue prose; prompt is a private local file.
+        command = shlex.join([sys.executable, str(turn_dir / "devin_runner.py"),
+                              "worker", str(turn_dir / "job.json")])
+        run(tmux_args(socket, "new-session", "-d", "-s", session, "-c", str(worktree),
+                      command, ";", "set-option", "-w", "-t", "=" + session,
+                      "remain-on-exit", "on"), env=env)
+        for _ in range(100):
+            observed = read_json(state_path)
+            if observed.get("phase") in {"running", "finished"}:
+                return {"result": "launched-local-cli", "socket": socket, "session": session,
+                        "log": job["log"], "state": str(state_path)}
+            if observed.get("phase") in {"failed", "needs-reconciliation"}:
+                raise ControlError("Devin CLI failed to start/finish; inspect local receipt and log")
+            sleep(0.2)
+        raise ControlError("Local launch acknowledgement timed out; reconcile before retrying")
 
 
 def main():
-    # Settings are admin-controlled workflow env, not issue-supplied commands.
+    os.umask(0o077)
+    if len(sys.argv) == 3 and sys.argv[1] == "worker":
+        return worker(sys.argv[2])
+    if sys.argv[1:] != ["launch"]:
+        raise ControlError("usage: devin_runner.py launch | worker JOB_JSON")
     if os.environ.get("GITHUB_REF") != "refs/heads/" + os.environ["DEFAULT_BRANCH"]:
-        raise ControlError("Devin launches must use the repository default branch")
-    raw_limit = os.environ.get("DEVIN_MAX_ACU_LIMIT", "")
-    if not re.fullmatch(r"[1-9][0-9]{0,5}", raw_limit):
-        raise ControlError("Set repository variable DEVIN_MAX_ACU_LIMIT to a positive integer before enabling Devin")
-    ceiling = positive_int(int(raw_limit), "DEVIN_MAX_ACU_LIMIT")
-    result = launch(
-        GitHub(os.environ["GITHUB_REPOSITORY"], os.environ.get("GITHUB_TOKEN")),
-        Devin(os.environ.get("DEVIN_ORG_ID", ""), os.environ.get("DEVIN_API_KEY")),
-        os.environ["ISSUE_NUMBER"], os.environ["GITHUB_RUN_ID"], ceiling,
-        wait=os.environ.get("WAIT_FOR_EXISTING_TURN") == "true",
-    )
+        raise ControlError("Local Devin launches require the trusted default-branch workflow")
+    repo, number = os.environ["GITHUB_REPOSITORY"], os.environ["ISSUE_NUMBER"]
+    if not re.fullmatch(r"[1-9][0-9]*", number):
+        raise ControlError("Invalid controlling issue number")
+    gh = GitHub(repo, os.environ.get("GITHUB_TOKEN"))
+    repo_key = repo.replace("/", "-")
+    home = Path.home()
+    result = launch(gh, number, os.environ["SKILLFORGE_REPO_ROOT"],
+                    os.environ.get("SKILLFORGE_WORKTREE_ROOT", str(home / ".skillforge/worktrees")),
+                    home / ".skillforge/run" / repo_key / f"issue-{number}" / "devin",
+                    Path(os.environ.get("SKILLFORGE_LOG_ROOT", str(home / ".skillforge/logs"))) / repo_key,
+                    os.environ["DEFAULT_BRANCH"], os.environ["GITHUB_RUN_ID"],
+                    wait=os.environ.get("WAIT_FOR_EXISTING_TURN") == "true")
     print(json.dumps(result, sort_keys=True))
+    # No private host paths/log contents in public Actions summaries.
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as output:
-        output.write(f"Devin launcher: **{result['result']}**. Launch acknowledgement is not task completion.\n\n")
-        if "url" in result:
-            output.write(f"Session: {result['url']}\n")
+        output.write(f"Local Devin CLI: **{result['result']}**. Launch is not task completion.\n")
+    return 0
 
 
 if __name__ == "__main__":
     try:
-        main()
-    except (ControlError, KeyError) as exc:
-        raise SystemExit(str(exc)) from None
+        raise SystemExit(main())
+    except (ControlError, KeyError, OSError, subprocess.SubprocessError) as exc:
+        raise SystemExit(f"Local Devin runner stopped: {type(exc).__name__}: {exc}") from None

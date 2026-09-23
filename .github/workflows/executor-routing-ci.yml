@@ -30,7 +30,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Test routing and Devin API doubles (no paid calls)
+      - name: Ensure real tmux transport is exercised
+        run: |
+          if ! command -v tmux >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y tmux
+          fi
+      - name: Test routing, real Git worktrees and tmux with a fake local CLI
+        env:
+          REQUIRE_TMUX_TEST: '1'
         run: python3 -m unittest discover -s .github/scripts -p 'test_executor_routing.py' -v
       - name: Preserve native Codex lifecycle behavior
         run: python3 -m unittest discover -s .github/scripts -p 'test_codex_profile.py' -v

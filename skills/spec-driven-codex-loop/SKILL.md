@@ -50,7 +50,9 @@ This is the activation rule. Final integration freshness may later rebase the ex
 
 When `SKILLFORGE_LOCAL_RUNNER=1`, require current directory to equal `SKILLFORGE_ISSUE_WORKTREE`, current branch to equal `SKILLFORGE_ISSUE_BRANCH`, repository identity to match, and the worktree/branch to belong to the controlling issue. A retry may contain unfinished prior issue state; inspect/adopt it rather than replacing it.
 
-Do not create another worktree, switch to the durable coordination clone/default branch, invent a second implementation branch, or reset valid issue work. The Actions job only launches the long-lived App Server turn; its success is not issue success. Detached execution intentionally has no Actions token and must use persistent transports defined by `codex-github-operations`.
+Do not create another worktree, switch to the durable coordination clone/default branch, invent a second implementation branch, or reset valid issue work. The Actions job only launches the long-lived local turn: a shared App Server turn for Codex or a tmux-supervised CLI turn for Devin. Launch success is not issue success. Detached execution intentionally has no Actions token and must use persistent transports defined by `codex-github-operations`.
+
+Local Devin follows this same lease and workflow without invoking Codex or a cloud handoff. `skills/execution-runner-selection/SKILL.md` and `docs/execution-runners.md` own provider settings, native permissions and session recovery. Do not modify dispatcher-owned executor/host records or start a second process against an active session.
 
 ## Entry gate and state
 
@@ -64,7 +66,7 @@ Before first implementation edit, replace `execution-ready` with `in-progress` w
 
 ### 1. Establish bounded outcome
 
-Confirm intended behavior, permitted subsystem, invariants, validation/evidence, execution target, and any explicit intermediate checkpoint. Do not combine unrelated work or invent project-wide machinery.
+Confirm intended behavior, permitted subsystem/files, invariants, validation/evidence, execution target, and any explicit intermediate checkpoint. Do not combine unrelated work or invent project-wide machinery.
 
 ### 2. Implement smallest coherent delta
 
@@ -78,7 +80,7 @@ Preserve identities/provenance/licensing of submodules, vendored code, external 
 
 Prefer repository-native build/test/lint/type/evaluation/benchmark paths. Run required and risk-appropriate focused checks; record material deviations/environment limits; never claim an unrun check passed. Local implementation failures are corrected in scope rather than labeled external blockers.
 
-Any final integration rebase/conflict resolution creates a new candidate head. Rerun affected focused validation and require fresh exact-head CI/check evidence; do not reuse pre-rebase CI as final evidence.
+Any final integration rebase/conflict resolution creates a new candidate head. Rerun affected focused validation and obtain fresh exact-head CI/check evidence; do not reuse pre-rebase CI as final evidence.
 
 ### 5. Retain proportional evidence
 
@@ -95,7 +97,7 @@ This gate applies only with one valid canonical `integration_branch`, after cand
 1. Fetch current remote integration branch and remote issue branch. Capture integration tip and candidate/remote issue heads.
 2. Require issue still open with sole state `in-progress`, one matching PR targeting intended integration base, clean worktree, and remote issue head equal local candidate.
 3. If integration tip is already ancestor of candidate, no rewrite is needed. Otherwise require canonical `base_sha` still ancestor of integration tip.
-4. Ask `codex-github-operations` to rebase issue-owned commits onto exact integration tip and publish with exact old-head `--force-with-lease`; never force integration branch.
+4. Ask `codex-github-operations` to rebase issue-owned commits onto exact integration tip and publish with an **exact old-head lease**; never force integration branch.
 5. Resolve conflicts only within issue authority; otherwise return to design.
 6. After rebase rerun affected validation and obtain fresh exact-head CI/checks while PR remains draft.
 7. Fetch integration branch again after required checks. If its tip changed, repeat.

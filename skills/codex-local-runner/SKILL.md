@@ -9,29 +9,31 @@ description: Install, repair, and verify the optional repository-scoped GitHub A
 
 Use this skill to provision or repair Skillforge's optional host-side bridge. The public label entrypoint is `.github/workflows/codex-issue-state.yml`; it is the **only** workflow that reacts to `issues:labeled`. It routes:
 
-- `execution-ready` to `.github/workflows/codex-execute-ready.yml` for the default/explicit `codex` executor, or `.github/workflows/devin-execute-ready.yml` for explicit `devin`;
+- `execution-ready` to `.github/workflows/codex-execute-ready.yml` for the default/explicit `codex` executor, or `.github/workflows/devin-execute-ready.yml` for explicit local `devin`;
 - `review-ready` to `.github/workflows/codex-review-ready.yml`;
 - `completed` / `queued` child events back to the unique active epic parent when its canonical DAG contains that child.
 
-The executor and audit workflows are reusable `workflow_call` workflows. They do not interpret labels themselves. The dispatcher may use a hosted runner for control-plane discovery; only the Codex execution/audit jobs require a repository-scoped self-hosted runner carrying `self-hosted` and `codex`.
+The executor and audit workflows are reusable `workflow_call` workflows. They do not interpret labels themselves. The dispatcher may use a hosted runner for control-plane discovery; both local execution workflows and Codex audit use the existing repository-scoped self-hosted runner carrying `self-hosted` and `codex`. The latter is a physical runner label, not a forced executor selection.
 
-The executor never uses the Actions `_work` checkout as project state. It receives a durable clone through `SKILLFORGE_REPO_ROOT`, creates/reuses one persistent worktree and `codex/issue-N` branch, and connects to the **existing Codex App Server control socket used by Desktop Remote Control**. The audit workflow creates a fresh detached review worktree and fresh App Server thread for the exact PR head.
+The Codex executor never uses the Actions `_work` checkout as project state. It receives a durable clone through `SKILLFORGE_REPO_ROOT`, creates/reuses one persistent worktree and `codex/issue-N` branch, and connects to the **existing Codex App Server control socket used by Desktop Remote Control**. The audit workflow creates a fresh detached review worktree and fresh App Server thread for the exact PR head.
 
-GitHub Actions is authorization/routing/launch infrastructure; the actual model turn is owned by the shared App Server and continues after the Actions job exits.
+GitHub Actions is authorization/routing/launch infrastructure; the actual Codex model turn is owned by the shared App Server and continues after the Actions job exits.
 
-This skill owns runner installation, registration, service configuration, durable-repository environment wiring, App Server prerequisites, repair, optional scaling, and verification. It does not implement issues or modify repository files.
+This skill owns Codex runner installation, registration, service configuration, durable-repository environment wiring, App Server prerequisites, repair, optional scaling, and verification. It does not implement issues or modify repository files.
 
 Never execute this skill against the canonical `murillo128/skillforge` template repository itself.
 
 ## Executor selection boundary
 
-This skill provisions the Codex host only. Use
-`skills/execution-runner-selection/SKILL.md` and `docs/execution-runners.md` to
-choose an executor independently of its model. Devin runs through its own hosted
-API launcher and VM; it does not require a local `devin` Actions label or access
-to the shared Codex App Server. Keep the Codex runner for independent final audit.
-Do not rename existing runner labels, copy credentials, migrate active sessions,
-edit executor/session lease comments or relabel issues as a provisioning test.
+Use `skills/execution-runner-selection/SKILL.md` and `docs/execution-runners.md`
+to choose an executor independently of its model. Devin uses the installed local
+CLI inside tmux on the same host, with actual persistent issue worktrees; it does
+not use a cloud API, remote VM or the Codex App Server. Its host prerequisites
+and inspection belong to `skills/devin-local-runner/SKILL.md`.
+
+Keep the Codex App Server/runner for existing work and independent final audit.
+Do not rename runner labels, copy credentials, migrate active sessions, edit
+executor/session lease comments or relabel issues as a provisioning test.
 
 ## Authority and safety
 
@@ -59,7 +61,7 @@ For `<owner>/<repo>` issue `N`, execution uses persistent `codex/issue-N`. A ret
 
 For an SSH/Desktop project, Skillforge joins the same remote App Server through its Unix control socket. Do not start a second `codex app-server`, `codex exec`, or TUI as fallback. If the socket is absent/unreachable, restore/reconnect the intended Desktop SSH App Server and retry.
 
-Executor semantics:
+Codex executor semantics:
 
 1. prepare/adopt the issue worktree;
 2. create or resume the issue's durable thread;
@@ -118,7 +120,7 @@ Use official runner service mechanism. Run as intended non-root user, active now
 
 ### 6. Verify without model execution
 
-Verify service identity/active/boot state; GitHub runner online for exact repo with `self-hosted`/`codex`; environment paths/socket; exact repo origin and harmless fetch; required host tools; shared socket is reachable by intended user; dispatcher has the sole label trigger; reusable executor/audit target the codex runner; executor uses persistent issue worktree and shared App Server; audit uses fresh detached review worktree/session.
+Verify service identity/active/boot enablement; GitHub runner online for exact repo with `self-hosted`/`codex`; environment paths/socket; exact repo origin and harmless fetch; required host tools; shared socket is reachable by intended user; dispatcher has the sole label trigger; reusable executor/audit target the codex runner; executor uses persistent issue worktree and shared App Server; audit uses fresh detached review worktree/session.
 
 Do not create a dummy issue, add/remove workflow labels, or launch a model request merely to test provisioning. The first real transition is the end-to-end test.
 

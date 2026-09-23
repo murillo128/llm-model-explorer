@@ -171,8 +171,6 @@ jobs:
     with:
       issue_number: ${{ needs.route.outputs.issue_number }}
       wait_for_existing_turn: ${{ needs.route.outputs.wait_for_existing_turn == 'true' }}
-    secrets:
-      DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
 
   audit:
     needs: route

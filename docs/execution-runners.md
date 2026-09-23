@@ -1,182 +1,198 @@
 # Execution runners
 
-Executor selection and model selection are independent. The single label
-entrypoint remains `.github/workflows/codex-issue-state.yml`. Existing issues
-without an executor override continue to use the local Codex App Server.
-This policy applies to ordinary execution and epic scheduler turns; final audit
-continues to use a fresh, independent Codex session.
+Executor selection is independent of model selection. Both implementations now
+run **locally on the existing self-hosted machine**: Codex through its shared
+App Server, Devin through its installed CLI inside an isolated tmux session.
+There is no Devin Cloud API launcher, cloud VM, `/handoff`, or `--cloud` fallback.
 
-## Select an executor in the controlling issue
+The single label entrypoint remains `.github/workflows/codex-issue-state.yml`.
+Existing issues without an override still use Codex. The final independent audit
+remains a fresh Codex session regardless of the implementation executor.
 
-Use at most one top-level fenced `execution` block containing TOML:
+## Select an executor
 
-````markdown
-```execution
-executor = "codex"
-```
-
-```codex
-model = "gpt-6-sol"
-model_reasoning_effort = "xhigh"
-```
-````
-
-The `codex` model above is an example, not a launcher default or availability
-claim. The live Codex catalog must accept any explicit model/effort pair.
-The existing optional `codex` block and native/profile/resume behavior remain
-unchanged; see [Codex operations](codex-operations.md).
-
-To choose Devin instead:
+Use at most one top-level TOML `execution` fence in the controlling issue body:
 
 ````markdown
 ```execution
 executor = "devin"
 ```
-
-```devin
-devin_mode = "normal"
-max_acu_limit = 5
-```
 ````
 
-Both provider blocks are optional. Missing `execution`, an empty block, or an
-omitted `executor` selects `codex`. Supported executors are exactly `codex` and
-`devin`; no typo, unavailable capability, missing credential or failed launch
-silently falls back to another executor. Executor selection is not a workflow
-state or a model alias. Never put `executor` inside `codex`, or model/effort,
-commands, paths, credentials or permissions inside `execution`.
+An optional separate `devin` fence accepts `model = "<local CLI model identifier>"`.
+Use an identifier exposed by `devin models list` for the installed account; the
+launcher passes it as one `--model` argument without translating Codex aliases or
+adding a fallback. Omit it for native Devin selection, including saved-session
+selection on resume. Model availability and any fuzzy-name resolution belong to
+the installed CLI; the launcher does not claim to have verified a resulting model.
 
-Only the current controlling issue **body** is parsed. Prose, quoted examples,
-indented code, nested Markdown fences, labels, comments and parent settings do
-not select an executor. Duplicate, unterminated, oversized, malformed or unknown
-settings fail closed. A failed issue read is not a default selection.
+For Codex, select `executor = "codex"` and keep its existing optional `codex`
+model/effort/profile block unchanged. Missing `execution`, an empty fence, or an
+omitted `executor` retains Codex. Only exactly `codex` and `devin` are accepted.
+Prose, comments, quoted examples, nested fences and parent settings do not select
+an executor. Duplicates, malformed TOML and unsupported fields fail closed.
 
-Each epic child selects independently, allowing a mixed Codex/Devin DAG. The
-parent's executor controls only that parent's scheduler turns. A child completion
-or `queued` wake resolves the canonical parent first, then reads the **parent's**
-executor; it never uses the triggering child's selection for the scheduler.
-Changing configuration does not activate an issue, release a hold, change the DAG
-or increase `max_parallel_workers`.
+Devin Cloud fields such as `devin_mode` and `max_acu_limit` are no longer accepted.
+They are not CLI settings and are never silently ignored or translated. Do not
+put credentials, commands, paths, permission modes or arbitrary flags in issues.
+An issue cannot disable workspace trust, select dangerous permissions, or redirect
+the process to a cloud service through these settings.
 
-## Provider capabilities and final audit
+Each child and parent selects independently. Mixed Codex/Devin epics retain the
+same DAG and parallelism policy; the parent controls only its scheduler turns.
+A child-completion wake resolves its canonical parent before selecting that
+parent's executor. Selection changes do not activate issues or release holds.
 
-Codex still uses `[self-hosted, codex]`, the persistent clone/worktrees and shared
-App Server. Its `codex` block configures its execution and fresh audit settings.
-Do not rename the existing runner label, kill/restart the App Server, alter host
-authentication or reinstall local profiles to select another executor.
+## Physical runner and worktrees
 
-Devin uses a hosted Actions control-plane job and the organization-scoped v3 API;
-the implementation runs in Devin's persistent VM with its configured repository
-integration. No self-hosted `devin` Actions runner or local Codex socket is needed.
-Devin exposes `devin_mode`, not arbitrary Codex model IDs or reasoning efforts.
-Supported values are `normal`, `fast`, `lite`, `ultra` and `fusion`; availability
-and approval policy remain organization-owned. Omission keeps the organization
-mode default. No local model alias is translated or silently substituted.
+Both execution workflows target `[self-hosted, codex]` because that is the existing
+physical runner label. It does not force the implementation to be Codex. No new
+runner registration, label rename or service restart is required by this change.
+Provision Devin CLI and tmux under the same non-root user as the existing runner.
 
-`review-ready` still routes directly to `.github/workflows/codex-review-ready.yml`
-regardless of the implementation executor. A `codex` block on a Devin-owned issue
-therefore configures its independent Codex audit, not its Devin implementation.
-Choosing the audit provider is outside this change. Review capability, exact-head
-CI, integration freshness and merge authority remain unchanged. Keep the Codex
-audit runner available even for a Devin-only implementation wave.
+`SKILLFORGE_REPO_ROOT` must name the persistent coordination clone with the exact
+repository origin, outside Actions `_work`. Optional `SKILLFORGE_WORKTREE_ROOT`
+and `SKILLFORGE_LOG_ROOT` retain their existing meanings. Never replace the shared
+Codex App Server, touch its authentication or use its socket to run Devin.
 
-Both executors use the existing skills, `codex/issue-N` branch convention,
-`codex-epic-dag:v1` graph and `codex-execution-context:v1` activation context.
-Those historical names are workflow identifiers, not instructions to run Codex.
-Only `SKILLFORGE_LOCAL_RUNNER=1` makes the local host/worktree lease mandatory;
-Devin must not manufacture local-runner variables or copy Codex credentials.
+The Devin launcher performs real Git worktree preparation before starting the
+agent. It verifies origin, branch and common Git directory, serializes worktree
+creation, and uses the same `codex/issue-N` branch and default
+`~/.skillforge/worktrees/<owner>-<repo>/issue-N` path as the existing workflow.
+A registered issue worktree is reused, including its uncommitted/untracked work.
+It never resets, cleans, prunes worktrees, or substitutes the coordination clone.
+An unregistered occupied path or an unowned legacy local branch requires repair.
 
-## One-time Devin prerequisites
+A new child worktree is created at the canonical activation `base_sha`, after
+checking its integration branch and parent. The parser accepts the documented
+three-scalar YAML context, including simple quoted scalars and comments; aliases,
+object constructors, duplicate/unknown keys and unsupported layouts fail closed.
+A reused issue branch is preserved as-is. The execution skill still owns any
+required pinned-base reconciliation and final integration freshness before edits
+and handoff; the infrastructure does not merge or discard valid issue commits.
 
-A repository administrator configures:
+Before resume, the saved host/user/clone binding and worktree path must match.
+Moving to another host, clone, worktree or executor is an explicit idle migration,
+not something that an issue-body edit or a missing state file can authorize.
 
-| GitHub setting | Purpose |
-| --- | --- |
-| Secret `DEVIN_API_KEY` | Devin v3 organization service-user credential, normally `cog_...`. |
-| Variable `DEVIN_ORG_ID` | Exact organization ID beginning `org-`. |
-| Variable `DEVIN_MAX_ACU_LIMIT` | Required positive integer ceiling for each session; there is no unbounded default. |
+## Shell, detachment and lifecycle
 
-The optional issue `max_acu_limit` may reduce, but never exceed, the repository
-ceiling. The service user needs session use/read/manage capabilities for creation,
-status checks and follow-up messages. Enable repository read/write and GitHub
-issue/PR operations through Devin's own authorized integration. A successful API
-launch does not establish that this integration or model files/test infrastructure
-exist in the VM. Host-local weights, CUDA resources and caches are not transferred;
-designs requiring them need an explicitly suitable execution environment.
+The trusted default-branch workflow loads launcher scripts by its exact
+`GITHUB_SHA`, not from the issue branch. It snapshots the supervisor and prompt
+under durable state before starting tmux, so Actions temporary-file cleanup cannot
+remove the running program. It does not execute an Actions checkout as product
+state and does not execute issue-provided shell snippets.
 
-No secret is put in issue bodies, session prompts, tags, comments, command-line
-arguments or `session_secrets`. Only `DEVIN_API_KEY` is forwarded to the reusable
-Devin launcher; it is sent to the fixed API host as an Authorization header. The
-short-lived Actions token is used for GitHub control-plane records only. The
-launcher never forwards it into Devin. Redirects are refused, write requests are
-not retried automatically, and API errors do not print response bodies or tokens.
-Organization approval/security defaults are preserved; no bypass is requested.
+Each turn uses an isolated tmux server/socket and one issue-named session. The
+supervisor runs the installed local CLI in the verified worktree using `--print`,
+`--prompt-file` and `--export`; it does not merely background an interactive TUI.
+The shell commands executed by Devin therefore run on the local machine, with its
+installed tools and available model caches/GPU resources, subject to host policy.
+No resources or repository contents are transferred to a cloud VM.
 
-The dispatcher and Devin launcher require the default-branch workflow. Their
-checkouts read trusted infrastructure only, with persisted Git credentials
-disabled. Neither executes issue-provided shell commands or PR-head code.
+The new tmux server and descendants receive an empty `RUNNER_TRACKING_ID` and no
+Actions token, `GH_TOKEN`, `GITHUB_TOKEN`, Actions runtime credentials, CI markers,
+Codex environment overrides or personal tmux connection. The detached agent uses
+persistent host Git/gh authentication and its own local Devin authentication.
+Authentication files are neither copied nor replaced. Keep ephemeral tokens out
+of shell startup files too: Devin may read the user's shell configuration.
 
-## Ownership, retries and recovery
+A local launch lock serializes dispatch; a separate lifetime lock, process identity
+and tmux pane checks protect the active turn. A durable `pending` receipt precedes process creation. The supervisor
+records its PID, child PID/start identity, CLI exit code, export and final phase.
+Unknown/incomplete receipts and lost acknowledgements require reconciliation;
+there is no automatic duplicate CLI launch or provider fallback.
 
-Before execution, the hosted selector re-reads the live state and establishes
-one Actions-owned `<!-- skillforge-executor:v1 -->` comment with a JSON executor
-lease. Repeated same-provider selections reuse it. A conflicting, duplicate,
-malformed or non-Actions-owned record stops the launch rather than choosing an
-owner. Selector jobs are serialized per resolved controlling issue.
+Actions exits after local process acknowledgement. **That is not task success.**
+The supervisor continues, records output directly to a local log and mirrors it
+to tmux, and records the CLI exit even after the job finishes. Print-mode stdin is
+closed; background command children cannot hold an output pipe open indefinitely. `remain-on-exit` preserves the finished pane for
+inspection. A later authorized turn removes only its verified inactive prior
+session and uses a new isolated socket, avoiding stale tmux environments.
 
-A legacy issue without a lease may continue on Codex. A first Devin selection
-refuses an already `in-progress` issue, an existing issue branch or an initialized
-epic DAG. These remote checks cannot prove the absence of unpublished legacy
-Codex work on a host: inspect/coordinate that host before any manual transfer.
-Changing an issue block alone is **not** a hot executor/session migration.
+The CLI's ATIF export supplies the session ID used by the next explicit `--resume`.
+The launcher never uses `--continue`, a latest-session guess, private CLI database
+paths or a fabricated session ID. Missing/unsupported exports or a mismatched ID
+fail closed. The first real installed-CLI execution must validate this export
+contract; fake CLI tests do not prove compatibility with a particular installation.
 
-Devin uses one separate Actions-owned `<!-- skillforge-devin-session:v1 -->`
-comment for organization, issue scope, session identity, effective creation
-settings, last Actions run and `pending`/`ready` acknowledgement state. These two
-launcher records are infrastructure-owned: executors and schedulers must not edit,
-delete or duplicate them. They do not replace the canonical epic DAG or child
-activation context and do not grant implementation/merge authority.
+Ordinary duplicate events do not steer an active turn. Scheduler follow-ups may
+wait up to 15 minutes, rechecking current state and ownership, then resume the
+same session. Holds cancel the follow-up. A timeout requires another authorized
+wake; this change adds no cron or unconditional polling service. SIGTERM/interrupt
+terminates the supervised CLI and leaves a reconciliation receipt rather than
+claiming success. Host reboot does not preserve processes; worktree/logs/receipts
+remain, and interrupted execution requires review before resuming.
 
-Every paid create/resume request is preceded by a verified durable `pending`
-receipt. A successful response is identity-checked and recorded `ready`. Replaying
-the same Actions run does not repeat it. A timeout, lost response, failed receipt
-write or mode mismatch stops for manual reconciliation; it never starts a second
-paid session to compensate. The create request includes a `skillforge-run:<run>`
-tag to locate an unrecorded response in Devin. A launch acknowledgement is not
-issue success, PR readiness or proof that validation ran.
+## Local prerequisites and permissions
 
-Ordinary dispatch does not steer an active session. Scheduler follow-ups may wait
-up to 15 minutes, repeatedly checking live holds, ownership and settings, then
-resume the same inactive session. Quota/user holds, approval waits, archived,
-error and unknown unsafe states are not bypassed. A bounded wait timeout requires
-a later authorized retry; this change installs no cron or extra wake-up service.
+The existing Linux runner user needs Python 3.11+, Git, tmux, an installed Devin
+CLI exposing `--print`, `--prompt-file`, `--export`, `--resume` and
+`--respect-workspace-trust`, and persistent Git/gh access. `devin auth status` and
+`gh auth status --hostname github.com` must succeed without an Actions token.
+The launcher checks prerequisites but does not install software or log in.
+No `DEVIN_API_KEY`, organization variable or ACU-limit secret is required.
 
-A Devin mode or ceiling change for an existing session fails rather than claiming
-that a message changed creation-only settings. For recovery or provider transfer,
-a human first verifies/stops the old turn through its native control plane,
-preserves unpublished work and branch/PR ownership, and explicitly reconciles the
-existing records in place. Do not merely delete a pending receipt or lease to
-force another launch. Restore exactly one compatible record only after proving
-whether the old request/session exists; retain session evidence in the handoff.
-Do not restart, migrate or relabel active tasks as a provisioning smoke test.
+Workspace trust and native command permissions are intentionally preserved:
+`--respect-workspace-trust true` is explicit and no bypass/permission-mode flag is
+added. The exact issue worktree must be trusted in Devin before non-interactive
+execution, and native policies must allow the required commands. A brand-new,
+untrusted worktree or an approval requirement may cause the CLI to stop; tmux does
+not make print mode interactive or approve commands. Configure trust/allow rules
+as the runner user, within the intended scope, before an authorized retry. Never
+solve this with a blanket dangerous mode or by switching to the cloud.
+
+Keep the Codex audit runner available. A `codex` block on a Devin-owned issue
+configures its independent Codex audit, not the Devin implementation. Shared
+historical skill/branch/comment names remain workflow identifiers, not instructions
+to invoke a Codex helper from Devin. Provider-specific model/delegation settings
+remain scoped to that provider.
+
+## Inspection and recovery
+
+Devin state is under
+`~/.skillforge/run/<owner>-<repo>/issue-N/devin/`. `state.json` contains the current
+socket/session, session ID when confirmed, worktree, run, PIDs and phase. Each
+`run-<Actions-run-id>/` retains its supervisor snapshot, `job.json`, prompt and
+ATIF export. Logs are in
+`${SKILLFORGE_LOG_ROOT:-~/.skillforge/logs}/<owner>-<repo>/issue-N-<run>-devin.log`.
+Keep these artifacts private; they are not uploaded to GitHub automatically.
+
+For a recorded socket `S` and session `issue-N`, `tmux -L S attach -t issue-N`
+shows the running or retained output. Detach normally rather than terminating the
+session. In print mode this is monitoring, not an approval UI. Read the log and
+receipt for the CLI result; GitHub issue/PR state remains the task authority.
+
+The dispatcher owns the existing `skillforge-executor:v1` lease and the new
+`skillforge-devin-local:v1` host-binding comment. Agents/schedulers must not edit,
+delete or duplicate them. The old `skillforge-devin-session:v1` marker is retained
+only as a migration guard: any cloud receipt blocks local launch, including a
+pending cloud request. No old session is automatically killed or adopted.
+
+For interrupted/missing-export/failed-trust launches, inspect the receipt, local
+log, tmux pane and `devin list --format json` in the exact worktree. Verify whether
+a session exists and whether any process remains active before repair. A human
+may reconcile the existing local receipt in place only with a verified explicit
+session ID and inactive ownership; preserve the prior run evidence. If no CLI
+session was ever created, verify that negative result before resetting the initial
+launch state/binding. Never delete a pending receipt merely to force another call,
+use a last-session guess, or reattach a second Devin process to an active session.
 
 ## Validation
-
-Run the offline regression suite without any provider credentials:
 
 ```sh
 python3 -m unittest discover -s .github/scripts -p 'test_executor_routing.py' -v
 python3 -m unittest discover -s .github/scripts -p 'test_codex_profile.py' -v
 ```
 
-The path-scoped `executor-routing-ci.yml` checks both suites without starting an
-agent. New tests cover parser defaults/isolation, provider leases, legacy-owner
-refusal, current holds, pagination, API identity, duplicate events, pending
-receipts, busy/resumed sessions, bounded waits, cost caps, errors and credential
-boundaries. Offline doubles and YAML parsing are not live Devin/Codex validation.
-The first explicitly authorized real task is the end-to-end environment check.
+The path-scoped CI includes real temporary Git repositories/worktrees, a fake
+local Devin executable, supervisor completion/resume and a required real tmux
+transport test. It covers current holds, host/owner identity, legacy cloud/Codex
+refusal, native model settings, dirty work preservation, explicit-session resume,
+missing exports, bounded waits, credential removal and nonzero CLI exits.
+It performs no paid model request and does not validate the user's host setup.
 
-API contract references (checked 2026-09-23):
-[create session](https://docs.devin.ai/api-reference/v3/sessions/post-organizations-sessions),
-[get session](https://docs.devin.ai/api-reference/v3/sessions/get-organizations-session),
-[send a message](https://docs.devin.ai/api-reference/v3/sessions/post-organizations-sessions-messages).
+CLI references (checked 2026-09-23):
+[commands and flags](https://docs.devin.ai/cli/reference/commands),
+[permissions](https://docs.devin.ai/cli/reference/permissions),
+[local models](https://docs.devin.ai/cli/models).
