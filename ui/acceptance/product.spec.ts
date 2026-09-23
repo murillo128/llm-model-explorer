@@ -1353,8 +1353,16 @@ test('polish magnifier follows edges after scrolling resize DPR and source repla
 
 test('expanded model coverage links native embeddings in GPTQ and NVFP4 checkpoints', async ({ page }) => {
   await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
+  const response = await fetch(`${backend}/models`);
+  expect(response.ok).toBeTruthy();
+  const models = (await response.json()).models as { id: string }[];
+  const modelId = (family: string) => {
+    const model = models.find((candidate) => candidate.id === family || candidate.id.startsWith(`${family}@`));
+    expect(model, `No advertised model matches fixture family ${family}`).toBeTruthy();
+    return model!.id;
+  };
   for (const [family, columns] of [['smollm2', 12], ['qwen3', 128], ['qwen35', 32]] as const) {
-    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(family);
+    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(modelId(family));
     const editor = page.getByRole('textbox', { name: 'Prompt', exact: true });
     await editor.fill('one two one');
     await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
@@ -1369,7 +1377,7 @@ test('expanded model coverage links native embeddings in GPTQ and NVFP4 checkpoi
     await expect(page.locator('[data-token-index="1"]')).toHaveAttribute('data-active-token', '');
     await expect(page.locator('[data-token-index="3"]')).not.toHaveAttribute('data-active-token', '');
   }
-  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('vjepa2');
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(modelId('vjepa2'));
   await expect(page.getByText('Tokenizer unavailable for this model. You can still edit the prompt.')).toBeVisible();
   await expect(page.locator('.matrix-scroll')).toHaveCount(0);
   await documentFits(page); await closeSession(page);

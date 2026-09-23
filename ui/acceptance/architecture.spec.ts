@@ -27,9 +27,7 @@ let observed: string[];
 let fixtureModelIds: Record<string, string> = {};
 
 function fixtureModelId(family: string, models: { id: string }[]) {
-  const model = models.find((candidate) => candidate.id === family || candidate.id.startsWith(`${family}@`));
-  expect(model, `No advertised model matches fixture family ${family}`).toBeTruthy();
-  return model!.id;
+  return models.find((candidate) => candidate.id === family || candidate.id.startsWith(`${family}@`))?.id;
 }
 
 // Scalar oracle for the physical synthetic words in architecture_fixtures.py.
@@ -289,9 +287,13 @@ test.beforeEach(async ({ page }, info) => {
     const response = await fetch(`${backend}/models`);
     const models = (await response.json()).models as { id: string }[];
     fixtureModelIds = Object.fromEntries(
-      ['smollm2', 'qwen3', 'qwen35', 'vjepa2'].map((name) => [name, fixtureModelId(name, models)]),
+      ['smollm2', 'qwen3', 'qwen35', 'vjepa2']
+        .map((name) => [name, fixtureModelId(name, models)] as const)
+        .filter((entry): entry is readonly [string, string] => entry[1] !== undefined),
     );
-    modelId = fixtureModelIds[family]!;
+    // Template-only fixture runs intentionally advertise a different set of
+    // models. Resolve an ID only when this test's family is present.
+    modelId = fixtureModelIds[family] ?? family;
   }
   page.on('request', (r) => { if (r.url().startsWith(backend)) observed.push(new URL(r.url()).pathname); });
   await page.addInitScript(installProbe);
