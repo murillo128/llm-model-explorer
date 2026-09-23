@@ -63,7 +63,7 @@ test('malformed architecture responses stay local and partial inventories remain
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(contractResponse.model_id);
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Invalid getArchitecture response');
+  await expect(page.getByLabel('Architecture capability').getByRole('alert')).toContainText('Invalid getArchitecture response');
   await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
   await expect(page.getByRole('button', { name: /linear.weight/ })).toBeVisible();
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(referenceFixture('vjepa2').model_id);
