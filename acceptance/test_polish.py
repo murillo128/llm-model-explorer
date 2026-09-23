@@ -15,6 +15,20 @@ from acceptance.polish_fixtures import generate, packed_table
 from acceptance.test_network import Frames, Service, result
 
 
+def fixture_model_id(service, family=None):
+    models = service.client.get("/models").json()["models"]
+    if family is None:
+        assert len(models) == 1, [model["id"] for model in models]
+        return models[0]["id"]
+    advertised = [
+        model["id"]
+        for model in models
+        if model["id"] == family or model["id"].startswith(f"{family}@")
+    ]
+    assert len(advertised) == 1, (family, advertised)
+    return advertised[0]
+
+
 def embedding_result(service, prefix, ids):
     with service.client.stream("POST", prefix + "/embeddings", json={"token_ids": ids}) as response:
         frames = Frames(response).rest()
@@ -74,7 +88,9 @@ def test_packed_inventory_data_analysis_and_embedding_rows_over_tcp(tmp_path, fa
     expected = fixture.expected()  # Scalar format oracle, including negative-zero bits.
     service = Service(tmp_path, model_root=tmp_path / "models")
     try:
-        response = service.client.post("/sessions", json={"model_id": "numeric"})
+        response = service.client.post(
+            "/sessions", json={"model_id": fixture_model_id(service)}
+        )
         assert response.status_code == 201, response.text
         prefix = f"/sessions/{response.json()['id']}"
         inventory = service.client.get(prefix + "/tensors").json()
@@ -124,7 +140,9 @@ def test_text_families_and_non_text_capability_over_tcp(tmp_path):
             ("qwen3", 16, 128),
             ("qwen35", 64, 32),
         ):
-            session = service.client.post("/sessions", json={"model_id": family})
+            session = service.client.post(
+                "/sessions", json={"model_id": fixture_model_id(service, family)}
+            )
             assert session.status_code == 201, session.text
             prefix = f"/sessions/{session.json()['id']}"
             tokenized = service.client.post(
@@ -143,7 +161,9 @@ def test_text_families_and_non_text_capability_over_tcp(tmp_path):
                 )
                 assert payload == expected
             assert service.client.delete(prefix).status_code == 204
-        session = service.client.post("/sessions", json={"model_id": "vjepa2"})
+        session = service.client.post(
+            "/sessions", json={"model_id": fixture_model_id(service, "vjepa2")}
+        )
         assert session.status_code == 201
         prefix = f"/sessions/{session.json()['id']}"
         for ids in ([], [0]):
@@ -183,7 +203,7 @@ def test_local_quantized_checkpoint_input_rows(tmp_path, family):
     expected = None
     for shard in directory.rglob("*.safetensors"):
         with safe_open(shard, framework="pt", device="cpu") as weights:
-            if name not in weights.keys():
+            if name not in weights:
                 continue
             view = weights.get_slice(name)
             vocabulary, hidden = view.get_shape()
