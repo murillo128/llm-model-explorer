@@ -352,6 +352,47 @@ def test_rejected_peft_candidate_is_diagnosed_by_models_api_but_not_selectable(
         assert client.post("/sessions", json={"model_id": composite_id()}).status_code == 404
 
 
+def test_rejected_peft_binding_is_diagnosed_by_models_api_but_not_selectable(
+    settings: Settings,
+) -> None:
+    make_bases(settings.model_root)
+    make_adapter(
+        settings.model_root,
+        factors=[
+            ("base_model.model." + MODULE + ".lora_A.weight", "F32", [2, 127], [1.0] * 254),
+            ("base_model.model." + MODULE + ".lora_B.weight", "F32", [8, 2], [1.0] * 16),
+            ("base_model.model." + V_MODULE + ".lora_A.weight", "F32", [2, 128], [1.0] * 256),
+            ("base_model.model." + V_MODULE + ".lora_B.weight", "F32", [8, 2], [1.0] * 16),
+        ],
+    )
+
+    with TestClient(create_app(settings)) as client:
+        response = client.get("/models")
+        assert response.status_code == 200
+        document = response.json()
+        assert {model["id"] for model in document["models"]} == {
+            UPSTREAM,
+            f"{UPSTREAM}@gptq-int4",
+        }
+        assert {
+            (diagnostic["code"], diagnostic["base_model_id"], diagnostic["message"])
+            for diagnostic in document["diagnostics"]
+        } == {
+            (
+                "peft_composition_rejected",
+                UPSTREAM,
+                "LoRA composition rejected: PEFT LoRA A/B dimensions do not match the base weight.",
+            ),
+            (
+                "peft_composition_rejected",
+                f"{UPSTREAM}@gptq-int4",
+                "LoRA composition rejected: PEFT LoRA A/B dimensions do not match the base weight.",
+            ),
+        }
+        assert str(settings.model_root) not in response.text
+        assert client.post("/sessions", json={"model_id": composite_id()}).status_code == 404
+
+
 def test_duplicate_factor_alias_is_rejected(settings: Settings) -> None:
     make_bases(settings.model_root)
     factors = [
