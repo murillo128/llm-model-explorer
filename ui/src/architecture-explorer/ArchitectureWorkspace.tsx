@@ -1,6 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { readInventoryPreference, writeInventoryPreference } from '../components/inventory-preferences';
+import { BrowserTarget } from './architecture-browser-target';
+import './architecture.css';
 
 const preferenceKey = 'lmex.architecture-browser.pane';
 const minimum = 200, maximum = 480;
@@ -11,12 +13,14 @@ function initialPreference() {
 }
 
 /** Mirrors the inventory's bounded splitter/rail without replacing the canvas subtree. */
-export function ArchitectureWorkspace({ browser, children }: { browser: ReactNode; children: ReactNode }) {
+export function ArchitectureWorkspace({ browser, browserPlaceholder = false, children }: { browser: ReactNode; browserPlaceholder?: boolean; children: ReactNode }) {
   const [preference, setPreference] = useState(initialPreference);
   const [available, setAvailable] = useState(0);
   const main = useRef<HTMLDivElement>(null), hide = useRef<HTMLButtonElement>(null), restore = useRef<HTMLButtonElement>(null);
   const focusPending = useRef(false), drag = useRef<{ pointer: number; x: number; width: number } | null>(null);
   const [resizing, setResizing] = useState(false);
+  const [browserTarget, setBrowserTarget] = useState<HTMLDivElement | null>(null);
+  const attachBrowser = useCallback((node: HTMLDivElement | null) => setBrowserTarget(node), []);
   const limit = Math.max(minimum, Math.min(maximum, available - 360 - 16));
   const width = Math.min(preference.width, limit), hidden = !preference.visible;
   useEffect(() => {
@@ -39,7 +43,9 @@ export function ArchitectureWorkspace({ browser, children }: { browser: ReactNod
           <svg aria-hidden="true" viewBox="0 0 16 16"><path d="m10 3-5 5 5 5" /></svg>
         </button>
       </header>
-      {browser}
+      <div ref={attachBrowser} className="architecture-browser-content">
+        {browserPlaceholder ? <div className="architecture-browser-placeholder">{browser}</div> : browser}
+      </div>
     </aside>
     <div role="separator" aria-label="Resize architecture browser" aria-orientation="vertical" aria-controls="architecture-browser"
       aria-valuemin={minimum} aria-valuemax={limit} aria-valuenow={width} aria-valuetext={`${width} pixels`} tabIndex={0}
@@ -63,6 +69,6 @@ export function ArchitectureWorkspace({ browser, children }: { browser: ReactNod
         <svg aria-hidden="true" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="1" /><path d="M6 2v12M9 5h3M9 8h3M9 11h3" /></svg>
       </button>
     </nav>}
-    {children}
+    <BrowserTarget.Provider value={browserTarget}>{children}</BrowserTarget.Provider>
   </div>;
 }

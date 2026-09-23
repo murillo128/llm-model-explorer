@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ExplorerContextValue } from '../app/explorer-context';
 import { Lifetime } from '../app/lifetime';
 import { ApiFailure } from '../api/errors';
@@ -10,6 +11,7 @@ import { DiagnosticBand } from '../app/ModelDiagnostics';
 import { ModelDiagnostics, finding } from '../app/model-diagnostics';
 import { interfaceIndex } from './interfaces';
 import { ArchitectureInspection } from './ArchitectureInspection';
+import { useArchitectureBrowserTarget } from './architecture-browser-target';
 
 type Response = components['schemas']['ArchitectureResponse'];
 const unavailable = {
@@ -27,6 +29,7 @@ export function ArchitectureExplorer(props: Props) {
   return <SessionArchitectureExplorer key={JSON.stringify([props.session.id, props.session.model_id])} {...props} />;
 }
 function SessionArchitectureExplorer(props: Props) {
+  const browserTarget = useArchitectureBrowserTarget();
   const { client, session, selection, views, onInspect } = props;
   const [localDiagnostics] = useState(() => { const store = new ModelDiagnostics(); store.activate(session); return store; });
   const diagnostics = props.diagnostics ?? localDiagnostics;
@@ -74,7 +77,11 @@ function SessionArchitectureExplorer(props: Props) {
   }, [client, session, selection, retry, diagnostics]);
   const response = result.response;
   const band = <DiagnosticBand store={diagnostics} />;
-  if (!response || response.status === 'unavailable') return <div tabIndex={-1} className="architecture-explorer explorer-card architecture-empty" aria-label="Architecture capability">
+  if (!response || response.status === 'unavailable') return <>
+    {browserTarget && createPortal(<p className="architecture-browser-state" role={result.error ? 'alert' : 'status'}>
+      {result.error ? 'Architecture browser unavailable. Retry retrieval.' : !response ? 'Retrieving prepared architecture…' : unavailable[response.reason]}
+    </p>, browserTarget)}
+    <div tabIndex={-1} className="architecture-explorer explorer-card architecture-empty" aria-label="Architecture capability">
     <header className="architecture-empty-heading">Architecture</header>
     {band}
     <div className="architecture-capability-state">
@@ -86,7 +93,8 @@ function SessionArchitectureExplorer(props: Props) {
           </ul>}
           {response.requires_restart && response.reason !== 'restart_required' && <p>Restart the backend to prepare this model again.</p>}</div>}
     </div>
-  </div>;
+    </div>
+  </>;
   return <>
     <ArchitectureCanvas key={JSON.stringify([session.id, response.model_id, response.graph.graph_id])} graph={response.graph} notices={band}
       modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspected(null)} onInspect={(value) => { setInspected(value); onInspect?.(value); }} />

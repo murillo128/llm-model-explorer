@@ -36,7 +36,17 @@ it.each(['malformed', 'unavailable'])('keeps hide/restore usable with %s browser
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('disabled'); });
   }
   render(<Workspace />);
+  expect(screen.getByRole('heading', { name: 'Inventory' })).toBeVisible();
   await userEvent.click(screen.getByRole('button', { name: 'Collapse inventory' }));
   await userEvent.click(screen.getByRole('button', { name: 'Expand inventory' }));
   expect(screen.getByText('Tree')).toBeVisible();
+});
+it('keeps a user change across remounts when browser storage denies access', async () => {
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('disabled'); });
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('disabled'); });
+  const view = render(<Workspace />);
+  await userEvent.click(screen.getByRole('button', { name: 'Collapse inventory' }));
+  view.unmount();
+  render(<Workspace />);
+  expect(screen.getByRole('button', { name: 'Expand inventory' })).toBeVisible();
 });
