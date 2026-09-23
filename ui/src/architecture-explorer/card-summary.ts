@@ -63,8 +63,11 @@ export function cardMetrics(node: ProjectedNode, summary: CardSummary, dimension
     .map((p) => portLabels[p.id]!.width));
   const height = Math.max(84, metadataTop + Math.min(summaryLimit, summary.parameters.length) * rowHeight +
     (summary.parameters.length > summaryLimit ? 26 : 0) + summary.constants.length * 24 + 10);
-  return { width: summary.formula || summary.parameters.length || summary.constants.length || dimensions ? summaryWidth :
-    node.ports.some((p) => p.interfaces?.length) ? Math.max(180, portLabelWidth('input') + portLabelWidth('output') + 48) : 180,
+  const contentWidth = summary.formula || summary.parameters.length || summary.constants.length || dimensions ? summaryWidth : 180;
+  // Opposite-side names share each row. Reserve both rectangles on ordinary
+  // operation cards as well as interface containers, including truncated names.
+  const width = Math.max(contentWidth, portLabelWidth('input') + portLabelWidth('output') + 48);
+  return { width,
     height, headerHeight: summary.parameters.length || summary.constants.length ? height : Math.max(64, portStart),
     portStart, portGap, metadataTop, rowHeight, portLabels,
     portLabelWidth: { input: portLabelWidth('input'), output: portLabelWidth('output') } };

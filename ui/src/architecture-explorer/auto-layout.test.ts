@@ -542,6 +542,31 @@ it('bounds long labels and dimensions without moving a collapsed external termin
   }
 });
 
+it('reserves disjoint opposite-side labels on an ordinary operation card', async () => {
+  const graph = interfaceFixture('dense');
+  const operation = graph.nodes.find((node) => node.id === 'Embedding')!;
+  operation.ports.find((port) => port.id === 'Token IDs')!.label = 'An unusually long attention mask input name';
+  operation.ports.find((port) => port.id === 'out')!.label = 'An unusually long hidden state output name';
+  for (const dimensions of [false, true]) {
+    const layout = await layoutGraph(graph, { expanded: ['model'], showUnused: true, dimensions });
+    const node = layout.projection.nodes.find((candidate) => candidate.id === operation.id)!;
+    const metrics = cardMetrics(node, cardSummary(operation, new Map()), dimensions);
+    const box = layout.boxes.find((candidate) => candidate.id === operation.id)!;
+    const input = layout.ports.find((port) => port.nodeId === operation.id && port.portId === 'Token IDs')!;
+    const output = layout.ports.find((port) => port.nodeId === operation.id && port.portId === 'out')!;
+    expect(metrics.portLabels['Token IDs']!.width).toBe(120);
+    expect(metrics.portLabels.out!.width).toBe(120);
+    expect(box.width).toBeGreaterThanOrEqual(288);
+    expect(box.width).toBe(metrics.width);
+    expect(input.label.y).toBe(output.label.y);
+    expect(output.label.x - (input.label.x + input.label.width)).toBeGreaterThanOrEqual(8);
+    expect(input.label.x).toBeGreaterThan(box.absoluteX);
+    expect(output.label.x + output.label.width).toBeLessThan(box.absoluteX + box.width);
+    expect(input.label.raised).toBe(false);
+    expect(output.label.raised).toBe(false);
+  }
+});
+
 it('keeps equal names, an unused port and isolated forwarding bound to their exact ports', async () => {
   const graph = interfaceFixture('hybrid', true);
   graph.nodes.find((node) => node.id === 'positions')!.label = 'Shared name';

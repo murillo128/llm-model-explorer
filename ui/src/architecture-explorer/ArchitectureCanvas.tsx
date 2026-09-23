@@ -113,7 +113,7 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
           <span className="architecture-port-dot" />
           <span className="architecture-port-label" data-emphasized={active} data-raised={position.label.raised}
             data-layout-bounds={JSON.stringify(position.label)}
-            title={`${port.direction}: ${port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
+            title={`${port.direction}: ${port.interfaceLabel ?? port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
             style={{ left: position.label.x - position.absoluteX + hit / 2, top: position.label.y - position.absoluteY + hit / 2,
               width: position.label.width, height: position.label.height }}>
             {port.interfaceLabel ?? port.label}{data.dimensions && <span className="architecture-port-shape">{formatShape(port.shape)}</span>}

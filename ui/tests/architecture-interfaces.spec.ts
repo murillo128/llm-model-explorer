@@ -65,6 +65,54 @@ test('boundary hover/focus/pinning preserves layout and source connections; expl
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
 });
 
+test('ordinary operation keeps long opposite labels disjoint and bound to their own terminals', async ({ page }) => {
+  await page.goto(`${harness}?fixture=interface-long-ports`); await ready(page);
+  await findComponent(page, 'Embedding'); await ready(page);
+  const node = page.locator('.react-flow__node[data-id="Embedding"]');
+  const input = node.locator('.architecture-port[data-port-id="Token IDs"]');
+  const output = node.locator('.architecture-port[data-port-id="out"]');
+  const inputLabel = input.locator('.architecture-port-label');
+  const outputLabel = output.locator('.architecture-port-label');
+  const boundary = page.locator('.architecture-port[data-node-id="language"][data-port-id="Token IDs"]');
+  await expect(boundary.locator('.architecture-port-label')).toHaveText('An unusually long attention mask input name');
+  await expect(boundary.locator('.architecture-port-label')).toHaveAttribute('title', 'input: An unusually long attention mask input name');
+  await expect(inputLabel).toHaveAttribute('title', 'input: An unusually long attention mask input name');
+  await expect(inputLabel).toHaveText('An unusually long attention mask input name');
+  await expect(input).toHaveAttribute('title', 'input: An unusually long attention mask input name');
+  await expect(outputLabel).toHaveAttribute('title', 'output: An unusually long hidden state output name');
+  const bounds = await node.evaluate((card) => {
+    const first = card.querySelector('.architecture-port[data-port-id="Token IDs"] .architecture-port-label')!;
+    const last = card.querySelector('.architecture-port[data-port-id="out"] .architecture-port-label')!;
+    const left = first.getBoundingClientRect(), right = last.getBoundingClientRect();
+    const scale = new DOMMatrix(getComputedStyle(document.querySelector('.react-flow__viewport')!).transform).a;
+    return { gap: (right.left - left.right) / scale, rowGap: Math.abs(left.top - right.top) / scale,
+      cardWidth: card.getBoundingClientRect().width / scale,
+      inputWidth: left.width / scale, outputWidth: right.width / scale };
+  });
+  expect(bounds.cardWidth).toBeGreaterThanOrEqual(288);
+  expect(bounds.inputWidth).toBeCloseTo(120, 0);
+  expect(bounds.outputWidth).toBeCloseTo(120, 0);
+  expect(bounds.rowGap).toBeLessThan(1);
+  expect(bounds.gap).toBeGreaterThanOrEqual(8);
+  const emphasized = () => page.locator('.architecture-connection[data-emphasized="true"]')
+    .evaluateAll((edges) => edges.map((edge) => edge.getAttribute('data-edge-id')!).sort());
+  const layout = await page.locator(panel).getAttribute('data-layout-count');
+  const before = await camera(page);
+  await inputLabel.hover();
+  await expect(input).toHaveAttribute('data-emphasized', 'true');
+  const inputEdges = await emphasized();
+  expect(inputEdges.length).toBeGreaterThan(0);
+  await outputLabel.hover();
+  await expect(output).toHaveAttribute('data-emphasized', 'true');
+  const outputEdges = await emphasized();
+  expect(outputEdges.length).toBeGreaterThan(0);
+  expect(outputEdges).not.toEqual(inputEdges);
+  await output.focus();
+  await expect.poll(emphasized).toEqual(outputEdges);
+  expect(await camera(page)).toBe(before);
+  await expect(page.locator(panel)).toHaveAttribute('data-layout-count', layout!);
+});
+
 test('many interfaces stay targetable without document overflow', async ({ page }) => {
   await page.goto(`${harness}?fixture=interface-many`); await ready(page);
   await viewOptions(page); await page.keyboard.press('Escape');
