@@ -63,10 +63,7 @@ def make_bases(root: Path, *, adapter_tokens: bool = False) -> tuple[Path, Path]
     quantized_config["vocab_size"] = 16
     (quantized / "config.json").write_text(json.dumps(quantized_config))
     q_group = packed_group("JunHowie")
-    v_group = [
-        (name.replace(MODULE, V_MODULE), dtype, shape)
-        for name, dtype, shape in q_group
-    ]
+    v_group = [(name.replace(MODULE, V_MODULE), dtype, shape) for name, dtype, shape in q_group]
     write_storage(quantized / "model.safetensors", [*q_group, *v_group])
     if adapter_tokens:
         adapter = root / "adapter"
@@ -211,12 +208,8 @@ def test_models_and_sessions_expose_native_and_quantized_compositions(settings: 
             }
             for tensor in adapter_tensors:
                 assert tensor["id"] == hashlib.sha256(tensor["name"].encode()).hexdigest()
-            a_tensor = next(
-                t for t in adapter_tensors if ".q_proj.lora_A." in t["name"]
-            )
-            b_tensor = next(
-                t for t in adapter_tensors if ".q_proj.lora_B." in t["name"]
-            )
+            a_tensor = next(t for t in adapter_tensors if ".q_proj.lora_A." in t["name"])
+            b_tensor = next(t for t in adapter_tensors if ".q_proj.lora_B." in t["name"])
             assert tensor_payload(client, session_id, a_tensor["id"]) == as_float32(
                 "F16", [float(i - 64) / 16 for i in range(256)]
             )
@@ -310,9 +303,7 @@ def test_malformed_or_ambiguous_adapter_files_are_not_candidates(
     if fault == "malformed-config":
         (adapter / "adapter_config.json").write_text("{")
     elif fault == "ambiguous-payload":
-        shutil.copyfile(
-            adapter / "adapter_model.safetensors", adapter / "unexpected.safetensors"
-        )
+        shutil.copyfile(adapter / "adapter_model.safetensors", adapter / "unexpected.safetensors")
     else:
         index = adapter / "adapter_model.safetensors.index.json"
         document = json.loads(index.read_text())
@@ -399,7 +390,8 @@ def test_composite_pin_rechecks_both_snapshots_after_hashing(
     native, _ = make_bases(settings.model_root)
     make_adapter(settings.model_root)
     entry = next(
-        entry for entry in ModelCatalogue(settings.model_root).discover()
+        entry
+        for entry in ModelCatalogue(settings.model_root).discover()
         if entry.summary.id == composite_id()
     )
     original_fingerprint = FileSnapshot.fingerprint

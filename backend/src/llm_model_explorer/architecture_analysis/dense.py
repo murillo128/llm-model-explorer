@@ -429,9 +429,7 @@ class DenseGraph:
             shape("B", "S", out),
             parameters=tuple(params),
             attributes={"bias": bias, **(extra_attributes or {})},
-            formula=None
-            if suppress_formula
-            else ("y = x Wᵀ + bias" if bias else "y = x Wᵀ"),
+            formula=None if suppress_formula else ("y = x Wᵀ + bias" if bias else "y = x Wᵀ"),
         )
         target = self.lora_targets.get(key)
         if target is None:

@@ -246,8 +246,7 @@ def validate_adapter(
         raise _unsupported("The adapter enables an unsupported LoRA extension.")
     qalora_group_size = config.get("qalora_group_size")
     if qalora_group_size is not None and (
-        type(qalora_group_size) is not int
-        or not 0 < qalora_group_size <= MAX_SAFE_INTEGER
+        type(qalora_group_size) is not int or not 0 < qalora_group_size <= MAX_SAFE_INTEGER
     ):
         raise invalid("Invalid PEFT QALoRA group size metadata.")
     dropout = config.get("lora_dropout", 0.0)
