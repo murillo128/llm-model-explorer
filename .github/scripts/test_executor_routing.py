@@ -552,14 +552,14 @@ class RealTmuxTests(LaunchFixture):
             deadline = time.monotonic() + 10
             while time.monotonic() < deadline:
                 if self.receipt()["phase"] in runner.TERMINAL:
-                    # Let supervisor leave the pane and release its inherited lock.
+                    # Let supervisor leave the pane and release its lifetime lock.
                     time.sleep(0.2)
                     return
                 time.sleep(0.05)
             self.fail("Local tmux CLI did not finish")
         wait_final()
         self.assertEqual(self.receipt()["phase"], "finished")
-        panes = subprocess.run(runner.tmux_args(result["socket"], "list-panes", "-t", "=" + result["session"],
+        panes = subprocess.run(runner.tmux_args(result["socket"], "list-panes", "-t", "=" + result["session"] + ":0",
                                                 "-F", "#{pane_dead}"), text=True, capture_output=True)
         self.assertEqual(panes.stdout.strip(), "1")
         self.launch("102")

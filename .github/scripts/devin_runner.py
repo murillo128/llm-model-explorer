@@ -109,7 +109,7 @@ def active(state_dir, record, env):
         pid, start = record.get(name + "_pid"), record.get(name + "_start")
         if pid and start and process_identity(pid) == start:
             return True
-    panes = run(tmux_args(record["socket"], "list-panes", "-t", "=" + record["session"],
+    panes = run(tmux_args(record["socket"], "list-panes", "-t", "=" + record["session"] + ":0",
                           "-F", "#{pane_dead}"), env=env, check=False)
     return panes.returncode == 0 and any(line == "0" for line in panes.stdout.splitlines())
 
@@ -330,7 +330,7 @@ def launch(gh, number, root, worktree_base, state_dir, log_dir, default_branch, 
         command = shlex.join([sys.executable, str(turn_dir / "devin_runner.py"),
                               "worker", str(turn_dir / "job.json")])
         run(tmux_args(socket, "new-session", "-d", "-s", session, "-c", str(worktree),
-                      command, ";", "set-option", "-w", "-t", "=" + session,
+                      command, ";", "set-option", "-w", "-t", "=" + session + ":0",
                       "remain-on-exit", "on"), env=env)
         for _ in range(100):
             observed = read_json(state_path)
