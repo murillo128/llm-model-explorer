@@ -24,6 +24,13 @@ let backend: string;
 let modelId: string;
 let log: string;
 let observed: string[];
+let fixtureModelIds: Record<string, string> = {};
+
+function fixtureModelId(family: string, models: { id: string }[]) {
+  const model = models.find((candidate) => candidate.id === family || candidate.id.startsWith(`${family}@`));
+  expect(model, `No advertised model matches fixture family ${family}`).toBeTruthy();
+  return model!.id;
+}
 
 // Scalar oracle for the physical synthetic words in architecture_fixtures.py.
 // It does not use application decoding, renderer readout, or uploaded GPU values.
@@ -278,6 +285,14 @@ test.beforeEach(async ({ page }, info) => {
     if (service.exitCode !== null) throw new Error(log);
     try { return (await fetch(`${backend}/models`)).status; } catch { return 0; }
   }, { timeout: reference ? 300_000 : 30_000 }).toBe(200);
+  if (!reference) {
+    const response = await fetch(`${backend}/models`);
+    const models = (await response.json()).models as { id: string }[];
+    fixtureModelIds = Object.fromEntries(
+      ['smollm2', 'qwen3', 'qwen35', 'vjepa2'].map((name) => [name, fixtureModelId(name, models)]),
+    );
+    modelId = fixtureModelIds[family]!;
+  }
   page.on('request', (r) => { if (r.url().startsWith(backend)) observed.push(new URL(r.url()).pathname); });
   await page.addInitScript(installProbe);
   await page.addInitScript(installArchitectureProbe);
@@ -568,7 +583,7 @@ test('deterministic production [smollm2] isolated session replacement rejects a 
   await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
   holdNext = true;
   try {
-    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('qwen3');
+    await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(fixtureModelIds.qwen3!);
     await waiting;
     await expect(canvas).toHaveCount(0);
     const replacement = page.waitForResponse((response) => response.request().method() === 'GET' &&

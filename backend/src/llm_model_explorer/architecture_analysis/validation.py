@@ -2,7 +2,7 @@
 
 import json
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel
@@ -112,6 +112,7 @@ class BindingContext:
     physical: Mapping[str, r.ArchitectureStorage]
     numeric: Mapping[str, NumericTensor]
     tokenizer_available: bool
+    adapter_tensor_storage: Mapping[str, str] = field(default_factory=dict)
 
 
 def unique(records: Iterable[Any], field: str = "id") -> dict[str, Any]:
@@ -344,10 +345,19 @@ def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
             )
         if parameter.binding == "native":
             geometry = constants(parameter.logical_shape)
-            require(
-                len(parameter.storage) == 1 and parameter.storage[0].name == parameter.name,
-                "Native binding must name one complete tensor.",
-            )
+            adapter_storage = context.adapter_tensor_storage.get(parameter.name)
+            if adapter_storage is not None:
+                require(
+                    len(parameter.storage) == 1
+                    and parameter.storage[0].name == adapter_storage
+                    and parameter.storage[0].role == "adapter_factor",
+                    "Adapter factor binding disagrees with the verified composition.",
+                )
+            else:
+                require(
+                    len(parameter.storage) == 1 and parameter.storage[0].name == parameter.name,
+                    "Native binding must name one complete tensor.",
+                )
             require(
                 geometry is not None and list(geometry) == parameter.storage[0].shape,
                 "Native logical and physical geometry disagree.",
@@ -384,7 +394,13 @@ def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
             continue
         require(
             any(
-                s.name == tensor.name
+                (
+                    s.name == tensor.name
+                    or (
+                        s.role == "adapter_factor"
+                        and context.adapter_tensor_storage.get(tensor.name) == s.name
+                    )
+                )
                 and s.dtype == tensor.dtype
                 and s.dtype in ("F32", "F16", "BF16", "float32", "float16", "bfloat16")
                 and s.role not in ("scales", "packed", "packed_data")

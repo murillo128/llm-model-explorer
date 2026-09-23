@@ -4,20 +4,21 @@ import type { Page } from '@playwright/test';
 import { nativeCamera } from './native-camera';
 import { integratedCard } from './viewer-panel';
 
-async function open(page: Page, model = 'lab/alpha', strict = false) {
-  await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html?architecture${strict ? '&strict' : ''}`);
+async function open(page: Page, model = 'lab/alpha', strict = false, lora = false) {
+  const query = `architecture${strict ? '&strict' : ''}${lora ? '&lora' : ''}`;
+  await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html?${query}`);
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(model);
   await expect(page.getByText('Partial tensor inventory:', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '3');
 }
-async function inspect(page: Page, node = 'linear1') {
+async function inspect(page: Page, node = 'linear1', dialogName = node) {
   await findComponent(page, node);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
   const trigger = page.getByRole('button', { name: 'Inspect selected', exact: true });
   await trigger.focus(); await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByRole('dialog')).toHaveAccessibleName(node);
+  await expect(page.getByRole('dialog')).toHaveAccessibleName(dialogName);
   await expect(page.getByRole('button', { name: 'Close inspection' })).toBeFocused();
 }
 const requests = (page: Page, count: number) => expect.poll(() => page.evaluate(() => window.explorerFixture.requests.length)).toBe(count);
@@ -63,6 +64,29 @@ test('card gestures select, expand, and open the native modal without changing t
   await expect(group.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
   await requests(page, 0);
+});
+
+test('generic graph navigation and inspection expose both LoRA factor tensors', async ({ page }) => {
+  await open(page, 'lab/alpha', false, true);
+  await graphAction(page, 'Show all operations');
+  await inspect(page, 'lora_A', 'LoRA A projection');
+  await expect(page.getByRole('dialog')).toHaveAccessibleName('LoRA A projection');
+  await expect(page.getByText(/Module: model\.layers\.1\.self_attn\.q_proj\.lora_A/)).toBeVisible();
+  await page.getByLabel('Inspect parameter').selectOption('lora-a');
+  await requests(page, 3);
+  await expect.poll(() => page.evaluate(() => window.explorerFixture.requests.map((request) => request.tensor)))
+    .toEqual(['lora-A', 'lora-A', 'lora-A']);
+  await page.keyboard.press('Escape');
+  await released(page);
+
+  await inspect(page, 'lora_B', 'LoRA B projection');
+  await expect(page.getByRole('dialog')).toHaveAccessibleName('LoRA B projection');
+  await page.getByLabel('Inspect parameter').selectOption('lora-b');
+  await requests(page, 6);
+  await expect.poll(() => page.evaluate(() => window.explorerFixture.requests.map((request) => request.tensor)))
+    .toEqual(['lora-A', 'lora-A', 'lora-A', 'lora-B', 'lora-B', 'lora-B']);
+  await page.keyboard.press('Escape');
+  await released(page);
 });
 
 test('concrete repeated weight preserves exact progressive values, independent profiles/statistics and native camera', async ({ page }, info) => {

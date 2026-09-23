@@ -8,11 +8,13 @@ from pathlib import Path, PurePosixPath
 from pydantic import BaseModel, ConfigDict
 
 from .model_files import FileSnapshot, ModelError, confined, invalid, read_json
-from .peft_adapters import AdapterSpec, bind_adapter, validate_adapter
+from .peft_adapters import AdapterSpec, bind_adapter, factor_logical_names, validate_adapter
 from .quantized_inventory import encoding, logical_locations
 from .tensor_source import (
     MAX_SAFE_INTEGER,
     ModelSource,
+    PeftLoraComposition,
+    PeftLoraTarget,
     PhysicalTensor,
     TensorDescriptor,
     TensorLocation,
@@ -82,6 +84,7 @@ class CatalogueEntry:
     _physical: tuple[PhysicalTensor, ...]
     _additional_snapshots: tuple[FileSnapshot, ...] = ()
     _composition_semantics: str | None = None
+    lora_composition: PeftLoraComposition | None = None
 
     def physical_tensors(self) -> tuple[PhysicalTensor, ...]:
         for snapshot in (self._snapshot, *self._additional_snapshots):
@@ -110,6 +113,7 @@ class CatalogueEntry:
             self._physical,
             self._additional_snapshots,
             self._composition_semantics,
+            self.lora_composition,
         )
 
 
@@ -297,6 +301,16 @@ class ModelCatalogue:
             logger.warning("Skipping incompatible local PEFT composition: %s", exc)
             return None
         base_entry = base.entry
+        targets = tuple(
+            PeftLoraTarget(
+                module_name=module,
+                a_tensor_name=factor_logical_names(adapter.identity, module)[0],
+                b_tensor_name=factor_logical_names(adapter.identity, module)[1],
+                a_storage_name=adapter.spec.factors[module][0].name,
+                b_storage_name=adapter.spec.factors[module][1].name,
+            )
+            for module in sorted(adapter.spec.factors)
+        )
         model_id = f"{base_entry.summary.id}+peft-lora:{adapter.identity}"
         adapter_size = sum(stamp.size for _, stamp in adapter.snapshot.files)
         base_size = base_entry.summary.size_bytes
@@ -316,6 +330,13 @@ class ModelCatalogue:
             (*base_entry._physical, *adapter.physical),
             (adapter.snapshot,),
             "peft-lora-causal-lm-alpha-over-r-v1",
+            PeftLoraComposition(
+                adapter_id=adapter.identity,
+                rank=adapter.spec.rank,
+                alpha=adapter.spec.alpha,
+                scale=adapter.spec.scale,
+                targets=targets,
+            ),
         )
 
     @staticmethod

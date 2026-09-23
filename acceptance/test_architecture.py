@@ -41,6 +41,13 @@ def test_grouping_preserves_the_accepted_operation_level_contract(tmp_path):
 
 
 def inspect_graph(service, model_id):
+    advertised = [
+        model["id"]
+        for model in service.client.get("/models").json()["models"]
+        if model["id"] == model_id or model["id"].startswith(f"{model_id}@")
+    ]
+    assert len(advertised) == 1, (model_id, advertised)
+    model_id = advertised[0]
     response = service.client.post("/sessions", json={"model_id": model_id})
     assert response.status_code == 201, response.text
     session = response.json()

@@ -1,12 +1,18 @@
 """Packaged static dense-language descriptions; never an inference implementation."""
 
-from typing import Literal
+import re
+from dataclasses import dataclass
+from math import isfinite
+from typing import TYPE_CHECKING, Literal
 
 from . import records as r
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
 from .dense_config import SOURCE_REVISION, DenseConfig, checked
 from .semantic import operation_role, role_attribute, source_key
-from .validation import require
+from .validation import GraphError, require
+
+if TYPE_CHECKING:
+    from ..tensor_source import PeftLoraTarget
 
 
 def shape(*dims: int | str) -> list[r.ArchitectureDimension]:
@@ -18,6 +24,16 @@ def shape(*dims: int | str) -> list[r.ArchitectureDimension]:
     ]
 
 
+@dataclass(frozen=True)
+class LinearNodes:
+    base: str
+    output: str
+    adapter_input: str | None = None
+
+
+_ADAPTER_FACTOR = re.compile(r"\.lora_[AB](?:\.[A-Za-z0-9_-]+)?\.weight$")
+
+
 class DenseGraph:
     """Shared fragments only where reviewed Qwen3/Llama mathematics agrees."""
 
@@ -27,6 +43,130 @@ class DenseGraph:
         self.parameters: dict[str, r.ArchitectureParameter] = {}
         self.used_storage: set[str] = set()
         self.numeric = {t.name: t for t in inputs.bindings.numeric.values()}
+        self.lora = inputs.lora_composition
+        self.lora_targets = self._validate_lora()
+
+    def _lora_error(self, code: str, message: str) -> None:
+        raise GraphError(code, message)
+
+    def _validate_lora(self) -> dict[str, "PeftLoraTarget"]:
+        composition = self.lora
+        context = self.inputs.bindings
+        if composition is None:
+            if context.adapter_tensor_storage:
+                self._lora_error(
+                    "lora_orphan_factor",
+                    "Adapter tensor bindings exist without a PEFT composition.",
+                )
+            return {}
+        if (
+            type(composition.rank) is not int
+            or composition.rank <= 0
+            or isinstance(composition.alpha, bool)
+            or not isinstance(composition.alpha, (int, float))
+            or not isfinite(composition.alpha)
+            or composition.alpha <= 0
+            or isinstance(composition.scale, bool)
+            or not isinstance(composition.scale, (int, float))
+            or not isfinite(composition.scale)
+            or composition.scale <= 0
+            or composition.scale != composition.alpha / composition.rank
+        ):
+            self._lora_error(
+                "lora_scale", "LoRA scale must equal the configured alpha divided by rank."
+            )
+        expected: dict[str, tuple[int, int]] = {"lm_head": (self.c.vocab, self.c.hidden)}
+        for index in range(self.c.layers):
+            prefix = f"model.layers.{index}."
+            expected.update(
+                {
+                    prefix + "self_attn.q_proj": (self.c.heads * self.c.head_dim, self.c.hidden),
+                    prefix + "self_attn.k_proj": (
+                        self.c.kv_heads * self.c.head_dim,
+                        self.c.hidden,
+                    ),
+                    prefix + "self_attn.v_proj": (
+                        self.c.kv_heads * self.c.head_dim,
+                        self.c.hidden,
+                    ),
+                    prefix + "self_attn.o_proj": (
+                        self.c.hidden,
+                        self.c.heads * self.c.head_dim,
+                    ),
+                    prefix + "mlp.gate_proj": (self.c.intermediate, self.c.hidden),
+                    prefix + "mlp.up_proj": (self.c.intermediate, self.c.hidden),
+                    prefix + "mlp.down_proj": (self.c.hidden, self.c.intermediate),
+                }
+            )
+        targets: dict[str, PeftLoraTarget] = {}
+        logical_names: set[str] = set()
+        storage_names: set[str] = set()
+        for target in composition.targets:
+            if target.module_name in targets:
+                self._lora_error(
+                    "lora_ambiguous_target",
+                    "A LoRA target resolves to more than one graph operation.",
+                )
+            dims = expected.get(target.module_name)
+            if dims is None:
+                self._lora_error(
+                    "lora_unsupported_target",
+                    "A LoRA target has no reviewed linear graph operation.",
+                )
+            assert dims is not None
+            a_name, b_name = target.a_tensor_name, target.b_tensor_name
+            if a_name == b_name or a_name in logical_names or b_name in logical_names:
+                self._lora_error(
+                    "lora_ambiguous_target", "LoRA factors do not have unique logical identities."
+                )
+            logical_names.update((a_name, b_name))
+            storage_names.update((target.a_storage_name, target.b_storage_name))
+            for logical_name, physical_name, geometry in (
+                (a_name, target.a_storage_name, (composition.rank, dims[1])),
+                (b_name, target.b_storage_name, (dims[0], composition.rank)),
+            ):
+                matches = [t for t in context.numeric.values() if t.name == logical_name]
+                storage = context.physical.get(physical_name)
+                if len(matches) != 1 or storage is None:
+                    self._lora_error(
+                        "lora_missing_factor",
+                        "Each LoRA target requires one verified A and B tensor.",
+                    )
+                tensor = matches[0]
+                if (
+                    tuple(storage.shape) != geometry
+                    or tensor.shape != geometry
+                    or tensor.dtype != storage.dtype
+                    or storage.dtype not in {"F32", "F16", "BF16"}
+                    or context.adapter_tensor_storage.get(logical_name) != physical_name
+                ):
+                    self._lora_error(
+                        "lora_factor_geometry",
+                        "LoRA A/B tensor shapes or storage do not match the target.",
+                    )
+            base = self.numeric.get(target.module_name + ".weight")
+            if base is None or base.shape != dims:
+                self._lora_error(
+                    "lora_base_binding", "A LoRA target has no matching base linear weight."
+                )
+            targets[target.module_name] = target
+        logical_adapter_names = {
+            tensor.name
+            for tensor in context.numeric.values()
+            if tensor.name.startswith("__peft__.")
+        }
+        actual_factor_storage = {name for name in context.physical if _ADAPTER_FACTOR.search(name)}
+        if (
+            not targets
+            or set(context.adapter_tensor_storage) != logical_names
+            or logical_adapter_names != logical_names
+            or actual_factor_storage != storage_names
+        ):
+            self._lora_error(
+                "lora_orphan_factor",
+                "LoRA factors are missing, duplicated, or outside the verified targets.",
+            )
+        return targets
 
     def provenance(self, *fields: str) -> list[r.ArchitectureProvenance]:
         return self.b.producer.provenance() + [
@@ -69,6 +209,7 @@ class DenseGraph:
         formula: str | None = None,
         kind: Literal["operation", "input", "output"] = "operation",
         fields: tuple[str, ...] = (),
+        extra_provenance: tuple[r.ArchitectureProvenance, ...] = (),
     ) -> str:
         self.children.setdefault(parent, []).append(self.nid(key))
         kwargs = {} if formula is None else {"formula": formula}
@@ -89,11 +230,17 @@ class DenseGraph:
                 parameter_ids=list(parameters),
                 references=references,
                 attributes=[
-                    r.ArchitectureAttribute(name=k, value=v, provenance=self.provenance(*fields))
+                    r.ArchitectureAttribute(
+                        name=k,
+                        value=v,
+                        provenance=self.provenance(*fields) + list(extra_provenance),
+                    )
                     for k, v in (attributes or {}).items()
                 ]
                 + [role_attribute(self.b.producer, operation_role(key, operation))],
-                provenance=self.provenance(*fields) + [source_key(self.b.producer, key)],
+                provenance=self.provenance(*fields)
+                + list(extra_provenance)
+                + [source_key(self.b.producer, key)],
                 **kwargs,
             ),
             semantic_key=key,
@@ -254,20 +401,130 @@ class DenseGraph:
             fields=("rms_norm_eps",),
         )
 
-    def linear(self, key: str, parent: str, inp: int, out: int, bias: bool) -> str:
-        params = [self.parameter(key + ".weight", (out, inp), packed=self.c.quantized)]
+    def linear(
+        self,
+        key: str,
+        parent: str,
+        inp: int,
+        out: int,
+        bias: bool,
+        *,
+        weight_parameter: str | None = None,
+        extra_attributes: dict[str, str | float | bool] | None = None,
+        suppress_formula: bool = False,
+    ) -> LinearNodes:
+        weight = (
+            weight_parameter
+            if weight_parameter is not None
+            else self.parameter(key + ".weight", (out, inp), packed=self.c.quantized)
+        )
+        params = [weight]
         if bias:
             params.append(self.parameter(key + ".bias", (out,)))
-        return self.node(
+        base = self.node(
             key,
             parent,
             "linear",
             {"x": shape("B", "S", inp)},
             shape("B", "S", out),
             parameters=tuple(params),
-            attributes={"bias": bias},
-            formula="y = x Wᵀ + bias" if bias else "y = x Wᵀ",
+            attributes={"bias": bias, **(extra_attributes or {})},
+            formula=None
+            if suppress_formula
+            else ("y = x Wᵀ + bias" if bias else "y = x Wᵀ"),
         )
+        target = self.lora_targets.get(key)
+        if target is None:
+            return LinearNodes(base, base)
+
+        composition = self.lora
+        assert composition is not None
+        adapter_provenance = (
+            r.ArchitectureProvenance(kind="configuration", source="adapter_config.json#/r"),
+            r.ArchitectureProvenance(
+                kind="configuration", source="adapter_config.json#/lora_alpha"
+            ),
+        )
+        a_parameter = self.b.adapter_parameter(
+            key + ".lora_A.weight",
+            target.a_tensor_name,
+            target.a_storage_name,
+            shape(composition.rank, inp),
+            self.provenance()
+            + [r.ArchitectureProvenance(kind="configuration", source="adapter_config.json#/r")],
+        )
+        b_parameter = self.b.adapter_parameter(
+            key + ".lora_B.weight",
+            target.b_tensor_name,
+            target.b_storage_name,
+            shape(out, composition.rank),
+            self.provenance()
+            + [r.ArchitectureProvenance(kind="configuration", source="adapter_config.json#/r")],
+        )
+        a = self.node(
+            key + ".lora_A",
+            parent,
+            "linear",
+            {"x": shape("B", "S", inp)},
+            shape("B", "S", composition.rank),
+            parameters=(a_parameter,),
+            attributes={"bias": False},
+            formula="y = x Aᵀ",
+            extra_provenance=adapter_provenance,
+        )
+        b = self.node(
+            key + ".lora_B",
+            parent,
+            "linear",
+            {"x": shape("B", "S", composition.rank)},
+            shape("B", "S", out),
+            parameters=(b_parameter,),
+            attributes={"bias": False},
+            formula="y = x Bᵀ",
+            extra_provenance=adapter_provenance,
+        )
+        scale = self.node(
+            key + ".lora_scale",
+            parent,
+            "scale",
+            {"x": shape("B", "S", out)},
+            shape("B", "S", out),
+            attributes={
+                "factor": composition.scale,
+                "alpha": composition.alpha,
+                "rank": float(composition.rank),
+            },
+            formula="y = (alpha / r) * x",
+            extra_provenance=adapter_provenance,
+        )
+        residual = self.node(
+            key + ".lora_add",
+            parent,
+            "add",
+            {"base": shape("B", "S", out), "adapter": shape("B", "S", out)},
+            shape("B", "S", out),
+            formula="y = base + adapter",
+            extra_provenance=adapter_provenance,
+        )
+        self.edge(a, b)
+        self.edge(b, scale)
+        self.edge(base, residual, "base")
+        self.edge(scale, residual, "adapter")
+        self.used_storage.update((target.a_storage_name, target.b_storage_name))
+        return LinearNodes(base, residual, a)
+
+    def connect_linear(
+        self,
+        source: str,
+        linear: LinearNodes,
+        *,
+        source_port: str = "out",
+        target_port: str = "x",
+    ) -> str:
+        self.edge(source, linear.base, target_port, source_port)
+        if linear.adapter_input is not None:
+            self.edge(source, linear.adapter_input, target_port, source_port)
+        return linear.output
 
     def layer(self, index: int) -> str:
         c = self.c
@@ -284,10 +541,10 @@ class DenseGraph:
         projected: dict[str, str] = {}
         for branch, heads in (("q", c.heads), ("k", c.kv_heads), ("v", c.kv_heads)):
             base = key + ".self_attn."
-            proj = self.linear(
+            linear = self.linear(
                 base + branch + "_proj", attention, c.hidden, heads * c.head_dim, c.attention_bias
             )
-            self.edge(attention, proj, source_port="x")
+            proj = self.connect_linear(attention, linear, source_port="x")
             split_shape = shape("B", "S", heads, c.head_dim)
             split = self.node(
                 base + branch + "_heads",
@@ -402,10 +659,10 @@ class DenseGraph:
             shape("B", "S", c.heads * c.head_dim),
         )
         self.edge(trans, merge)
-        out = self.linear(
+        linear = self.linear(
             base + "o_proj", attention, c.heads * c.head_dim, c.hidden, c.attention_bias
         )
-        self.edge(merge, out)
+        out = self.connect_linear(merge, linear)
         self.edge(out, attention, "out")
         self.group(
             attention,
@@ -429,10 +686,16 @@ class DenseGraph:
         mlp = key + ".mlp"
         self.b.begin_template(mlp, mlp, "gated_mlp", "mlp")
         self.edge(post, mlp)
-        gate = self.linear(key + ".mlp.gate_proj", mlp, c.hidden, c.intermediate, c.mlp_bias)
-        up = self.linear(key + ".mlp.up_proj", mlp, c.hidden, c.intermediate, c.mlp_bias)
-        self.edge(mlp, gate, source_port="x")
-        self.edge(mlp, up, source_port="x")
+        gate = self.connect_linear(
+            mlp,
+            self.linear(key + ".mlp.gate_proj", mlp, c.hidden, c.intermediate, c.mlp_bias),
+            source_port="x",
+        )
+        up = self.connect_linear(
+            mlp,
+            self.linear(key + ".mlp.up_proj", mlp, c.hidden, c.intermediate, c.mlp_bias),
+            source_port="x",
+        )
         intermediate = shape("B", "S", c.intermediate)
         act = self.node(
             key + ".mlp.activation",
@@ -453,8 +716,10 @@ class DenseGraph:
         )
         self.edge(act, multiply, "gate")
         self.edge(up, multiply, "up")
-        down = self.linear(key + ".mlp.down_proj", mlp, c.intermediate, c.hidden, c.mlp_bias)
-        self.edge(multiply, down)
+        down = self.connect_linear(
+            multiply,
+            self.linear(key + ".mlp.down_proj", mlp, c.intermediate, c.hidden, c.mlp_bias),
+        )
         self.edge(down, mlp, "out")
         self.group(mlp, key, [self.port("x", hidden), self.port("out", hidden, True)], role="mlp")
         final = self.node(
@@ -571,16 +836,19 @@ class DenseGraph:
             previous = layer
         norm = self.norm("model.norm", "model", shape("B", "S", c.hidden), c.hidden)
         self.edge(previous, norm)
-        output = self.node(
-            "lm_head",
-            "model",
-            "linear",
-            {"x": shape("B", "S", c.hidden)},
-            shape("B", "S", c.vocab),
-            parameters=(head,),
-            attributes={"bias": False, "mode": "evaluation; full-sequence static architecture"},
+        output = self.connect_linear(
+            norm,
+            self.linear(
+                "lm_head",
+                "model",
+                c.hidden,
+                c.vocab,
+                False,
+                weight_parameter=head,
+                extra_attributes={"mode": "evaluation; full-sequence static architecture"},
+                suppress_formula=True,
+            ),
         )
-        self.edge(norm, output)
         logits = self.node(
             "logits",
             "model",
@@ -640,7 +908,22 @@ def register_dense_descriptions(registry: DescriptionRegistry) -> None:
                 "language_model",
                 frozenset({family}),
                 frozenset({architecture}),
-                lambda inputs: checked(inputs.configuration) is not None,
+                lambda inputs: (
+                    inputs.lora_composition is None and checked(inputs.configuration) is not None
+                ),
+                build,
+            )
+        )
+        registry.register(
+            Description(
+                Producer(name + "-lora", "1", SOURCE_REVISION),
+                "language_model",
+                frozenset({family}),
+                frozenset({architecture}),
+                lambda inputs: (
+                    inputs.lora_composition is not None
+                    and checked(inputs.configuration) is not None
+                ),
                 build,
             )
         )

@@ -225,12 +225,36 @@ def test_models_and_sessions_expose_native_and_quantized_compositions(settings: 
             )
 
 
+def test_current_smollm_adapter_inert_peft_metadata_is_accepted(settings: Settings) -> None:
+    make_bases(settings.model_root)
+    make_adapter(
+        settings.model_root,
+        config_updates={
+            "inference_mode": True,
+            "lora_dropout": 0.05,
+            "eva_config": None,
+            "lora_ga_config": None,
+            "use_bdlora": None,
+            "qalora_group_size": 16,
+            "megatron_core": "megatron.core",
+        },
+    )
+    models = {model.id for model in ModelCatalogue(settings.model_root).list_models()}
+    assert composite_id("native") in models
+    assert composite_id("gptq") in models
+
+
 @pytest.mark.parametrize(
     "config_updates,factors",
     [
         ({"peft_type": "IA3"}, None),
         ({"task_type": "FEATURE_EXTRACTION"}, None),
         ({"use_dora": True}, None),
+        ({"use_bdlora": True}, None),
+        ({"eva_config": {"enabled": True}}, None),
+        ({"lora_ga_config": {"enabled": True}}, None),
+        ({"megatron_core": "custom.core"}, None),
+        ({"qalora_group_size": 0}, None),
         ({"rank_pattern": {"q_proj": 4}}, None),
         ({"target_modules": ["q_proj", "self_attn.q_proj"]}, None),
         ({"new_inference_option": True}, None),
