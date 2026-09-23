@@ -308,6 +308,16 @@ export interface components {
             size_bytes?: number;
             tokenizer_available: boolean;
         };
+        CatalogueDiagnostic: {
+            /** @enum {string} */
+            code: "peft_adapter_rejected" | "peft_composition_rejected" | "peft_base_unmatched";
+            /** @description Path-free adapter candidate label, never a filesystem path. */
+            candidate: string;
+            /** @description Path-free public identity of the compatible local base, when one was matched. */
+            base_model_id?: string;
+            /** @description Safe, precise reason the adapter candidate was not made selectable. */
+            message: string;
+        };
         CreateSessionRequest: {
             model_id: string;
         };
@@ -1000,6 +1010,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         models: components["schemas"]["ModelSummary"][];
+                        diagnostics: components["schemas"]["CatalogueDiagnostic"][];
                     };
                 };
             };

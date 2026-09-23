@@ -9,7 +9,7 @@ import type { Session } from './session-controller';
 const backend = 'https://backend.example';
 function setup(storage = memoryStorage(), url = backend) {
   const client = new ApiClient({ backendBaseUrl: url }, vi.fn());
-  vi.spyOn(client, 'listModels').mockResolvedValue({ models });
+  vi.spyOn(client, 'listModels').mockResolvedValue({ models, diagnostics: [] });
   vi.spyOn(client, 'listTensors').mockResolvedValue({ tensors, coverage: 'complete', diagnostics: [] });
   vi.spyOn(client, 'createSession').mockResolvedValue(sessionA);
   vi.spyOn(client, 'getSession').mockImplementation(async (id) => id === sessionB.id ? sessionB : sessionA);
@@ -194,10 +194,10 @@ it('ignores late recovery and catalogue results after replacement', async () => 
   controller.chooseModel(models[1]!.id); await tick();
   recovery.resolve(sessionA); await tick();
   expect(controller.getSnapshot().session).toEqual(sessionB);
-  const catalogue = deferred<{ models: typeof models }>();
-  vi.mocked(client.listModels).mockReturnValueOnce(catalogue.promise).mockResolvedValueOnce({ models: [] });
+  const catalogue = deferred<{ models: typeof models; diagnostics: [] }>();
+  vi.mocked(client.listModels).mockReturnValueOnce(catalogue.promise).mockResolvedValueOnce({ models: [], diagnostics: [] });
   controller.loadModels(); controller.loadModels(); await tick();
-  catalogue.resolve({ models }); await tick();
+  catalogue.resolve({ models, diagnostics: [] }); await tick();
   expect(controller.getSnapshot().models).toEqual([]);
   controller.dispose();
 });

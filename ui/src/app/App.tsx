@@ -50,8 +50,12 @@ function BackendApp({ config, slots }: Required<AppProps>) {
       <div className="workspace-frame">
         <div className="workspace-notices">
           {state.catalogue === 'loading' && <p role="status">Loading models…</p>}
-          {state.catalogue === 'complete' && !state.models.length && <p role="status">No models available on this backend.</p>}
+          {state.catalogue === 'complete' && !state.models.length && !state.catalogueDiagnostics.length && <p role="status">No models available on this backend.</p>}
+          {state.catalogue === 'complete' && !state.models.length && !!state.catalogueDiagnostics.length && <p role="status">No selectable models are available.</p>}
           {state.catalogue === 'failed' && <p role="alert">Could not load models. The backend is unreachable or returned an invalid response.</p>}
+          {state.catalogueDiagnostics.map((diagnostic, index) => <p key={`${diagnostic.candidate}-${diagnostic.base_model_id ?? ''}-${diagnostic.code}-${index}`} role="alert">
+            {diagnostic.candidate}{diagnostic.base_model_id ? ` · ${diagnostic.base_model_id}` : ''}: {diagnostic.message}
+          </p>)}
           {state.message && <p role="status">{state.message}</p>}
           {state.sessionStatus === 'failed' && <Button onClick={() => controller.retrySession()}>Retry session</Button>}
           {!state.storageAvailable && <p>Tab storage is unavailable. This session cannot be recovered after refresh.</p>}

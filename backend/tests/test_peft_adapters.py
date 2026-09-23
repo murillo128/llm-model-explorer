@@ -288,10 +288,16 @@ def test_invalid_or_unsupported_adapters_are_not_candidates(
 ) -> None:
     make_bases(settings.model_root)
     make_adapter(settings.model_root, config_updates=config_updates, factors=factors)
-    assert {model.id for model in ModelCatalogue(settings.model_root).list_models()} == {
+    listing = ModelCatalogue(settings.model_root).list_catalogue()
+    assert {model.id for model in listing.models} == {
         UPSTREAM,
         f"{UPSTREAM}@gptq-int4",
     }
+    assert listing.diagnostics
+    assert all(diagnostic.candidate == "adapter" for diagnostic in listing.diagnostics)
+    assert str(settings.model_root) not in json.dumps(
+        [diagnostic.model_dump(mode="json") for diagnostic in listing.diagnostics]
+    )
 
 
 @pytest.mark.parametrize("fault", ["malformed-config", "ambiguous-payload", "invalid-index"])
@@ -310,10 +316,40 @@ def test_malformed_or_ambiguous_adapter_files_are_not_candidates(
         first = next(iter(document["weight_map"]))
         document["weight_map"][first] = "../outside.safetensors"
         index.write_text(json.dumps(document))
-    assert {model.id for model in ModelCatalogue(settings.model_root).list_models()} == {
+    listing = ModelCatalogue(settings.model_root).list_catalogue()
+    assert {model.id for model in listing.models} == {
         UPSTREAM,
         f"{UPSTREAM}@gptq-int4",
     }
+    assert listing.diagnostics and listing.diagnostics[0].candidate == "adapter"
+
+
+def test_rejected_peft_candidate_is_diagnosed_by_models_api_but_not_selectable(
+    settings: Settings,
+) -> None:
+    make_bases(settings.model_root)
+    make_adapter(settings.model_root, config_updates={"new_inference_option": True})
+
+    with TestClient(create_app(settings)) as client:
+        response = client.get("/models")
+        assert response.status_code == 200
+        document = response.json()
+        assert {model["id"] for model in document["models"]} == {
+            UPSTREAM,
+            f"{UPSTREAM}@gptq-int4",
+        }
+        assert document["diagnostics"] == [
+            {
+                "code": "peft_adapter_rejected",
+                "candidate": "adapter",
+                "message": (
+                    "LoRA adapter candidate was rejected: "
+                    "Adapter metadata contains an unsupported option."
+                ),
+            }
+        ]
+        assert str(settings.model_root) not in response.text
+        assert client.post("/sessions", json={"model_id": composite_id()}).status_code == 404
 
 
 def test_duplicate_factor_alias_is_rejected(settings: Settings) -> None:

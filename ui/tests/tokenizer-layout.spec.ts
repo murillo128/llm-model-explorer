@@ -27,7 +27,7 @@ async function start(page: Page) {
   await page.route('https://backend.example/**', route => {
     const path = new URL(route.request().url()).pathname;
     if (route.request().method() === 'DELETE') return route.fulfill({ status: 204 });
-    if (path === '/models') return route.fulfill({ json: { models } });
+    if (path === '/models') return route.fulfill({ json: { models, diagnostics: [] } });
     if (path === '/sessions') return route.fulfill({ status: 201, json: sessionA });
     if (path.endsWith('/tensors')) return route.fulfill({ json: { coverage: 'complete', diagnostics: [], tensors: [] } });
     if (path.endsWith('/tokenize')) {

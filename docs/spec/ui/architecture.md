@@ -24,6 +24,8 @@ React composes one reusable application bar, a bounded workspace, and a bottom s
 
 Normal use does not scroll the document. Each explorer owns its bounded composition inside the remaining workspace. Switching explorers does not duplicate page headings or model identity. Session lifecycle and consumer ownership continue through the existing controller and API. Preserve accepted matrix-camera and tokenizer stale-result behavior; the new graph does not redesign either explorer.
 
+Keep path-free catalogue diagnostics for rejected PEFT adapter candidates visible in the workspace notices, including when no selectable model is available. Rejected adapter compositions never appear as model options and cannot start sessions.
+
 ## Progressive results
 
 Consume numerical long-operation responses incrementally; begin rendering before the entire tensor arrives. Cancellation aborts the active stream and uses operation cancellation where required.
