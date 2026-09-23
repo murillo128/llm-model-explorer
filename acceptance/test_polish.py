@@ -30,9 +30,7 @@ def fixture_model_id(service, family=None):
 
 
 def embedding_result(service, prefix, ids):
-    with service.client.stream(
-        "POST", prefix + "/embeddings", json={"token_ids": ids}
-    ) as response:
+    with service.client.stream("POST", prefix + "/embeddings", json={"token_ids": ids}) as response:
         frames = Frames(response).rest()
     assert frames[0][0] == 1 and frames[-1] == (4, b"")
     metadata = json.loads(frames[0][1])
@@ -76,9 +74,7 @@ def assert_analysis(service, path, expected):
         if not math.isfinite(scalar):
             continue
         bin_index = (
-            50
-            if low == high
-            else min(99, math.floor((float(scalar) - low) / (high - low) * 100))
+            50 if low == high else min(99, math.floor((float(scalar) - low) / (high - low) * 100))
         )
         row_counts[row, bin_index] += 1
         column_counts[bin_index, column] += 1
@@ -87,16 +83,12 @@ def assert_analysis(service, path, expected):
 
 @pytest.mark.parametrize("family", ["qwen3", "qwen35"])
 @pytest.mark.parametrize("unresolved", [False, True], ids=["complete", "partial"])
-def test_packed_inventory_data_analysis_and_embedding_rows_over_tcp(
-    tmp_path, family, unresolved
-):
+def test_packed_inventory_data_analysis_and_embedding_rows_over_tcp(tmp_path, family, unresolved):
     fixture = packed_table(tmp_path / "models", family, unresolved=unresolved)
     expected = fixture.expected()  # Scalar format oracle, including negative-zero bits.
     service = Service(tmp_path, model_root=tmp_path / "models")
     try:
-        response = service.client.post(
-            "/sessions", json={"model_id": fixture_model_id(service)}
-        )
+        response = service.client.post("/sessions", json={"model_id": fixture_model_id(service)})
         assert response.status_code == 201, response.text
         prefix = f"/sessions/{response.json()['id']}"
         inventory = service.client.get(prefix + "/tensors").json()
@@ -124,18 +116,13 @@ def test_packed_inventory_data_analysis_and_embedding_rows_over_tcp(
         ids = [rows - 1, 0, 1, rows - 1, 1]
         metadata, payload = embedding_result(service, prefix, ids)
         assert metadata["shape"] == [len(ids), columns]
-        assert payload == b"".join(
-            expected[i * columns * 4 : (i + 1) * columns * 4] for i in ids
-        )
+        assert payload == b"".join(expected[i * columns * 4 : (i + 1) * columns * 4] for i in ids)
         assert embedding_result(service, prefix, [])[0]["shape"] == [0, columns]
         if unresolved:
             unknown = hashlib.sha256(b"unknown.packed").hexdigest()
             for kind in ("data", "statistics", "distributions"):
                 response = service.client.get(f"{prefix}/tensors/{unknown}/{kind}")
-                assert (
-                    response.status_code == 404
-                    and response.json()["code"] == "tensor_not_found"
-                )
+                assert response.status_code == 404 and response.json()["code"] == "tensor_not_found"
         assert str(tmp_path) not in json.dumps(inventory)
     finally:
         service.stop()
@@ -181,9 +168,7 @@ def test_text_families_and_non_text_capability_over_tcp(tmp_path):
         assert session.status_code == 201
         prefix = f"/sessions/{session.json()['id']}"
         for ids in ([], [0]):
-            response = service.client.post(
-                prefix + "/embeddings", json={"token_ids": ids}
-            )
+            response = service.client.post(prefix + "/embeddings", json={"token_ids": ids})
             assert (
                 response.status_code == 422
                 and response.json()["code"] == "unsupported_representation"
@@ -194,8 +179,7 @@ def test_text_families_and_non_text_capability_over_tcp(tmp_path):
         inventory = service.client.get(prefix + "/tensors").json()
         tensor = next(t for t in inventory["tensors"] if t["rank"] == 2)
         assert (
-            result(service, f"{prefix}/tensors/{tensor['id']}/data")[0]["shape"]
-            == tensor["shape"]
+            result(service, f"{prefix}/tensors/{tensor['id']}/data")[0]["shape"] == tensor["shape"]
         )
     finally:
         service.stop()
@@ -210,9 +194,7 @@ def test_local_quantized_checkpoint_input_rows(tmp_path, family):
     if family not in entries:
         if os.environ.get("LMEX_REQUIRE_ARCHITECTURE_REFERENCES") == "1":
             pytest.fail(f"Required complete local {family} checkpoint is missing")
-        pytest.skip(
-            f"No configured local {family} checkpoint; fixture success is separate"
-        )
+        pytest.skip(f"No configured local {family} checkpoint; fixture success is separate")
     directory, model_id, evidence = inventory(family, entries[family])
     name = (
         "model.embed_tokens.weight"
@@ -239,14 +221,10 @@ def test_local_quantized_checkpoint_input_rows(tmp_path, family):
         assert metadata["shape"] == [len(ids), hidden]
         assert payload == expected
         assert embedding_result(service, prefix, [])[0]["shape"] == [0, hidden]
-        evidence.update(
-            shape=[len(ids), hidden], token_ids=ids, exact_bytes=len(expected)
-        )
+        evidence.update(shape=[len(ids), hidden], token_ids=ids, exact_bytes=len(expected))
         if output := os.environ.get("LMEX_EVIDENCE_DIR"):
             Path(output).mkdir(parents=True, exist_ok=True)
-            (Path(output) / f"input-rows-{family}.json").write_text(
-                json.dumps(evidence, indent=2)
-            )
+            (Path(output) / f"input-rows-{family}.json").write_text(json.dumps(evidence, indent=2))
     finally:
         service.stop()
         service.client.close()
