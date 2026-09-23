@@ -1,4 +1,5 @@
 import { memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import type { ReactNode } from 'react';
 import type { Node, NodeProps } from '@xyflow/react';
@@ -22,6 +23,7 @@ import { semanticRole } from './semantic-role';
 import { displayLabel, instanceOf } from './presentation';
 import { ArchitectureBrowser } from './ArchitectureBrowser';
 import { ArchitectureWorkspace } from './ArchitectureWorkspace';
+import { useArchitectureBrowserTarget } from './architecture-browser-target';
 import { browserExpansionId } from './browser-model';
 import { CameraDock } from './CameraDock';
 import { ArchitectureControls } from './ArchitectureControls';
@@ -139,6 +141,7 @@ const nodeTypes = { architecture: OperationNode }, edgeTypes = { connection: Con
 
 export function ArchitectureCanvas(props: CanvasProps) { return <ReactFlowProvider><Canvas {...props} /></ReactFlowProvider>; }
 function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspection, notices }: CanvasProps) {
+  const browserTarget = useArchitectureBrowserTarget();
   const flow = useReactFlow<CanvasNode>();
   const options = useGraphView(view);
   const { selected, selectionMode, focus: focusId, edge: pinned, activeStack, shared } = view;
@@ -679,9 +682,9 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     center: centerDerived, clear: clearSelection,
     explore: selected !== options.scope ? exploreSelected : undefined,
   } : undefined;
-  return <ArchitectureWorkspace browser={<ArchitectureBrowser graph={graph} view={view} searchRef={browserSearch}
-    select={selectSource} selectBoundary={selectBoundary} selectFamily={selectFamily} toggle={toggleBrowser} exploreStack={exploreStack} />}>
-    <div ref={panel} tabIndex={-1} className="architecture-explorer explorer-card" aria-label="Architecture graph" data-graph-id={graph.graph_id}
+  const browser = <ArchitectureBrowser graph={graph} view={view} searchRef={browserSearch}
+    select={selectSource} selectBoundary={selectBoundary} selectFamily={selectFamily} toggle={toggleBrowser} exploreStack={exploreStack} />;
+  const canvas = <div ref={panel} tabIndex={-1} className="architecture-explorer explorer-card" aria-label="Architecture graph" data-graph-id={graph.graph_id}
     data-template-id={shared?.templateId ?? ''} data-template-instance-id={shared?.instanceId ?? ''}
     data-scope-id={concreteInstance?.node_id ?? options.scope ?? ''} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
     data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options || !result.error && !cameraState.ready}
@@ -724,5 +727,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
           if (picker.current) nativeInspect(records.get(id)!, picker.current);
         }} />}
     </div>
-  </div></ArchitectureWorkspace>;
+  </div>;
+  return browserTarget === undefined ? <ArchitectureWorkspace browser={browser}>{canvas}</ArchitectureWorkspace> :
+    <>{browserTarget && createPortal(browser, browserTarget)}{canvas}</>;
 }

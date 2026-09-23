@@ -104,6 +104,15 @@ Store only pane preferences in optional local storage with an in-memory fallback
 graph-specific navigation remains scoped to backend/model/graph view lifetime.
 Collapse and resize never remount the canvas, refetch, restart numeric consumers
 or invoke Fit view.
+Resolve the saved visibility and preferred width before the first Architecture
+workspace frame; missing or invalid preferences default to an expanded browser.
+Keep the browser card, its fixed header and collapse control, and the chosen
+layout mounted during session and graph retrieval. The body shows accessible
+loading, error, or unavailable content until the current graph's browser is
+ready. Graph arrival replaces only that body; it does not expand a collapsed
+pane, change its preferred width, move the central card, or trigger a second
+layout or Fit. Collapse and resize during loading remain effective. On model or
+graph replacement, remove obsolete actionable rows and reject late old results.
 
 Component names select the exact source component on both surfaces, including
 nonzero repeated instances. Selection does not expand, inspect, reveal, change

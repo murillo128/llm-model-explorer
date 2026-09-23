@@ -117,9 +117,16 @@
 .architecture-workspace { display: grid; grid-template-columns: var(--browser-width) 16px minmax(0, 1fr); flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
 .architecture-workspace.browser-hidden { grid-template-columns: 40px minmax(0, 1fr); }
 .architecture-workspace > [hidden] { display: none; }
+.architecture-workspace > .working-surface { display: flex; overflow: hidden; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.architecture-workspace > .working-surface > .surface-content { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; padding: 4px; gap: 0; }
+.architecture-workspace .architecture-empty { flex: 1; }
 #architecture-browser { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 #architecture-browser[hidden] { display: none; }
 #architecture-browser .inventory-header { position: static; flex-shrink: 0; }
+.architecture-browser-content { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.architecture-browser-content:has(.architecture-browser-search, .architecture-browser-state) > .architecture-browser-placeholder { display: none; }
+.architecture-browser-status { margin: 0; padding: 12px; color: var(--ui-text-muted); font-size: 13px; }
+.architecture-browser-state { margin: 0; padding: 12px; color: var(--ui-text-muted); font-size: 13px; }
 .architecture-browser-search { display: flex; gap: 2px; padding: 8px; flex-shrink: 0; }
 .architecture-browser-search input { width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--ui-border); border-radius: 4px; background: var(--ui-surface); color: var(--ui-text); font: inherit; font-size: 12px; }
 .architecture-browser-scroll { overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 0 6px 8px; flex: 1; }
