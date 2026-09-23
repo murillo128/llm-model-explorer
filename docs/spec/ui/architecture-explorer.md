@@ -243,7 +243,7 @@ An unavailable representation, fused region, unresolved binding, or higher-rank 
 
 Closing the modal restores focus and leaves camera/expansion intact. Escape closes it; focus stays contained while open. Keyboard users can select/expand/inspect components and connections without pointer-only access. Release numeric subscriptions, operation handles, CPU/GPU resources, and obsolete callbacks on close or replacement. A late result must not populate a different node/model's modal. Existing stream cancellation must preserve other consumers of shared work.
 
-Resource references are semantic: model scope, modules, parameters, and an optional tokenizer. They contain no UI routes. The initial numeric action is weight inspection; future Tokenizer Explorer or computation-view links can be added by the UI without rewriting the static graph. Do not display buttons for unimplemented endpoints or fabricate runtime activation resources.
+Resource references are semantic: model scope, modules, parameters, and an optional tokenizer. They contain no UI routes. The numeric action remains weight inspection; for a selected PEFT composition, its verified `lora_A` and `lora_B` parameters open through the same weight-inspection modal as base tensors. Do not present a merged delta as a tensor or imply that the static graph executed the adapter. Future Tokenizer Explorer or computation-view links can be added by the UI without rewriting the static graph. Do not display buttons for unimplemented endpoints or fabricate runtime activation resources.
 
 ## Language and V-JEPA presentation
 
