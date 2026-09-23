@@ -17,8 +17,11 @@ def run(args, *, cwd=None, env=None, check=True):
     result = subprocess.run([str(a) for a in args], cwd=cwd, env=env,
                             text=True, capture_output=True, timeout=180)
     if check and result.returncode:
-        # Command output may contain remote URLs or authentication details.
-        raise ControlError(f"{Path(args[0]).name} command failed (exit {result.returncode})")
+        # Git output may contain remote URLs or authentication details.
+        # tmux receives only fixed control arguments and private local paths;
+        # preserve its bounded diagnostic so a failed spawn is actionable.
+        detail = ": " + result.stderr.strip()[:500].replace("\n", " ") if Path(args[0]).name == "tmux" else ""
+        raise ControlError(f"{Path(args[0]).name} command failed (exit {result.returncode}){detail}")
     return result
 
 
