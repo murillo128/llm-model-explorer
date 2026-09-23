@@ -1495,13 +1495,22 @@ test('integrated two-card embeddings have real scientific parity with the same c
     await expect(page.locator('.tokenizer-workspace .viewer-panel')).toHaveCount(2);
     const promptCard = await page.locator('.prompt-panel .viewer-panel').evaluate(panel => {
       const rect = (node: Element) => node.getBoundingClientRect().toJSON();
+      const bounds = panel.getBoundingClientRect();
+      const style = getComputedStyle(panel);
+      const left = bounds.left + parseFloat(style.borderLeftWidth);
+      const right = bounds.right - parseFloat(style.borderRightWidth);
       return {
-        panel: rect(panel), title: rect(panel.querySelector('.matrix-panel-header')!), body: rect(panel.querySelector('.viewer-panel-body')!),
+        inner: { left, right, width: right - left },
+        title: rect(panel.querySelector('.matrix-panel-header')!), body: rect(panel.querySelector('.viewer-panel-body')!),
       };
     });
-    expect(promptCard.title.width).toBe(promptCard.panel.width);
+    expect(promptCard.title.left).toBe(promptCard.inner.left);
+    expect(promptCard.title.right).toBe(promptCard.inner.right);
+    expect(promptCard.title.width).toBe(promptCard.inner.width);
     expect(promptCard.body.y).toBe(promptCard.title.bottom);
-    expect(promptCard.body.width).toBe(promptCard.panel.width);
+    expect(promptCard.body.left).toBe(promptCard.inner.left);
+    expect(promptCard.body.right).toBe(promptCard.inner.right);
+    expect(promptCard.body.width).toBe(promptCard.inner.width);
     await integratedCard(page.locator('.embedding-layer:not([data-staging]) .viewer-panel'));
     await page.screenshot({ path: info.outputPath(`two-cards-populated-${width}.png`) });
   }

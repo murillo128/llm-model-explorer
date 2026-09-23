@@ -349,7 +349,8 @@ test('deterministic production [smollm2] shows the precise model-owned load fail
   const body = await (await response).json();
   expect(body).toMatchObject({ status: 'unavailable', reason: 'analysis_failed',
     diagnostics: [{ code: finding.code, message: finding.message }] });
-  await expect(page.getByText('Architecture preparation failed for this model.')).toBeVisible();
+  await expect(page.getByLabel('Architecture capability', { exact: true })
+    .getByRole('status').getByText('Architecture preparation failed for this model.', { exact: true })).toBeVisible();
   await expect(page.locator('.architecture-capability-state').getByText(finding.message)).toBeVisible();
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveCount(0);
 });
