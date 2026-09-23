@@ -37,6 +37,17 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
   const started = performance.now();
   if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
   const projection = projectGraph(graph, options);
+  const projectedNodes = new Map(projection.nodes.map((node) => [node.id, node]));
+  const descendant = (id: string, ancestor: string) => {
+    for (let node = projectedNodes.get(id); node?.parentId; node = projectedNodes.get(node.parentId)) {
+      if (node.parentId === ancestor) return true;
+    }
+    return false;
+  };
+  const raisedPorts = new Set<string>();
+  for (const edge of projection.edges) for (const [boundary, other] of [[edge.source, edge.target], [edge.target, edge.source]] as const) {
+    if (projectedNodes.get(boundary.node_id)?.expanded && descendant(other.node_id, boundary.node_id)) raisedPorts.add(endpointKey(boundary));
+  }
   const elkNodes = new Map<string, ElkNode>();
   const sourceIds = new Map<string, string>();
   const portIds = new Map<string, { nodeId: string; portId: string; side: 'left' | 'right' }>();
@@ -44,8 +55,11 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
   const parameters = new Map(graph.parameters.map((p) => [p.id, p]));
   const annotated = new Set([...graph.repetitions.flatMap((r) => r.instances.map((i) => i.node_id)),
     ...graph.diagnostics.flatMap((d) => d.node_id ? [d.node_id] : [])]);
+  const metricsByNode = new Map<string, ReturnType<typeof cardMetrics>>();
   for (const [index, node] of projection.nodes.entries()) {
-    const metrics = cardMetrics(node, cardSummary(node.record, parameters), Boolean(options.dimensions), annotated.has(node.id));
+    const raised = new Set(node.ports.filter((port) => raisedPorts.has(endpointKey({ node_id: node.id, port_id: port.id }))).map((port) => port.id));
+    const metrics = cardMetrics(node, cardSummary(node.record, parameters), Boolean(options.dimensions), annotated.has(node.id), raised);
+    metricsByNode.set(node.id, metrics);
     const id = `node-${index}`;
     sourceIds.set(id, node.id);
     const rows = { input: 0, output: 0 };
@@ -160,7 +174,10 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
       for (const port of node.ports ?? []) {
         const identity = portIds.get(port.id)!;
         const x = (port.x ?? 0) + (port.width ?? 0) / 2, y = (port.y ?? 0) + (port.height ?? 0) / 2;
-        ports.push({ ...identity, x, y, absoluteX: absoluteX + x, absoluteY: absoluteY + y });
+        const metric = metricsByNode.get(id)!.portLabels[identity.portId]!;
+        ports.push({ ...identity, x, y, absoluteX: absoluteX + x, absoluteY: absoluteY + y,
+          label: { x: absoluteX + x + (identity.side === 'left' ? 9 : -9 - metric.width), y: absoluteY + y + metric.top,
+            width: metric.width, height: metric.height, clearance: metric.clearance, raised: metric.raised } });
       }
     }
     for (const edge of node.edges ?? []) routed.push({ edge, parent: node.id });
@@ -243,6 +260,7 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
         if (!delta) return;
         const from = { x: position.absoluteX, y: position.absoluteY };
         position.y += delta; position.absoluteY += delta;
+        position.label.y += delta;
         moved.set(endpointKey({ node_id: node.id, port_id: position.portId }), { from, to: { x: position.absoluteX, y: position.absoluteY }, fraction: (index + 1) / (ordered.length + 1) });
       });
     }
@@ -266,6 +284,19 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
         }
         return reverse ? points.reverse() : points;
       });
+    }
+  }
+  // ELK reports section points and compound port positions through different
+  // floating-point addition paths. Share the exact endpoint coordinates with
+  // the rendered terminal and the route after any boundary permutation.
+  for (const edge of projection.edges) {
+    const route = byRoute.get(edge.id)!;
+    for (const endpoint of [edge.source, edge.target]) {
+      const port = byEndpoint.get(endpointKey(endpoint))!;
+      for (const section of route.sections) for (const index of [0, section.length - 1]) {
+        const point = section[index]!;
+        if (near(point, { x: port.absoluteX, y: port.absoluteY })) section[index] = { x: port.absoluteX, y: port.absoluteY };
+      }
     }
   }
   const represented = new Set([...projection.edges.flatMap((edge) => edge.originalEdgeIds), ...(projection.boundaryPaths ?? []).flat().map((e) => e.id)]);
