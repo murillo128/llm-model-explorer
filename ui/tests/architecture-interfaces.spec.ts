@@ -10,6 +10,32 @@ const ready = async (page: import('@playwright/test').Page) => {
 };
 const camera = (page: import('@playwright/test').Page) => page.locator('.react-flow__viewport').getAttribute('style');
 
+test('rotary sin and causal mask stay separately targetable after visual ordering', async ({ page }, info) => {
+  await page.goto(`${harness}?fixture=routing-context`); await ready(page);
+  await graphAction(page, 'Show all operations'); await ready(page);
+  await graphAction(page, 'Fit view'); await ready(page);
+  const sin = page.locator('.architecture-connection[data-source-node="sin"][data-target-node="use"][data-target-port="sin"]');
+  const mask = page.locator('.architecture-connection[data-source-node="mask"][data-target-node="use"][data-target-port="causal mask"]');
+  await expect(sin).toHaveCount(1); await expect(mask).toHaveCount(1);
+  const emphasized = () => page.locator('.architecture-connection[data-emphasized="true"]')
+    .evaluateAll((edges) => edges.map((edge) => edge.getAttribute('data-edge-id')!).sort());
+  const sinId = (await sin.getAttribute('data-edge-id'))!, maskId = (await mask.getAttribute('data-edge-id'))!;
+  for (const dimensions of [false, true]) {
+    if (dimensions) { await graphPreference(page, 'Show dimensions', true); await ready(page); }
+    const before = await camera(page), count = await page.locator(panel).getAttribute('data-layout-count');
+    for (const [node, target, id] of [['sin', 'sin', sinId], ['mask', 'causal mask', maskId]] as const) {
+      const source = page.locator(`.architecture-port[data-node-id=${JSON.stringify(node)}] .architecture-port-label`);
+      const input = page.locator(`.architecture-port[data-node-id="use"][data-port-id=${JSON.stringify(target)}] .architecture-port-label`);
+      await source.hover(); await expect.poll(emphasized).toEqual([id]);
+      await input.hover(); await expect.poll(emphasized).toEqual([id]);
+    }
+    await page.mouse.move(0, 0); await expect.poll(emphasized).toEqual([]);
+    expect(await camera(page)).toBe(before);
+    await expect(page.locator(panel)).toHaveAttribute('data-layout-count', count!);
+  }
+  await info.attach('rotary-context-routes', { body: await page.screenshot(), contentType: 'image/png' });
+});
+
 for (const kind of ['dense', 'hybrid', 'visual'] as const) test(`${kind}: declarations stay as ports across browser, dimensions, collapse and restore`, async ({ page }, info) => {
   const calls: string[] = []; page.on('request', (r) => { if (/\/sessions\//.test(r.url())) calls.push(r.url()); });
   await page.goto(`${harness}?fixture=interface-${kind}`); await ready(page);

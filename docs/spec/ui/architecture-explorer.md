@@ -402,6 +402,8 @@ Expanded group geometry is determined by the visible children, their labels, por
 
 Connection routing must keep distinct signals visually distinguishable. Routes should avoid unrelated node bodies and labels, preserve exact source and destination ports, and use clear destination arrowheads. A shared trunk is valid only for genuine fan-out from the same source signal/port; unrelated signals that happen to share a label, shape, or corridor must remain individually traceable. Group-boundary forwarding may be composed into one visible route, but must retain the original edge and port identities represented by that route.
 
+Order external context cards and visual boundary ports with their exact connected producers and consumers where feasible, without changing source hierarchy or execution order. Align simple connections before adding bends; keep any unavoidable crossing in open routing space. Each port's displayed name and optional dimensions have a padded rectangle that no connection may cross. A connection must depart its source and approach its destination on a straight horizontal lane past any label on that side, with a small margin before a bend or branch. Other signals may not cross that lane; genuine fan-out may share the source lane before branching beyond it. Container gutters and row spacing may grow to preserve these clearances, while bounded layout failure remains explicit and recoverable.
+
 Changing hover, keyboard focus, or pinned connection selection must not move nodes, change port positions, refit the camera, or recompute layout. A layout failure is recoverable and explicit; it must not silently fall back to an unreadable vertical stacking mode.
 
 ## Clean default presentation and dimensions
