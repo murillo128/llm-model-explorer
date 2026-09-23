@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 from math import isfinite
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, NoReturn
 
 from . import records as r
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
@@ -46,7 +46,7 @@ class DenseGraph:
         self.lora = inputs.lora_composition
         self.lora_targets = self._validate_lora()
 
-    def _lora_error(self, code: str, message: str) -> None:
+    def _lora_error(self, code: str, message: str) -> NoReturn:
         raise GraphError(code, message)
 
     def _validate_lora(self) -> dict[str, "PeftLoraTarget"]:

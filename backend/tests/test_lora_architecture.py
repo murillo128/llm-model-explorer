@@ -171,7 +171,7 @@ def make_qwen_native_and_gptq(root: Path) -> tuple[str, str]:
     return model_id, adapter_id
 
 
-def analyze(source: object):
+def analyze(source: ModelSource) -> tuple[AnalysisInput, r.ArchitectureGraph]:
     inputs = AnalysisInput.from_source(source, tokenizer_available=False)
     registry = DescriptionRegistry()
     register_dense_descriptions(registry)

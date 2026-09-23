@@ -41,7 +41,8 @@ class MetadataSource(Protocol):
     def tensors(self) -> tuple[TensorDescriptor, ...]: ...
     def check_unchanged(self, *, rehash: bool = False) -> None: ...
 
-    lora_composition: PeftLoraComposition | None
+    @property
+    def lora_composition(self) -> PeftLoraComposition | None: ...
 
 
 @dataclass(frozen=True)
