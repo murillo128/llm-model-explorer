@@ -120,7 +120,7 @@ test('blocking safe validation finding remains discoverable after dismissal with
   await expect(band.getByRole('status')).toContainText('Error'); await expect(band).toContainText(precise);
   await band.getByRole('button', { name: 'Dismiss architecture notices' }).click();
   await expect(page.getByLabel('Architecture capability')).toBeFocused();
-  await expect(page.getByText('Architecture preparation failed for this model.', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Architecture capability').getByText('Architecture preparation failed for this model.', { exact: true })).toBeVisible();
   await expect(page.getByText('Restart the backend to prepare this model again.')).toBeVisible();
   const details = await information(page); await expect(details).toContainText(precise); await expect(details).toContainText('0 warnings · 1 errors');
   await expect(page.locator('.react-flow')).toHaveCount(0);
