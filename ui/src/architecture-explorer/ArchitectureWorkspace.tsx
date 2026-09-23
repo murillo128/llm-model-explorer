@@ -23,9 +23,11 @@ export function ArchitectureWorkspace({ browser, browserPlaceholder = false, chi
   const attachBrowser = useCallback((node: HTMLDivElement | null) => setBrowserTarget(node), []);
   const limit = Math.max(minimum, Math.min(maximum, available - 360 - 16));
   const width = Math.min(preference.width, limit), hidden = !preference.visible;
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = main.current!;
-    const observer = new ResizeObserver(() => setAvailable(node.clientWidth));
+    const measure = () => setAvailable(node.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(node); return () => observer.disconnect();
   }, []);
   useEffect(() => writeInventoryPreference(preferenceKey, preference), [preference]);

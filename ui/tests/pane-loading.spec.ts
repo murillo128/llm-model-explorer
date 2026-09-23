@@ -4,6 +4,8 @@ import { contractInventory, contractResponse } from './architecture-fixtures';
 import { models, sessionA, sessionB, tensors } from '../src/test/shell-fixtures';
 
 const backend = 'https://pane-loading.example';
+type PaneFrame = { pane: number; centerX: number; centerWidth: number };
+type PaneFrames = { tensor: PaneFrame[]; architecture: PaneFrame[] };
 const preference = (page: Page, key: string, value: unknown) => page.addInitScript(({ key, value }) => {
   localStorage.setItem(key, JSON.stringify(value));
 }, { key, value });
@@ -37,6 +39,41 @@ async function configure(page: Page, respond: (path: string, method: string, mod
     await route.fulfill({ status: result.status ?? 200, json: result.json });
   });
 }
+
+test('saved pane width is applied in the first rendered frame for both explorers', async ({ page }) => {
+  test.skip(page.viewportSize()!.width <= 760, 'The narrow layout stacks panes at the viewport width.');
+  await page.addInitScript(() => {
+    localStorage.setItem('lmex.tensor-inventory.pane', JSON.stringify({ visible: true, width: 344 }));
+    localStorage.setItem('lmex.architecture-browser.pane', JSON.stringify({ visible: true, width: 344 }));
+    const frames: PaneFrames = { tensor: [], architecture: [] };
+    Object.assign(window, { paneFirstFrames: frames });
+    for (const [key, selector] of [['tensor', '#tensor-inventory'], ['architecture', '#architecture-browser']] as const) {
+      const observer = new MutationObserver(() => {
+        const pane = document.querySelector<HTMLElement>(selector);
+        if (!pane) return;
+        observer.disconnect();
+        const center = pane.parentElement!.querySelector<HTMLElement>('.working-surface')!;
+        const capture = () => {
+          const side = pane.getBoundingClientRect(), body = center.getBoundingClientRect();
+          frames[key].push({ pane: side.width, centerX: body.x, centerWidth: body.width });
+          if (frames[key].length < 3) requestAnimationFrame(capture);
+        };
+        requestAnimationFrame(capture);
+      });
+      observer.observe(document, { childList: true, subtree: true });
+    }
+  });
+  await configure(page, async (path) => path === '/models' ? { json: { models } } : { json: sessionA });
+  await page.goto('/');
+  const samples = () => page.evaluate(() => (window as typeof window & { paneFirstFrames: PaneFrames }).paneFirstFrames);
+  await expect.poll(async () => (await samples()).tensor.length).toBe(3);
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  await expect.poll(async () => (await samples()).architecture.length).toBe(3);
+  for (const frames of Object.values(await samples())) {
+    expect(frames.map((frame) => frame.pane)).toEqual([344, 344, 344]);
+    expect(frames.every((frame) => frame.centerX === frames[0]!.centerX && frame.centerWidth === frames[0]!.centerWidth)).toBe(true);
+  }
+});
 
 test('inventory shell survives delayed session and inventory changes without replacing user choices', async ({ page }) => {
   const session = gate(), inventory = gate();
