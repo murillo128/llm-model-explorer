@@ -18,6 +18,15 @@ _NAME = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]*\Z")
 _FACTOR = re.compile(
     r"^(?P<module>.+)\.lora_(?P<factor>A|B)(?:\.(?P<adapter>[A-Za-z0-9_-]+))?\.weight$"
 )
+_DENSE_LINEAR_MODULE = re.compile(
+    r"^model\.layers\.(?P<layer>0|[1-9][0-9]*)\."
+    r"(?:self_attn\.(?:q_proj|k_proj|v_proj|o_proj)|"
+    r"mlp\.(?:gate_proj|up_proj|down_proj))$"
+)
+_SUPPORTED_CAUSAL_ARCHITECTURES = {
+    ("llama", "LlamaForCausalLM"),
+    ("qwen3", "Qwen3ForCausalLM"),
+}
 
 _KNOWN_FIELDS = {
     "_commit_hash",
@@ -136,6 +145,29 @@ def _factor_module(name: str) -> tuple[str, str, str | None]:
     return module, match.group("factor"), match.group("adapter")
 
 
+def _supported_linear_module(config: dict[str, object], module: str) -> bool:
+    architectures = config.get("architectures")
+    if (
+        not isinstance(architectures, list)
+        or len(architectures) != 1
+        or not isinstance(architectures[0], str)
+        or (config.get("model_type"), architectures[0]) not in _SUPPORTED_CAUSAL_ARCHITECTURES
+    ):
+        return False
+    if module == "lm_head":
+        return True
+    layer_count = config.get("num_hidden_layers")
+    match = _DENSE_LINEAR_MODULE.fullmatch(module)
+    if (
+        type(layer_count) is not int
+        or not 0 < layer_count <= MAX_SAFE_INTEGER
+        or match is None
+        or len(match.group("layer")) > 16
+    ):
+        return False
+    return int(match.group("layer")) < layer_count
+
+
 def validate_adapter(
     config: dict[str, object], physical: tuple[PhysicalTensor, ...]
 ) -> AdapterSpec:
@@ -238,6 +270,7 @@ def validate_adapter(
 def bind_adapter(
     spec: AdapterSpec,
     adapter_id: str,
+    base_config: dict[str, object],
     base_locations: tuple[TensorLocation, ...],
     snapshot: FileSnapshot,
 ) -> tuple[TensorLocation, ...]:
@@ -248,6 +281,9 @@ def bind_adapter(
         for location in base_locations
         if location.descriptor.name.endswith(".weight")
         and location.descriptor.rank == 2
+        and _supported_linear_module(
+            base_config, location.descriptor.name.removesuffix(".weight")
+        )
     }
     matched: dict[str, TensorLocation] = {}
     matched_patterns: set[tuple[str, bool]] = set()

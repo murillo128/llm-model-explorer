@@ -33,12 +33,23 @@ def make_bases(root: Path, *, adapter_tokens: bool = False) -> tuple[Path, Path]
     native_config = copy.deepcopy(config_for("JunHowie"))
     native_config.pop("quantization_config")
     native_config["_name_or_path"] = UPSTREAM
+    native_config["num_hidden_layers"] = 1
+    native_config["hidden_size"] = 128
+    native_config["vocab_size"] = 16
     (native / "config.json").write_text(json.dumps(native_config))
     write_weights(
         native / "model.safetensors",
         [
             (name + ".weight", "F32", [8, 128], [float(i) / 32 for i in range(8 * 128)])
             for name in (MODULE, V_MODULE)
+        ]
+        + [
+            (
+                "model.embed_tokens.weight",
+                "F32",
+                [16, 128],
+                [float(i) / 128 for i in range(16 * 128)],
+            )
         ],
     )
     (native / "tokenizer.json").write_text('{"model":"base"}')
@@ -47,6 +58,9 @@ def make_bases(root: Path, *, adapter_tokens: bool = False) -> tuple[Path, Path]
     quantized.mkdir()
     quantized_config = copy.deepcopy(config_for("JunHowie"))
     quantized_config["_name_or_path"] = UPSTREAM
+    quantized_config["num_hidden_layers"] = 1
+    quantized_config["hidden_size"] = 128
+    quantized_config["vocab_size"] = 16
     (quantized / "config.json").write_text(json.dumps(quantized_config))
     q_group = packed_group("JunHowie")
     v_group = [
@@ -295,6 +309,33 @@ def test_duplicate_factor_alias_is_rejected(settings: Settings) -> None:
         (MODULE + ".lora_B.weight", "F32", [8, 2], [1.0] * 16),
     ]
     make_adapter(settings.model_root, factors=factors)
+    assert {model.id for model in ModelCatalogue(settings.model_root).list_models()} == {
+        UPSTREAM,
+        f"{UPSTREAM}@gptq-int4",
+    }
+
+
+def test_embedding_weights_are_not_supported_lora_targets(settings: Settings) -> None:
+    make_bases(settings.model_root)
+    factors = [
+        (
+            "base_model.model.model.embed_tokens.lora_A.weight",
+            "F32",
+            [2, 128],
+            [1.0] * (2 * 128),
+        ),
+        (
+            "base_model.model.model.embed_tokens.lora_B.weight",
+            "F32",
+            [16, 2],
+            [1.0] * (16 * 2),
+        ),
+    ]
+    make_adapter(
+        settings.model_root,
+        config_updates={"target_modules": ["embed_tokens"]},
+        factors=factors,
+    )
     assert {model.id for model in ModelCatalogue(settings.model_root).list_models()} == {
         UPSTREAM,
         f"{UPSTREAM}@gptq-int4",

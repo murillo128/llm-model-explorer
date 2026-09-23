@@ -286,6 +286,7 @@ class ModelCatalogue:
             adapter_locations = bind_adapter(
                 adapter.spec,
                 adapter.identity,
+                base.config,
                 base.entry._locations,
                 adapter.snapshot,
             )
