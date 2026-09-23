@@ -664,7 +664,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   } : undefined;
   return <ArchitectureWorkspace browser={<ArchitectureBrowser graph={graph} view={view} searchRef={browserSearch}
     select={selectSource} selectBoundary={selectBoundary} selectFamily={selectFamily} toggle={toggleBrowser} exploreStack={exploreStack} />}>
-    <div ref={panel} tabIndex={-1} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
+    <div ref={panel} tabIndex={-1} className="architecture-explorer explorer-card" aria-label="Architecture graph" data-graph-id={graph.graph_id}
     data-template-id={shared?.templateId ?? ''} data-template-instance-id={shared?.instanceId ?? ''}
     data-scope-id={concreteInstance?.node_id ?? options.scope ?? ''} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
     data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options || !result.error && !cameraState.ready}

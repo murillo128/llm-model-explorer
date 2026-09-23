@@ -16,6 +16,87 @@ async function state(page: Page) {
     scope: document.querySelector('[data-scope-id]')?.getAttribute('data-scope-id') }));
 }
 
+test('browser and Model cards share compact chrome while contextual controls remain available', async ({ page }, info) => {
+  await page.goto(`${harness}?fixture=components`); await ready(page);
+  const side = browser(page), graph = panel(page), divider = page.getByRole('separator', { name: 'Resize architecture browser' });
+  const styles = await page.evaluate(() => [document.querySelector('#architecture-browser')!, document.querySelector('.architecture-explorer')!].map(node => {
+    const outer = getComputedStyle(node);
+    return { border: outer.borderTopWidth, radius: outer.borderTopLeftRadius,
+      background: outer.backgroundColor, shadow: outer.boxShadow };
+  }));
+  expect(styles[0]).toEqual(styles[1]);
+  expect(styles[0]).toMatchObject({ border: '1px', radius: '9px', background: 'rgb(255, 255, 255)' });
+  const sideHeader = side.locator('.inventory-header'), title = graph.locator('.architecture-controls');
+  expect((await sideHeader.boundingBox())!.height).toBe(40);
+  expect((await title.boundingBox())!.height).toBe(40);
+  for (const header of [sideHeader, title]) {
+    expect(await header.evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgb(251, 250, 247)');
+    expect(await header.evaluate(node => getComputedStyle(node).borderBottomWidth)).toBe('1px');
+  }
+  expect(await graph.locator('.architecture-flow').evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgb(255, 255, 255)');
+  const collapse = side.getByRole('button', { name: 'Collapse browser' });
+  expect(await collapse.evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  expect(await collapse.evaluate(node => getComputedStyle(node).borderTopColor)).toBe('rgba(0, 0, 0, 0)');
+  if (page.viewportSize()!.width > 760) {
+    const initial = { side: await side.boundingBox(), graph: await graph.boundingBox() };
+    expect(await divider.evaluate(node => getComputedStyle(node, '::before').backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    await divider.hover();
+    expect(await divider.evaluate(node => getComputedStyle(node, '::before').backgroundColor)).toBe('rgb(200, 121, 34)');
+    expect({ side: await side.boundingBox(), graph: await graph.boundingBox() }).toEqual(initial);
+    const bounds = (await divider.boundingBox())!;
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(bounds.x + 40, bounds.y + bounds.height / 2);
+    await expect(divider).toHaveAttribute('data-resizing', 'true');
+    expect(await divider.evaluate(node => getComputedStyle(node, '::before').backgroundColor)).toBe('rgb(200, 121, 34)');
+    await page.mouse.up();
+    await expect(divider).not.toHaveAttribute('data-resizing');
+    const resizedBounds = (await divider.boundingBox())!;
+    await page.mouse.move(resizedBounds.x + resizedBounds.width / 2, resizedBounds.y + resizedBounds.height / 2);
+    await page.mouse.down();
+    await expect(divider).toHaveAttribute('data-resizing', 'true');
+    await divider.dispatchEvent('pointercancel', { pointerId: 1 });
+    await expect(divider).not.toHaveAttribute('data-resizing');
+    await page.mouse.up();
+    await page.mouse.down();
+    await expect(divider).toHaveAttribute('data-resizing', 'true');
+    await divider.dispatchEvent('lostpointercapture', { pointerId: 1 });
+    await expect(divider).not.toHaveAttribute('data-resizing');
+    await page.mouse.up();
+    await divider.focus(); await divider.press('Home');
+    await expect(divider).toHaveAttribute('aria-valuenow', '200');
+    await divider.press('End');
+    await expect(divider).toHaveAttribute('aria-valuenow', '480');
+  } else {
+    await expect(divider).toBeHidden();
+    await collapse.click();
+    const restore = page.getByRole('button', { name: 'Expand browser' });
+    await expect(restore).toBeVisible();
+    await restore.click();
+    await expect(collapse).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'Collapse all' }).focus();
+  await selectComponent(page, 'layer-3.attention');
+  expect((await title.boundingBox())!.height).toBe(40);
+  await expect(page.getByRole('button', { name: 'View options' })).toBeVisible();
+  await info.attach('architecture-cards', { body: await page.locator('.architecture-workspace').screenshot(), contentType: 'image/png' });
+  await page.getByRole('combobox', { name: 'Fixture' }).selectOption('mixed-stacks'); await ready(page);
+  await page.getByRole('button', { name: /Explore stack/ }).first().click(); await ready(page);
+  const context = graph.locator('.architecture-context-row');
+  await expect(context).toBeVisible();
+  expect((await title.boundingBox())!.height).toBeGreaterThan(40);
+  const contextual = (await title.boundingBox())!, canvas = (await graph.boundingBox())!;
+  expect(contextual.y + contextual.height).toBeLessThan(canvas.y + canvas.height);
+  await info.attach('architecture-context', { body: await page.locator('.architecture-workspace').screenshot(), contentType: 'image/png' });
+  await page.goto(`${harness}?fixture=components-large&long-browser`); await ready(page);
+  await side.getByRole('searchbox', { name: 'Search components' }).fill('intentionally long public');
+  await side.locator('[data-node-id="layer-31.attention.Q"] [data-browser-name]').click();
+  const selected = graph.locator('.architecture-selection > span');
+  await expect(selected).toHaveAttribute('title', /intentionally long public component name/);
+  expect((await selected.boundingBox())!.width).toBeLessThanOrEqual(170);
+  expect((await title.boundingBox())!.height).toBe(40);
+});
+
 test('three section headers and all navigable row kinds share one visual system', async ({ page }) => {
   const requests: string[] = [];
   page.on('request', (request) => { if (/\/sessions\//.test(request.url())) requests.push(request.url()); });

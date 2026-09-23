@@ -88,12 +88,13 @@ export function ArchitectureControls(props: Props) {
         <button aria-label={selection.edge ? 'Center connection' : 'Center selected'} onClick={selection.center}>Center</button>
         <button aria-label={selection.edge ? 'Clear connection selection' : 'Clear node selection'} onClick={() => { picker.current?.focus(); selection.clear(); }}>×</button>
       </div>}
+      {props.toggleSelected && <button onClick={props.toggleSelected}>Toggle selected group</button>}
       <GraphAction icon="collapse" label="Collapse all" tooltip="Collapse all components and reframe the model" onClick={props.collapseAll} />
       <GraphAction icon="expand" label={props.isolation ? 'Show all operations in model' : 'Show all operations'} tooltip="Show every operation and instance in the model" onClick={props.expandAll} />
       <button className="architecture-settings" title="View options" ref={optionsTrigger} aria-expanded={popover === 'options'} aria-controls={optionsId} aria-haspopup="dialog"
         onClick={() => setPopover(popover === 'options' ? null : 'options')}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 7h8m4 0h4M4 17h3m4 0h9M12 4v6M7 14v6" /></svg> View options</button>
     </div>
-    {(props.isolation || stack || props.returnContext || props.toggleSelected || props.focusLayer || props.focusMlp || props.stateFocus) && <div className="architecture-context-row">
+    {(props.isolation || stack || props.returnContext || props.focusLayer || props.focusMlp || props.stateFocus) && <div className="architecture-context-row">
       <div className="architecture-context-navigation" aria-label={props.isolation ? 'Component navigation' : stack ? 'Stack navigation' : 'Model components'}>
         {props.returnContext && !props.isolation && <button onClick={props.returnContext}>Back</button>}
         {props.isolation ? <>
@@ -132,7 +133,6 @@ export function ArchitectureControls(props: Props) {
             <button aria-label={`Next window ${stack.label}`} disabled={window.start + window.count >= stack.instances.length} onClick={() => props.exploreStack(stack.id, window.start + props.windowSize)}>›</button>
           </>}
         </> : null}
-        {props.toggleSelected && <button onClick={props.toggleSelected}>Toggle selected group</button>}
         {stack && !props.isolation && <button onClick={() => props.exploreStack(stack.id)}>Explore stack</button>}
         {props.focusLayer && <button onClick={props.focusLayer}>{options.stateScope ? 'Back to layer' : 'Focus layer'}</button>}
         {props.focusMlp && <button onClick={props.focusMlp}>Focus MLP</button>}

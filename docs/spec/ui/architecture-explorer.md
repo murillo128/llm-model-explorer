@@ -156,6 +156,13 @@ selected node/connection with applicable **Inspect**, **Explore component** or
 outside **View options**, with descriptive tooltips and accessible names. Each
 action has one primary location. Collapse invokes one collapse-and-reframe
 command after layout; ordinary Fit never expands components.
+The ordinary Model header is one 40 CSS-pixel title/action row, vertically
+centered with no reserved empty context row. Applicable stack, isolation,
+selection and scope controls may add a bounded contextual row when present.
+The selected-group toggle stays in the title row so selecting a card does not
+move the canvas between the two clicks of a double-click gesture.
+Diagnostics remain below the header. Loading and unavailable capability views
+retain the same ordinary header height.
 
 A small lower-left camera dock inside the graph viewport contains **Zoom in**,
 **Zoom out** and **Fit view**. It stays outside the camera transform, with full
