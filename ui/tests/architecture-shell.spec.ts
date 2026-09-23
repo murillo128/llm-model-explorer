@@ -71,6 +71,25 @@ test('malformed architecture responses stay local and partial inventories remain
   await expect(page.getByText('Fixture has no native weights.')).toBeVisible();
 });
 
+test('loading and unavailable Architecture cards keep the compact soft title row', async ({ page, context }) => {
+  await backend(context);
+  let pending: Route | undefined;
+  await context.route('https://architecture.example/sessions/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/architecture', route => { pending = route; });
+  await page.goto('/');
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(contractResponse.model_id);
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  const card = page.getByLabel('Architecture capability');
+  const heading = card.locator('.architecture-empty-heading');
+  await expect(heading).toHaveText('Architecture');
+  expect((await heading.boundingBox())!.height).toBe(40);
+  await expect.poll(() => Boolean(pending)).toBe(true);
+  await pending!.fulfill({ json: { status: 'unavailable', model_id: contractResponse.model_id,
+    reason: 'unsupported_architecture', requires_restart: false, diagnostics: [] } });
+  await expect(card.locator('.architecture-capability-state').getByText('Architecture is not supported for this model.')).toBeVisible();
+  expect((await heading.boundingBox())!.height).toBe(40);
+  expect(await heading.evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgb(251, 250, 247)');
+});
+
 test('a delayed architecture response cannot replace a newer model/session', async ({ page, context }) => {
   const requests = await backend(context);
   let old: Route | undefined;

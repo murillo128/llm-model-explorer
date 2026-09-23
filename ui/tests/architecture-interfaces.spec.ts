@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import { viewOptions, graphAction, graphPreference, findComponent, openShared } from './architecture-controls';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
@@ -8,6 +9,32 @@ const ready = async (page: import('@playwright/test').Page) => {
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
 };
 const camera = (page: import('@playwright/test').Page) => page.locator('.react-flow__viewport').getAttribute('style');
+
+test('rotary sin and causal mask stay separately targetable after visual ordering', async ({ page }, info) => {
+  await page.goto(`${harness}?fixture=routing-context`); await ready(page);
+  await graphAction(page, 'Show all operations'); await ready(page);
+  await graphAction(page, 'Fit view'); await ready(page);
+  const sin = page.locator('.architecture-connection[data-source-node="sin"][data-target-node="use"][data-target-port="sin"]');
+  const mask = page.locator('.architecture-connection[data-source-node="mask"][data-target-node="use"][data-target-port="causal mask"]');
+  await expect(sin).toHaveCount(1); await expect(mask).toHaveCount(1);
+  const emphasized = () => page.locator('.architecture-connection[data-emphasized="true"]')
+    .evaluateAll((edges) => edges.map((edge) => edge.getAttribute('data-edge-id')!).sort());
+  const sinId = (await sin.getAttribute('data-edge-id'))!, maskId = (await mask.getAttribute('data-edge-id'))!;
+  for (const dimensions of [false, true]) {
+    if (dimensions) { await graphPreference(page, 'Show dimensions', true); await ready(page); }
+    const before = await camera(page), count = await page.locator(panel).getAttribute('data-layout-count');
+    for (const [node, target, id] of [['sin', 'sin', sinId], ['mask', 'causal mask', maskId]] as const) {
+      const source = page.locator(`.architecture-port[data-node-id=${JSON.stringify(node)}] .architecture-port-label`);
+      const input = page.locator(`.architecture-port[data-node-id="use"][data-port-id=${JSON.stringify(target)}] .architecture-port-label`);
+      await source.hover(); await expect.poll(emphasized).toEqual([id]);
+      await input.hover(); await expect.poll(emphasized).toEqual([id]);
+    }
+    await page.mouse.move(0, 0); await expect.poll(emphasized).toEqual([]);
+    expect(await camera(page)).toBe(before);
+    await expect(page.locator(panel)).toHaveAttribute('data-layout-count', count!);
+  }
+  await info.attach('rotary-context-routes', { body: await page.screenshot(), contentType: 'image/png' });
+});
 
 for (const kind of ['dense', 'hybrid', 'visual'] as const) test(`${kind}: declarations stay as ports across browser, dimensions, collapse and restore`, async ({ page }, info) => {
   const calls: string[] = []; page.on('request', (r) => { if (/\/sessions\//.test(r.url())) calls.push(r.url()); });
@@ -63,6 +90,124 @@ test('boundary hover/focus/pinning preserves layout and source connections; expl
   await expect(page.locator('.architecture-port[data-node-id="language"][data-port-id="positions"]')).toHaveCount(1);
   await expect(page.locator('.architecture-node[data-presentation="external"]')).toHaveCount(1); // Real LM head.
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
+});
+
+test('raised label to terminal traversal retains exact hover at fit and high zoom', async ({ page }) => {
+  await page.goto(`${harness}?fixture=interface-hybrid`); await ready(page);
+  await page.locator('[data-node-id="language"] .architecture-browser-disclosure').click(); await ready(page);
+  await graphAction(page, 'Fit view'); await ready(page);
+  const emphasized = () => page.locator('.architecture-connection[data-emphasized="true"]')
+    .evaluateAll((edges) => edges.map((edge) => edge.getAttribute('data-edge-id')!).sort());
+  const zoom = () => page.locator('.react-flow__viewport').evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a);
+  const traverse = async (port: Locator) => {
+    const id = await port.getAttribute('data-port-id');
+    const label = port.locator('.architecture-port-label');
+    await expect(label).toHaveAttribute('data-raised', 'true');
+    const text = await label.boundingBox(), terminal = await port.boundingBox();
+    expect(text).toBeTruthy(); expect(terminal).toBeTruthy();
+    const start = { x: text!.x + text!.width / 2, y: text!.y + text!.height / 2 };
+    const end = { x: terminal!.x + terminal!.width / 2, y: terminal!.y + terminal!.height / 2 };
+    await page.mouse.move(start.x, start.y);
+    await expect.poll(emphasized).not.toEqual([]);
+    const connected = await emphasized();
+    for (let step = 1; step <= 16; step++) {
+      const point = { x: start.x + (end.x - start.x) * step / 16, y: start.y + (end.y - start.y) * step / 16 };
+      await page.mouse.move(point.x, point.y);
+      await page.waitForTimeout(100); // Catch the next-frame pointer leave that a fast hover misses.
+      const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('.architecture-port')?.getAttribute('data-port-id') ?? document.elementFromPoint(x, y)?.className, point);
+      expect(await emphasized(), `${id} lost emphasis at step ${step}, zoom ${await zoom()}, ${JSON.stringify({ start, end, point, hit })}`).toEqual(connected);
+    }
+    await page.mouse.move(0, 0);
+    await expect.poll(emphasized).toEqual([]);
+  };
+  const before = await camera(page), layouts = await page.locator(panel).getAttribute('data-layout-count');
+  const input = page.locator('.architecture-port[data-node-id="language"][data-port-id="positions"]');
+  const output = page.locator('.architecture-port[aria-label^="output port"]:has(.architecture-port-label[data-raised="true"])').first();
+  await expect(output).toHaveCount(1);
+  await traverse(input);
+  await traverse(output);
+  expect(await camera(page)).toBe(before);
+  await expect(page.locator(panel)).toHaveAttribute('data-layout-count', layouts!);
+
+  const label = page.locator('.architecture-port[data-node-id="language"][data-port-id="positions"] .architecture-port-label');
+  await label.hover();
+  for (let attempt = 0; attempt < 12 && await zoom() < 3.9; attempt++) await page.mouse.wheel(0, -1000);
+  await expect.poll(zoom).toBeGreaterThan(3.9);
+  const host = await page.locator('.architecture-flow').boundingBox();
+  const highPort = await input.boundingBox();
+  expect(host).toBeTruthy(); expect(highPort).toBeTruthy();
+  const center = highPort!.x + highPort!.width / 2;
+  if (center < host!.x + 12 || center > host!.x + host!.width - 12) {
+    // Narrow fit can zoom the terminal offscreen. Pan the actual graph pane so
+    // the full pointer path is possible before measuring continuity.
+    const shift = host!.x + host!.width * 0.35 - center;
+    const from = { x: shift > 0 ? host!.x + 24 : host!.x + host!.width - 24, y: host!.y + 20 };
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + shift, from.y, { steps: 10 });
+    await page.mouse.up(); await ready(page);
+  }
+  const highCamera = await camera(page);
+  await traverse(input);
+  expect(await camera(page)).toBe(highCamera);
+  // At high zoom the terminal and label are visibly separate. Their gap must
+  // resolve to the same port button instead of the graph pane underneath.
+  const gap = await label.evaluate((element) => {
+    const text = element.getBoundingClientRect(), port = element.closest('button')!.getBoundingClientRect();
+    const x = (port.right + text.left) / 2, y = text.top + text.height / 2;
+    return { width: text.left - port.right, hit: document.elementFromPoint(x, y)?.closest('.architecture-port')?.getAttribute('data-port-id') };
+  });
+  expect(gap.width).toBeGreaterThan(2);
+  expect(gap.hit).toBe('positions');
+  await expect(page.locator(panel)).toHaveAttribute('data-layout-count', layouts!);
+});
+
+test('ordinary operation keeps long opposite labels disjoint and bound to their own terminals', async ({ page }) => {
+  await page.goto(`${harness}?fixture=interface-long-ports`); await ready(page);
+  await findComponent(page, 'Embedding'); await ready(page);
+  const node = page.locator('.react-flow__node[data-id="Embedding"]');
+  const input = node.locator('.architecture-port[data-port-id="Token IDs"]');
+  const output = node.locator('.architecture-port[data-port-id="out"]');
+  const inputLabel = input.locator('.architecture-port-label');
+  const outputLabel = output.locator('.architecture-port-label');
+  const boundary = page.locator('.architecture-port[data-node-id="language"][data-port-id="Token IDs"]');
+  await expect(boundary.locator('.architecture-port-label')).toHaveText('An unusually long attention mask input name');
+  await expect(boundary.locator('.architecture-port-label')).toHaveAttribute('title', 'input: An unusually long attention mask input name');
+  await expect(inputLabel).toHaveAttribute('title', 'input: An unusually long attention mask input name');
+  await expect(inputLabel).toHaveText('An unusually long attention mask input name');
+  await expect(input).toHaveAttribute('title', 'input: An unusually long attention mask input name');
+  await expect(outputLabel).toHaveAttribute('title', 'output: An unusually long hidden state output name');
+  const bounds = await node.evaluate((card) => {
+    const first = card.querySelector('.architecture-port[data-port-id="Token IDs"] .architecture-port-label')!;
+    const last = card.querySelector('.architecture-port[data-port-id="out"] .architecture-port-label')!;
+    const left = first.getBoundingClientRect(), right = last.getBoundingClientRect();
+    const scale = new DOMMatrix(getComputedStyle(document.querySelector('.react-flow__viewport')!).transform).a;
+    return { gap: (right.left - left.right) / scale, rowGap: Math.abs(left.top - right.top) / scale,
+      cardWidth: card.getBoundingClientRect().width / scale,
+      inputWidth: left.width / scale, outputWidth: right.width / scale };
+  });
+  expect(bounds.cardWidth).toBeGreaterThanOrEqual(288);
+  expect(bounds.inputWidth).toBeCloseTo(120, 0);
+  expect(bounds.outputWidth).toBeCloseTo(120, 0);
+  expect(bounds.rowGap).toBeLessThan(1);
+  expect(bounds.gap).toBeGreaterThanOrEqual(8);
+  const emphasized = () => page.locator('.architecture-connection[data-emphasized="true"]')
+    .evaluateAll((edges) => edges.map((edge) => edge.getAttribute('data-edge-id')!).sort());
+  const layout = await page.locator(panel).getAttribute('data-layout-count');
+  const before = await camera(page);
+  await inputLabel.hover();
+  await expect(input).toHaveAttribute('data-emphasized', 'true');
+  const inputEdges = await emphasized();
+  expect(inputEdges.length).toBeGreaterThan(0);
+  await outputLabel.hover();
+  await expect(output).toHaveAttribute('data-emphasized', 'true');
+  const outputEdges = await emphasized();
+  expect(outputEdges.length).toBeGreaterThan(0);
+  expect(outputEdges).not.toEqual(inputEdges);
+  await output.focus();
+  await expect.poll(emphasized).toEqual(outputEdges);
+  expect(await camera(page)).toBe(before);
+  await expect(page.locator(panel)).toHaveAttribute('data-layout-count', layout!);
 });
 
 test('many interfaces stay targetable without document overflow', async ({ page }) => {

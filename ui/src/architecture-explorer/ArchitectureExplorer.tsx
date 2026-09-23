@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ExplorerContextValue } from '../app/explorer-context';
 import { Lifetime } from '../app/lifetime';
 import { ApiFailure } from '../api/errors';
@@ -10,6 +11,7 @@ import { DiagnosticBand } from '../app/ModelDiagnostics';
 import { ModelDiagnostics, finding } from '../app/model-diagnostics';
 import { interfaceIndex } from './interfaces';
 import { ArchitectureInspection } from './ArchitectureInspection';
+import { useArchitectureBrowserTarget } from './architecture-browser-target';
 
 type Response = components['schemas']['ArchitectureResponse'];
 const unavailable = {
@@ -27,6 +29,7 @@ export function ArchitectureExplorer(props: Props) {
   return <SessionArchitectureExplorer key={JSON.stringify([props.session.id, props.session.model_id])} {...props} />;
 }
 function SessionArchitectureExplorer(props: Props) {
+  const browserTarget = useArchitectureBrowserTarget();
   const { client, session, selection, views, onInspect } = props;
   const [localDiagnostics] = useState(() => { const store = new ModelDiagnostics(); store.activate(session); return store; });
   const diagnostics = props.diagnostics ?? localDiagnostics;
@@ -53,10 +56,14 @@ function SessionArchitectureExplorer(props: Props) {
           const generation = graph?.graph_id ?? session.id;
           diagnostics.graph(session, session.model_id, generation, graph);
           const severity = response.status === 'unavailable' && ['analysis_failed', 'cache_unavailable'].includes(response.reason) ? 'error' : 'warning';
-          const records = [...response.diagnostics, ...(graph?.diagnostics ?? [])].map((d) => finding(session.model_id, generation, 'Architecture', d, severity,
-            [d.node_id ? `${graph?.nodes.find((n) => n.id === d.node_id)?.label ?? 'Component'} · ${d.node_id}` : '', d.parameter_id].filter(Boolean).join(' · ') || undefined));
+          const records = [...response.diagnostics, ...(graph?.diagnostics ?? [])].map((d) => {
+            const label = d.node_id ? graph?.nodes.find((n) => n.id === d.node_id)?.label ?? 'Component' : undefined;
+            return finding(session.model_id, generation, 'Architecture', d, severity,
+              [d.node_id ? `${label} · ${d.node_id}` : '', d.parameter_id].filter(Boolean).join(' · ') || undefined, label);
+          });
           if (graph) for (const [id, message] of interfaceIndex(graph).notices) records.push(finding(session.model_id, generation, 'Architecture',
-            { code: 'interface_mapping_ambiguous', node_id: id, message }, 'warning', `${graph.nodes.find((n) => n.id === id)!.label} · ${id}`));
+            { code: 'interface_mapping_ambiguous', node_id: id, message }, 'warning', `${graph.nodes.find((n) => n.id === id)!.label} · ${id}`,
+            graph.nodes.find((n) => n.id === id)!.label));
           if (response.status === 'unavailable' && !records.length) records.push(finding(session.model_id, generation, 'Architecture',
             { code: response.reason, message: unavailable[response.reason] }, severity));
           diagnostics.observe(session, 'Architecture', records, graph?.scope === 'model_defined');
@@ -74,7 +81,11 @@ function SessionArchitectureExplorer(props: Props) {
   }, [client, session, selection, retry, diagnostics]);
   const response = result.response;
   const band = <DiagnosticBand store={diagnostics} />;
-  if (!response || response.status === 'unavailable') return <div tabIndex={-1} className="architecture-explorer architecture-empty" aria-label="Architecture capability">
+  if (!response || response.status === 'unavailable') return <>
+    {browserTarget && createPortal(<p className="architecture-browser-state" role={result.error ? 'alert' : 'status'}>
+      {result.error ? 'Architecture browser unavailable. Retry retrieval.' : !response ? 'Retrieving prepared architecture…' : unavailable[response.reason]}
+    </p>, browserTarget)}
+    <div tabIndex={-1} className="architecture-explorer explorer-card architecture-empty" aria-label="Architecture capability">
     <header className="architecture-empty-heading">Architecture</header>
     {band}
     <div className="architecture-capability-state">
@@ -86,12 +97,13 @@ function SessionArchitectureExplorer(props: Props) {
           </ul>}
           {response.requires_restart && response.reason !== 'restart_required' && <p>Restart the backend to prepare this model again.</p>}</div>}
     </div>
-  </div>;
+    </div>
+  </>;
   return <>
     <ArchitectureCanvas key={JSON.stringify([session.id, response.model_id, response.graph.graph_id])} graph={response.graph} notices={band}
       modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspected(null)} onInspect={(value) => { setInspected(value); onInspect?.(value); }} />
     {inspected && result.inventory && inspected.sessionId === session.id && inspected.modelId === response.model_id && inspected.graphId === response.graph.graph_id &&
       <ArchitectureInspection key={JSON.stringify([inspected.sessionId, inspected.graphId, inspected.node?.id, inspected.boundary, inspected.parameterId, Boolean(inspected.structureOnly)])} context={props}
-        graph={response.graph} diagnostics={response.diagnostics} inventory={result.inventory} selected={inspected} onClose={() => setInspected(null)} />}
+        graph={response.graph} diagnostics={diagnostics.getSnapshot().records} inventory={result.inventory} selected={inspected} onClose={() => setInspected(null)} />}
   </>;
 }

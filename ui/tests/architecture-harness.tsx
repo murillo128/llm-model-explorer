@@ -13,10 +13,26 @@ import { contractResponse, referenceFixture } from './architecture-fixtures';
 import { makeProjectionFixture } from './architecture-projection-fixture';
 import { makeTemplateFixture, makeVjepaBrowserFixture } from './architecture-template-fixture';
 import { makeExplicitFixture } from './architecture-explicit-fixture';
+import { rotaryContextFixture } from './architecture-routing-fixture';
 import '../src/app/styles.css';
 
 function fixture(name: string) {
+  if (name === 'routing-context') return { ...contractResponse, model_id: name, graph: rotaryContextFixture() };
   if (name.startsWith('overview-')) return { ...contractResponse, model_id: name, graph: overviewFixture(name.slice(9) as Parameters<typeof overviewFixture>[0]) };
+  if (name === 'interface-long-ports') {
+    const graph = interfaceFixture('hybrid');
+    const declaredInput = graph.nodes.find((node) => node.id === 'Token IDs')!;
+    declaredInput.label = 'An unusually long attention mask input name';
+    declaredInput.parent_id = 'language';
+    const boundary = graph.nodes.find((node) => node.id === 'language')!;
+    if (boundary.kind !== 'group') throw new Error('Fixture language boundary must be a group');
+    boundary.children.unshift(declaredInput.id);
+    boundary.ports.find((port) => port.id === 'Token IDs')!.label = 'opaque boundary input';
+    const operation = graph.nodes.find((node) => node.id === 'Embedding')!;
+    operation.ports.find((port) => port.id === 'Token IDs')!.label = 'An unusually long attention mask input name';
+    operation.ports.find((port) => port.id === 'out')!.label = 'An unusually long hidden state output name';
+    return { ...contractResponse, model_id: name, graph };
+  }
   if (name.startsWith('interface-')) return { ...contractResponse, model_id: name, graph: interfaceFixture(name.includes('hybrid') ? 'hybrid' : name.includes('visual') ? 'visual' : 'dense', name.includes('many')) };
   if (name === 'summaries') return { ...contractResponse, model_id: name, graph: summaryFixture(new URLSearchParams(location.search).has('long')) };
   if (name === 'empty-group') {
@@ -72,7 +88,7 @@ function Harness() {
   const [response, setResponse] = useState(() => configuredFixture(name));
   return <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
     <div><select aria-label="Fixture" value={name} onChange={(e) => { setName(e.target.value); setResponse(configuredFixture(e.target.value)); }}>
-      {['overview-compact', 'overview-synthetic', 'overview-wide', 'overview-fanout', 'overview-training', 'interface-dense', 'interface-hybrid', 'interface-hybrid-many', 'interface-visual', 'interface-many', 'contract', 'summaries', 'empty-group', 'templates', 'templates-absent', 'browser-vjepa', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'components', 'components-large', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
+      {['overview-compact', 'overview-synthetic', 'overview-wide', 'overview-fanout', 'overview-training', 'interface-dense', 'interface-hybrid', 'interface-hybrid-many', 'interface-visual', 'interface-many', 'routing-context', 'contract', 'summaries', 'empty-group', 'templates', 'templates-absent', 'browser-vjepa', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'components', 'components-large', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
     </select><button onClick={() => setShown(!shown)}>Toggle explorer</button><output style={{ display: 'block', height: 20, overflow: 'hidden' }}>{inspection}</output></div>
     <div contentEditable suppressContentEditableWarning aria-label="Untransformed prompt">Prompt remains outside graph camera</div>
     {shown && <ArchitectureCanvas key={name} graph={response.graph} modelId={response.model_id} sessionId="fixture-session"

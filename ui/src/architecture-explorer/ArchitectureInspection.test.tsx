@@ -8,6 +8,7 @@ import { validateSchema } from '../api/validation';
 import { Lifetime } from '../app/lifetime';
 import type { MatrixSource, MatrixUpdates } from '../matrix-explorer';
 import { ArchitectureInspection } from './ArchitectureInspection';
+import { finding } from '../app/model-diagnostics';
 
 const sinks = vi.hoisted(() => [] as MatrixUpdates[]);
 vi.mock('../matrix-explorer', () => ({ MatrixExplorer: ({ source }: { source: MatrixSource }) => {
@@ -134,6 +135,42 @@ it('cannot activate an unrelated parameter or structure-only weight through an i
   view.rerender(<ArchitectureInspection {...props} selected={{ ...props.selected, parameterId: 'weight', structureOnly: { label: 'Common', role: 'linear' } }} />);
   expect(handles).toHaveLength(0);
   view.unmount(); trigger.remove();
+});
+
+it('shows all normalized findings in real and presentation Model inspection, and only exact component findings elsewhere', () => {
+  const { props, trigger } = setup();
+  props.graph.scope = 'model_defined'; props.graph.coverage = 'partial';
+  const root = props.graph.nodes.find((n) => n.id === 'root')!;
+  root.provenance = [{ kind: 'description', source: '<script>source evidence</script>' }];
+  const findings = [
+    finding(props.selected.modelId, props.graph.graph_id, 'Architecture', { code: 'source_warning', node_id: 'linear0', message: 'Source warning.' }, 'warning'),
+    finding(props.selected.modelId, props.graph.graph_id, 'Architecture', { code: 'interface_mapping_ambiguous', node_id: 'linear1', message: 'UI mapping warning.' }, 'warning'),
+    finding(props.selected.modelId, props.graph.graph_id, 'Architecture', { code: 'parameter_warning', parameter_id: 'weight', message: 'Own parameter warning.' }, 'warning'),
+    finding(props.selected.modelId, props.graph.graph_id, 'Architecture', { code: 'coverage_note', message: 'Coverage note.' }, 'warning'),
+  ];
+  const model = render(<ArchitectureInspection {...props} selected={{ ...props.selected, node: root }} diagnostics={findings} />);
+  const modelDetails = screen.getByLabelText('Model architecture information');
+  expect(modelDetails).toHaveTextContent('Partial architecture coverage · model defined');
+  expect(modelDetails).toHaveTextContent('Model-supplied architecture.');
+  expect(screen.getByRole('dialog')).toHaveTextContent('<script>source evidence</script>');
+  expect(screen.getByLabelText('Applicable architecture diagnostics').querySelectorAll('li')).toHaveLength(4);
+  model.unmount();
+  const component = render(<ArchitectureInspection {...props} diagnostics={findings} />);
+  expect(screen.getByLabelText('Applicable architecture diagnostics')).toHaveTextContent('UI mapping warning.');
+  expect(screen.getByLabelText('Applicable architecture diagnostics')).toHaveTextContent('Own parameter warning.');
+  expect(screen.getByLabelText('Applicable architecture diagnostics')).not.toHaveTextContent('Source warning.');
+  expect(screen.queryByLabelText('Model architecture information')).not.toBeInTheDocument();
+  component.unmount();
+  const syntheticGraph = structuredClone(props.graph);
+  const secondRoot = { ...syntheticGraph.nodes.find((n) => n.id === 'linear0')! };
+  delete secondRoot.parent_id;
+  syntheticGraph.nodes.push({ ...secondRoot, id: 'second-root' });
+  const synthetic = render(<ArchitectureInspection {...props} graph={syntheticGraph} selected={{
+    modelId: props.selected.modelId, sessionId: props.selected.sessionId, graphId: props.selected.graphId, trigger,
+    boundary: { kind: 'boundary', owner: { kind: 'model', id: 'presentation:model' }, endpoints: [] } }} diagnostics={findings} />);
+  expect(screen.getByLabelText('Model architecture information')).toHaveTextContent('Model-supplied architecture.');
+  expect(screen.getByLabelText('Applicable architecture diagnostics').querySelectorAll('li')).toHaveLength(4);
+  synthetic.unmount(); trigger.remove();
 });
 
 it('streams values through StrictMode effect replay and fences replaced/closed generations', () => {

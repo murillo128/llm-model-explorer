@@ -80,6 +80,16 @@ desktop, and `8 px` padding at narrow widths. Working panels use a `1 px` hairli
 border, approximately `8–10 px` corner radius, and at most the subtle base shadow.
 Floating inspection surfaces may use the stronger floating shadow.
 
+Inventory, Architecture Browser, the Architecture canvas and primary explorer
+surfaces use a continuous card edge with a white working body. Their full-width
+headers use `--ui-surface-soft`, a single thin bottom separator and the compact
+40 CSS-pixel title row where no contextual controls are present. Side-pane
+collapse chevrons have a transparent, borderless resting state inside a 32-pixel
+hit target, with subtle hover/press feedback and visible keyboard focus. The
+icon-only restore rail remains visible without hover. The 16-pixel lateral
+resize hit area has no visible rule at rest; hover, keyboard focus and active
+drag paint a thin accent line without changing pane geometry.
+
 ## Global application bar and status bar
 
 One compact global bar owns product identity, the three-explorer navigation, the
@@ -237,3 +247,7 @@ stable local focus target when dismissal removes its button, and announce change
 findings politely without reannouncing unchanged content on ordinary rerenders.
 Quiet provenance badges are distinct from warning/error counts. This pattern does
 not insert transient rows between Matrix Explorer headers and exact tensor pixels.
+Inline provenance and findings use separate ghost close controls with comfortable
+targets, hover and visible focus. Disclosure never dismisses a notice. When both
+are dismissed, remove the band and separator so the scientific body reclaims its
+space. Full details remain available through inspection.

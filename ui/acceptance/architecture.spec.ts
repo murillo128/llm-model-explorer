@@ -355,6 +355,126 @@ test('deterministic production [smollm2] shows the precise model-owned load fail
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveCount(0);
 });
 
+test('deterministic production [smollm2] port labels keep cable clearance and share terminal emphasis', async ({ page }, info) => {
+  const graph = await selectGraph(page);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await ready();
+  const root = page.locator('.react-flow__node').first();
+  await root.locator('.architecture-expand').click();
+  await ready();
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const label = page.locator('.architecture-port-label[data-raised="true"]').first();
+  await expect(label).toBeVisible();
+  const port = label.locator('xpath=..');
+  const highlighted = () => page.locator('.architecture-connection[data-emphasized="true"]')
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-edge-id')!).sort());
+  const inspectGeometry = async () => label.evaluate((element) => {
+    const button = element.closest('button')!;
+    const metric = JSON.parse(element.getAttribute('data-layout-bounds')!) as { x: number; y: number; width: number; height: number; clearance: number };
+    const zoom = new DOMMatrix(getComputedStyle(document.querySelector('.react-flow__viewport')!).transform).a;
+    const rect = element.getBoundingClientRect(), terminal = button.getBoundingClientRect();
+    const cx = terminal.left + terminal.width / 2, cy = terminal.top + terminal.height / 2;
+    return { actual: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      expected: { x: cx + (metric.x - Number(button.dataset.absoluteX)) * zoom,
+        y: cy + (metric.y - Number(button.dataset.absoluteY)) * zoom,
+        width: metric.width * zoom, height: metric.height * zoom },
+      gap: (cy - rect.bottom) / zoom, clearance: metric.clearance };
+  });
+  const assertGeometry = async () => {
+    const { actual, expected, gap, clearance } = await inspectGeometry();
+    for (const key of ['x', 'y', 'width', 'height'] as const) expect(actual[key]).toBeCloseTo(expected[key], 0);
+    expect(gap).toBeGreaterThanOrEqual(clearance - 0.1);
+  };
+  await assertGeometry();
+  if (info.project.name === 'dpr1') {
+    const bounds = await port.boundingBox();
+    expect(bounds).toBeTruthy();
+    const clip = { x: bounds!.x - 4, y: bounds!.y - 28, width: 100, height: 64 };
+    const overlap = info.outputPath('port-label-overlap-baseline.png');
+    await label.evaluate((element) => {
+      const span = element as HTMLElement, button = element.closest('button')!;
+      span.dataset.savedTop = span.style.top;
+      span.style.top = `${button.clientHeight / 2 - 7}px`;
+    });
+    await page.screenshot({ path: overlap, clip });
+    await info.attach('port-label-overlap-baseline', { path: overlap, contentType: 'image/png' });
+    await label.evaluate((element) => {
+      const span = element as HTMLElement;
+      span.style.top = span.dataset.savedTop!;
+      delete span.dataset.savedTop;
+    });
+    const clear = info.outputPath('port-label-clearance.png');
+    await page.screenshot({ path: clear, clip });
+    await info.attach('port-label-clearance', { path: clear, contentType: 'image/png' });
+    await assertGeometry();
+  }
+  const before = info.outputPath('port-label-before.png');
+  await page.screenshot({ path: before });
+  await info.attach('port-label-before', { path: before, contentType: 'image/png' });
+  const count = await canvas.getAttribute('data-layout-count');
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const requests = observed.length;
+  const numeric = await metrics(page);
+  await label.hover();
+  await expect.poll(highlighted).not.toEqual([]);
+  const labelEdges = await highlighted();
+  await expect(port).toHaveAttribute('data-emphasized', 'true');
+  await port.locator('.architecture-port-dot').hover();
+  await expect.poll(highlighted).toEqual(labelEdges);
+  if (labelEdges.length === 1) {
+    const line = page.locator(`.architecture-connection[data-edge-id=${JSON.stringify(labelEdges[0])}]`);
+    const point = await fanoutPoint(page, [line], [line]);
+    await page.mouse.move(point.x, point.y);
+    await expect.poll(highlighted).toEqual(labelEdges);
+  }
+  await label.click();
+  await page.mouse.move(0, 0);
+  await expect.poll(highlighted).toEqual(labelEdges);
+  const otherLabel = page.locator('.architecture-port-label[data-raised="true"]').nth(1);
+  await otherLabel.hover();
+  await expect.poll(highlighted).not.toEqual(labelEdges);
+  await page.mouse.move(0, 0);
+  await expect.poll(highlighted).toEqual(labelEdges);
+  await port.focus();
+  await expect.poll(highlighted).toEqual(labelEdges);
+  await expect(label).toHaveAttribute('data-emphasized', 'true');
+  const after = info.outputPath('port-label-emphasis.png');
+  await page.screenshot({ path: after });
+  await info.attach('port-label-emphasis', { path: after, contentType: 'image/png' });
+  expect(await canvas.getAttribute('data-layout-count')).toBe(count);
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+  expect(observed.slice(requests)).toEqual([]);
+  expect((await metrics(page)).createdTextures).toBe(numeric.createdTextures);
+  await graphPreference(page, 'Show dimensions', true);
+  await ready();
+  await assertGeometry();
+  await page.setViewportSize({ width: 1178, height: 900 });
+  await assertGeometry();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const instance = graph.repetitions[0]!.instances.at(-1)!;
+  expect(instance.index).toBeGreaterThan(0);
+  await findComponent(page, instance.node_id);
+  await ready();
+  await page.getByRole('button', { name: 'Explore component', exact: true }).click();
+  await ready();
+  await expect(canvas).toHaveAttribute('data-scope-id', instance.node_id);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const isolated = page.locator(`.architecture-port[data-node-id=${JSON.stringify(instance.node_id)}] .architecture-port-label[data-raised="true"]`).first();
+  await expect(isolated).toBeVisible();
+  const isolatedCount = await canvas.getAttribute('data-layout-count');
+  const isolatedCamera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const isolatedRequests = observed.length;
+  await isolated.hover();
+  await expect.poll(highlighted).not.toEqual([]);
+  const isolatedEdges = await highlighted();
+  await isolated.locator('xpath=..').focus();
+  await expect.poll(highlighted).toEqual(isolatedEdges);
+  expect(await canvas.getAttribute('data-layout-count')).toBe(isolatedCount);
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(isolatedCamera);
+  expect(observed.slice(isolatedRequests)).toEqual([]);
+});
+
 for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3', 'qwen35', 'vjepa2']) {
   test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and logical weight modal`, async ({ page }, info) => {
     test.setTimeout(reference ? 600_000 : 90_000);

@@ -2,7 +2,7 @@
 
 .architecture-explorer button, .architecture-explorer select { color: var(--ui-text); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 4px; padding: 3px 6px; font-size: 12px; cursor: pointer; }
 .architecture-explorer button:hover { background: var(--ui-accent-soft); }
-.architecture-flow { position: relative; flex: 1; min-height: 0; min-width: 0; background: var(--ui-surface-soft); }
+.architecture-flow { position: relative; flex: 1; min-height: 0; min-width: 0; background: var(--ui-surface); }
 .architecture-loading { position: absolute; top: 0; left: 8px; z-index: 1; pointer-events: none; }
 .architecture-node { width: 100%; height: 100%; background: var(--ui-surface); border: 1px solid var(--ui-border-strong); border-radius: 6px; position: relative; }
 .architecture-node[data-kind="group"] { background: var(--ui-surface-soft); border-style: dashed; }
@@ -30,9 +30,8 @@
 .architecture-card-shape { font-size: 10px; line-height: 16px; color: var(--ui-text-muted); }
 .architecture-constant { height: 24px; padding-top: 3px; box-sizing: border-box; }
 .architecture-node .architecture-more-parameters { height: 26px; display: block; padding: 2px 4px; border: none; background: transparent; font-size: 11px; }
-.architecture-node[data-expanded="true"] .architecture-port-label { max-width: 120px; }
 .architecture-port-shape { display: block; overflow: hidden; text-overflow: ellipsis; color: var(--ui-text-muted); }
-.architecture-port-label { position: absolute; font: 10px/16px ui-monospace, monospace; max-width: 43%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+.architecture-port-label { position: absolute; box-sizing: border-box; text-align: left; font: 10px/16px ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .architecture-explorer .react-flow__edge-text { font: 11px ui-monospace, monospace; }
 .architecture-explorer .react-flow__edge-path { stroke: var(--ui-text-muted); }
 .working-surface:has(.architecture-explorer) { display: flex; overflow: hidden; }
@@ -57,11 +56,12 @@
 .architecture-explorer .react-flow__node:has(.architecture-node[data-expanded="true"]) { pointer-events: none; }
 .architecture-node[data-expanded="true"] { background: transparent; pointer-events: none; }
 .architecture-node[data-expanded="true"] .architecture-node-heading, .architecture-node[data-expanded="true"] > .architecture-node-type, .architecture-node[data-expanded="true"] .architecture-port { pointer-events: auto; }
-.architecture-explorer .architecture-port { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: transparent; border-radius: 50%; display: grid; place-items: center; z-index: 6; }
+.architecture-explorer .architecture-port { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0; background: transparent; border-radius: 50%; display: grid; place-items: center; overflow: visible; z-index: 6; }
 .architecture-port-dot { width: 7px; height: 7px; border: 1px solid var(--ui-text-muted); border-radius: 50%; background: var(--ui-surface); box-sizing: border-box; pointer-events: none; }
+.architecture-port-hit-bridge { position: absolute; pointer-events: auto; }
 .architecture-explorer .architecture-port:hover { background: transparent; }
 .architecture-port[data-emphasized="true"] .architecture-port-dot, .architecture-port:focus-visible .architecture-port-dot { background: var(--ui-accent); border-color: var(--ui-accent); box-shadow: 0 0 0 2px var(--ui-surface), 0 0 0 3px var(--ui-accent); }
-.architecture-port-label[data-emphasized="true"] { color: var(--ui-text); font-weight: 700; text-decoration: underline; text-decoration-color: var(--ui-accent); text-underline-offset: 3px; }
+.architecture-port-label[data-emphasized="true"] { color: var(--ui-text); text-decoration: underline; text-decoration-color: var(--ui-accent); text-underline-offset: 3px; }
 .architecture-explorer .architecture-handle { opacity: 0; pointer-events: none; width: 1px; height: 1px; min-width: 0; min-height: 0; border: 0; transform: translate(-50%, -50%); }
 .architecture-connection { outline: none; cursor: pointer; }
 .architecture-edge-line { stroke: var(--ui-text-muted); stroke-width: 1.3; fill: none; pointer-events: none; }
@@ -82,8 +82,8 @@
 .architecture-connection-details summary { cursor: pointer; }
 
 /* Controls own their disclosures and overflow; the canvas geometry is independent. */
-.architecture-controls { flex-shrink: 0; min-width: 0; min-height: 77px; max-height: 45%; overflow: auto; }
-.architecture-toolbar { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 8px 5px; overflow-x: auto; }
+.architecture-controls { flex-shrink: 0; min-width: 0; max-height: 45%; overflow: auto; }
+.architecture-toolbar { display: flex; align-items: center; gap: 6px; height: 39px; min-height: 39px; padding: 0 8px; overflow-x: auto; }
 .architecture-toolbar > button { flex-shrink: 0; min-height: 28px; }
 .architecture-breadcrumbs { display: flex; align-items: center; flex: 1; min-width: 100px; overflow-x: auto; white-space: nowrap; }
 .architecture-breadcrumbs > span { display: flex; align-items: center; gap: 2px; color: var(--ui-text-muted); }
@@ -117,10 +117,16 @@
 .architecture-workspace { display: grid; grid-template-columns: var(--browser-width) 16px minmax(0, 1fr); flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
 .architecture-workspace.browser-hidden { grid-template-columns: 40px minmax(0, 1fr); }
 .architecture-workspace > [hidden] { display: none; }
-.architecture-workspace > .architecture-explorer, #architecture-browser { border: 1px solid var(--ui-border); border-radius: 9px; background: var(--ui-surface); box-shadow: var(--ui-shadow-base); }
+.architecture-workspace > .working-surface { display: flex; overflow: hidden; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.architecture-workspace > .working-surface > .surface-content { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; padding: 4px; gap: 0; }
+.architecture-workspace .architecture-empty { flex: 1; }
 #architecture-browser { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 #architecture-browser[hidden] { display: none; }
-#architecture-browser .inventory-header { flex-shrink: 0; min-height: 40px; box-sizing: border-box; border-bottom: 1px solid var(--ui-border); background: var(--ui-surface-soft); }
+#architecture-browser .inventory-header { position: static; flex-shrink: 0; }
+.architecture-browser-content { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.architecture-browser-content:has(.architecture-browser-search, .architecture-browser-state) > .architecture-browser-placeholder { display: none; }
+.architecture-browser-status { margin: 0; padding: 12px; color: var(--ui-text-muted); font-size: 13px; }
+.architecture-browser-state { margin: 0; padding: 12px; color: var(--ui-text-muted); font-size: 13px; }
 .architecture-browser-search { display: flex; gap: 2px; padding: 8px; flex-shrink: 0; }
 .architecture-browser-search input { width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--ui-border); border-radius: 4px; background: var(--ui-surface); color: var(--ui-text); font: inherit; font-size: 12px; }
 .architecture-browser-scroll { overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 0 6px 8px; flex: 1; }
@@ -159,7 +165,6 @@
   .architecture-workspace.browser-hidden { grid-template-rows: minmax(0, 1fr); gap: 0; }
 }
 .working-surface:has(.architecture-workspace) { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-#architecture-browser .inventory-header { padding-inline: 8px; }
 
 /* Commands stay outside preferences; camera controls never enter the transform. */
 .architecture-action { display: inline-flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }

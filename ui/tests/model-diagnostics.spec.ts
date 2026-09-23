@@ -2,18 +2,20 @@ import { expect, test } from '@playwright/test';
 import type { BrowserContext, Page } from '@playwright/test';
 import type { components } from '../src/api/generated/types';
 import { contractInventory, contractResponse } from './architecture-fixtures';
+import { selectComponent } from './architecture-controls';
 type Response = components['schemas']['ArchitectureResponse'];
 const precise = 'Invalid model-owned architecture: node "projection" references missing port "output".';
+const checkpointId = 'checkpoint.source.input_ids_with_a_long_technical_identifier';
 function authored(many = false): Response {
   const response = structuredClone(contractResponse);
   response.graph.scope = 'model_defined'; response.graph.coverage = 'partial';
-  response.graph.nodes.push({ id: 'checkpoint', parent_id: 'root', label: 'Trained checkpoint', kind: 'input',
+  response.graph.nodes.push({ id: checkpointId, parent_id: 'root', label: 'Trained checkpoint', kind: 'input',
     ports: [{ id: 'in', direction: 'input', label: 'ambiguous', shape: null }], parameter_ids: [], references: [], attributes: [], provenance: [] });
   const root = response.graph.nodes.find((n) => n.id === 'root')!;
-  if (root.kind === 'group') root.children.push('checkpoint');
+  if (root.kind === 'group') { root.children.push(checkpointId); root.provenance.push({ kind: 'description', source: '<script>author supplied architecture</script>' }); }
   const diagnostic = { code: 'author_declared_partial', message: 'Only the trained checkpoint is described.', node_id: 'linear0' };
   response.diagnostics = [diagnostic]; response.graph.diagnostics = [diagnostic, { ...diagnostic, node_id: 'linear1' }];
-  if (many) response.graph.diagnostics.push(...Array.from({ length: 30 }, (_, i) => ({ code: `detail_${i}`, message: `Finding ${i}: ${'Complete explanatory evidence. '.repeat(30)}`, node_id: 'checkpoint' })));
+  if (many) response.graph.diagnostics.push(...Array.from({ length: 30 }, (_, i) => ({ code: `detail_${i}`, message: `Finding ${i}: ${'Complete explanatory evidence. '.repeat(30)}`, node_id: checkpointId })));
   return response;
 }
 async function backend(context: BrowserContext, initial: Response) {
@@ -61,11 +63,17 @@ test('card notices dismiss and rediscover without graph, camera, layout or reque
   await expect(band.getByRole('note')).toContainText('equivalence to model code is not verified');
   await band.getByText('View details', { exact: true }).click();
   await expect(band.locator('.diagnostic-list li')).toHaveCount(3);
-  await expect(band).toContainText('Trained checkpoint · checkpoint');
+  await expect(band.locator('[role="status"]')).not.toContainText(checkpointId);
+  await expect(band).toContainText(`Trained checkpoint · ${checkpointId}`);
   await expect(band).toContainText('Interface mapping is ambiguous; the original component and connections remain visible.');
   await page.screenshot({ path: testInfo.outputPath('diagnostics.png') });
-  await band.getByRole('button', { name: 'Dismiss architecture notices' }).click();
+  await band.getByRole('button', { name: 'Dismiss model-supplied information' }).click();
   await expect(canvas).toBeFocused();
+  await expect(band.locator('.model-supplied')).toHaveCount(0);
+  await expect(band.getByRole('status')).toContainText('Warning');
+  await band.getByRole('button', { name: 'Dismiss architecture notices' }).click();
+  await expect(band).toHaveCount(0);
+  await expect(canvas.locator('.architecture-controls').evaluate((header) => header.nextElementSibling?.className)).resolves.not.toBe('diagnostic-band');
   await expect(band.getByRole('status')).toHaveCount(0);
   const details = await information(page);
   await expect(details.locator('.diagnostic-list li')).toHaveCount(3);
@@ -73,6 +81,8 @@ test('card notices dismiss and rediscover without graph, camera, layout or reque
   await expect(details).toContainText(contractResponse.graph.graph_id);
   await expect(details).toContainText('Partial architecture coverage · model defined');
   await expect(details).toContainText('Interface mapping is ambiguous');
+  await expect(details).toContainText(checkpointId);
+  await expect(details).toContainText('Model-supplied architecture.');
   await page.screenshot({ path: testInfo.outputPath('model-information.png') });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Session options', exact: true })).toBeFocused();
@@ -81,7 +91,20 @@ test('card notices dismiss and rediscover without graph, camera, layout or reque
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
   expect(api.requests).toEqual(requests);
   await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click(); await graph(page);
-  await expect(band.getByRole('status')).toHaveCount(0);
+  await expect(band).toHaveCount(0);
+  await selectComponent(page, 'root');
+  await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+  const modelInspection = page.getByRole('dialog');
+  await expect(modelInspection.getByLabel('Model architecture information')).toContainText('Partial architecture coverage');
+  await expect(modelInspection).toContainText('<script>author supplied architecture</script>');
+  await expect(modelInspection.getByLabel('Applicable architecture diagnostics').locator('li')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Close inspection' }).click();
+  await selectComponent(page, checkpointId);
+  await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+  const componentInspection = page.getByRole('dialog');
+  await expect(componentInspection.getByLabel('Applicable architecture diagnostics')).toContainText(checkpointId);
+  await expect(componentInspection).not.toContainText('Only the trained checkpoint is described.');
+  await page.getByRole('button', { name: 'Close inspection' }).click();
   // A real graph replacement makes its findings visible again.
   const replacement = authored(); if (replacement.status === 'available') replacement.graph.graph_id = 'replacement';
   api.replace(replacement);
@@ -97,10 +120,27 @@ test('blocking safe validation finding remains discoverable after dismissal with
   await expect(band.getByRole('status')).toContainText('Error'); await expect(band).toContainText(precise);
   await band.getByRole('button', { name: 'Dismiss architecture notices' }).click();
   await expect(page.getByLabel('Architecture capability')).toBeFocused();
-  await expect(page.getByText('Architecture preparation failed for this model.', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Architecture capability').getByText('Architecture preparation failed for this model.', { exact: true })).toBeVisible();
   await expect(page.getByText('Restart the backend to prepare this model again.')).toBeVisible();
   const details = await information(page); await expect(details).toContainText(precise); await expect(details).toContainText('0 warnings · 1 errors');
   await expect(page.locator('.react-flow')).toHaveCount(0);
+});
+test('warning dismissal before provenance retains disclosure and independent focus', async ({ page, context }) => {
+  await backend(context, authored()); await open(page); await graph(page);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const band = page.getByRole('region', { name: 'Architecture notices' });
+  await band.getByText('View details', { exact: true }).click();
+  await expect(band.locator('.diagnostic-list li')).toHaveCount(3);
+  await expect(band.getByRole('status')).toContainText('Warning');
+  await band.getByRole('button', { name: 'Dismiss architecture notices' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(canvas).toBeFocused();
+  await expect(band.getByRole('status')).toHaveCount(0);
+  await expect(band.getByText('ⓘ Model-supplied')).toBeVisible();
+  await band.getByRole('button', { name: 'Dismiss model-supplied information' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(canvas).toBeFocused();
+  await expect(band).toHaveCount(0);
 });
 test('many long findings stay bounded with complete accessible details and clear on model replacement', async ({ page, context }) => {
   const api = await backend(context, authored(true)); await open(page); await graph(page);

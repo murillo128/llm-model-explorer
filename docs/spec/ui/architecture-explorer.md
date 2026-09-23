@@ -104,6 +104,15 @@ Store only pane preferences in optional local storage with an in-memory fallback
 graph-specific navigation remains scoped to backend/model/graph view lifetime.
 Collapse and resize never remount the canvas, refetch, restart numeric consumers
 or invoke Fit view.
+Resolve the saved visibility and preferred width before the first Architecture
+workspace frame; missing or invalid preferences default to an expanded browser.
+Keep the browser card, its fixed header and collapse control, and the chosen
+layout mounted during session and graph retrieval. The body shows accessible
+loading, error, or unavailable content until the current graph's browser is
+ready. Graph arrival replaces only that body; it does not expand a collapsed
+pane, change its preferred width, move the central card, or trigger a second
+layout or Fit. Collapse and resize during loading remain effective. On model or
+graph replacement, remove obsolete actionable rows and reject late old results.
 
 Component names select the exact source component on both surfaces, including
 nonzero repeated instances. Selection does not expand, inspect, reveal, change
@@ -156,6 +165,13 @@ selected node/connection with applicable **Inspect**, **Explore component** or
 outside **View options**, with descriptive tooltips and accessible names. Each
 action has one primary location. Collapse invokes one collapse-and-reframe
 command after layout; ordinary Fit never expands components.
+The ordinary Model header is one 40 CSS-pixel title/action row, vertically
+centered with no reserved empty context row. Applicable stack, isolation,
+selection and scope controls may add a bounded contextual row when present.
+The selected-group toggle stays in the title row so selecting a card does not
+move the canvas between the two clicks of a double-click gesture.
+Diagnostics remain below the header. Loading and unavailable capability views
+retain the same ordinary header height.
 
 A small lower-left camera dock inside the graph viewport contains **Zoom in**,
 **Zoom out** and **Fit view**. It stays outside the camera transform, with full
@@ -280,6 +296,18 @@ or connections. Interaction does not move geometry. Deterministic conservation
 checks and desktop/constrained-width browser checks must verify these properties
 alongside surviving computation, source identity and independent graph coverage.
 
+An expanded boundary label whose visible connection enters the container sits
+above its cable axis with clearance for the full displayed line box, including
+an optional shape annotation. Ordinary labels whose cables leave the text side
+clear retain centered alignment. Port rows, header clearance and side gutters
+reserve the label's actual bounded rectangle; layout exposes that rectangle and
+its clearance for routing. Truncated text retains its full hover/focus title.
+The label and terminal share one accessible port control and the same exact
+connection emphasis and activation. Its pointer target spans the label-to-terminal
+gap so moving between them preserves emphasis even at high zoom. Hover, focus
+and pin restoration are presentation-only and never start layout, camera, graph
+retrieval or tensor work.
+
 ## Optional isolated component exploration
 
 **Explore component** is an explicit action on a selected source group,
@@ -373,6 +401,8 @@ Use vertical separation for genuine parallel branches, auxiliary inputs, residua
 Expanded group geometry is determined by the visible children, their labels, ports, and connection clearances. Collapsed descendants and their internal routes do not contribute to visible layout bounds. When a horizontal computation is wider than the Architecture panel, preserve computational order and use graph pan/zoom and compact repetition navigation rather than wrapping the serial chain vertically, shrinking labels until unreadable, resizing the application shell, or creating document-level scrolling.
 
 Connection routing must keep distinct signals visually distinguishable. Routes should avoid unrelated node bodies and labels, preserve exact source and destination ports, and use clear destination arrowheads. A shared trunk is valid only for genuine fan-out from the same source signal/port; unrelated signals that happen to share a label, shape, or corridor must remain individually traceable. Group-boundary forwarding may be composed into one visible route, but must retain the original edge and port identities represented by that route.
+
+Order external context cards and visual boundary ports with their exact connected producers and consumers where feasible, without changing source hierarchy or execution order. Align simple connections before adding bends; keep any unavoidable crossing in open routing space. Each port's displayed name and optional dimensions have a padded rectangle that no connection may cross. A connection must depart its source and approach its destination on a straight horizontal lane past any label on that side, with a small margin before a bend or branch. Other signals may not cross that lane; genuine fan-out may share the source lane before branching beyond it. Container gutters and row spacing may grow to preserve these clearances, while bounded layout failure remains explicit and recoverable.
 
 Changing hover, keyboard focus, or pinned connection selection must not move nodes, change port positions, refit the camera, or recompute layout. A layout failure is recoverable and explicit; it must not silently fall back to an unreadable vertical stacking mode.
 
@@ -523,6 +553,10 @@ keyboard-accessible disclosure and Model information preserve the explanation:
 “Model-supplied architecture. Structure and weight bindings are validated;
 equivalence to model code is not verified.” Never use an unqualified Validated
 badge. This is provenance information, separate from warning/error counts.
+The disclosure folds its explanation; a separate labelled close action dismisses
+only the inline provenance for the current model/graph generation. Model
+inspection always retains the explanation, declared scope/coverage and source
+provenance, including for a presentation-only outer Model boundary.
 
 ## Persistent capability diagnostics
 
@@ -546,6 +580,15 @@ and graph metadata remain distinguishable from diagnostic findings.
 Dismissal hides only the inline findings. The current model's observations remain
 in the shell's Model information destination, defined in
 [UI architecture](architecture.md#model-information-and-diagnostic-lifetime).
+The warning close action is independent of provenance dismissal. Unchanged
+findings stay dismissed across explorer remounts and equivalent retrievals;
+changed findings or a replacement graph can appear. A component's inspection
+shows only diagnostics explicitly associated with its source component, port or
+selected parameter. Model inspection shows every applicable source and
+interface-presentation finding, including dismissed ones, with original IDs,
+codes, severity and messages. Primary previews use readable component labels;
+the complete technical location remains in details and inspection. When no
+inline provenance or findings remain, omit the band entirely.
 Blocking failures retain an explicit unavailable/failed explanation and any
 applicable recovery action after dismissal. No inspection, details or dismissal
 action may retrieve the graph, mutate source records, invoke layout, remount the

@@ -37,20 +37,38 @@ export type CardSummary = ReturnType<typeof cardSummary>;
 
 /** One bounded geometry contract for the layout worker and rendered card. Long
  * text uses a full-text disclosure; hover/focus never changes these dimensions. */
-export function cardMetrics(node: ProjectedNode, summary: CardSummary, dimensions: boolean, annotation = false) {
+export function cardMetrics(node: ProjectedNode, summary: CardSummary, dimensions: boolean, annotation = false,
+  raisedPorts: ReadonlySet<string> = new Set()) {
   const hasSubtitle = Boolean(summary.formula || node.summary || annotation);
+  const labelHeight = dimensions ? 32 : 16;
+  const centeredTop = -8;
+  const raisedTop = -labelHeight - 4;
   const portStart = 54 + (hasSubtitle ? 24 : 0);
-  const portGap = dimensions ? 40 : 24;
+  // A centered row followed by a raised row is the widest vertical case.
+  const mixedRows = (['input', 'output'] as const).some((direction) => {
+    const ports = node.ports.filter((port) => port.direction === direction);
+    return ports.some((port, index) => index > 0 && !raisedPorts.has(ports[index - 1]!.id) && raisedPorts.has(port.id));
+  });
+  const portGap = mixedRows ? labelHeight * 2 + 4 : dimensions ? 40 : 24;
   const portRows = Math.max(node.ports.filter((p) => p.direction === 'input').length,
     node.ports.filter((p) => p.direction === 'output').length);
   const metadataTop = portStart + portRows * portGap + 4;
   const rowHeight = dimensions ? 42 : 26;
-  const portLabelWidth = (direction: 'input' | 'output') => Math.min(120, Math.max(0, ...node.ports.filter((p) => p.direction === direction)
-    .map((p) => dimensions ? Math.max((p.interfaceLabel ?? p.label).length * 6, formatShape(p.shape).length * 6) : (p.interfaceLabel ?? p.label).length * 6)));
+  const portLabels = Object.fromEntries(node.ports.map((port) => {
+    const characters = Math.max((port.interfaceLabel ?? port.label).length, dimensions ? formatShape(port.shape).length : 0);
+    return [port.id, { width: Math.min(120, characters * 6.1 + 2), height: labelHeight,
+      top: raisedPorts.has(port.id) ? raisedTop : centeredTop, clearance: 4, raised: raisedPorts.has(port.id) }];
+  })) as Record<string, { width: number; height: number; top: number; clearance: number; raised: boolean }>;
+  const portLabelWidth = (direction: 'input' | 'output') => Math.max(0, ...node.ports.filter((p) => p.direction === direction)
+    .map((p) => portLabels[p.id]!.width));
   const height = Math.max(84, metadataTop + Math.min(summaryLimit, summary.parameters.length) * rowHeight +
     (summary.parameters.length > summaryLimit ? 26 : 0) + summary.constants.length * 24 + 10);
-  return { width: summary.formula || summary.parameters.length || summary.constants.length || dimensions ? summaryWidth :
-    node.ports.some((p) => p.interfaces?.length) ? Math.max(180, portLabelWidth('input') + portLabelWidth('output') + 48) : 180,
+  const contentWidth = summary.formula || summary.parameters.length || summary.constants.length || dimensions ? summaryWidth : 180;
+  // Opposite-side names share each row. Reserve both rectangles on ordinary
+  // operation cards as well as interface containers, including truncated names.
+  const width = Math.max(contentWidth, portLabelWidth('input') + portLabelWidth('output') + 48);
+  return { width,
     height, headerHeight: summary.parameters.length || summary.constants.length ? height : Math.max(64, portStart),
-    portStart, portGap, metadataTop, rowHeight, portLabelWidth: { input: portLabelWidth('input'), output: portLabelWidth('output') } };
+    portStart, portGap, metadataTop, rowHeight, portLabels,
+    portLabelWidth: { input: portLabelWidth('input'), output: portLabelWidth('output') } };
 }

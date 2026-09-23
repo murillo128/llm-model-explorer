@@ -46,6 +46,7 @@ h2 { font-size: 18px; font-weight: 600; }
   .app-bar select { padding-inline: 2px; }
 }
 .working-surface { border: 1px solid var(--ui-border); border-radius: 9px; background: var(--ui-surface); box-shadow: var(--ui-shadow); overflow: auto; }
+.explorer-card { min-width: 0; min-height: 0; border: 1px solid var(--ui-border); border-radius: 9px; background: var(--ui-surface); box-shadow: var(--ui-shadow); }
 .surface-label { padding: 16px 20px; border-bottom: 1px solid var(--ui-border); background: var(--ui-surface-soft); }
 .surface-content { padding: 24px; display: grid; gap: 18px; }
 .empty-state { min-height: 330px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; text-align: center; }
@@ -75,18 +76,22 @@ dl { margin: 0; }
 dd { margin: 0; overflow-wrap: anywhere; }
 .model-metadata, .tensor-metadata { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; }
 .tensor-layout { display: grid; grid-template-columns: var(--inventory-width, 280px) 16px minmax(360px, 1fr); }
-.tensor-layout > aside { min-width: 0; min-height: 0; overflow: auto; scrollbar-gutter: stable; overscroll-behavior: contain; scroll-padding-top: 42px; padding: 6px; }
-.inventory-header { position: sticky; top: -6px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 4px; background: var(--ui-bg); min-height: 36px; padding-block: 4px; }
+.tensor-layout > aside { min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; scroll-padding-top: 40px; }
+.tensor-layout > aside > :not(.inventory-header) { padding: 6px; }
+.inventory-header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 4px; height: 40px; min-height: 40px; padding: 0 8px; border-bottom: 1px solid var(--ui-border); border-radius: 8px 8px 0 0; background: var(--ui-surface-soft); }
 .inventory-header h2 { font-size: 14px; }
 .inventory-toggle { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; padding: 6px; border: 1px solid var(--ui-border); border-radius: 4px; background: var(--ui-surface); color: var(--ui-text); cursor: pointer; }
 .inventory-toggle:hover { background: var(--ui-accent-soft); }
+.inventory-header .inventory-toggle { border-color: transparent; background: transparent; box-shadow: none; }
+.inventory-header .inventory-toggle:is(:hover, :active) { background: var(--ui-accent-soft); }
+.inventory-header .inventory-toggle:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
 .inventory-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.3; }
 .inventory-rail { position: relative; z-index: 1; align-self: start; display: flex; justify-content: flex-start; padding-top: 6px; }
 .inventory-rail [role="tooltip"] { visibility: hidden; position: absolute; top: 6px; left: 36px; width: max-content; max-width: var(--inventory-tooltip-width); overflow-wrap: anywhere; padding: 6px 8px; font-size: 12px; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 4px; box-shadow: var(--ui-shadow-float); }
 .inventory-rail:hover [role="tooltip"], .inventory-rail:focus-within [role="tooltip"] { visibility: visible; }
 .inventory-resizer { cursor: col-resize; touch-action: none; position: relative; }
-.inventory-resizer::before { content: ''; position: absolute; inset: 0 7px; background: var(--ui-border); }
-.inventory-resizer:hover::before, .inventory-resizer:focus-visible::before { background: var(--ui-accent); }
+.inventory-resizer::before { content: ''; position: absolute; inset: 0 7px; background: transparent; }
+.inventory-resizer:hover::before, .inventory-resizer:focus-visible::before, .inventory-resizer[data-resizing]::before { background: var(--ui-accent); }
 .inventory-resizer:focus-visible { outline-offset: -3px; }
 .tensor-layout.inventory-hidden { grid-template-columns: 40px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0; }
 .tensor-navigator { container-type: inline-size; }
@@ -182,14 +187,16 @@ dd { margin: 0; overflow-wrap: anywhere; }
 
 /* Persistent model findings are separate from connection status and toasts. */
 .diagnostic-band { flex: 0 1 auto; min-height: 0; max-height: 32%; overflow: auto; border-bottom: 1px solid var(--ui-border); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
-.diagnostic-band:empty { display: none; }
 .diagnostic-notice, .model-supplied { padding: 6px 10px; }
 .diagnostic-notice[data-severity="warning"] { border-left: 3px solid var(--ui-accent); }
 .diagnostic-notice[data-severity="error"] { border-left: 3px solid #a34b45; }
 .diagnostic-notice p, .model-supplied p, .diagnostic-list p { margin: 3px 0; white-space: pre-wrap; }
-.diagnostic-actions { display: flex; align-items: start; gap: 12px; }
+.diagnostic-actions, .model-supplied { display: flex; align-items: start; gap: 12px; }
 .diagnostic-actions details { flex: 1; min-width: 0; }
-.diagnostic-actions button { flex: none; }
+.model-supplied details { flex: 1; min-width: 0; }
+.diagnostic-close { flex: none; width: 32px; height: 32px; border: 0; border-radius: 4px; background: transparent; color: var(--ui-text-muted); cursor: pointer; font: inherit; font-size: 20px; line-height: 1; }
+.diagnostic-close:hover { background: var(--ui-surface-soft); color: var(--ui-text); }
+.diagnostic-close:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
 .diagnostic-list { list-style: none; padding: 0; margin: 4px 0; overflow-wrap: anywhere; }
 .diagnostic-list li { padding: 8px 0; border-bottom: 1px solid var(--ui-border); }
 .diagnostic-list code { font-size: 11px; }
@@ -197,8 +204,7 @@ dd { margin: 0; overflow-wrap: anywhere; }
 .model-supplied summary, .diagnostic-actions summary { cursor: pointer; }
 .session-options h2, .session-options h3 { margin: 0; font-size: 14px; }
 .session-options h3 small { display: block; font-weight: normal; }
-.architecture-empty { border: 1px solid var(--ui-border); border-radius: 9px; background: var(--ui-surface); }
-.architecture-empty-heading { flex: none; padding: 10px; border-bottom: 1px solid var(--ui-border); font-weight: 600; }
+.architecture-empty-heading { display: flex; align-items: center; flex: none; height: 40px; padding: 0 8px; border-bottom: 1px solid var(--ui-border); border-radius: 8px 8px 0 0; background: var(--ui-surface-soft); font-weight: 600; }
 .architecture-capability-state { padding: 12px; overflow: auto; }
 .architecture-failure-details { margin: 8px 0; padding-left: 20px; overflow-wrap: anywhere; }
 
