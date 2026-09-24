@@ -1667,5 +1667,6 @@ def register_kimi_linear(registry: DescriptionRegistry) -> None:
             architectures=frozenset({ARCHITECTURE}),
             supports=supports,
             build=build,
+            compact_experts=True,
         )
     )

@@ -1634,5 +1634,6 @@ def register_deepseek_v2(registry: DescriptionRegistry) -> None:
             architectures=frozenset({ARCHITECTURE}),
             supports=supports,
             build=build,
+            compact_experts=True,
         )
     )

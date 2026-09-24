@@ -1988,6 +1988,78 @@ components:
           maxItems: 33554432
           items:
             $ref: '#/components/schemas/ArchitectureTemplateInstance'
+    ArchitectureCompactInstance:
+      type: object
+      additionalProperties: false
+      required: [node_id, prefix, label, index, node_ids, edge_ids, parameter_ids, symbols]
+      properties:
+        node_id:
+          $ref: '#/components/schemas/ArchitectureId'
+        prefix:
+          $ref: '#/components/schemas/ArchitectureName'
+        label:
+          $ref: '#/components/schemas/ArchitectureName'
+        index:
+          $ref: '#/components/schemas/SafeInteger'
+        node_ids:
+          type: array
+          minItems: 1
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureId'
+        edge_ids:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureId'
+        parameter_ids:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureId'
+        symbols:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureName'
+    ArchitectureCompactComponent:
+      type: object
+      additionalProperties: false
+      required: [id, repetition_id, base_prefix, nodes, edges, parameter_ids, symbols, instances]
+      properties:
+        id:
+          $ref: '#/components/schemas/ArchitectureId'
+        repetition_id:
+          $ref: '#/components/schemas/ArchitectureId'
+        base_prefix:
+          $ref: '#/components/schemas/ArchitectureName'
+        nodes:
+          type: array
+          minItems: 1
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureNode'
+        edges:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureEdge'
+        parameter_ids:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureId'
+        symbols:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureName'
+        instances:
+          type: array
+          minItems: 2
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureCompactInstance'
     ArchitectureGraph:
       type: object
       additionalProperties: false
@@ -2050,6 +2122,11 @@ components:
           maxItems: 33554432
           items:
             $ref: '#/components/schemas/ArchitectureTemplate'
+        compact_components:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureCompactComponent'
     ArchitectureAvailableResponse:
       type: object
       additionalProperties: false

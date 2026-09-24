@@ -35,7 +35,7 @@ For a newly discovered model/snapshot that was not prepared at startup, a new va
 
 All record IDs are nonempty URL-safe strings, at most 256 characters, scoped by `graph_id`; clients treat them as opaque. Display labels, module names, and layer numbers are not interchangeable with IDs. Every cross-reference must resolve in the same graph. Identity/repetition expansion is supplied by the backend; the browser must not synthesize tensor IDs or infer computational edges from names.
 
-The first implementation sends the full instance graph. Repetition records group existing instances for display; no template interpreter or lazy graph-fetch protocol is required. Server responses may use ordinary HTTP compression, but the decoded JSON size is bounded and all required instances remain present. No camera positions, renderer classes, modal commands, local filesystem paths, executable code, tensor values, or runtime execution IDs belong in graph records.
+The ordinary representation sends the full instance graph. Repetition records group existing instances for display. Verified routed-expert repetitions may instead use `compact_components` as described below; all required instances remain reconstructable from the same response. Server responses may use ordinary HTTP compression, but the decoded JSON size is bounded. No camera positions, renderer classes, modal commands, local filesystem paths, executable code, tensor values, or runtime execution IDs belong in graph records.
 
 ## Nodes, ports, edges, and repetition
 
@@ -69,6 +69,16 @@ bounded derived-MLP fallback when no explicit MLP component owns those operation
 Labels are concise display text. Original module references and semantic source
 keys in description provenance retain full identity for inspection. Conceptual
 description-derived groups must not claim an original module that does not exist.
+
+## Verified compact routed experts
+
+`ArchitectureGraph.compact_components` is optional. Each family names one routed-expert repetition, a source-prefix prototype, its exact ordered node and internal-edge definition, the ordered parameter and shape-symbol roles, and at least two ordered instances. An instance carries its root ID, source prefix, display label, configured expert index, and ordered concrete node, edge, parameter and symbol mappings. The repetition still lists every expert with its real index and variant; all parameter records, external edges, router nodes and shared-expert branches remain concrete. A family ID shares the graph identity namespace.
+
+To reconstruct an instance, substitute the listed IDs and declared shape symbols in corresponding prototype records, replace the prototype source prefix in descriptive source strings with the instance prefix, then set the root label and `expert_index` attribute from that instance. These substitutions supply identity and source provenance only; the browser never infers an operation, edge, shape or tensor binding from a filename. The root parent must match the repetition parent. All compacted records are removed from ordinary `nodes`/`edges`; no record may be represented twice. Ordered containment and external connections refer to their original concrete IDs and remain intact after reconstruction.
+
+The backend may publish a family only after exact round-trip comparison against every constructed source node and edge, including ports, shapes, operations, attributes, provenance and references, plus exact source-scoped parameter-name correspondence. Full graph validation then checks closure and inventory bindings. On parsing a cached or received graph, validate mapping lengths, uniqueness, repetition membership/order, symbol declarations and parameter names before ordinary graph validation. A missing or swapped expert binding fails closed even if the tensor geometry is otherwise plausible. Structural exceptions stay explicit and consume the ordinary byte budget. Compact families do not imply runtime expert selection or shared weights.
+
+Existing `templates` remain optional presentation annotations over the reconstructed logical graph; they do not replace `compact_components` and need no new endpoint. Dense, hybrid and V-JEPA graphs with no compact family retain their current wire form. Producer/schema revisions invalidate old structured artifacts through the normal startup cache rules.
 
 ## Optional verified shared structures
 
