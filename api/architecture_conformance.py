@@ -141,6 +141,16 @@ def validate_packed_storage(parameter, geometry, tensor=None):
                     'weight.nested_absmax': ('F32', [nested_count]),
                     'weight.nested_quant_map': ('F32', [256]),
                     'weight.quant_state.bitsandbytes__nf4': ('U8', states[0]['shape'])}
+    elif representation == 'compressed-tensors-w4a16-int4':
+        require(inputs % 32 == 0, 'compressed-tensors logical geometry')
+        dtype = 'I32'
+        scale = next((record for record in parameter['storage']
+                      if record['name'] == prefix + '.weight_scale'), None)
+        require(scale is not None and scale['dtype'] in ('F16', 'BF16'),
+                'compressed-tensors scale dtype')
+        expected = {'weight_packed': ('I32', [output, inputs // 8]),
+                    'weight_scale': (scale['dtype'], [output, inputs // 32]),
+                    'weight_shape': ('I64', [2])}
     elif representation == 'nvfp4':
         require(inputs % 16 == 0, 'NVFP4 logical geometry')
         dtype = 'U8'
@@ -524,7 +534,7 @@ def template_cases():
     return graph, cases
 
 
-def compact_cases():
+def compact_cases(inventory):
     """Small authored routed-expert wire document with distinct exact bindings."""
     provenance = [dict(kind='description', source='independent-compact-fixture', revision='1')]
     prefix = 'model.layers.1.mlp.experts.0'
@@ -569,6 +579,22 @@ def compact_cases():
              edits=[edit('compact_components/0/instances/1/node_ids',['expert0'])],valid=False,
              schema_valid=True,context_edits=[]),
     ]
+    compressed_prefix = 'model.layers.1.mlp.experts.0.w1'
+    compressed_parameter = dict(
+        id='p0', name=compressed_prefix + '.weight',
+        logical_shape=[dict(kind='constant', value=2), dict(kind='constant', value=32)],
+        binding='quantized',
+        storage=[dict(name=compressed_prefix + '.weight_packed', dtype='I32', shape=[2,4], role='packed_data'),
+                 dict(name=compressed_prefix + '.weight_scale', dtype='BF16', shape=[2,1], role='scales'),
+                 dict(name=compressed_prefix + '.weight_shape', dtype='I64', shape=[2], role='logical_shape')],
+        inspection=dict(status='available', tensor_id='tensor_compact_packed'), provenance=provenance)
+    compact_inventory = deepcopy(inventory['tensors']) + [dict(
+        id='tensor_compact_packed', name=compressed_parameter['name'],
+        path=compressed_parameter['name'].split('.'), shape=[2,32], rank=2, numel=64,
+        storage_dtype='I32', storage_format='compressed-tensors-w4a16-int4', logical_dtype='float32')]
+    cases.append(dict(name='compact-experts-compressed-tensors-storage', base='compact_response',
+        edits=[edit('parameters/0', compressed_parameter)], valid=True, schema_valid=True,
+        context_edits=[dict(path=['inventory', 'tensors'], value=compact_inventory)]))
     return response, cases
 
 
@@ -776,8 +802,18 @@ def fixtures():
                  dict(name='fp4.weight_scale', dtype='F8_E4M3', shape=[2,2], role='block_scale'),
                  dict(name='fp4.weight_scale_2', dtype='F32', shape=[], role='global_weight_scale'),
                  dict(name='fp4.input_scale', dtype='F32', shape=[], role='input_scale')])
+    compressed_prefix = 'model.layers.0.mlp.experts.0.w1'
+    def compressed(scale_dtype):
+        return dict(id='quantized', name=compressed_prefix + '.weight',
+            logical_shape=[dim(64), dim(96)], binding='quantized',
+            inspection=dict(status='available', tensor_id='tensor_packed'), provenance=[],
+            storage=[dict(name=compressed_prefix + '.weight_packed', dtype='I32', shape=[64,12], role='packed_data'),
+                     dict(name=compressed_prefix + '.weight_scale', dtype=scale_dtype, shape=[64,3], role='scales'),
+                     dict(name=compressed_prefix + '.weight_shape', dtype='I64', shape=[2], role='logical_shape')])
     for label, parameter, dtype, representation in [
-        ('gptq', packed, 'I32', 'gptq-int4'), ('nvfp4', nvfp4, 'U8', 'nvfp4')]:
+        ('gptq', packed, 'I32', 'gptq-int4'), ('nvfp4', nvfp4, 'U8', 'nvfp4'),
+        ('compressed-tensors-bf16', compressed('BF16'), 'I32', 'compressed-tensors-w4a16-int4'),
+        ('compressed-tensors-f16', compressed('F16'), 'I32', 'compressed-tensors-w4a16-int4')]:
         dims = [d['value'] for d in parameter['logical_shape']]
         descriptor = dict(id='tensor_packed', name=parameter['name'], path=parameter['name'].split('.'),
             shape=dims, rank=2, numel=product(dims), storage_dtype=dtype,
@@ -797,7 +833,7 @@ def fixtures():
             ('wrong-scale-dtype', [set_('graph/parameters/2/storage/'+('2' if label == 'gptq' else '1')+'/dtype', 'F32')]),
             ('foreign-companion', [set_('graph/parameters/2/storage/1/name', 'foreign.scale')]),
             ('missing-companion', [set_('graph/parameters/2/storage', parameter['storage'][:-1])]),
-            ('duplicate-companion', [set_('graph/parameters/2/storage/3', parameter['storage'][0])]),
+            ('duplicate-companion', [set_('graph/parameters/2/storage/'+str(len(parameter['storage'])-1), parameter['storage'][0])]),
             ('wrong-logical-identity', [set_('graph/parameters/2/name', 'other.weight')]),
             ('auxiliary-logical-identity', [set_('graph/parameters/2/name', 'packed.scales')]),
             ('wrong-actionable-id', [set_('graph/parameters/2/inspection/tensor_id', 'tensor_native')]),
@@ -811,6 +847,20 @@ def fixtures():
             ('wrong-inventory-shape', [set_('inventory/tensors/2/shape', list(reversed(dims)))]),
         ]:
             case(label+'-'+suffix, base_edits, context_edits=base_context + changes)
+        if label == 'compressed-tensors-bf16':
+            for suffix, changes, extra_context in [
+                ('swapped-companions', [
+                    set_('graph/parameters/2/storage/0/name', compressed_prefix + '.weight_scale'),
+                    set_('graph/parameters/2/storage/1/name', compressed_prefix + '.weight_packed')], []),
+                ('wrong-scale-geometry', [set_('graph/parameters/2/storage/1/shape', [64,1])], []),
+                ('wrong-shape-dtype', [set_('graph/parameters/2/storage/2/dtype', 'F32')], []),
+                ('wrong-shape-record-geometry', [set_('graph/parameters/2/storage/2/shape', [64,96])], []),
+                ('input-not-group-aligned', [set_('graph/parameters/2/logical_shape/1/value', 63)], [
+                    set_('inventory/tensors/2/shape', [64,63]),
+                    set_('inventory/tensors/2/numel', 64 * 63)]),
+            ]:
+                case(label+'-'+suffix, base_edits + changes,
+                     context_edits=base_context + extra_context)
     # SmolLM2-135M's q_proj is a 576x576 NF4 matrix in the pinned QLoRA reference.
     # The serialized quantization-state bytes are opaque to this contract fixture.
     nf4_elements = 576 * 576
@@ -834,7 +884,7 @@ def fixtures():
     case('bnb-nf4-dq-complete-logical-inspection', nf4_base_edits, True, context_edits=nf4_context)
     template_graph, additional_cases = template_cases()
     cases.extend(additional_cases)
-    compact_response, compact_additional = compact_cases()
+    compact_response, compact_additional = compact_cases(inventory)
     cases.extend(compact_additional)
     # Large-size tests use repeated fixed chunks, never a 32 MiB fixture/object allocation.
     bounds = [dict(name='exact-limit', chunk_bytes=4096, repeat=8192, tail_bytes=0, valid=True),

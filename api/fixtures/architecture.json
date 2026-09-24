@@ -9233,6 +9233,5269 @@
       ]
     },
     {
+      "name": "compressed-tensors-bf16-complete-logical-inspection",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-complete-logical-alias",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "alias_of"
+          ],
+          "value": "quantized"
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "logical_shape"
+          ],
+          "value": [
+            {
+              "kind": "constant",
+              "value": 64
+            },
+            {
+              "kind": "constant",
+              "value": 96
+            }
+          ]
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "storage"
+          ],
+          "value": []
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "inspection"
+          ],
+          "value": {
+            "status": "available",
+            "tensor_id": "tensor_packed"
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-primary-geometry",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "shape"
+          ],
+          "value": [
+            1,
+            1
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-primary-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "dtype"
+          ],
+          "value": "F32"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-scale-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "1",
+            "dtype"
+          ],
+          "value": "F32"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-foreign-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "1",
+            "name"
+          ],
+          "value": "foreign.scale"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-missing-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage"
+          ],
+          "value": [
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+              "dtype": "I32",
+              "shape": [
+                64,
+                12
+              ],
+              "role": "packed_data"
+            },
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+              "dtype": "BF16",
+              "shape": [
+                64,
+                3
+              ],
+              "role": "scales"
+            }
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-duplicate-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "2"
+          ],
+          "value": {
+            "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+            "dtype": "I32",
+            "shape": [
+              64,
+              12
+            ],
+            "role": "packed_data"
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-logical-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "name"
+          ],
+          "value": "other.weight"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-auxiliary-logical-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "name"
+          ],
+          "value": "packed.scales"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-actionable-id",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "inspection",
+            "tensor_id"
+          ],
+          "value": "tensor_native"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-inventory-format",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_format"
+          ],
+          "value": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-missing-inventory-format",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_format"
+          ],
+          "delete": true
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-inventory-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_dtype"
+          ],
+          "value": "F16"
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-inventory-name",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "name"
+          ],
+          "value": "other.weight"
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-inventory-shape",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "shape"
+          ],
+          "value": [
+            96,
+            64
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-swapped-companions",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "name"
+          ],
+          "value": "model.layers.0.mlp.experts.0.w1.weight_scale"
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "1",
+            "name"
+          ],
+          "value": "model.layers.0.mlp.experts.0.w1.weight_packed"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-scale-geometry",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "1",
+            "shape"
+          ],
+          "value": [
+            64,
+            1
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-shape-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "2",
+            "dtype"
+          ],
+          "value": "F32"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-wrong-shape-record-geometry",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "2",
+            "shape"
+          ],
+          "value": [
+            64,
+            96
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-bf16-input-not-group-aligned",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "logical_shape",
+            "1",
+            "value"
+          ],
+          "value": 63
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "shape"
+          ],
+          "value": [
+            64,
+            63
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "numel"
+          ],
+          "value": 4032
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-complete-logical-inspection",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-complete-logical-alias",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "alias_of"
+          ],
+          "value": "quantized"
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "logical_shape"
+          ],
+          "value": [
+            {
+              "kind": "constant",
+              "value": 64
+            },
+            {
+              "kind": "constant",
+              "value": 96
+            }
+          ]
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "storage"
+          ],
+          "value": []
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "inspection"
+          ],
+          "value": {
+            "status": "available",
+            "tensor_id": "tensor_packed"
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-wrong-primary-geometry",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "shape"
+          ],
+          "value": [
+            1,
+            1
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-wrong-primary-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "dtype"
+          ],
+          "value": "F32"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-wrong-scale-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "1",
+            "dtype"
+          ],
+          "value": "F32"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-foreign-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "1",
+            "name"
+          ],
+          "value": "foreign.scale"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-missing-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage"
+          ],
+          "value": [
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+              "dtype": "I32",
+              "shape": [
+                64,
+                12
+              ],
+              "role": "packed_data"
+            },
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+              "dtype": "F16",
+              "shape": [
+                64,
+                3
+              ],
+              "role": "scales"
+            }
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-duplicate-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "2"
+          ],
+          "value": {
+            "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+            "dtype": "I32",
+            "shape": [
+              64,
+              12
+            ],
+            "role": "packed_data"
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-wrong-logical-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "name"
+          ],
+          "value": "other.weight"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-auxiliary-logical-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "name"
+          ],
+          "value": "packed.scales"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-wrong-actionable-id",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "inspection",
+            "tensor_id"
+          ],
+          "value": "tensor_native"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-wrong-inventory-format",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_format"
+          ],
+          "value": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-missing-inventory-format",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_format"
+          ],
+          "delete": true
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-wrong-inventory-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_dtype"
+          ],
+          "value": "F16"
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-wrong-inventory-name",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "name"
+          ],
+          "value": "other.weight"
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-f16-wrong-inventory-shape",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 64
+              },
+              {
+                "kind": "constant",
+                "value": 96
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  64,
+                  12
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  64,
+                  3
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                64,
+                96
+              ],
+              "rank": 2,
+              "numel": 6144,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "shape"
+          ],
+          "value": [
+            96,
+            64
+          ]
+        }
+      ]
+    },
+    {
       "name": "bnb-nf4-dq-complete-logical-inspection",
       "valid": true,
       "schema_valid": true,
@@ -10823,6 +16086,141 @@
       "valid": false,
       "schema_valid": true,
       "context_edits": []
+    },
+    {
+      "name": "compact-experts-compressed-tensors-storage",
+      "base": "compact_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "0"
+          ],
+          "value": {
+            "id": "p0",
+            "name": "model.layers.1.mlp.experts.0.w1.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 32
+              }
+            ],
+            "binding": "quantized",
+            "storage": [
+              {
+                "name": "model.layers.1.mlp.experts.0.w1.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  2,
+                  4
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.1.mlp.experts.0.w1.weight_scale",
+                "dtype": "BF16",
+                "shape": [
+                  2,
+                  1
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.1.mlp.experts.0.w1.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ],
+                "role": "logical_shape"
+              }
+            ],
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_compact_packed"
+            },
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "independent-compact-fixture",
+                "revision": "1"
+              }
+            ]
+          }
+        }
+      ],
+      "valid": true,
+      "schema_valid": true,
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_compact_packed",
+              "name": "model.layers.1.mlp.experts.0.w1.weight",
+              "path": [
+                "model",
+                "layers",
+                "1",
+                "mlp",
+                "experts",
+                "0",
+                "w1",
+                "weight"
+              ],
+              "shape": [
+                2,
+                32
+              ],
+              "rank": 2,
+              "numel": 64,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
     }
   ],
   "byte_cases": [

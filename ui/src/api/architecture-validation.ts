@@ -47,6 +47,17 @@ function validatePackedStorage(parameter: S['ArchitectureParameter'], tensor: S[
       ['weight.nested_quant_map', 'F32', [256]],
       ['weight.quant_state.bitsandbytes__nf4', 'U8', [state.shape[0]!]],
     ];
+  } else if (tensor.storage_format === 'compressed-tensors-w4a16-int4') {
+    require(tensor.storage_dtype === 'I32' && input % 32 === 0,
+      'Compressed-tensors storage identity/geometry');
+    const scale = storage.get(`${prefix}.weight_scale`);
+    require(scale && (scale.dtype === 'F16' || scale.dtype === 'BF16'),
+      'Compressed-tensors scale dtype');
+    expected = [
+      ['weight_packed', 'I32', [output, input / 8]],
+      ['weight_scale', scale.dtype, [output, input / 32]],
+      ['weight_shape', 'I64', [2]],
+    ];
   } else {
     require(tensor.storage_format === 'nvfp4' && tensor.storage_dtype === 'U8' && input % 16 === 0,
       'NVFP4 storage identity/geometry');
