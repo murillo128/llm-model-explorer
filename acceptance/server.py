@@ -180,6 +180,7 @@ def main():
     parser.add_argument("--origin", default="http://127.0.0.1:4175")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--polish", action="store_true")
+    parser.add_argument("--kimi-architecture-fixture", action="store_true")
     args = parser.parse_args()
     # Bound fixture kernels on shared CI hosts; no performance claim about this setting.
     torch.set_num_threads(2)
@@ -192,6 +193,10 @@ def main():
                 generate_polish(root / "models")
             else:
                 generate(root / "models", extended=True)
+        if args.kimi_architecture_fixture:
+            from acceptance.kimi_linear_fixture import install_test_adapter
+
+            install_test_adapter()
         uvicorn.run(
             application(root, args.origin, args.device),
             host="127.0.0.1",
