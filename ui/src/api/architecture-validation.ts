@@ -19,6 +19,7 @@ function validatePackedStorage(parameter: S['ArchitectureParameter'], tensor: S[
     'Packed logical geometry/name');
   const output = geometry[0]!, input = geometry[1]!;
   const prefix = parameter.name.slice(0, -'.weight'.length);
+  const storage = unique(parameter.storage, (record) => record.name);
   let expected: [string, string, number[]][];
   if (tensor.storage_format === 'gptq-int4') {
     require(tensor.storage_dtype === 'I32' && input % 128 === 0 && output % 8 === 0, 'GPTQ storage identity/geometry');
@@ -27,6 +28,23 @@ function validatePackedStorage(parameter: S['ArchitectureParameter'], tensor: S[
       ['qzeros', 'I32', [input / 128, output / 8]],
       ['scales', 'F16', [input / 128, output]],
       ['g_idx', 'I32', [input]],
+    ];
+  } else if (tensor.storage_format === 'bnb-nf4-dq') {
+    require(tensor.storage_dtype === 'U8', 'NF4 storage identity');
+    const elements = product(geometry);
+    const absmaxCount = Math.ceil(elements / 64);
+    const nestedCount = Math.ceil(absmaxCount / 256);
+    const stateName = `${prefix}.weight.quant_state.bitsandbytes__nf4`;
+    const state = storage.get(stateName);
+    require(state && state.dtype === 'U8' && state.shape.length === 1 && state.shape[0]! > 0 && state.shape[0]! <= 4096,
+      'NF4 quantization state metadata');
+    expected = [
+      ['weight', 'U8', [Math.ceil(elements / 2), 1]],
+      ['weight.absmax', 'U8', [absmaxCount]],
+      ['weight.quant_map', 'F32', [16]],
+      ['weight.nested_absmax', 'F32', [nestedCount]],
+      ['weight.nested_quant_map', 'F32', [256]],
+      ['weight.quant_state.bitsandbytes__nf4', 'U8', [state.shape[0]!]],
     ];
   } else {
     require(tensor.storage_format === 'nvfp4' && tensor.storage_dtype === 'U8' && input % 16 === 0,
@@ -38,7 +56,6 @@ function validatePackedStorage(parameter: S['ArchitectureParameter'], tensor: S[
       ['input_scale', 'F32', []],
     ];
   }
-  const storage = unique(parameter.storage, (record) => record.name);
   require(storage.size === expected.length, 'Packed storage group');
   for (const [suffix, dtype, shape] of expected) {
     const record = storage.get(`${prefix}.${suffix}`);

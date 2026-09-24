@@ -676,7 +676,13 @@ components:
           description: Physical dtype/representation reported by the backend.
         storage_format:
           type: string
-          description: Optional additional physical format such as a quantization scheme.
+          enum:
+          - safetensors
+          - gptq-int4
+          - nvfp4
+          - bnb-nf4-dq
+          - compressed-tensors-w4a16-int4
+          description: Validated backend physical format for this logical tensor.
         logical_dtype:
           type: string
           enum: [float32]
