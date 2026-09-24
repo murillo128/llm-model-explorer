@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import TypeGuard, cast
 
+from ..bnb_config import is_supported_config as is_supported_bnb_nf4_config
+
 SOURCE_REVISION = "753d61104116eefc8ffc977327b441ee0c8d599f"
 
 # Unknown fields are not assumed harmless. These known metadata fields do not
@@ -109,13 +111,16 @@ def checked(config: Mapping[str, object]) -> DenseConfig | None:
         return None
     quant = config.get("quantization_config")
     if quant is not None:
-        if not qwen or not isinstance(quant, dict):
+        if not isinstance(quant, dict):
             return None
-        if set(quant) - GPTQ.keys() - {"meta", "hyb_act"}:
-            return None
-        if any(type(quant.get(k)) is not type(v) or quant[k] != v for k, v in GPTQ.items()):
-            return None
-        if quant.get("hyb_act", False) is not False:
+        if qwen:
+            if set(quant) - GPTQ.keys() - {"meta", "hyb_act"}:
+                return None
+            if any(type(quant.get(k)) is not type(v) or quant[k] != v for k, v in GPTQ.items()):
+                return None
+            if quant.get("hyb_act", False) is not False:
+                return None
+        elif not is_supported_bnb_nf4_config(quant):
             return None
     defaults = {
         "vocab_size": 151936 if qwen else 32000,

@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from quantized_oracles import (
     PackedFixture,
     Stored,
+    bnb_nf4_fixture,
     compressed_tensors_fixture,
     gptq_fixture,
     nvfp4_fixture,
@@ -35,13 +36,15 @@ from llm_model_explorer.settings import Settings
 from llm_model_explorer.tensor_analysis import TensorAnalysis
 
 
-@pytest.fixture(params=["gptq-int4", "nvfp4", "compressed-tensors-w4a16-int4"])
+@pytest.fixture(params=["gptq-int4", "nvfp4", "compressed-tensors-w4a16-int4", "bnb-nf4-dq"])
 def packed(request: pytest.FixtureRequest) -> PackedFixture:
     if request.param == "gptq-int4":
         return gptq_fixture()
     if request.param == "nvfp4":
         return nvfp4_fixture()
-    return compressed_tensors_fixture()
+    if request.param == "compressed-tensors-w4a16-int4":
+        return compressed_tensors_fixture()
+    return bnb_nf4_fixture()
 
 
 def tensor_id(packed: PackedFixture) -> str:
@@ -84,7 +87,9 @@ def test_logical_identity_shape_coverage_and_shard_independence(
         assert descriptor.shape == packed.shape
         assert descriptor.rank == 2 and descriptor.numel == len(expected) // 4
         assert descriptor.logical_dtype == "float32"
-        assert descriptor.storage_dtype == ("U8" if packed.encoding == "nvfp4" else "I32")
+        assert descriptor.storage_dtype == (
+            "U8" if packed.encoding in {"nvfp4", "bnb-nf4-dq"} else "I32"
+        )
         assert descriptor.storage_format == packed.encoding
         inventory = source.inventory()
         assert inventory["coverage"] == "complete" and inventory["diagnostics"] == []

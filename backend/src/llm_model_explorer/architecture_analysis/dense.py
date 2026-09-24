@@ -161,6 +161,22 @@ class DenseGraph:
                     r.ArchitectureStorage(name=f"{prefix}.{s}", dtype=dt, shape=sh, role=role)
                     for s, (dt, sh, role) in expected.items()
                 ]
+        elif packed and name in self.numeric and self.numeric[name].storage_format == "bnb-nf4-dq":
+            roles = {
+                ".absmax": "scales",
+                ".quant_map": "codebook",
+                ".nested_absmax": "scales",
+                ".nested_quant_map": "codebook",
+                ".quant_state.bitsandbytes__nf4": "quantization_state",
+            }
+            storage = [physical[name].model_copy(update={"role": "packed_data"})]
+            storage.extend(
+                physical[name + suffix].model_copy(update={"role": role})
+                for suffix, role in roles.items()
+                if name + suffix in physical
+            )
+            binding, reason = "quantized", "unsupported_representation"
+            message = "No admitted complete bitsandbytes NF4 numeric tensor exists."
         elif (
             storage
             and storage[0].shape == list(dims)
@@ -620,7 +636,7 @@ def register_dense_descriptions(registry: DescriptionRegistry) -> None:
     ):
         registry.register(
             Description(
-                Producer(name, "2", SOURCE_REVISION),
+                Producer(name, "3", SOURCE_REVISION),
                 "language_model",
                 frozenset({family}),
                 frozenset({architecture}),

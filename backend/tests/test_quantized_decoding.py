@@ -12,6 +12,8 @@ import pytest
 import torch
 from quantized_oracles import (
     PackedFixture,
+    bnb_nf4_asymmetric_fixture,
+    bnb_nf4_fixture,
     compressed_tensors_fixture,
     e2m1,
     e4m3,
@@ -25,13 +27,15 @@ from llm_model_explorer.models import ModelCatalogue
 from llm_model_explorer.tensor_source import DEFAULT_CHUNK_ELEMENTS, ModelSource
 
 
-@pytest.fixture(params=["gptq-int4", "nvfp4", "compressed-tensors-w4a16-int4"])
+@pytest.fixture(params=["gptq-int4", "nvfp4", "compressed-tensors-w4a16-int4", "bnb-nf4-dq"])
 def packed(request: pytest.FixtureRequest) -> PackedFixture:
     if request.param == "gptq-int4":
         return gptq_fixture()
     if request.param == "nvfp4":
         return nvfp4_fixture()
-    return compressed_tensors_fixture()
+    if request.param == "compressed-tensors-w4a16-int4":
+        return compressed_tensors_fixture()
+    return bnb_nf4_fixture()
 
 
 def pin(root: Path, fixture: PackedFixture, *, split: bool = False) -> ModelSource:
@@ -119,6 +123,22 @@ def test_nvfp4_all_nibbles_and_signed_zero_are_explicit() -> None:
     assert e4m3(0x7E) == 448
 
 
+def test_bnb_nf4_high_nibble_first_asymmetric_codes_and_unaligned_slice(tmp_path: Path) -> None:
+    fixture = bnb_nf4_asymmetric_fixture()
+    source = pin(tmp_path, fixture)
+    expected = struct.pack("<4f", -2.0, 2.0, 2.0, -2.0)
+
+    assert raw(decode(source, fixture, 0, 4)) == expected
+    assert raw(decode(source, fixture, 1, 2)) == struct.pack("<2f", 2.0, 2.0)
+
+
+def test_bnb_nf4_odd_element_uses_high_nibble_and_ignores_low_padding() -> None:
+    fixture = bnb_nf4_fixture(outputs=1, inputs=3)
+    packed = fixture.storage[0].data
+    assert packed[-1] & 0x0F == 0
+    assert packed[-1] >> 4 == 2
+
+
 def test_gptq_fixture_exercises_stored_group_mapping_and_zero_endpoints() -> None:
     fixture = gptq_fixture()
     data = {entry.name.rsplit(".", 1)[1]: entry.data for entry in fixture.storage}
@@ -191,7 +211,8 @@ def test_small_range_copies_only_bounded_storage_and_owns_output(
             proxy = Mock(wraps=stream)
 
             def read(size: int) -> bytes:
-                assert 0 < size <= 5 * 4
+                maximum = 5 * 4 if packed.encoding != "bnb-nf4-dq" else 4096
+                assert 0 < size <= maximum
                 reads.append(size)
                 return stream.read(size)
 
@@ -202,8 +223,9 @@ def test_small_range_copies_only_bounded_storage_and_owns_output(
         values: torch.Tensor, dimension: int, indices: torch.Tensor
     ) -> torch.Tensor:
         selected_counts.append(indices.numel())
-        # Physical reads may gather four bytes per requested logical scalar.
-        assert indices.numel() <= 5 * 4
+        # BNB range reads also gather their selected codebook entries.
+        maximum = 5 * 4 if packed.encoding != "bnb-nf4-dq" else 5 * 4 + 16 + 256
+        assert indices.numel() <= maximum
         return original_select(values, dimension, indices)
 
     monkeypatch.setattr(FileSnapshot, "open", observed_open)
@@ -211,7 +233,8 @@ def test_small_range_copies_only_bounded_storage_and_owns_output(
     values = decode(source, packed, 3, 5)
     assert raw(values) == packed.expected()[12:32]
     assert selected_counts
-    assert reads and sum(reads) <= 4 * 5 * 4
+    read_budget = 4 * 5 * 4 if packed.encoding != "bnb-nf4-dq" else 4096 + 4 * 5 * 4
+    assert reads and sum(reads) <= read_budget
     assert values.untyped_storage().nbytes() == 5 * 4
     values.fill_(987.0)
     assert {path: path.read_bytes() for path in files} == files

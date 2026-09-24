@@ -51,6 +51,48 @@ def e4m3(code: int) -> float:
     return math.copysign(magnitude, -1 if code & 128 else 1)
 
 
+NF4_CODEBOOK = (
+    -1.0,
+    -0.6961928009986877,
+    -0.5250730514526367,
+    -0.39491748809814453,
+    -0.28444138169288635,
+    -0.18477343022823334,
+    -0.09105003625154495,
+    0.0,
+    0.07958029955625534,
+    0.16093020141124725,
+    0.24611230194568634,
+    0.33791524171829224,
+    0.44070982933044434,
+    0.5626170039176941,
+    0.7229568362236023,
+    1.0,
+)
+
+
+def bnb_config() -> dict[str, object]:
+    return {
+        "model_type": "llama",
+        "architectures": ["LlamaForCausalLM"],
+        "quantization_config": {
+            "_load_in_4bit": True,
+            "_load_in_8bit": False,
+            "bnb_4bit_compute_dtype": "bfloat16",
+            "bnb_4bit_quant_storage": "uint8",
+            "bnb_4bit_quant_type": "nf4",
+            "bnb_4bit_use_double_quant": True,
+            "llm_int8_enable_fp32_cpu_offload": False,
+            "llm_int8_has_fp16_weight": False,
+            "llm_int8_skip_modules": None,
+            "llm_int8_threshold": 6.0,
+            "load_in_4bit": True,
+            "load_in_8bit": False,
+            "quant_method": "bitsandbytes",
+        },
+    }
+
+
 @dataclass(frozen=True)
 class Stored:
     name: str
@@ -80,9 +122,22 @@ class PackedFixture:
         """Walk output rows and input columns, decoding one scalar at a time."""
         fields = {entry.name.rsplit(".", 1)[1]: entry.data for entry in self.storage}
         output, inputs = self.shape
+        if self.encoding == "bnb-nf4-dq":
+            fields["bitsandbytes__nf4"] = next(
+                entry.data
+                for entry in self.storage
+                if entry.name.endswith(".quant_state.bitsandbytes__nf4")
+            )
+            nf4_map = struct.unpack("<16f", fields["quant_map"])
+            nested_map = struct.unpack("<256f", fields["nested_quant_map"])
+            nested_absmax_values = struct.unpack(
+                f"<{len(fields['nested_absmax']) // 4}f", fields["nested_absmax"]
+            )
+            offset = json.loads(fields["bitsandbytes__nf4"])["nested_offset"]
         values = bytearray()
         for row in range(output):
             for column in range(inputs):
+                index = row * inputs + column
                 if self.encoding == "gptq-int4":
                     group = struct.unpack_from("<i", fields["g_idx"], column * 4)[0]
                     word = struct.unpack_from(
@@ -103,7 +158,7 @@ class PackedFixture:
                     scale = e4m3(fields["weight_scale"][row * (inputs // 16) + column // 16])
                     global_scale = struct.unpack("<f", fields["weight_scale_2"])[0]
                     value = e2m1(code) * f32(scale * global_scale)
-                else:
+                elif self.encoding == "compressed-tensors-w4a16-int4":
                     word = struct.unpack_from(
                         "<I", fields["weight_packed"], (row * (inputs // 8) + column // 8) * 4
                     )[0]
@@ -113,14 +168,29 @@ class PackedFixture:
                     )[0]
                     scale = struct.unpack("<f", struct.pack("<I", scale_bits << 16))[0]
                     value = signed * scale
+                else:
+                    packed = fields["weight"][index // 2]
+                    code = (packed >> (4 * (1 - index % 2))) & 15
+                    block = index // 64
+                    nested_code = fields["absmax"][block]
+                    nested_block = block // 256
+                    nested_absmax = nested_absmax_values[nested_block]
+                    nested_codebook = nested_map[nested_code]
+                    scale = f32(f32(nested_codebook * nested_absmax) + offset)
+                    nf4 = nf4_map[code]
+                    value = f32(nf4 * scale)
                 values.extend(struct.pack("<f", value))
         return bytes(values)
 
     def write(self, root: Path, *, split: bool = False, name: str = "numeric") -> Path:
         directory = root / name
         directory.mkdir(parents=True)
-        kind = self.config_kind or ("JunHowie" if self.encoding == "gptq-int4" else "AxionML")
-        (directory / "config.json").write_text(json.dumps(config_for(kind)))
+        if self.encoding == "bnb-nf4-dq":
+            config = bnb_config()
+        else:
+            kind = self.config_kind or ("JunHowie" if self.encoding == "gptq-int4" else "AxionML")
+            config = config_for(kind)
+        (directory / "config.json").write_text(json.dumps(config))
         groups = [(entry,) for entry in self.storage] if split else [self.storage]
         mapping: dict[str, str] = {}
         for number, entries in enumerate(groups):
@@ -263,4 +333,85 @@ def compressed_tensors_fixture(
             Stored(prefix + ".weight_shape", "I64", (2,), struct.pack("<2q", output, inputs)),
         ),
         config_kind=kind,
+    )
+
+
+def bnb_nf4_fixture(
+    *, outputs: int = 3, inputs: int = 64 * 257 + 1, prefix: str = PREFIX
+) -> PackedFixture:
+    """Exercise all NF4 codes, odd padding and both nested-scale group boundaries."""
+    count = outputs * inputs
+    packed = bytes(
+        (((2 * index) % 16) << 4) | ((2 * index + 1) % 16 if 2 * index + 1 < count else 0)
+        for index in range((count + 1) // 2)
+    )
+    absmax = bytes(index % 256 for index in range((count + 63) // 64))
+    nested_count = (len(absmax) + 255) // 256
+    nested_absmax = b"".join(struct.pack("<f", 1.25 + index) for index in range(nested_count))
+    nested_map = b"".join(struct.pack("<f", -1.0 + (2.0 * index / 255)) for index in range(256))
+    state = json.dumps(
+        {
+            "quant_type": "nf4",
+            "blocksize": 64,
+            "dtype": "bfloat16",
+            "shape": [outputs, inputs],
+            "nested_blocksize": 256,
+            "nested_dtype": "float32",
+            "nested_offset": 100.0,
+        }
+    ).encode()
+    return PackedFixture(
+        "bnb-nf4-dq",
+        (outputs, inputs),
+        (
+            Stored(prefix + ".weight", "U8", ((count + 1) // 2, 1), packed),
+            Stored(prefix + ".weight.absmax", "U8", (len(absmax),), absmax),
+            Stored(prefix + ".weight.quant_map", "F32", (16,), struct.pack("<16f", *NF4_CODEBOOK)),
+            Stored(prefix + ".weight.nested_absmax", "F32", (nested_count,), nested_absmax),
+            Stored(prefix + ".weight.nested_quant_map", "F32", (256,), nested_map),
+            Stored(
+                prefix + ".weight.quant_state.bitsandbytes__nf4",
+                "U8",
+                (len(state),),
+                state,
+            ),
+        ),
+    )
+
+
+def bnb_nf4_asymmetric_fixture(*, prefix: str = PREFIX) -> PackedFixture:
+    """Keep nibble identity visible: map endpoints times an exact absmax of two."""
+    nested_map = tuple((index - 127) / 128 for index in range(256))
+    state = json.dumps(
+        {
+            "quant_type": "nf4",
+            "blocksize": 64,
+            "dtype": "bfloat16",
+            "shape": [1, 4],
+            "nested_blocksize": 256,
+            "nested_dtype": "float32",
+            "nested_offset": 2.0,
+        }
+    ).encode()
+    return PackedFixture(
+        "bnb-nf4-dq",
+        (1, 4),
+        (
+            Stored(prefix + ".weight", "U8", (2, 1), bytes((0x0F, 0xF0))),
+            Stored(prefix + ".weight.absmax", "U8", (1,), bytes((127,))),
+            Stored(prefix + ".weight.quant_map", "F32", (16,), struct.pack("<16f", *NF4_CODEBOOK)),
+            Stored(prefix + ".weight.nested_absmax", "F32", (1,), struct.pack("<f", 1.0)),
+            Stored(
+                prefix + ".weight.nested_quant_map",
+                "F32",
+                (256,),
+                struct.pack("<256f", *nested_map),
+            ),
+            Stored(
+                prefix + ".weight.quant_state.bitsandbytes__nf4",
+                "U8",
+                (len(state),),
+                state,
+            ),
+        ),
     )

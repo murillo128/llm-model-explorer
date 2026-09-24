@@ -15,6 +15,7 @@ import pytest
 import torch
 from architecture_assertions import semantic_key, transparent_edges
 from dense_fixtures import local_fixture, small_config, small_storage
+from quantized_oracles import bnb_config, bnb_nf4_fixture
 from test_quantized_models import Storage
 
 from llm_model_explorer.architecture_analysis import (
@@ -249,6 +250,41 @@ def test_gptq_inspection_uses_existing_complete_logical_identity() -> None:
         for suffix in ("qweight", "qzeros", "scales", "g_idx")
     ]
     assert parameters["model.layers.0.self_attn.q_proj.weight"].inspection.status == "unavailable"
+
+
+def test_bnb_nf4_architecture_binds_complete_group_without_decoding() -> None:
+    prefix = "model.layers.0.self_attn.q_proj"
+    fixture = bnb_nf4_fixture(outputs=12, inputs=12, prefix=prefix)
+    entries = [entry for entry in small_storage(False) if entry[0] != prefix + ".weight"]
+    entries.extend((item.name, item.dtype, list(item.shape)) for item in fixture.storage)
+    config = small_config(False) | {"quantization_config": bnb_config()["quantization_config"]}
+    data = metadata(config, entries)
+    tensor = NumericTensor("logical_bnb", fixture.name, fixture.shape, "U8", "bnb-nf4-dq")
+    bnb_storage_names = {item.name for item in fixture.storage}
+    numeric = {
+        key: item
+        for key, item in data.bindings.numeric.items()
+        if item.name not in bnb_storage_names
+    }
+    data = replace(
+        data,
+        bindings=replace(data.bindings, numeric={**numeric, tensor.id: tensor}),
+    )
+
+    graph = graph_for(data)
+    parameter = next(item for item in graph.parameters if item.name == fixture.name)
+    assert parameter.binding == "quantized"
+    assert parameter.inspection.status == "available"
+    assert parameter.inspection.tensor_id == tensor.id
+    assert dimensions(parameter.logical_shape) == [12, 12]
+    assert [storage.role for storage in parameter.storage] == [
+        "packed_data",
+        "scales",
+        "codebook",
+        "scales",
+        "codebook",
+        "quantization_state",
+    ]
 
 
 @pytest.mark.parametrize(

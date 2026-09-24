@@ -31,7 +31,8 @@ def test_reviewed_groups_and_revision(
     name: str, inputs: AnalysisInput, registry: DescriptionRegistry
 ) -> None:
     selected = registry.select(inputs)
-    assert selected is not None and selected.producer.revision == "2"
+    expected_revision = "3" if name in {"llama", "qwen3", "llama-bias", "llama-partial"} else "2"
+    assert selected is not None and selected.producer.revision == expected_revision
     result = registry.analyze(inputs)
     graph = result.graph
     assert graph is not None
