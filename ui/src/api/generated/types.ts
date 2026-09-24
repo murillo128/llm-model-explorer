@@ -345,8 +345,11 @@ export interface components {
             numel: number;
             /** @description Physical dtype/representation reported by the backend. */
             storage_dtype: string;
-            /** @description Optional additional physical format such as a quantization scheme. */
-            storage_format?: string;
+            /**
+             * @description Validated backend physical format for this logical tensor.
+             * @enum {string}
+             */
+            storage_format?: "safetensors" | "gptq-int4" | "nvfp4" | "bnb-nf4-dq" | "compressed-tensors-w4a16-int4";
             /** @enum {string} */
             logical_dtype: "float32";
         };

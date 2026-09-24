@@ -21,4 +21,16 @@ describe('UI contextual validation against the independently published oracle ca
     });
     if (test.valid) expect(check).not.toThrow(); else expect(check).toThrow();
   });
+
+  it('rejects malformed SmolLM2 NF4 packed storage metadata', () => {
+    const test = fixtures.cases.find((entry) => entry.name === 'bnb-nf4-dq-complete-logical-inspection');
+    expect(test).toBeDefined();
+    const context = edit(fixtures.context, test!.context_edits) as typeof fixtures.context;
+    const response = edit(fixtures.response, test!.edits);
+    const malformed = edit(response, [{ path: ['graph', 'parameters', '2', 'storage', '0', 'shape'], value: [1, 1] }]);
+    expect(() => validateArchitecture(malformed, {
+      modelId: context.session.model_id, inventory: validateSchema('TensorInventory', context.inventory),
+      tokenizerAvailable: context.tokenizer_available,
+    })).toThrow();
+  });
 });

@@ -9024,6 +9024,155 @@
       ]
     },
     {
+      "name": "bnb-nf4-dq-complete-logical-inspection",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "model.layers.0.self_attn.q_proj.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 576
+              },
+              {
+                "kind": "constant",
+                "value": 576
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "model.layers.0.self_attn.q_proj.weight",
+                "dtype": "U8",
+                "shape": [
+                  165888,
+                  1
+                ],
+                "role": "packed_data"
+              },
+              {
+                "name": "model.layers.0.self_attn.q_proj.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  5184
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.self_attn.q_proj.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ],
+                "role": "codebook"
+              },
+              {
+                "name": "model.layers.0.self_attn.q_proj.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  21
+                ],
+                "role": "scales"
+              },
+              {
+                "name": "model.layers.0.self_attn.q_proj.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ],
+                "role": "codebook"
+              },
+              {
+                "name": "model.layers.0.self_attn.q_proj.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  1
+                ],
+                "role": "quantization_state"
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "model.layers.0.self_attn.q_proj.weight",
+              "path": [
+                "model",
+                "layers",
+                "0",
+                "self_attn",
+                "q_proj",
+                "weight"
+              ],
+              "shape": [
+                576,
+                576
+              ],
+              "rank": 2,
+              "numel": 331776,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "template-verified-nonconsecutive",
       "base": "template_response",
       "edits": [],

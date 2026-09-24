@@ -61,6 +61,21 @@ def validate_packed_storage(parameter, geometry, tensor=None):
         expected = {'qweight': ('I32', [inputs // 8, output]),
                     'qzeros': ('I32', [inputs // 128, output // 8]),
                     'scales': ('F16', [inputs // 128, output]), 'g_idx': ('I32', [inputs])}
+    elif representation == 'bnb-nf4-dq':
+        dtype = 'U8'
+        elements = product(geometry)
+        absmax_count = (elements + 63) // 64
+        nested_count = (absmax_count + 255) // 256
+        state_name = prefix + '.weight.quant_state.bitsandbytes__nf4'
+        states = [record for record in parameter['storage'] if record['name'] == state_name]
+        require(len(states) == 1 and states[0]['dtype'] == 'U8' and len(states[0]['shape']) == 1 and
+                0 < states[0]['shape'][0] <= 4096, 'NF4 quantization state metadata')
+        expected = {'weight': ('U8', [(elements + 1) // 2, 1]),
+                    'weight.absmax': ('U8', [absmax_count]),
+                    'weight.quant_map': ('F32', [16]),
+                    'weight.nested_absmax': ('F32', [nested_count]),
+                    'weight.nested_quant_map': ('F32', [256]),
+                    'weight.quant_state.bitsandbytes__nf4': ('U8', states[0]['shape'])}
     elif representation == 'nvfp4':
         require(inputs % 16 == 0, 'NVFP4 logical geometry')
         dtype = 'U8'
@@ -683,6 +698,27 @@ def fixtures():
             ('wrong-inventory-shape', [set_('inventory/tensors/2/shape', list(reversed(dims)))]),
         ]:
             case(label+'-'+suffix, base_edits, context_edits=base_context + changes)
+    # SmolLM2-135M's q_proj is a 576x576 NF4 matrix in the pinned QLoRA reference.
+    # The serialized quantization-state bytes are opaque to this contract fixture.
+    nf4_elements = 576 * 576
+    nf4_absmax_count = (nf4_elements + 63) // 64
+    nf4_nested_count = (nf4_absmax_count + 255) // 256
+    nf4_prefix = 'model.layers.0.self_attn.q_proj'
+    nf4 = dict(id='quantized', name=nf4_prefix + '.weight',
+        logical_shape=[dim(576), dim(576)], binding='quantized',
+        inspection=dict(status='available', tensor_id='tensor_packed'), provenance=[],
+        storage=[dict(name=nf4_prefix + '.weight', dtype='U8', shape=[(nf4_elements + 1) // 2, 1], role='packed_data'),
+                 dict(name=nf4_prefix + '.weight.absmax', dtype='U8', shape=[nf4_absmax_count], role='scales'),
+                 dict(name=nf4_prefix + '.weight.quant_map', dtype='F32', shape=[16], role='codebook'),
+                 dict(name=nf4_prefix + '.weight.nested_absmax', dtype='F32', shape=[nf4_nested_count], role='scales'),
+                 dict(name=nf4_prefix + '.weight.nested_quant_map', dtype='F32', shape=[256], role='codebook'),
+                 dict(name=nf4_prefix + '.weight.quant_state.bitsandbytes__nf4', dtype='U8', shape=[1], role='quantization_state')])
+    nf4_descriptor = dict(id='tensor_packed', name=nf4['name'], path=nf4['name'].split('.'),
+        shape=[576, 576], rank=2, numel=nf4_elements, storage_dtype='U8',
+        storage_format='bnb-nf4-dq', logical_dtype='float32')
+    nf4_base_edits = [set_('graph/parameters/2', nf4)]
+    nf4_context = [set_('inventory/tensors', inventory['tensors'] + [nf4_descriptor])]
+    case('bnb-nf4-dq-complete-logical-inspection', nf4_base_edits, True, context_edits=nf4_context)
     template_graph, additional_cases = template_cases()
     cases.extend(additional_cases)
     # Large-size tests use repeated fixed chunks, never a 32 MiB fixture/object allocation.
