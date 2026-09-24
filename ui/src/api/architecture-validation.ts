@@ -2,6 +2,7 @@ import type { components } from './generated/types';
 import { requireProtocol as require } from './errors';
 import { product, validateSchema } from './validation';
 import { validateTemplates } from './template-validation';
+import { expandCompactGraph } from './compact-architecture';
 
 type S = components['schemas'];
 export interface ArchitectureContext {
@@ -72,7 +73,7 @@ export function validateArchitecture(value: unknown, context: ArchitectureContex
     require(!['restart_required', 'cache_unavailable'].includes(response.reason) || response.requires_restart, 'Restart required');
     return response;
   }
-  const graph = response.graph;
+  const graph = expandCompactGraph(response.graph);
   const nodes = unique(graph.nodes, (n) => n.id);
   const parameters = unique(graph.parameters, (p) => p.id);
   unique([...graph.nodes, ...graph.parameters, ...graph.edges, ...graph.repetitions], (r) => r.id);
@@ -189,5 +190,5 @@ export function validateArchitecture(value: unknown, context: ArchitectureContex
     }
   }
   validateTemplates(graph);
-  return response;
+  return { ...response, graph };
 }

@@ -47,6 +47,71 @@ def unique(records, field='id'):
     return result
 
 
+def expand_compact_graph(source):
+    """Independent expansion of the public repeated-component wire form."""
+    if not source.get('compact_components'):
+        return source
+    graph = deepcopy(source)
+    families = graph.pop('compact_components')
+    parameters = unique(graph['parameters'])
+    repetitions = unique(graph['repetitions'])
+    symbols = unique(graph['symbols'], 'name')
+    seen = {record['id'] for key in ('nodes', 'edges', 'parameters', 'repetitions') for record in graph[key]}
+    prefixes = set()
+
+    def replace(value, ids, before, after):
+        if isinstance(value, str):
+            return ids.get(value, value.replace(before, after))
+        if isinstance(value, list):
+            return [replace(item, ids, before, after) for item in value]
+        if isinstance(value, dict):
+            return {key: replace(item, ids, before, after) for key, item in value.items()}
+        return value
+
+    for family in families:
+        require(family['id'] not in seen, 'duplicate compact family')
+        seen.add(family['id'])
+        repetition = repetitions.get(family['repetition_id'])
+        require(repetition is not None and family['nodes'][0]['kind'] == 'group', 'compact root')
+        require(all(item['variant'] in ('routed_expert', 'routed_swiglu') for item in repetition['instances']),
+                'compact routed variant')
+        require([(item['node_id'], item['index']) for item in repetition['instances']] ==
+                [(item['node_id'], item['index']) for item in family['instances']], 'compact repetition order')
+        names = [parameters[pid]['name'] for pid in family['parameter_ids']]
+        require(all(name.startswith(family['base_prefix'] + '.') for name in names), 'compact prototype parameter scope')
+        require(all(name in symbols for name in family['symbols']), 'compact prototype symbols')
+        for instance in family['instances']:
+            require(instance['prefix'] not in prefixes, 'duplicate compact prefix')
+            prefixes.add(instance['prefix'])
+            require(len(instance['node_ids']) == len(family['nodes']) and
+                    len(instance['edge_ids']) == len(family['edges']) and
+                    len(instance['parameter_ids']) == len(family['parameter_ids']) and
+                    len(instance['symbols']) == len(family['symbols']) and
+                    instance['node_ids'][0] == instance['node_id'], 'compact mapping length')
+            require(all(name in symbols for name in instance['symbols']), 'compact instance symbols')
+            for name, pid in zip(names, instance['parameter_ids'], strict=True):
+                parameter = parameters.get(pid)
+                require(parameter is not None and parameter['name'] == name.replace(family['base_prefix'], instance['prefix']),
+                        'compact expert binding is missing or swapped')
+            ids = {record['id']: target for record, target in zip(family['nodes'], instance['node_ids'], strict=True)}
+            ids.update((record['id'], target) for record, target in zip(family['edges'], instance['edge_ids'], strict=True))
+            ids.update(zip(family['parameter_ids'], instance['parameter_ids'], strict=True))
+            ids.update(zip(family['symbols'], instance['symbols'], strict=True))
+            nodes = replace(family['nodes'], ids, family['base_prefix'], instance['prefix'])
+            edges = replace(family['edges'], ids, family['base_prefix'], instance['prefix'])
+            nodes[0]['label'] = instance['label']
+            for attribute in nodes[0]['attributes']:
+                if attribute['name'] == 'expert_index':
+                    attribute['value'] = float(instance['index'])
+            require(nodes[0]['parent_id'] == repetition['parent_id'], 'compact parent')
+            for record in nodes + edges:
+                require(record['id'] not in seen, 'duplicate compact record')
+                seen.add(record['id'])
+            graph['nodes'].extend(nodes)
+            graph['edges'].extend(edges)
+    return graph
+
+
 def validate_packed_storage(parameter, geometry, tensor=None):
     """Logical matrices require a complete admitted group, never raw auxiliary IDs."""
     require(parameter['name'].endswith('.weight') and len(geometry) == 2 and min(geometry) > 0,
@@ -101,7 +166,7 @@ def validate_architecture(value, context=None):
         if value['reason'] in ('restart_required', 'cache_unavailable'):
             require(value['requires_restart'], 'restart required')
         return
-    graph = value['graph']
+    graph = expand_compact_graph(value['graph'])
     nodes = unique(graph['nodes'])
     params = unique(graph['parameters'])
     unique(graph['edges'])
@@ -459,6 +524,54 @@ def template_cases():
     return graph, cases
 
 
+def compact_cases():
+    """Small authored routed-expert wire document with distinct exact bindings."""
+    provenance = [dict(kind='description', source='independent-compact-fixture', revision='1')]
+    prefix = 'model.layers.1.mlp.experts.0'
+    root = dict(id='root',kind='group',label='MoE',children=['expert0','expert1'],ports=[],
+                parameter_ids=[],references=[],attributes=[],provenance=provenance)
+    prototype = dict(id='expert0',kind='group',parent_id='root',label='Routed expert 0',
+                     operation='weighted_swiglu_mlp',children=[],ports=[],parameter_ids=['p0'],
+                     references=[dict(kind='module',name=prefix),dict(kind='parameter',parameter_id='p0')],
+                     attributes=[dict(name='semantic_role',value='mlp',provenance=provenance),
+                                 dict(name='expert_index',value=0.0,provenance=provenance)],
+                     provenance=provenance)
+    def parameter(index):
+        return dict(id=f'p{index}',name=f'model.layers.1.mlp.experts.{index}.w1.weight',
+                    logical_shape=[dict(kind='constant',value=2),dict(kind='constant',value=2)],
+                    binding='unresolved',storage=[],inspection=dict(status='unavailable',
+                    reason='unresolved_binding',message='Independent fixture has no storage.'),provenance=provenance)
+    def instance(index):
+        return dict(node_id=f'expert{index}',prefix=f'model.layers.1.mlp.experts.{index}',
+                    label=f'Routed expert {index}',index=index,node_ids=[f'expert{index}'],
+                    edge_ids=[],parameter_ids=[f'p{index}'],symbols=[])
+    graph = dict(graph_id='independent-compact',scope='language_model',coverage='complete',symbols=[],
+                 nodes=[root],edges=[],parameters=[parameter(0),parameter(1)],diagnostics=[],
+                 repetitions=[dict(id='experts',parent_id='root',label='Routed experts',instances=[
+                     dict(node_id='expert0',index=0,variant='routed_expert'),
+                     dict(node_id='expert1',index=1,variant='routed_expert')])],
+                 compact_components=[dict(id='compact_experts',repetition_id='experts',base_prefix=prefix,
+                     nodes=[prototype],edges=[],parameter_ids=['p0'],symbols=[],instances=[instance(0),instance(1)])])
+    response = dict(status='available',model_id='test/architecture',diagnostics=[],graph=graph)
+    def edit(path,value): return dict(path=('graph/'+path).split('/'),value=value)
+    cases = [
+        dict(name='compact-experts-valid',base='compact_response',edits=[],valid=True,schema_valid=True,context_edits=[]),
+        dict(name='compact-experts-missing-binding',base='compact_response',
+             edits=[edit('compact_components/0/instances/1/parameter_ids',['missing'])],valid=False,
+             schema_valid=True,context_edits=[]),
+        dict(name='compact-experts-swapped-binding',base='compact_response',
+             edits=[edit('compact_components/0/instances/1/parameter_ids',['p0'])],valid=False,
+             schema_valid=True,context_edits=[]),
+        dict(name='compact-experts-wrong-index',base='compact_response',
+             edits=[edit('compact_components/0/instances/1/index',0)],valid=False,
+             schema_valid=True,context_edits=[]),
+        dict(name='compact-experts-duplicate-node',base='compact_response',
+             edits=[edit('compact_components/0/instances/1/node_ids',['expert0'])],valid=False,
+             schema_valid=True,context_edits=[]),
+    ]
+    return response, cases
+
+
 def fixtures():
     """Compact base documents plus mutation cases; never repeat a full graph per defect."""
     dim = lambda n: {'kind': 'constant', 'value': n}
@@ -721,6 +834,8 @@ def fixtures():
     case('bnb-nf4-dq-complete-logical-inspection', nf4_base_edits, True, context_edits=nf4_context)
     template_graph, additional_cases = template_cases()
     cases.extend(additional_cases)
+    compact_response, compact_additional = compact_cases()
+    cases.extend(compact_additional)
     # Large-size tests use repeated fixed chunks, never a 32 MiB fixture/object allocation.
     bounds = [dict(name='exact-limit', chunk_bytes=4096, repeat=8192, tail_bytes=0, valid=True),
               dict(name='one-byte-over', chunk_bytes=4096, repeat=8192, tail_bytes=1, valid=False)]
@@ -734,7 +849,8 @@ def fixtures():
             dict(code='excluded', message='Descriptive only.', node_id='foreign')]), valid=False),
     ]
     return dict(inventory_cases=inventory_cases, response=response,
-                template_response={**response, 'graph': template_graph}, context=context, cases=cases, byte_cases=bounds,
+                template_response={**response, 'graph': template_graph}, compact_response=compact_response,
+                context=context, cases=cases, byte_cases=bounds,
                 http_cases=[dict(status=409, value=dict(code='model_content_changed',message='Pinned model content changed.'))])
 
 

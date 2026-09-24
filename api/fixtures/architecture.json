@@ -1998,6 +1998,215 @@
       ]
     }
   },
+  "compact_response": {
+    "status": "available",
+    "model_id": "test/architecture",
+    "diagnostics": [],
+    "graph": {
+      "graph_id": "independent-compact",
+      "scope": "language_model",
+      "coverage": "complete",
+      "symbols": [],
+      "nodes": [
+        {
+          "id": "root",
+          "kind": "group",
+          "label": "MoE",
+          "children": [
+            "expert0",
+            "expert1"
+          ],
+          "ports": [],
+          "parameter_ids": [],
+          "references": [],
+          "attributes": [],
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-compact-fixture",
+              "revision": "1"
+            }
+          ]
+        }
+      ],
+      "edges": [],
+      "parameters": [
+        {
+          "id": "p0",
+          "name": "model.layers.1.mlp.experts.0.w1.weight",
+          "logical_shape": [
+            {
+              "kind": "constant",
+              "value": 2
+            },
+            {
+              "kind": "constant",
+              "value": 2
+            }
+          ],
+          "binding": "unresolved",
+          "storage": [],
+          "inspection": {
+            "status": "unavailable",
+            "reason": "unresolved_binding",
+            "message": "Independent fixture has no storage."
+          },
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-compact-fixture",
+              "revision": "1"
+            }
+          ]
+        },
+        {
+          "id": "p1",
+          "name": "model.layers.1.mlp.experts.1.w1.weight",
+          "logical_shape": [
+            {
+              "kind": "constant",
+              "value": 2
+            },
+            {
+              "kind": "constant",
+              "value": 2
+            }
+          ],
+          "binding": "unresolved",
+          "storage": [],
+          "inspection": {
+            "status": "unavailable",
+            "reason": "unresolved_binding",
+            "message": "Independent fixture has no storage."
+          },
+          "provenance": [
+            {
+              "kind": "description",
+              "source": "independent-compact-fixture",
+              "revision": "1"
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "repetitions": [
+        {
+          "id": "experts",
+          "parent_id": "root",
+          "label": "Routed experts",
+          "instances": [
+            {
+              "node_id": "expert0",
+              "index": 0,
+              "variant": "routed_expert"
+            },
+            {
+              "node_id": "expert1",
+              "index": 1,
+              "variant": "routed_expert"
+            }
+          ]
+        }
+      ],
+      "compact_components": [
+        {
+          "id": "compact_experts",
+          "repetition_id": "experts",
+          "base_prefix": "model.layers.1.mlp.experts.0",
+          "nodes": [
+            {
+              "id": "expert0",
+              "kind": "group",
+              "parent_id": "root",
+              "label": "Routed expert 0",
+              "operation": "weighted_swiglu_mlp",
+              "children": [],
+              "ports": [],
+              "parameter_ids": [
+                "p0"
+              ],
+              "references": [
+                {
+                  "kind": "module",
+                  "name": "model.layers.1.mlp.experts.0"
+                },
+                {
+                  "kind": "parameter",
+                  "parameter_id": "p0"
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "semantic_role",
+                  "value": "mlp",
+                  "provenance": [
+                    {
+                      "kind": "description",
+                      "source": "independent-compact-fixture",
+                      "revision": "1"
+                    }
+                  ]
+                },
+                {
+                  "name": "expert_index",
+                  "value": 0.0,
+                  "provenance": [
+                    {
+                      "kind": "description",
+                      "source": "independent-compact-fixture",
+                      "revision": "1"
+                    }
+                  ]
+                }
+              ],
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-compact-fixture",
+                  "revision": "1"
+                }
+              ]
+            }
+          ],
+          "edges": [],
+          "parameter_ids": [
+            "p0"
+          ],
+          "symbols": [],
+          "instances": [
+            {
+              "node_id": "expert0",
+              "prefix": "model.layers.1.mlp.experts.0",
+              "label": "Routed expert 0",
+              "index": 0,
+              "node_ids": [
+                "expert0"
+              ],
+              "edge_ids": [],
+              "parameter_ids": [
+                "p0"
+              ],
+              "symbols": []
+            },
+            {
+              "node_id": "expert1",
+              "prefix": "model.layers.1.mlp.experts.1",
+              "label": "Routed expert 1",
+              "index": 1,
+              "node_ids": [
+                "expert1"
+              ],
+              "edge_ids": [],
+              "parameter_ids": [
+                "p1"
+              ],
+              "symbols": []
+            }
+          ]
+        }
+      ]
+    }
+  },
   "context": {
     "session": {
       "id": "12345678-1234-4234-8234-123456789abc",
@@ -10520,6 +10729,100 @@
       "valid": true,
       "context_edits": [],
       "schema_valid": true
+    },
+    {
+      "name": "compact-experts-valid",
+      "base": "compact_response",
+      "edits": [],
+      "valid": true,
+      "schema_valid": true,
+      "context_edits": []
+    },
+    {
+      "name": "compact-experts-missing-binding",
+      "base": "compact_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "compact_components",
+            "0",
+            "instances",
+            "1",
+            "parameter_ids"
+          ],
+          "value": [
+            "missing"
+          ]
+        }
+      ],
+      "valid": false,
+      "schema_valid": true,
+      "context_edits": []
+    },
+    {
+      "name": "compact-experts-swapped-binding",
+      "base": "compact_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "compact_components",
+            "0",
+            "instances",
+            "1",
+            "parameter_ids"
+          ],
+          "value": [
+            "p0"
+          ]
+        }
+      ],
+      "valid": false,
+      "schema_valid": true,
+      "context_edits": []
+    },
+    {
+      "name": "compact-experts-wrong-index",
+      "base": "compact_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "compact_components",
+            "0",
+            "instances",
+            "1",
+            "index"
+          ],
+          "value": 0
+        }
+      ],
+      "valid": false,
+      "schema_valid": true,
+      "context_edits": []
+    },
+    {
+      "name": "compact-experts-duplicate-node",
+      "base": "compact_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "compact_components",
+            "0",
+            "instances",
+            "1",
+            "node_ids"
+          ],
+          "value": [
+            "expert0"
+          ]
+        }
+      ],
+      "valid": false,
+      "schema_valid": true,
+      "context_edits": []
     }
   ],
   "byte_cases": [

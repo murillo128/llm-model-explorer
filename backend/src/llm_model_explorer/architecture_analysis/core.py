@@ -165,13 +165,19 @@ class GraphBuilder:
         scope: Scope,
         *,
         byte_limit: int = MAX_BYTES,
+        work_limit: int | None = None,
     ) -> None:
         require(0 < byte_limit <= MAX_BYTES, "Invalid architecture byte budget.")
+        require(
+            work_limit is None or byte_limit <= work_limit <= 2 * MAX_BYTES,
+            "Invalid compact construction budget.",
+        )
         self.inputs = inputs
         self.producer = producer
         self.scope = scope
         self.graph_id = producer.graph_id(inputs.fingerprint, scope)
-        self.byte_limit = byte_limit
+        self.response_limit = byte_limit
+        self.byte_limit = work_limit or byte_limit
         self._numeric_by_name = {t.name: t for t in inputs.bindings.numeric.values()}
         self._used = 0
         self._ids: set[str] = set()
@@ -394,7 +400,14 @@ class GraphBuilder:
         graph = self.templates.annotate(graph, self)
         serialized_size(graph.document(), self.byte_limit)
         validate_graph(graph, self.inputs.bindings)
-        return graph
+        if serialized_size(graph.document(), self.byte_limit) <= self.response_limit:
+            return graph
+        from .compact import compact_graph, expand_graph
+
+        compact = compact_graph(graph)
+        serialized_size(compact.document(), self.response_limit)
+        validate_graph(expand_graph(compact), self.inputs.bindings)
+        return compact
 
 
 def parse_graph(
@@ -404,7 +417,9 @@ def parse_graph(
     try:
         serialized_size(document, byte_limit)
         graph = r.ArchitectureGraph.model_validate(document)
-        validate_graph(graph, context)
+        from .compact import expand_graph
+
+        validate_graph(expand_graph(graph), context)
         return graph
     except GraphError:
         raise
@@ -427,6 +442,7 @@ class Description:
     # Returning False leaves the checkpoint unsupported; it must not guess a fallback.
     supports: Callable[[AnalysisInput], bool]
     build: Callable[[AnalysisInput, GraphBuilder], None]
+    compact_experts: bool = False
 
 
 class DescriptionRegistry:
@@ -472,7 +488,13 @@ class DescriptionRegistry:
                     "description_selection",
                     "No unique verified architecture description matches this metadata.",
                 )
-            builder = GraphBuilder(inputs, selected.producer, selected.scope, byte_limit=byte_limit)
+            builder = GraphBuilder(
+                inputs,
+                selected.producer,
+                selected.scope,
+                byte_limit=byte_limit,
+                work_limit=2 * MAX_BYTES if selected.compact_experts else None,
+            )
             selected.build(inputs, builder)
             graph = builder.finish()
             return AnalysisResult(graph, None)

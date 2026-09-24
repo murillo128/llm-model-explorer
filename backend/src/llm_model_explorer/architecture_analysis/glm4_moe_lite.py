@@ -1360,5 +1360,6 @@ def register_glm4_moe_lite(registry: DescriptionRegistry) -> None:
             architectures=frozenset({ARCHITECTURE}),
             supports=supports,
             build=build,
+            compact_experts=True,
         )
     )

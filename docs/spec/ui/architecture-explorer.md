@@ -23,7 +23,7 @@ Keep actual layer order and variant differences visible when grouped. Repetition
 
 Expanding a group preserves the acted-on location/context; do not reset the camera or automatically fit the entire graph after every expansion. Maintain camera, expanded groups, focused repetition/instance context, and valid node/connection selection while closing inspection or switching explorers during the browser session, keyed by model and graph identity. Server-restart persistence is not required. Reject late responses and clear invalid selections on session/model/graph replacement.
 
-Viewport culling and asynchronous layout are allowed optimizations; discarding graph records or silently reducing detail is not. Bound layout work and provide an explicit recoverable failure rather than an indefinitely frozen canvas. All reference graphs must be usable when fully expanded on the documented acceptance environment. Record actual layout time, memory, and graph size rather than inventing a performance guarantee.
+Viewport culling and asynchronous layout are allowed optimizations; discarding graph records or silently reducing detail is not. A compact routed-expert response is decoded from its explicit definition and instance mappings before source navigation, projection or inspection. The decoded graph retains every concrete expert and exact weight binding. Bound layout work and provide an explicit recoverable failure rather than an indefinitely frozen canvas. All reference graphs must be usable when fully expanded on the documented acceptance environment. Record actual layout time, memory, and graph size rather than inventing a performance guarantee.
 
 React Flow and ELK are implementation candidates, not mandatory backend dependencies or reasons to change the graph contract. The layout implementation may be replaced without changing model semantics. Do not add a second matrix renderer, graph editor, export suite, or complex navigation framework in this increment.
 
@@ -82,7 +82,7 @@ unchanged.
 
 ## Source-preserving visible projection
 
-Keep the received graph unchanged. Visible presentation records retain source node IDs, repetition/instance identity, and exact original edge/port references. Compose boundary forwarding without traversing computational operations. Model, stack, layer, MLP and state focus are expansion/filter states of the same canvas, with an explicit return to global context. Stack window size depends on the view/context rather than a globally fixed layer count.
+Keep the decoded source graph unchanged. Visible presentation records retain source node IDs, repetition/instance identity, and exact original edge/port references. Compose boundary forwarding without traversing computational operations. Model, stack, layer, MLP and state focus are expansion/filter states of the same canvas, with an explicit return to global context. Stack window size depends on the view/context rather than a globally fixed layer count.
 
 A reversible derived MLP group requires matching parameter/module ownership and exact gate/up/SiLU/multiply/down topology. Mark it as derived; unmatched operations remain explicit. A presentation boundary alias is not a new mathematical operation or backend identity.
 

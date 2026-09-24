@@ -847,6 +847,26 @@ export interface components {
             provenance: components["schemas"]["ArchitectureProvenance"][];
             instances: components["schemas"]["ArchitectureTemplateInstance"][];
         };
+        ArchitectureCompactInstance: {
+            node_id: components["schemas"]["ArchitectureId"];
+            prefix: components["schemas"]["ArchitectureName"];
+            label: components["schemas"]["ArchitectureName"];
+            index: components["schemas"]["SafeInteger"];
+            node_ids: components["schemas"]["ArchitectureId"][];
+            edge_ids: components["schemas"]["ArchitectureId"][];
+            parameter_ids: components["schemas"]["ArchitectureId"][];
+            symbols: components["schemas"]["ArchitectureName"][];
+        };
+        ArchitectureCompactComponent: {
+            id: components["schemas"]["ArchitectureId"];
+            repetition_id: components["schemas"]["ArchitectureId"];
+            base_prefix: components["schemas"]["ArchitectureName"];
+            nodes: components["schemas"]["ArchitectureNode"][];
+            edges: components["schemas"]["ArchitectureEdge"][];
+            parameter_ids: components["schemas"]["ArchitectureId"][];
+            symbols: components["schemas"]["ArchitectureName"][];
+            instances: components["schemas"]["ArchitectureCompactInstance"][];
+        };
         ArchitectureGraph: {
             graph_id: components["schemas"]["ArchitectureId"];
             /** @enum {string} */
@@ -860,6 +880,7 @@ export interface components {
             parameters: components["schemas"]["ArchitectureParameter"][];
             diagnostics: components["schemas"]["ArchitectureDiagnostic"][];
             templates?: components["schemas"]["ArchitectureTemplate"][];
+            compact_components?: components["schemas"]["ArchitectureCompactComponent"][];
         };
         ArchitectureAvailableResponse: {
             /**

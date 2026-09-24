@@ -3,7 +3,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_REVISION = "845f3bc82e18dd37a23a044b9dc4b3ab356b406558816e63f3a988e471de4d38"
+SCHEMA_REVISION = "29fc7e06d4020e695e6b611cba6085254e8e53316f7a8ae6af9e2fe5aa9e31a3"
 
 
 class Record(BaseModel):
@@ -309,6 +309,30 @@ class ArchitectureTemplate(Record):
     ]
 
 
+class ArchitectureCompactInstance(Record):
+    node_id: ArchitectureId
+    prefix: ArchitectureName
+    label: ArchitectureName
+    index: SafeInteger
+    node_ids: Annotated[list[ArchitectureId], Field(min_length=1, max_length=33554432)]
+    edge_ids: Annotated[list[ArchitectureId], Field(max_length=33554432)]
+    parameter_ids: Annotated[list[ArchitectureId], Field(max_length=33554432)]
+    symbols: Annotated[list[ArchitectureName], Field(max_length=33554432)]
+
+
+class ArchitectureCompactComponent(Record):
+    id: ArchitectureId
+    repetition_id: ArchitectureId
+    base_prefix: ArchitectureName
+    nodes: Annotated[list[ArchitectureNode], Field(min_length=1, max_length=33554432)]
+    edges: Annotated[list[ArchitectureEdge], Field(max_length=33554432)]
+    parameter_ids: Annotated[list[ArchitectureId], Field(max_length=33554432)]
+    symbols: Annotated[list[ArchitectureName], Field(max_length=33554432)]
+    instances: Annotated[
+        list[ArchitectureCompactInstance], Field(min_length=2, max_length=33554432)
+    ]
+
+
 class ArchitectureGraph(Record):
     graph_id: ArchitectureId
     scope: Literal["language_model", "visual_encoder_predictor"]
@@ -320,3 +344,6 @@ class ArchitectureGraph(Record):
     parameters: Annotated[list[ArchitectureParameter], Field(max_length=33554432)]
     diagnostics: Annotated[list[ArchitectureDiagnostic], Field(max_length=33554432)]
     templates: Annotated[list[ArchitectureTemplate], Field(max_length=33554432)] | None = None
+    compact_components: (
+        Annotated[list[ArchitectureCompactComponent], Field(max_length=33554432)] | None
+    ) = None
