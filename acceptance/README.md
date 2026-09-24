@@ -150,6 +150,24 @@ hover samples; the actual inventory/sample manifest is attached to browser evide
 No weights are copied into Git or downloaded. Missing configuration produces SKIP;
 a supplied invalid/unreadable directory fails.
 
+For the accepted SmolLM2 Base plus SmolTalk LoRA pair, place both complete
+checkpoints as immediate children of one local model root and run the focused
+catalogue/session/architecture and production-browser gates:
+
+```sh
+export LMEX_LORA_REFERENCE_MODEL_ROOT=/absolute/path/to/models
+backend/.venv/bin/python -m pytest -q acceptance/test_lora_reference.py
+(cd ui && npm run test:acceptance -- --grep "SmolLM2 LoRA reference")
+```
+
+The Python gate checks the bare and composed sessions, all 60 `q_proj`/`v_proj`
+branches, A/B inventory bindings, `alpha/r` and residual edges, and exact
+streamed values for representative first-layer A/B factors against the local
+Safetensors source. The browser gate navigates the generic graph and opens the
+first-layer q/v A/B factors through the existing weight modal. Both commands
+skip when `LMEX_LORA_REFERENCE_MODEL_ROOT` is unset; keep the local model root
+outside the repository.
+
 The CUDA test runs only when the installed PyTorch build and hardware expose CUDA;
 otherwise it reports an explicit reason for SKIP. Use a compatible operator-managed
 CUDA environment to run it. The repository's default Linux lock is CPU-only.

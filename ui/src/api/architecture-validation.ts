@@ -156,9 +156,17 @@ export function validateArchitecture(value: unknown, context: ArchitectureContex
     require(tensor && JSON.stringify(tensor.shape) === JSON.stringify(geometry) && tensor.name === terminal.name &&
       tensor.rank === geometry.length && tensor.numel === product(geometry), 'Inventory membership/geometry');
     if (terminal.binding === 'native') {
-      require(terminal.storage.some((s) => s.name === terminal.name && JSON.stringify(s.shape) === JSON.stringify(geometry) &&
-        ['F32', 'F16', 'BF16', 'float32', 'float16', 'bfloat16'].includes(s.dtype) && !['scales', 'packed', 'packed_data'].includes(s.role ?? '')), 'Native storage geometry');
-      require(terminal.storage.some((s) => s.name === tensor.name && s.dtype === tensor.storage_dtype), 'Inventory storage identity');
+      const adapterFactors = terminal.storage.filter((s) => s.role === 'adapter_factor');
+      if (adapterFactors.length) {
+        const [factor] = adapterFactors;
+        require(terminal.storage.length === 1 && factor && JSON.stringify(factor.shape) === JSON.stringify(geometry) &&
+          ['F32', 'F16', 'BF16', 'float32', 'float16', 'bfloat16'].includes(factor.dtype) &&
+          factor.dtype === tensor.storage_dtype, 'Native adapter factor storage identity/geometry');
+      } else {
+        require(terminal.storage.some((s) => s.name === terminal.name && JSON.stringify(s.shape) === JSON.stringify(geometry) &&
+          ['F32', 'F16', 'BF16', 'float32', 'float16', 'bfloat16'].includes(s.dtype) && !['scales', 'packed', 'packed_data'].includes(s.role ?? '')), 'Native storage geometry');
+        require(terminal.storage.some((s) => s.name === tensor.name && s.dtype === tensor.storage_dtype), 'Inventory storage identity');
+      }
     } else {
       validatePackedStorage(terminal, tensor, geometry);
     }
