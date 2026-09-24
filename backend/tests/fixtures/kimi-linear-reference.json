@@ -558,5 +558,9 @@
         2
       ]
     ]
-  }
+  },
+  "admitted_native_numeric_observations": [
+    "model.layers.0.self_attn.q_conv1d.weight",
+    "model.layers.0.self_attn.dt_bias"
+  ]
 }

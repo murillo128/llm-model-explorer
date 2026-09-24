@@ -11,7 +11,7 @@ source is
 The
 reviewed structural projection and independently recorded expectations are in
 [`tests/fixtures/kimi-linear-reference.json`](../tests/fixtures/kimi-linear-reference.json)
-(SHA-256 `b14cc9d914e00fc85d2f2c2a2e2862e9b773e8b233f91ad93a5792a7b2187f9d`).
+(SHA-256 `d2516cce6b9e056efbcd6c4db5d57b3b8cad80a98c5a79b946787b0740b38b17`).
 
 The implementation source is Moonshot's Kimi Linear repository at revision
 `d64a5299ded33ab2609617e05f6bd2cf9b6eef35`, specifically
@@ -30,7 +30,8 @@ contained the Safetensors header and no tensor payload bytes. Selected records
 confirm KDA convolution weights `[4096, 1, 4]`, `A_log` `[1, 1, 32, 1]`,
 `dt_bias` `[4096]`, a full-attention query weight `[6144, 2304]`, and a packed
 expert `w1` weight `[1024, 288]` with BF16 scales `[1024, 72]` and logical shape
-`[2]`. This is metadata evidence only; it is not actual checkpoint acceptance.
+`[2]`. This initial header-only inspection preceded the pinned-checkpoint
+validation recorded below.
 
 ## Evaluated path
 
@@ -41,9 +42,9 @@ layers 1–26 use the configured MoE block. A changed layer list, KDA geometry,
 latent-attention geometry, routing policy, or unknown structural field fails
 selection.
 
-The packaged Kimi description is revision `2`; this revision records the
-source-verified KDA padding/compaction dependencies and invalidates graphs made
-from the earlier draft description.
+The packaged Kimi description is revision `3`. Revision `2` recorded the
+source-verified KDA padding/compaction dependencies; revision `3` corrects
+high-rank native inspection annotations and invalidates older cached graphs.
 
 Each KDA group retains q/k/v projections and causal short convolutions, the
 fused decay gate from `f_a_proj`, `f_b_proj`, `A_log` and `dt_bias`, the sigmoid
@@ -107,6 +108,37 @@ geometry, all 27 layer identities, every expert in all 26 MoE layers, KDA state
 ports, MLA latent-attention paths, routing, residuals, storage bindings,
 negative configuration fixtures, graph closure and response size. They guard
 network connections, checkpoint imports, model construction, `forward()` and
-`generate()` calls, tracing, and `torch.load`. Actual quantized-checkpoint/browser validation
-remains assigned to the integrated-reference issue; this description does not
-claim that the model weights were opened or validated.
+`generate()` calls, tracing, and `torch.load`.
+
+## Pinned checkpoint high-rank binding correction
+
+Issue #236 used the downloaded checkpoint at the pinned revision above. The
+normal catalogue parsed all seven Safetensors shard headers and compressed-tensors
+logical shape records; `entry.pin()` computed content fingerprint
+`807d6bf1add29a27a2573f719026d7197b61403be22988b8d44f5e54a3c1ad66`.
+The guarded inventory contained 60,429 physical and 20,447 numeric records.
+No model code was imported or tensor payload materialized by architecture analysis.
+
+Before the correction, `registry.analyze(AnalysisInput.from_source(...))`
+returned `unavailable / analysis_failed / invalid_graph`. The first offending
+parameter was `model.layers.0.self_attn.q_conv1d.weight`, the KDA
+`short_convolution` operation's native BF16 weight. Both its physical and logical
+shape are `[4096, 1, 4]` (rank 3). It had an admitted native numeric descriptor,
+which the Kimi binder incorrectly marked `inspection: available`; graph
+validation then rejected it at `validate_graph`'s available-inspection rank check
+(`Unsupported inspection rank`). The pinned header and reviewed `ShortConvolution`
+declaration agree on this geometry. `model.layers.0.self_attn.A_log` is native F32
+`[1, 1, 32, 1]` (rank 4), used by the KDA decay gate; it has no admitted numeric
+descriptor in this compressed-tensors inventory. Neither parameter is a packed
+logical rank-2 matrix.
+
+With description revision `3`, analysis of the same pinned source returns
+`complete` with 7,868 nodes, 2,351 edges, and 20,493 parameters. The convolution
+weight and `A_log` retain their complete native storage, exact logical shapes,
+description provenance, and operation parameter references. Both report
+`inspection: unavailable / unsupported_rank`, without a tensor ID. The adjacent
+rank-1 `dt_bias` remains inspectable through its original numeric tensor ID.
+The deterministic test replays these three header records and the actual native
+inventory pattern; it failed with `invalid_graph` under revision `2` and passes
+under revision `3`. This establishes structural binding for the pinned checkpoint;
+numeric streaming and production-browser acceptance remain separate checks.
