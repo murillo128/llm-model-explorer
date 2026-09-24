@@ -20,7 +20,7 @@ SOURCE_REVISION = (
     + "; cyankiwi/Kimi-Linear-48B-A3B-Instruct-AWQ-4bit/config.json@"
     + CONFIG_REVISION
 )
-PRODUCER = Producer("kimi-linear-kda-mla-moe", "2", SOURCE_REVISION)
+PRODUCER = Producer("kimi-linear-kda-mla-moe", "3", SOURCE_REVISION)
 ARCHITECTURE = "KimiLinearForCausalLM"
 MODEL_TYPE = "kimi_linear"
 
@@ -378,17 +378,24 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
             )
         else:
             self.used_storage.add(name)
-            if numeric is None:
+            if numeric is not None:
+                require(
+                    numeric.shape == dimensions and numeric.dtype == physical.dtype,
+                    "Kimi Linear numeric inventory disagrees with parameter geometry.",
+                )
+            if len(dimensions) not in (1, 2):
                 inspection: r.ArchitectureInspection = r.ArchitectureUnavailableInspection(
+                    status="unavailable",
+                    reason="unsupported_rank",
+                    message="Numeric inspection supports complete rank-1/rank-2 tensors.",
+                )
+            elif numeric is None:
+                inspection = r.ArchitectureUnavailableInspection(
                     status="unavailable",
                     reason="unsupported_representation",
                     message="No logical numeric view is attached.",
                 )
             else:
-                require(
-                    numeric.shape == dimensions and numeric.dtype == physical.dtype,
-                    "Kimi Linear numeric inventory disagrees with parameter geometry.",
-                )
                 inspection = r.ArchitectureAvailableInspection(
                     status="available", tensor_id=numeric.id
                 )

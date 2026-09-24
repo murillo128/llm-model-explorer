@@ -34,7 +34,7 @@ from llm_model_explorer.architecture_analysis.kimi_linear import (
     parameter_shapes,
     register_kimi_linear,
 )
-from llm_model_explorer.architecture_analysis.validation import MAX_BYTES
+from llm_model_explorer.architecture_analysis.validation import MAX_BYTES, constants
 from llm_model_explorer.architecture_service import ArchitectureService
 from llm_model_explorer.artifacts import ArtifactStore
 from llm_model_explorer.execution import BlockingWork
@@ -266,13 +266,62 @@ def test_pinned_configuration_fixture_and_independent_geometry() -> None:
     ]
     assert configuration["layer_types"].count("kda") == 20
     assert configuration["layer_types"].count("full_attention") == 7
-    assert PRODUCER.revision == "2"
+    assert PRODUCER.revision == "3"
     assert parameter_shapes(REFERENCE) == expected_parameters(REFERENCE)
     assert FIXTURE["source"]["configuration_revision"] in PRODUCER.source_revision
     assert FIXTURE["source"]["modeling_revision"] in PRODUCER.source_revision
     assert FIXTURE["bounded_safetensors_header_observations"][
         "model.layers.4.self_attn.q_proj.weight"
     ] == ["BF16", [6144, 2304]]
+
+
+def test_real_header_high_rank_native_bindings_have_unavailable_inspection() -> None:
+    """The pinned Kimi header has an admitted rank-3 convolution and a rank-4 A_log."""
+    base = inputs()
+    observations = FIXTURE["bounded_safetensors_header_observations"]
+    names = (
+        "model.layers.0.self_attn.q_conv1d.weight",
+        "model.layers.0.self_attn.A_log",
+        "model.layers.0.self_attn.dt_bias",
+    )
+    physical = dict(base.bindings.physical)
+    numeric: dict[str, NumericTensor] = {}
+    numeric_names = set(FIXTURE["admitted_native_numeric_observations"])
+    for name in names:
+        dtype, dimensions = observations[name]
+        physical[name] = r.ArchitectureStorage(name=name, dtype=dtype, shape=dimensions)
+        if name in numeric_names:
+            tensor_id = "observed-" + name.rsplit(".", 1)[-1]
+            numeric[tensor_id] = NumericTensor(
+                tensor_id, name, tuple(dimensions), dtype, "safetensors"
+            )
+    assert numeric_names == {names[0], names[2]}
+    data = AnalysisInput(
+        base.fingerprint,
+        base.configuration,
+        BindingContext(physical=physical, numeric=numeric, tokenizer_available=False),
+    )
+
+    result = registry().analyze(data)
+    assert result.status == "complete", result
+    assert result.graph is not None
+    parameters = {parameter.name: parameter for parameter in result.graph.parameters}
+    for name in names[:2]:
+        parameter = parameters[name]
+        dtype, dimensions = observations[name]
+        assert parameter.binding == "native"
+        assert constants(parameter.logical_shape) == tuple(dimensions)
+        assert [(item.name, item.dtype, item.shape) for item in parameter.storage] == [
+            (name, dtype, dimensions)
+        ]
+        assert parameter.inspection.status == "unavailable"
+        assert parameter.inspection.reason == "unsupported_rank"
+        assert any(item.kind == "description" for item in parameter.provenance)
+        assert any(parameter.id in node.parameter_ids for node in result.graph.nodes)
+
+    bias_inspection = parameters[names[2]].inspection
+    assert bias_inspection.status == "available"
+    assert bias_inspection.tensor_id == "observed-dt_bias"
 
 
 @pytest.mark.parametrize(
