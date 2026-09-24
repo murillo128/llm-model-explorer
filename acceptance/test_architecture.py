@@ -203,6 +203,47 @@ def test_all_descriptions_over_tcp_readonly_cold_warm_and_logical_values(tmp_pat
         )
 
 
+def test_kimi_linear_complete_expert_graph_over_production_tcp(tmp_path):
+    from acceptance.kimi_linear_fixture import generate as generate_kimi
+
+    generate_kimi(tmp_path / "models")
+    service = Service(tmp_path, startup_timeout=120, kimi_architecture_fixture=True)
+    try:
+        prefix, inventory, body = inspect_graph(service, "kimi_linear")
+        assert body["status"] == "available"
+        graph = body["graph"]
+        assert graph["coverage"] == "complete"
+        assert len(graph["repetitions"]) == 27
+
+        expected = {
+            f"model.layers.{layer}.block_sparse_moe.experts.{expert}.w{projection}.weight"
+            for layer in range(1, 27)
+            for expert in range(256)
+            for projection in (1, 2, 3)
+        }
+        observed = {
+            parameter["name"]
+            for parameter in graph["parameters"]
+            if ".block_sparse_moe.experts." in parameter["name"]
+        }
+        assert observed == expected
+        assert len({parameter["id"] for parameter in graph["parameters"]}) == len(
+            graph["parameters"]
+        )
+        assert len({node["id"] for node in graph["nodes"]}) == len(graph["nodes"])
+        assert len(graph["nodes"]) > 7000
+        assert len(graph["edges"]) > 2000
+        assert inventory["coverage"] == "complete"
+
+        response = service.client.get(prefix + "/architecture")
+        assert response.status_code == 200
+        assert len(response.content) < 33_554_432
+        assert response.json() == body
+    finally:
+        service.stop()
+        service.client.close()
+
+
 def test_tcp_unavailable_restart_cache_loss_and_partial_predictor(tmp_path):
     root = tmp_path / "models"
     generate(root)

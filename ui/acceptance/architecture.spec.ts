@@ -273,9 +273,14 @@ test.beforeEach(async ({ page }, info) => {
     await info.attach('actual-reference-inventory', { body: JSON.stringify(selected.report), contentType: 'application/json' });
     args = ['-m', 'llm_model_explorer', '--model-root', dirname(selected.directory), '--cache-dir', join(root, 'cache'), '--port', String(port), '--cors-origin', origin];
   } else {
-    execFileSync(python, ['-m', 'acceptance.architecture_fixtures', join(root, 'models'), ...(family === 'templates' ? ['--templates'] : [])], { cwd: repo });
+    if (family === 'kimi_linear') {
+      execFileSync(python, ['-m', 'acceptance.kimi_linear_fixture', join(root, 'models')], { cwd: repo });
+    } else {
+      execFileSync(python, ['-m', 'acceptance.architecture_fixtures', join(root, 'models'), ...(family === 'templates' ? ['--templates'] : [])], { cwd: repo });
+    }
     modelId = family;
-    args = ['-m', 'acceptance.server', '--root', root, '--port', String(port), '--origin', origin];
+    args = ['-m', 'acceptance.server', '--root', root, '--port', String(port), '--origin', origin,
+      ...(family === 'kimi_linear' ? ['--kimi-architecture-fixture'] : [])];
   }
   service = spawn(python, args, { cwd: repo, env: { ...process.env, HF_HUB_OFFLINE: '1', TOKENIZERS_PARALLELISM: 'false' }, stdio: ['ignore', 'pipe', 'pipe'] });
   service.stdout!.on('data', (data) => { log += data; }); service.stderr!.on('data', (data) => { log += data; });
@@ -287,7 +292,7 @@ test.beforeEach(async ({ page }, info) => {
     const response = await fetch(`${backend}/models`);
     const models = (await response.json()).models as { id: string }[];
     fixtureModelIds = Object.fromEntries(
-      ['smollm2', 'qwen3', 'qwen35', 'vjepa2']
+      ['smollm2', 'qwen3', 'qwen35', 'vjepa2', 'kimi_linear']
         .map((name) => [name, fixtureModelId(name, models)] as const)
         .filter((entry): entry is readonly [string, string] => entry[1] !== undefined),
     );
@@ -476,6 +481,30 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   });
 }
+
+test('deterministic production [kimi_linear] complete repeated experts remain reachable', async ({ page }, info) => {
+  test.setTimeout(300_000);
+  const graph = await selectGraph(page);
+  expect(graph.coverage).toBe('complete');
+
+  const experts = graph.parameters.filter((parameter) =>
+    /^model\.layers\.\d+\.block_sparse_moe\.experts\.\d+\.w[123]\.weight$/.test(parameter.name));
+  expect(experts).toHaveLength(26 * 256 * 3);
+  expect(new Set(experts.map((parameter) => parameter.name)).size).toBe(experts.length);
+
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await page.getByRole('button', { name: 'Find component', exact: true }).click();
+  const ids = await page.getByRole('listbox', { name: 'Components', exact: true })
+    .getByRole('option').evaluateAll((options) => options.map((option) => (option as HTMLElement).dataset.nodeId));
+  expect(ids).toEqual(graph.nodes.map((node) => node.id));
+  await page.keyboard.press('Escape');
+  await graphAction(page, 'Show all operations');
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
+  await recordGraph(page, info, 'kimi-linear-full-graph', graph);
+});
 
 test('complete local reference [qwen3] exhaustive global detail remains reachable at readable scale', async ({ page }, info) => {
   const graph = await selectGraph(page);

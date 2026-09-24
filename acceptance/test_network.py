@@ -23,12 +23,20 @@ MATRIX = "model.layers.0.mlp.down_proj.weight"
 
 
 class Service:
-    def __init__(self, root, device="cpu", model_root=None, startup_timeout=30):
+    def __init__(
+        self,
+        root,
+        device="cpu",
+        model_root=None,
+        startup_timeout=30,
+        kimi_architecture_fixture=False,
+    ):
         self.root = root
         self.startup_timeout = startup_timeout
         self.device = device
         self.model_root = model_root
-        if model_root is None:
+        self.kimi_architecture_fixture = kimi_architecture_fixture
+        if model_root is None and not kimi_architecture_fixture:
             generate(root / "models")
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
@@ -55,7 +63,18 @@ class Service:
             "--device",
             self.device,
         ]
-        if self.model_root is not None:
+        if self.kimi_architecture_fixture:
+            command = [
+                sys.executable,
+                "-m",
+                "acceptance.server",
+                "--root",
+                str(self.root),
+                "--port",
+                str(self.port),
+                "--kimi-architecture-fixture",
+            ]
+        elif self.model_root is not None:
             command = [
                 sys.executable,
                 "-m",
