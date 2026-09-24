@@ -151,7 +151,8 @@ def test_independently_reviewed_graph_cases(case: dict[str, Any]) -> None:
         response["graph"]["parameters"][1]["storage"] = copy.deepcopy(
             response["graph"]["parameters"][0]["storage"]
         )
-    if case["name"] == "zero-product":
+    if case["name"] in ("zero-product", "bnb-nf4-dq-complete-logical-inspection"):
+        # These independent API cases omit the backend's physical descriptor map.
         binding = replace(
             binding,
             physical={

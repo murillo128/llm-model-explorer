@@ -2137,6 +2137,17 @@
               ],
               "attributes": [
                 {
+                  "name": "semantic_role",
+                  "value": "mlp",
+                  "provenance": [
+                    {
+                      "kind": "description",
+                      "source": "independent-compact-fixture",
+                      "revision": "1"
+                    }
+                  ]
+                },
+                {
                   "name": "expert_index",
                   "value": 0.0,
                   "provenance": [

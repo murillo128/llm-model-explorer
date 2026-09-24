@@ -533,7 +533,8 @@ def compact_cases():
     prototype = dict(id='expert0',kind='group',parent_id='root',label='Routed expert 0',
                      operation='weighted_swiglu_mlp',children=[],ports=[],parameter_ids=['p0'],
                      references=[dict(kind='module',name=prefix),dict(kind='parameter',parameter_id='p0')],
-                     attributes=[dict(name='expert_index',value=0.0,provenance=provenance)],
+                     attributes=[dict(name='semantic_role',value='mlp',provenance=provenance),
+                                 dict(name='expert_index',value=0.0,provenance=provenance)],
                      provenance=provenance)
     def parameter(index):
         return dict(id=f'p{index}',name=f'model.layers.1.mlp.experts.{index}.w1.weight',
