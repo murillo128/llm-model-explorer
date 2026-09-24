@@ -427,7 +427,7 @@ def test_models_http_contract_privacy_and_errors(
             (OSError("private/path"), 500, "internal_error"),
             (ModelError("validation_error", "Ambiguous model identity."), 422, "validation_error"),
         ]:
-            fake.list_models.side_effect = error
+            fake.list_catalogue.side_effect = error
             response = client.get("/models")
             assert response.status_code == status
             assert response.json()["code"] == code
