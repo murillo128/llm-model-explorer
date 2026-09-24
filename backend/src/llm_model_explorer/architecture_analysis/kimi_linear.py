@@ -20,7 +20,7 @@ SOURCE_REVISION = (
     + "; cyankiwi/Kimi-Linear-48B-A3B-Instruct-AWQ-4bit/config.json@"
     + CONFIG_REVISION
 )
-PRODUCER = Producer("kimi-linear-kda-mla-moe", "1", SOURCE_REVISION)
+PRODUCER = Producer("kimi-linear-kda-mla-moe", "2", SOURCE_REVISION)
 ARCHITECTURE = "KimiLinearForCausalLM"
 MODEL_TYPE = "kimi_linear"
 
@@ -414,19 +414,21 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
         parent: str,
         *,
         kernel_size: int,
+        sequence_offsets: Value,
     ) -> tuple[Value, Value]:
         outputs = self.node(
             key,
             operation,
-            {"x": x, "prior_state": prior},
+            {"x": x, "prior_state": prior, "sequence_offsets": sequence_offsets},
             {"out": x.shape, "next_state": state_shape},
             parent=parent,
             parameters=(key + ".weight",),
             attributes={"kernel_size": float(kernel_size), "activation": "silu", "causal": True},
             fields=("linear_attn_config",),
             formula=(
-                "causal channel-wise short convolution with SiLU; prior/next history "
-                "is symbolic and is not a captured activation"
+                "causal channel-wise short convolution with SiLU, respecting per-example "
+                "sequence_offsets in the packed token sequence; prior/next history is symbolic "
+                "and is not a captured activation"
             ),
             state_outputs=("next_state",),
         )
@@ -451,11 +453,34 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
         width = heads * dim
         kernel = int(c["linear_attn_config"]["short_conv_kernel_size"])
         hidden = shape("B", "S", h)
-        projected_shape = shape("B", "S", width)
-        head_shape = shape("B", "S", heads, dim)
+        projected_shape = shape(1, "T", width)
+        packed_head_shape = shape(1, "T", heads, dim)
         conv_state_shape = shape("B", width, kernel - 1)
         recurrent_shape = shape("B", heads, dim, dim)
         current = Value(key, "x", hidden)
+        compaction = self.node(
+            key + ".input_compaction",
+            "compact_valid_tokens",
+            {
+                "padded_hidden_states": current,
+                "padding_mask": Value(key, "padding_mask", shape("B", "S")),
+            },
+            {
+                "compact_hidden_states": shape(1, "T", h),
+                "token_indices": shape("T"),
+                "sequence_offsets": shape(_expression("B + 1", "B")),
+            },
+            parent=key,
+            attributes={"packed_batch_size": 1.0},
+            formula=(
+                "compact each example's unmasked tokens into one packed sequence; emit original "
+                "flattened token indices and per-example cumulative sequence offsets. T is the "
+                "symbolic total valid-token count; no token values are evaluated"
+            ),
+        )
+        packed_hidden = compaction["compact_hidden_states"]
+        token_indices = compaction["token_indices"]
+        sequence_offsets = compaction["sequence_offsets"]
 
         projections: dict[str, Value] = {}
         conv_states: dict[str, Value] = {}
@@ -466,7 +491,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
         ):
             projection = self.linear(
                 key + f".{branch}_proj",
-                current,
+                packed_hidden,
                 h,
                 width,
                 key,
@@ -480,11 +505,12 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
                 conv_state_shape,
                 key,
                 kernel_size=kernel,
+                sequence_offsets=sequence_offsets,
             )
 
         decay_low = self.linear(
             key + ".f_a_proj",
-            current,
+            packed_hidden,
             h,
             dim,
             key,
@@ -502,7 +528,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
             key + ".fused_kda_decay",
             "kda_decay_gate",
             {"raw_gate": decay_raw},
-            head_shape,
+            packed_head_shape,
             parent=key,
             parameters=(key + ".A_log", key + ".dt_bias"),
             attributes={"head_count": float(heads), "head_width": float(dim)},
@@ -511,7 +537,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
         )
         beta_logits = self.linear(
             key + ".b_proj",
-            current,
+            packed_hidden,
             h,
             heads,
             key,
@@ -521,7 +547,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
             key + ".beta_sigmoid",
             "sigmoid",
             {"x": beta_logits},
-            shape("B", "S", heads),
+            shape(1, "T", heads),
             parent=key,
             formula="beta = sigmoid(b_proj(x))",
         )
@@ -529,7 +555,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
             key + ".q_heads",
             "reshape",
             {"x": projections["q"]},
-            head_shape,
+            packed_head_shape,
             parent=key,
             attributes={"heads": float(heads), "head_width": float(dim)},
         )
@@ -537,7 +563,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
             key + ".k_heads",
             "reshape",
             {"x": projections["k"]},
-            head_shape,
+            packed_head_shape,
             parent=key,
             attributes={"heads": float(heads), "head_width": float(dim)},
         )
@@ -545,7 +571,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
             key + ".v_heads",
             "reshape",
             {"x": projections["v"]},
-            head_shape,
+            packed_head_shape,
             parent=key,
             attributes={"heads": float(heads), "head_width": float(dim)},
         )
@@ -559,9 +585,9 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
                 "decay": decay,
                 "beta": beta,
                 "prior_state": Value(key, "prior_recurrent_state", prior_recurrent.shape, "state"),
-                "padding_mask": Value(key, "padding_mask", padding_mask.shape),
+                "sequence_offsets": sequence_offsets,
             },
-            {"out": head_shape, "next_state": recurrent_shape},
+            {"out": packed_head_shape, "next_state": recurrent_shape},
             parent=key,
             attributes={"qk_l2_normalized": True, "head_count": float(heads)},
             fields=("linear_attn_config", "moe_intermediate_size"),
@@ -574,7 +600,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
         )
         output_gate_low = self.linear(
             key + ".g_a_proj",
-            current,
+            packed_hidden,
             h,
             dim,
             key,
@@ -592,15 +618,18 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
             key + ".output_gate_heads",
             "reshape",
             {"x": output_gate},
-            head_shape,
+            packed_head_shape,
             parent=key,
             attributes={"heads": float(heads), "head_width": float(dim)},
         )
         normalized = self.op(
             key + ".o_norm",
             "rms_norm_gated",
-            {"x": Value(update["out"].node, "out", head_shape), "gate": output_gate_heads},
-            head_shape,
+            {
+                "x": Value(update["out"].node, "out", packed_head_shape),
+                "gate": output_gate_heads,
+            },
+            packed_head_shape,
             parent=key,
             parameters=(key + ".o_norm.weight",),
             attributes={"epsilon": float(c["rms_norm_eps"]), "gate_activation": "sigmoid"},
@@ -623,6 +652,18 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
             key,
             fields=("hidden_size", "linear_attn_config"),
         )
+        padded_result = self.op(
+            key + ".output_repadding",
+            "restore_padding",
+            {"compact_output": result, "token_indices": token_indices},
+            hidden,
+            parent=key,
+            attributes={"padding_value": 0.0},
+            formula=(
+                "scatter compact output rows back to their original batch/sequence positions "
+                "using token_indices and fill masked positions with zero"
+            ),
+        )
         grouped = self.end_group(
             key,
             "Kimi Delta Attention",
@@ -644,7 +685,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
                 ),
             },
             {
-                "out": result,
+                "out": padded_result,
                 "next_q_conv_state": conv_states["q"],
                 "next_k_conv_state": conv_states["k"],
                 "next_v_conv_state": conv_states["v"],
@@ -1401,6 +1442,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
         self.b.add_symbol("B", "Symbolic batch size; no input has been executed.")
         self.b.add_symbol("S", "Symbolic current sequence length; no prompt has been supplied.")
         self.b.add_symbol("K", "Symbolic prior MLA key/value length; no cache sample exists.")
+        self.b.add_symbol("T", "Symbolic count of unmasked KDA tokens after sequence compaction.")
 
         root_inputs: dict[str, Value] = {
             "input_ids": Value("model", "input_ids", sequence),

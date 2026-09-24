@@ -41,12 +41,21 @@ layers 1–26 use the configured MoE block. A changed layer list, KDA geometry,
 latent-attention geometry, routing policy, or unknown structural field fails
 selection.
 
+The packaged Kimi description is revision `2`; this revision records the
+source-verified KDA padding/compaction dependencies and invalidates graphs made
+from the earlier draft description.
+
 Each KDA group retains q/k/v projections and causal short convolutions, the
 fused decay gate from `f_a_proj`, `f_b_proj`, `A_log` and `dt_bias`, the sigmoid
 beta projection, normalized q/k delta-state update, gated RMSNorm, and output
 projection. It exposes three symbolic convolution-history states and the
-symbolic recurrent matrix state. The graph does not unroll sequence positions
-or provide captured values.
+symbolic recurrent matrix state. When a padding mask is supplied, the reviewed
+forward path compacts valid token rows before every KDA projection, convolution,
+and recurrent update. The graph carries symbolic original-token indices and
+per-example cumulative sequence offsets through those operations, then scatters
+the projected output back to `[B, S, hidden]` with zero-filled padded positions.
+This preserves convolution and recurrent sequence boundaries without evaluating
+token values, unrolling sequence positions, or providing captured state.
 
 Each MLA group retains the full q projection, compressed KV projection and
 normalization, KV expansion, split/recombined query and key subspaces, causal

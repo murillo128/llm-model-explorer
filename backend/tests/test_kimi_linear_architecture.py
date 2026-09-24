@@ -235,6 +235,25 @@ def graph_node(data: AnalysisInput, graph: r.ArchitectureGraph, key: str) -> r.A
     return next(value for value in graph.nodes if value.id == identity)
 
 
+def has_edge(
+    data: AnalysisInput,
+    graph: r.ArchitectureGraph,
+    source_key: str,
+    source_port: str,
+    target_key: str,
+    target_port: str,
+) -> bool:
+    source_id = node_id(data, source_key)
+    target_id = node_id(data, target_key)
+    return any(
+        edge.source.node_id == source_id
+        and edge.source.port_id == source_port
+        and edge.target.node_id == target_id
+        and edge.target.port_id == target_port
+        for edge in graph.edges
+    )
+
+
 def test_pinned_configuration_fixture_and_independent_geometry() -> None:
     configuration = checked(REFERENCE)
     assert configuration is not None
@@ -247,6 +266,7 @@ def test_pinned_configuration_fixture_and_independent_geometry() -> None:
     ]
     assert configuration["layer_types"].count("kda") == 20
     assert configuration["layer_types"].count("full_attention") == 7
+    assert PRODUCER.revision == "2"
     assert parameter_shapes(REFERENCE) == expected_parameters(REFERENCE)
     assert FIXTURE["source"]["configuration_revision"] in PRODUCER.source_revision
     assert FIXTURE["source"]["modeling_revision"] in PRODUCER.source_revision
@@ -356,14 +376,74 @@ def test_complete_graph_preserves_kda_mla_moe_identity_and_budget(
         attention = graph_node(data, graph, attention_key)
         assert attention.kind == "group"
         if kind == "kda":
+            compaction_key = attention_key + ".input_compaction"
+            compaction = graph_node(data, graph, compaction_key)
+            assert compaction.operation == "compact_valid_tokens"
+            assert has_edge(data, graph, attention_key, "x", compaction_key, "padded_hidden_states")
+            assert has_edge(
+                data, graph, attention_key, "padding_mask", compaction_key, "padding_mask"
+            )
+            for projection in ("q_proj", "k_proj", "v_proj", "f_a_proj", "b_proj", "g_a_proj"):
+                assert has_edge(
+                    data,
+                    graph,
+                    compaction_key,
+                    "compact_hidden_states",
+                    attention_key + "." + projection,
+                    "x",
+                )
+            for branch in ("q", "k", "v"):
+                convolution_key = attention_key + f".{branch}_conv1d"
+                assert has_edge(
+                    data,
+                    graph,
+                    compaction_key,
+                    "sequence_offsets",
+                    convolution_key,
+                    "sequence_offsets",
+                )
             assert (
                 graph_node(data, graph, attention_key + ".kda_delta_update").operation
                 == "kda_delta_state_update"
+            )
+            update_key = attention_key + ".kda_delta_update"
+            update = graph_node(data, graph, update_key)
+            assert {port.id for port in update.ports} >= {"sequence_offsets", "next_state"}
+            assert "padding_mask" not in {port.id for port in update.ports}
+            assert has_edge(
+                data, graph, compaction_key, "sequence_offsets", update_key, "sequence_offsets"
             )
             assert (
                 graph_node(data, graph, attention_key + ".q_conv1d").operation
                 == "short_convolution"
             )
+            padding_key = attention_key + ".output_repadding"
+            repadding = graph_node(data, graph, padding_key)
+            assert repadding.operation == "restore_padding"
+            padded_shape = [
+                {"kind": "symbol", "name": "B"},
+                {"kind": "symbol", "name": "S"},
+                {"kind": "constant", "value": REFERENCE["hidden_size"]},
+            ]
+            restored_shape = next(port for port in repadding.ports if port.id == "out").shape
+            attention_output_shape = next(
+                port for port in attention.ports if port.id == "out"
+            ).shape
+            assert restored_shape is not None and attention_output_shape is not None
+            assert [dimension.model_dump() for dimension in restored_shape] == padded_shape
+            assert [dimension.model_dump() for dimension in attention_output_shape] == padded_shape
+            assert has_edge(
+                data,
+                graph,
+                attention_key + ".o_proj",
+                "out",
+                padding_key,
+                "compact_output",
+            )
+            assert has_edge(
+                data, graph, compaction_key, "token_indices", padding_key, "token_indices"
+            )
+            assert has_edge(data, graph, padding_key, "out", attention_key, "out")
             assert any(port.id == "next_recurrent_state" for port in attention.ports)
         else:
             assert (
