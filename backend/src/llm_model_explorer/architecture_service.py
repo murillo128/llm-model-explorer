@@ -13,6 +13,7 @@ from .architecture_analysis import AnalysisInput, DescriptionRegistry, register_
 from .architecture_analysis.core import AnalysisResult
 from .architecture_analysis.deepseek_v2 import register_deepseek_v2
 from .architecture_analysis.glm4_moe_lite import register_glm4_moe_lite
+from .architecture_analysis.kimi_linear import register_kimi_linear
 from .architecture_analysis.qwen35 import register_qwen35
 from .architecture_analysis.validation import MAX_BYTES, BindingContext, GraphError
 from .architecture_analysis.vjepa2 import register_vjepa2
@@ -55,6 +56,7 @@ class ArchitectureService:
         register_dense_descriptions(self.registry)
         register_deepseek_v2(self.registry)
         register_glm4_moe_lite(self.registry)
+        register_kimi_linear(self.registry)
         register_qwen35(self.registry)
         register_vjepa2(self.registry)
         self._prepared: dict[tuple[str, str], Prepared] = {}
