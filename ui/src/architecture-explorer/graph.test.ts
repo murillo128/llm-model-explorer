@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 import fixture from '../../../api/fixtures/architecture.json';
 import { validateSchema } from '../api/validation';
 import { formatShape, GraphViews } from './graph';
+import { projectGraph } from './projection';
 import { requestLayout } from './layout';
 import { referenceFixture, references } from '../../tests/architecture-fixtures';
 import { validateArchitecture } from '../api/architecture-validation';
@@ -18,6 +19,28 @@ it.each(references)('validates full-size $name fixtures and preserves exact conf
   expect(response.graph.repetitions.map((r) => r.instances.length)).toEqual(reference.stacks);
   if (reference.hybrid) expect(response.graph.repetitions[0]!.instances.map((i) => i.variant)).toEqual(
     Array.from({ length: 6 }, () => ['linear_attention', 'linear_attention', 'linear_attention', 'full_attention']).flat());
+}, 60_000);
+it('projects and lays out the GLM layer stack and a focused routed-expert window', async () => {
+  const response = referenceFixture('glm4');
+  expect(() => validateArchitecture(response, { modelId: response.model_id, tokenizerAvailable: true,
+    inventory: { tensors: [], coverage: 'partial', diagnostics: [] } })).not.toThrow();
+  const source = response.graph;
+  const layers = source.repetitions.find((item) => item.id === 'repeat-0')!;
+  expect(layers.instances).toHaveLength(47);
+  expect(layers.instances.map((item) => item.variant)).toEqual(['dense', ...Array(46).fill('sparse')]);
+  const compact = projectGraph(source, { expanded: ['root', 'stack-0'] });
+  expect(compact.nodes.find((node) => node.repetitionId === layers.id)?.summary).toBe('1 dense · 46 sparse');
+
+  const expertRepetition = source.repetitions.find((item) => item.id === 'repeat-experts-0-1')!;
+  expect(expertRepetition.instances).toHaveLength(64);
+  const options = { expanded: ['root', 'stack-0', 'layer-0-1', 'layer-0-1-routed-experts'],
+    repetitions: { 'repeat-0': { start: 1, count: 1 }, [expertRepetition.id]: { start: 61, count: 3 } } };
+  const focused = projectGraph(source, options);
+  expect(focused.nodes.map((item) => item.id)).toEqual(expect.arrayContaining(
+    [61, 62, 63].map((index) => `layer-0-1-expert-${index}`)));
+  const layout = await layoutGraph(source, options);
+  expect(layout.boxes.map((box) => box.id)).toEqual(expect.arrayContaining(
+    [61, 62, 63].map((index) => `layer-0-1-expert-${index}`)));
 }, 60_000);
 it('retains every expanded record and source connection while compacting repeated siblings', async () => {
   const all = await layoutGraph(graph, { expanded: [], exhaustive: true });
