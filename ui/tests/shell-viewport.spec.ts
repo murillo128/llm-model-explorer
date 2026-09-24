@@ -47,7 +47,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1000, height: 840
         refreshes++;
         await pendingModels;
         if (catalogue === 'failed') return route.abort('connectionrefused');
-        return route.fulfill({ json: { models: catalogue === 'empty' ? [] : [{ ...models[0], size_bytes: 272400000 }] } });
+        return route.fulfill({ json: { models: catalogue === 'empty' ? [] : [{ ...models[0], size_bytes: 272400000 }], diagnostics: [] } });
       }
       if (request.method() === 'DELETE') { deleted.push(path); return route.fulfill({ status: 204 }); }
       if (path === '/sessions') {

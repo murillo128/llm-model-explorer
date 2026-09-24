@@ -215,10 +215,18 @@ def validate_architecture(value, context=None):
                     native['inspection']['tensor_id'] == inspection['tensor_id'],
                     'alias logical identity/geometry')
             if native['binding'] == 'native':
-                require(any(s['name'] == native['name'] and s['shape'] == geometry and
-                        s['dtype'] in ('F32', 'F16', 'BF16', 'float32', 'float16', 'bfloat16') and
-                        s.get('role') not in ('scales', 'packed', 'packed_data')
-                        for s in native['storage']), 'native storage geometry')
+                adapter_factors = [s for s in native['storage'] if s.get('role') == 'adapter_factor']
+                if adapter_factors:
+                    require(len(native['storage']) == len(adapter_factors) == 1 and
+                            adapter_factors[0]['shape'] == geometry and
+                            adapter_factors[0]['dtype'] in ('F32', 'F16', 'BF16',
+                                                            'float32', 'float16', 'bfloat16'),
+                            'adapter factor storage geometry')
+                else:
+                    require(any(s['name'] == native['name'] and s['shape'] == geometry and
+                            s['dtype'] in ('F32', 'F16', 'BF16', 'float32', 'float16', 'bfloat16') and
+                            s.get('role') not in ('scales', 'packed', 'packed_data')
+                            for s in native['storage']), 'native storage geometry')
             tensor = None
             if inventory is not None:
                 tensor = inventory.get(inspection['tensor_id'])
@@ -226,7 +234,9 @@ def validate_architecture(value, context=None):
                         tensor['name'] == native['name'] and tensor['rank'] == len(geometry) and
                         tensor['numel'] == product(geometry), 'session inventory membership/geometry')
                 if native['binding'] == 'native':
-                    require(any(s['name'] == tensor['name'] and s['dtype'] == tensor['storage_dtype']
+                    require(any((s['name'] == tensor['name'] or
+                                 s.get('role') == 'adapter_factor') and
+                                s['dtype'] == tensor['storage_dtype'] and s['shape'] == tensor['shape']
                                 for s in native['storage']), 'inventory storage identity')
             if native['binding'] == 'quantized':
                 validate_packed_storage(native, geometry, tensor)

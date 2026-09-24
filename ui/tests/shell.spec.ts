@@ -12,7 +12,7 @@ async function assetHashes() {
   ]));
 }
 async function mockConfig(page: Page, body = '{"backend_base_url":"https://backend.example/"}', status = 200) {
-  await page.route('**/models', (route) => route.fulfill({ json: { models: [] } }));
+  await page.route('**/models', (route) => route.fulfill({ json: { models: [], diagnostics: [] } }));
   await page.route('**/runtime-config.json', (route) => route.fulfill({ status, contentType: 'application/json', body }));
 }
 
@@ -26,7 +26,7 @@ test('one production build accepts two deployed backend URLs', async ({ page }, 
   page.on('request', (request) => {
     if (new URL(request.url()).origin !== new URL(testInfo.project.use.baseURL!).origin) backendRequests.push(request.url());
   });
-  await page.route('**/models', (route) => route.fulfill({ json: { models: [] } }));
+  await page.route('**/models', (route) => route.fulfill({ json: { models: [], diagnostics: [] } }));
   await page.route('**/runtime-config.json', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify({ backend_base_url: deployedBackend }),
   }));

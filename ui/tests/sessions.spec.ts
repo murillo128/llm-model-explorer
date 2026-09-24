@@ -10,7 +10,7 @@ async function fixture(context: BrowserContext) {
   await context.route('**/runtime-config.json', (route) => route.fulfill({ json: { backend_base_url: 'https://backend.example' } }));
   await context.route('https://backend.example/**', async (route) => {
     const request = route.request(); const path = new URL(request.url()).pathname;
-    if (path === '/models') return route.fulfill({ json: { models } });
+    if (path === '/models') return route.fulfill({ json: { models, diagnostics: [] } });
     if (path === '/sessions' && request.method() === 'POST') {
       const session = { id: `aaaaaaaa-aaaa-4aaa-8aaa-${String(++serial).padStart(12, '0')}`, model_id: request.postDataJSON().model_id as string };
       sessions.set(session.id, session);
@@ -86,7 +86,7 @@ test('backend URL changes on refresh never recover the previous backend session'
   await context.route('**/runtime-config.json', (route) => route.fulfill({ json: { backend_base_url: 'https://second.example' } }));
   const requests: string[] = [];
   await context.route('https://second.example/**', (route) => {
-    requests.push(route.request().url()); return route.fulfill({ json: { models: [] } });
+    requests.push(route.request().url()); return route.fulfill({ json: { models: [], diagnostics: [] } });
   });
   await page.reload();
   await expect(page.getByText('No models available on this backend.')).toBeVisible();
@@ -96,7 +96,7 @@ test('backend URL changes on refresh never recover the previous backend session'
 
 test('invalid and unreachable backend responses expose no private error details', async ({ page, context }) => {
   await fixture(context);
-  await context.route('https://backend.example/models', (route) => route.fulfill({ json: { models: [{ ...models[0], local_path: '/srv/private/model' }] } }));
+  await context.route('https://backend.example/models', (route) => route.fulfill({ json: { models: [{ ...models[0], local_path: '/srv/private/model' }], diagnostics: [] } }));
   await page.goto('/'); await expect(page.getByRole('alert')).toContainText('invalid response');
   await expect(page.locator('body')).not.toContainText('/srv/private');
   await context.unroute('https://backend.example/models');

@@ -8,7 +8,7 @@ test('adaptive prompt pixels and inline annotation geometry', async ({ page }) =
   await page.route('**/runtime-config.json', route => route.fulfill({ json: { backend_base_url: 'https://backend.example' } }));
   await page.route('https://backend.example/**', route => {
     const path = new URL(route.request().url()).pathname;
-    if (path === '/models') return route.fulfill({ json: { models } });
+    if (path === '/models') return route.fulfill({ json: { models, diagnostics: [] } });
     if (path === '/sessions') return route.fulfill({ status: 201, json: sessionA });
     if (path.endsWith('/tensors')) return route.fulfill({ json: { coverage: 'complete', diagnostics: [], tensors: [] } });
     if (path.endsWith('/tokenize')) {

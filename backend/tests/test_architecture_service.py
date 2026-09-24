@@ -68,6 +68,13 @@ def test_registered_descriptions_and_no_tokenizer_session(settings: Settings, fa
     with TestClient(create_app(settings)) as client:
         models = client.get("/models").json()["models"]
         assert not models[0]["tokenizer_available"]
+        advertised = [
+            model["id"]
+            for model in models
+            if model["id"] == model_id or model["id"].startswith(f"{model_id}@")
+        ]
+        assert len(advertised) == 1
+        model_id = advertised[0]
         sid = session(client, model_id)
         response = architecture(client, sid)
         assert response.status_code == 200, response.text

@@ -12,7 +12,7 @@ async function backend(context: BrowserContext) {
     if (path === '/models') return r.fulfill({ json: { models: [
       { id: contractResponse.model_id, display_name: 'Contract', architectures: [], tokenizer_available: true },
       { id: visual.model_id, display_name: 'Visual', architectures: [], tokenizer_available: false },
-    ] } });
+    ], diagnostics: [] } });
     if (path === '/sessions') return r.fulfill({ status: 201, json: {
       id: r.request().postDataJSON().model_id === visual.model_id ? 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' : 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       model_id: r.request().postDataJSON().model_id,

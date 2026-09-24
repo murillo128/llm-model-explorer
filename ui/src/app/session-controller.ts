@@ -14,6 +14,7 @@ export const sessionStorageKey = (backend: string) => `llm-model-explorer:sessio
 
 export interface ShellState {
   models: ModelSummary[];
+  catalogueDiagnostics: Schemas['CatalogueDiagnostic'][];
   catalogue: 'loading' | 'complete' | 'failed';
   session: Session | null;
   sessionStatus: 'idle' | 'loading' | 'ready' | 'closing' | 'failed' | 'expired-session';
@@ -44,7 +45,7 @@ function failureMessage(error: unknown, action: string) {
 /** One instance per mounted backend in one tab. No global current model/session. */
 export class SessionController {
   private state: ShellState = {
-    models: [], catalogue: 'loading', session: null, sessionStatus: 'idle', message: '',
+    models: [], catalogueDiagnostics: [], catalogue: 'loading', session: null, sessionStatus: 'idle', message: '',
     tensors: [], inventoryCoverage: 'complete', inventoryDiagnostics: [], inventory: 'idle', selected: null, explorer: 'Tensor Explorer',
     view: new Lifetime(), viewRevision: 0, viewStatus: 'idle', storageAvailable: true,
   };
@@ -93,9 +94,9 @@ export class SessionController {
     this.catalogueRequest.dispose();
     const request = this.catalogueRequest = new Lifetime();
     this.update({ catalogue: 'loading' });
-    void this.client.listModels(request.signal).then(request.guard(({ models }) => {
-      this.update({ catalogue: 'complete', models });
-    }), request.guard(() => this.update({ catalogue: 'failed', models: [] })));
+    void this.client.listModels(request.signal).then(request.guard(({ models, diagnostics }) => {
+      this.update({ catalogue: 'complete', models, catalogueDiagnostics: diagnostics });
+    }), request.guard(() => this.update({ catalogue: 'failed', models: [], catalogueDiagnostics: [] })));
   };
   private beginSession() {
     this.sessionRequest.dispose();

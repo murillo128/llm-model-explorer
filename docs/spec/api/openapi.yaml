@@ -19,12 +19,16 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [models]
+                required: [models, diagnostics]
                 properties:
                   models:
                     type: array
                     items:
                       $ref: "#/components/schemas/ModelSummary"
+                  diagnostics:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CatalogueDiagnostic"
           headers:
             Cache-Control:
               $ref: "#/components/headers/NoStore"
@@ -563,6 +567,33 @@ components:
           maximum: 9007199254740991
         tokenizer_available:
           type: boolean
+
+    CatalogueDiagnostic:
+      type: object
+      additionalProperties: false
+      required: [code, candidate, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - peft_adapter_rejected
+            - peft_composition_rejected
+            - peft_base_unmatched
+        candidate:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Path-free adapter candidate label, never a filesystem path.
+        base_model_id:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Path-free public identity of the compatible local base, when one was matched.
+        message:
+          type: string
+          minLength: 1
+          maxLength: 16384
+          description: Safe, precise reason the adapter candidate was not made selectable.
 
     CreateSessionRequest:
       type: object

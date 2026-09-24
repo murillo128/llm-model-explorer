@@ -40,6 +40,7 @@ _KNOWN_FIELDS = {
     "bias",
     "corda_config",
     "exclude_modules",
+    "eva_config",
     "fan_in_fan_out",
     "inference_mode",
     "init_lora_weights",
@@ -50,6 +51,7 @@ _KNOWN_FIELDS = {
     "lora_alpha",
     "lora_bias",
     "lora_dropout",
+    "lora_ga_config",
     "megatron_config",
     "megatron_core",
     "modules_to_save",
@@ -65,16 +67,20 @@ _KNOWN_FIELDS = {
     "task_type",
     "trainable_token_indices",
     "use_dora",
+    "use_bdlora",
     "use_qalora",
     "use_rslora",
     "ensure_weight_tying",
 }
+# PEFT 0.19 serializes several inactive/default fields on the accepted reference
+# adapter; validate their inert values below instead of rejecting that metadata.
 
 
 @dataclass(frozen=True)
 class AdapterSpec:
     upstream_name: str
     rank: int
+    alpha: float
     scale: float
     target_patterns: tuple[tuple[str, bool], ...]
     factors: dict[str, tuple[PhysicalTensor, PhysicalTensor]]
@@ -168,6 +174,18 @@ def _supported_linear_module(config: dict[str, object], module: str) -> bool:
     return int(match.group("layer")) < layer_count
 
 
+def factor_logical_names(adapter_id: str, module: str) -> tuple[str, str]:
+    """Return the stable composite tensor names for one already validated target."""
+    namespace = "".join(
+        character
+        if character.isascii() and (character.isalnum() or character in "_-")
+        else f"%{ord(character):02X}"
+        for character in adapter_id
+    )
+    prefix = f"__peft__.{namespace}.{module}"
+    return f"{prefix}.lora_A.weight", f"{prefix}.lora_B.weight"
+
+
 def validate_adapter(
     config: dict[str, object], physical: tuple[PhysicalTensor, ...]
 ) -> AdapterSpec:
@@ -215,12 +233,22 @@ def validate_adapter(
         "arrow_config",
         "corda_config",
         "megatron_config",
-        "megatron_core",
         "loftq_config",
+        "eva_config",
+        "lora_ga_config",
     ):
         value = config.get(key)
         if value is not None and value not in ({}, [], ()):
             raise _unsupported("The adapter enables an unsupported PEFT option.")
+    if config.get("megatron_core") not in (None, "megatron.core"):
+        raise _unsupported("Custom Megatron LoRA integration is unsupported.")
+    if config.get("use_bdlora") not in (None, False):
+        raise _unsupported("The adapter enables an unsupported LoRA extension.")
+    qalora_group_size = config.get("qalora_group_size")
+    if qalora_group_size is not None and (
+        type(qalora_group_size) is not int or not 0 < qalora_group_size <= MAX_SAFE_INTEGER
+    ):
+        raise invalid("Invalid PEFT QALoRA group size metadata.")
     dropout = config.get("lora_dropout", 0.0)
     if not isinstance(dropout, (int, float)) or isinstance(dropout, bool):
         raise invalid("Invalid PEFT LoRA dropout metadata.")
@@ -258,12 +286,10 @@ def validate_adapter(
     return AdapterSpec(
         upstream_name,
         rank,
+        alpha_value,
         scale,
         targets,
-        {
-            module: (factors["A"], factors["B"])
-            for module, factors in factor_map.items()
-        },
+        {module: (factors["A"], factors["B"]) for module, factors in factor_map.items()},
     )
 
 
@@ -276,14 +302,13 @@ def bind_adapter(
 ) -> tuple[TensorLocation, ...]:
     """Bind all saved factors to exactly the configured, actionable base weights."""
     from dataclasses import replace
+
     weights = {
         location.descriptor.name.removesuffix(".weight"): location
         for location in base_locations
         if location.descriptor.name.endswith(".weight")
         and location.descriptor.rank == 2
-        and _supported_linear_module(
-            base_config, location.descriptor.name.removesuffix(".weight")
-        )
+        and _supported_linear_module(base_config, location.descriptor.name.removesuffix(".weight"))
     }
     matched: dict[str, TensorLocation] = {}
     matched_patterns: set[tuple[str, bool]] = set()
@@ -306,12 +331,6 @@ def bind_adapter(
         raise invalid("PEFT adapter factors do not cover exactly the configured base targets.")
 
     locations: list[TensorLocation] = []
-    adapter_namespace = "".join(
-        character
-        if character.isascii() and (character.isalnum() or character in "_-")
-        else f"%{ord(character):02X}"
-        for character in adapter_id
-    )
     for module in sorted(matched):
         base = matched[module].descriptor
         a, b = spec.factors[module]
@@ -325,7 +344,8 @@ def bind_adapter(
         ):
             raise invalid("PEFT LoRA A/B dimensions do not match the base weight.")
         for factor_name, storage in (("lora_A", a), ("lora_B", b)):
-            name = f"__peft__.{adapter_namespace}.{module}.{factor_name}.weight"
+            a_name, b_name = factor_logical_names(adapter_id, module)
+            name = a_name if factor_name == "lora_A" else b_name
             if any(location.descriptor.name == name for location in base_locations):
                 raise invalid("PEFT logical tensor name collides with the base inventory.")
             location = native_location(storage)

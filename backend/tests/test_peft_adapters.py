@@ -63,10 +63,7 @@ def make_bases(root: Path, *, adapter_tokens: bool = False) -> tuple[Path, Path]
     quantized_config["vocab_size"] = 16
     (quantized / "config.json").write_text(json.dumps(quantized_config))
     q_group = packed_group("JunHowie")
-    v_group = [
-        (name.replace(MODULE, V_MODULE), dtype, shape)
-        for name, dtype, shape in q_group
-    ]
+    v_group = [(name.replace(MODULE, V_MODULE), dtype, shape) for name, dtype, shape in q_group]
     write_storage(quantized / "model.safetensors", [*q_group, *v_group])
     if adapter_tokens:
         adapter = root / "adapter"
@@ -211,12 +208,8 @@ def test_models_and_sessions_expose_native_and_quantized_compositions(settings: 
             }
             for tensor in adapter_tensors:
                 assert tensor["id"] == hashlib.sha256(tensor["name"].encode()).hexdigest()
-            a_tensor = next(
-                t for t in adapter_tensors if ".q_proj.lora_A." in t["name"]
-            )
-            b_tensor = next(
-                t for t in adapter_tensors if ".q_proj.lora_B." in t["name"]
-            )
+            a_tensor = next(t for t in adapter_tensors if ".q_proj.lora_A." in t["name"])
+            b_tensor = next(t for t in adapter_tensors if ".q_proj.lora_B." in t["name"])
             assert tensor_payload(client, session_id, a_tensor["id"]) == as_float32(
                 "F16", [float(i - 64) / 16 for i in range(256)]
             )
@@ -225,12 +218,36 @@ def test_models_and_sessions_expose_native_and_quantized_compositions(settings: 
             )
 
 
+def test_current_smollm_adapter_inert_peft_metadata_is_accepted(settings: Settings) -> None:
+    make_bases(settings.model_root)
+    make_adapter(
+        settings.model_root,
+        config_updates={
+            "inference_mode": True,
+            "lora_dropout": 0.05,
+            "eva_config": None,
+            "lora_ga_config": None,
+            "use_bdlora": None,
+            "qalora_group_size": 16,
+            "megatron_core": "megatron.core",
+        },
+    )
+    models = {model.id for model in ModelCatalogue(settings.model_root).list_models()}
+    assert composite_id("native") in models
+    assert composite_id("gptq") in models
+
+
 @pytest.mark.parametrize(
     "config_updates,factors",
     [
         ({"peft_type": "IA3"}, None),
         ({"task_type": "FEATURE_EXTRACTION"}, None),
         ({"use_dora": True}, None),
+        ({"use_bdlora": True}, None),
+        ({"eva_config": {"enabled": True}}, None),
+        ({"lora_ga_config": {"enabled": True}}, None),
+        ({"megatron_core": "custom.core"}, None),
+        ({"qalora_group_size": 0}, None),
         ({"rank_pattern": {"q_proj": 4}}, None),
         ({"target_modules": ["q_proj", "self_attn.q_proj"]}, None),
         ({"new_inference_option": True}, None),
@@ -271,10 +288,16 @@ def test_invalid_or_unsupported_adapters_are_not_candidates(
 ) -> None:
     make_bases(settings.model_root)
     make_adapter(settings.model_root, config_updates=config_updates, factors=factors)
-    assert {model.id for model in ModelCatalogue(settings.model_root).list_models()} == {
+    listing = ModelCatalogue(settings.model_root).list_catalogue()
+    assert {model.id for model in listing.models} == {
         UPSTREAM,
         f"{UPSTREAM}@gptq-int4",
     }
+    assert listing.diagnostics
+    assert all(diagnostic.candidate == "adapter" for diagnostic in listing.diagnostics)
+    assert str(settings.model_root) not in json.dumps(
+        [diagnostic.model_dump(mode="json") for diagnostic in listing.diagnostics]
+    )
 
 
 @pytest.mark.parametrize("fault", ["malformed-config", "ambiguous-payload", "invalid-index"])
@@ -286,19 +309,88 @@ def test_malformed_or_ambiguous_adapter_files_are_not_candidates(
     if fault == "malformed-config":
         (adapter / "adapter_config.json").write_text("{")
     elif fault == "ambiguous-payload":
-        shutil.copyfile(
-            adapter / "adapter_model.safetensors", adapter / "unexpected.safetensors"
-        )
+        shutil.copyfile(adapter / "adapter_model.safetensors", adapter / "unexpected.safetensors")
     else:
         index = adapter / "adapter_model.safetensors.index.json"
         document = json.loads(index.read_text())
         first = next(iter(document["weight_map"]))
         document["weight_map"][first] = "../outside.safetensors"
         index.write_text(json.dumps(document))
-    assert {model.id for model in ModelCatalogue(settings.model_root).list_models()} == {
+    listing = ModelCatalogue(settings.model_root).list_catalogue()
+    assert {model.id for model in listing.models} == {
         UPSTREAM,
         f"{UPSTREAM}@gptq-int4",
     }
+    assert listing.diagnostics and listing.diagnostics[0].candidate == "adapter"
+
+
+def test_rejected_peft_candidate_is_diagnosed_by_models_api_but_not_selectable(
+    settings: Settings,
+) -> None:
+    make_bases(settings.model_root)
+    make_adapter(settings.model_root, config_updates={"new_inference_option": True})
+
+    with TestClient(create_app(settings)) as client:
+        response = client.get("/models")
+        assert response.status_code == 200
+        document = response.json()
+        assert {model["id"] for model in document["models"]} == {
+            UPSTREAM,
+            f"{UPSTREAM}@gptq-int4",
+        }
+        assert document["diagnostics"] == [
+            {
+                "code": "peft_adapter_rejected",
+                "candidate": "adapter",
+                "message": (
+                    "LoRA adapter candidate was rejected: "
+                    "Adapter metadata contains an unsupported option."
+                ),
+            }
+        ]
+        assert str(settings.model_root) not in response.text
+        assert client.post("/sessions", json={"model_id": composite_id()}).status_code == 404
+
+
+def test_rejected_peft_binding_is_diagnosed_by_models_api_but_not_selectable(
+    settings: Settings,
+) -> None:
+    make_bases(settings.model_root)
+    make_adapter(
+        settings.model_root,
+        factors=[
+            ("base_model.model." + MODULE + ".lora_A.weight", "F32", [2, 127], [1.0] * 254),
+            ("base_model.model." + MODULE + ".lora_B.weight", "F32", [8, 2], [1.0] * 16),
+            ("base_model.model." + V_MODULE + ".lora_A.weight", "F32", [2, 128], [1.0] * 256),
+            ("base_model.model." + V_MODULE + ".lora_B.weight", "F32", [8, 2], [1.0] * 16),
+        ],
+    )
+
+    with TestClient(create_app(settings)) as client:
+        response = client.get("/models")
+        assert response.status_code == 200
+        document = response.json()
+        assert {model["id"] for model in document["models"]} == {
+            UPSTREAM,
+            f"{UPSTREAM}@gptq-int4",
+        }
+        assert {
+            (diagnostic["code"], diagnostic["base_model_id"], diagnostic["message"])
+            for diagnostic in document["diagnostics"]
+        } == {
+            (
+                "peft_composition_rejected",
+                UPSTREAM,
+                "LoRA composition rejected: PEFT LoRA A/B dimensions do not match the base weight.",
+            ),
+            (
+                "peft_composition_rejected",
+                f"{UPSTREAM}@gptq-int4",
+                "LoRA composition rejected: PEFT LoRA A/B dimensions do not match the base weight.",
+            ),
+        }
+        assert str(settings.model_root) not in response.text
+        assert client.post("/sessions", json={"model_id": composite_id()}).status_code == 404
 
 
 def test_duplicate_factor_alias_is_rejected(settings: Settings) -> None:
@@ -375,7 +467,8 @@ def test_composite_pin_rechecks_both_snapshots_after_hashing(
     native, _ = make_bases(settings.model_root)
     make_adapter(settings.model_root)
     entry = next(
-        entry for entry in ModelCatalogue(settings.model_root).discover()
+        entry
+        for entry in ModelCatalogue(settings.model_root).discover()
         if entry.summary.id == composite_id()
     )
     original_fingerprint = FileSnapshot.fingerprint

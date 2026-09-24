@@ -32,7 +32,7 @@ from llm_model_explorer.settings import Settings
 def test_only_implemented_product_endpoints_are_available(settings: Settings) -> None:
     app = create_app(settings)
     with TestClient(app) as client:
-        assert client.get("/models").json() == {"models": []}
+        assert client.get("/models").json() == {"models": [], "diagnostics": []}
         for path in ["/openapi.json", "/docs", "/redoc"]:
             assert client.get(path).status_code == 404
         assert isinstance(app.state.services, Services)

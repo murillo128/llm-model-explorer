@@ -13,7 +13,7 @@ test('compact deep navigator and contextual metadata remain accessible in narrow
   await page.route('https://backend.example/**', (route) => {
     const url = route.request().url();
     return route.fulfill({ status: route.request().method() === 'POST' ? 201 : 200,
-      json: url.endsWith('/models') ? { models } : url.endsWith('/tensors') ? { coverage: 'complete', diagnostics: [], tensors: inventory } : sessionA });
+      json: url.endsWith('/models') ? { models, diagnostics: [] } : url.endsWith('/tensors') ? { coverage: 'complete', diagnostics: [], tensors: inventory } : sessionA });
   });
   await page.goto('/');
   await page.getByRole('combobox').selectOption(models[0]!.id);

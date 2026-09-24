@@ -69,6 +69,28 @@ class TensorLocation:
     physical_names: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class PeftLoraTarget:
+    """Verified path-free binding for one standard PEFT LoRA linear target."""
+
+    module_name: str
+    a_tensor_name: str
+    b_tensor_name: str
+    a_storage_name: str
+    b_storage_name: str
+
+
+@dataclass(frozen=True)
+class PeftLoraComposition:
+    """Accepted uniform-rank, standard-scale local PEFT composition metadata."""
+
+    adapter_id: str
+    rank: int
+    alpha: float
+    scale: float
+    targets: tuple[PeftLoraTarget, ...]
+
+
 def combined_fingerprint(fingerprints: tuple[str, ...], semantics: str | None) -> str:
     """Domain-separated, length-framed identity for an ordered source composition."""
     if not fingerprints:
@@ -179,6 +201,7 @@ class ModelSource:
     _physical: tuple[PhysicalTensor, ...]
     _additional_snapshots: tuple[FileSnapshot, ...] = ()
     _composition_semantics: str | None = None
+    lora_composition: PeftLoraComposition | None = None
 
     def physical_tensors(self) -> tuple[PhysicalTensor, ...]:
         """Complete guarded storage inventory for structural analysis, never HTTP."""

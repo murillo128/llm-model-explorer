@@ -113,8 +113,8 @@ it('uses explicit typed endpoint methods and checks JSON responses', async () =>
   const fetcher = vi.fn<typeof fetch>();
   const client = new ApiClient(config, fetcher);
   const json = (value: unknown, status = 200) => fetcher.mockResolvedValueOnce(new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json; charset=utf-8' } }));
-  json({ models: [] });
-  expect(await client.listModels()).toEqual({ models: [] });
+  json({ models: [], diagnostics: [] });
+  expect(await client.listModels()).toEqual({ models: [], diagnostics: [] });
   json({ id, model_id: 'model' }, 201);
   expect(await client.createSession({ model_id: 'model' })).toEqual({ id, model_id: 'model' });
   json({ id, model_id: 'model' });
@@ -134,7 +134,7 @@ it('uses explicit typed endpoint methods and checks JSON responses', async () =>
     [`${config.backendBaseUrl}sessions/${id}/tokenize`, 'POST'], [`${config.backendBaseUrl}sessions/${id}`, 'DELETE'],
     [`${config.backendBaseUrl}operations/${id}`, 'DELETE'],
   ]);
-  json({ models: [null] });
+  json({ models: [null], diagnostics: [] });
   await expect(client.listModels()).rejects.toBeInstanceOf(ApiFailure);
   expect(() => client.createSession({ model_id: '' })).toThrow(ApiFailure);
 });
