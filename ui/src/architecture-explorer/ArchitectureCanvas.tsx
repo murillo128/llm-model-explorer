@@ -120,7 +120,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     } catch (error) { return { error: error instanceof Error ? error.message : 'Shared structure is unavailable.' }; }
   }, [graph, anchorInstance, sharedActive]);
   const result = useMemo(() => {
-    if (sharedActive && layoutResult.input !== layoutInput.graph) return {};
+    if (sharedActive && layoutResult.input !== layoutInput.graph) return layoutResult.error ? layoutResult : {};
     if (!sharedActive || !layoutResult.layout || !template || !anchorInstance) return layoutResult;
     try { return { ...layoutResult, layout: bindTemplateLayout(layoutResult.layout, graph, template, anchorInstance, concreteInstance) }; }
     catch (error) { return { ...layoutResult, layout: undefined, error: error instanceof Error ? error.message : 'Shared structure is unavailable.' }; }
@@ -277,6 +277,16 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     change({ expanded: [...expanded], exhaustive: false });
   });
   const reveal = useCanvasCallback((id: string) => {
+    const visibleBox = boxes.get(id);
+    if (!shared && visibleBox && result.layout && result.options === options && result.input === layoutInput.graph && !result.error) {
+      // Find and Center are camera/selection actions when the exact source node
+      // already has valid geometry. In particular, exhaustive MoE expansion must
+      // not clone and relayout the whole graph merely to inspect one expert.
+      select(id); focusContext(options.scope ?? instanceOf(graph, id)?.instance.node_id ?? id);
+      void flow.setCenter(visibleBox.absoluteX + Math.min(visibleBox.width / 2, 360),
+        visibleBox.absoluteY + Math.min(visibleBox.height / 2, 240), { zoom: Math.max(flow.getZoom(), 0.8) });
+      return;
+    }
     const base = shared || scope && !scope.members.has(id) && scope.id !== id ? leaveIsolation() : options;
     select(id);
     const derived = mlps.find((group) => group.id === id && !records.has(id));
@@ -369,7 +379,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     const controller = new AbortController(); layoutCount.current++;
     if (!layoutInput.graph) {
       // Failure is local to this optional view; ordinary model navigation stays available.
-      void Promise.resolve().then(() => { if (!controller.signal.aborted) setResult({ error: layoutInput.error, options }); });
+      void Promise.resolve().then(() => { if (!controller.signal.aborted) setResult((previous) => ({ ...previous, error: layoutInput.error })); });
       return () => controller.abort();
     }
     void requestLayout(layoutInput.graph, options, controller.signal).then((layout) => {
@@ -378,7 +388,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
         if (view.edge && !layout.projection.edges.some((e) => e.id === view.edge)) { view.update({ edge: null }); setPinned(null); setInspection(null); }
       }
     }, () => {
-      if (!controller.signal.aborted) setResult({ options, input: layoutInput.graph, invocation: layoutCount.current, error: 'Layout failed or exceeded 10 seconds. Retry or collapse groups.' });
+      if (!controller.signal.aborted) setResult((previous) => ({ ...previous, invocation: layoutCount.current,
+        error: 'Layout failed or exceeded 10 seconds. Retry or collapse groups.' }));
     });
     return () => controller.abort();
   }, [layoutInput, options, retry, view]);
@@ -508,7 +519,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   return <div ref={panel} className="architecture-explorer" aria-label="Architecture graph" data-graph-id={graph.graph_id}
     data-template-id={shared?.templateId ?? ''} data-template-instance-id={shared?.instanceId ?? ''}
     data-scope-id={concreteInstance?.node_id ?? options.scope ?? ''} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length} data-visible-nodes={nodes.length}
-    data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options}
+    data-visible-edges={edges.length} data-layout-ms={result.layout?.milliseconds} data-layout-count={result.invocation ?? 0} aria-busy={result.options !== options && !result.error}
     data-source-node-ids={JSON.stringify(sourceNodeIds)} data-represented-edge-ids={JSON.stringify(result.layout?.edgeIds ?? [])}>
     {notice && <p role="status">{notice}</p>}
     <ArchitectureControls shared={shared && template ? { template, instanceId: shared.instanceId, choose: chooseSharedInstance } : undefined}

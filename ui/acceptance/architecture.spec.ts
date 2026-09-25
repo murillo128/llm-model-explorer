@@ -482,7 +482,7 @@ for (const reference of [false, true]) for (const family of ['smollm2', 'qwen3',
   });
 }
 
-test('deterministic production [kimi_linear] complete repeated experts remain reachable', async ({ page }, info) => {
+test('deterministic production [kimi_linear] complete repeated experts remain reachable after Find', async ({ page }, info) => {
   test.setTimeout(300_000);
   const graph = await selectGraph(page);
   expect(graph.coverage).toBe('complete');
@@ -504,6 +504,20 @@ test('deterministic production [kimi_linear] complete repeated experts remain re
   expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
   expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
   await recordGraph(page, info, 'kimi-linear-full-graph', graph);
+
+  const parameter = experts.at(-1)!;
+  const target = graph.nodes.find((node) => node.parameter_ids.includes(parameter.id))!;
+  const layoutCount = await canvas.getAttribute('data-layout-count');
+  await findComponent(page, target.id);
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await expect(canvas).toHaveAttribute('data-layout-count', layoutCount!);
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
+  const card = page.locator(`.react-flow__node[data-id=${JSON.stringify(target.id)}]`);
+  await expect(card).toBeInViewport();
+  await card.getByRole('button', { name: `Inspect ${target.label}` }).click();
+  await expect(page.getByRole('dialog')).toContainText(parameter.name);
 });
 
 test('complete local reference [qwen3] exhaustive global detail remains reachable at readable scale', async ({ page }, info) => {
