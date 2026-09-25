@@ -35,6 +35,18 @@ export interface ProjectionOptions {
   /** Layout-only label visibility; it never changes source projection semantics. */
   dimensions?: boolean;
 }
+
+/** Shape labels change route geometry, but not which source records are shown. */
+export function sameProjectionOptions(a: ProjectionOptions, b: ProjectionOptions): boolean {
+  if (a === b) return true;
+  if (a.scope !== b.scope || a.exhaustive !== b.exhaustive || a.deriveMlp !== b.deriveMlp ||
+    a.showUnused !== b.showUnused || a.showContext !== b.showContext || a.stateScope !== b.stateScope ||
+    a.expanded.length !== b.expanded.length || !a.expanded.every((id, index) => id === b.expanded[index])) return false;
+  const first = a.repetitions ?? {}, second = b.repetitions ?? {};
+  const keys = Object.keys(first);
+  return keys.length === Object.keys(second).length && keys.every((id) =>
+    first[id]?.start === second[id]?.start && first[id]?.count === second[id]?.count);
+}
 export interface Projection {
   nodes: ProjectedNode[]; edges: ProjectedEdge[];
   /** Every omitted source edge has an explicit reason, for inspection/tests. */

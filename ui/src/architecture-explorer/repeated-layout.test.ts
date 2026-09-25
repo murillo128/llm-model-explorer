@@ -57,6 +57,12 @@ it('lays out every concrete expert and route in a large repeated-MoE graph', asy
 
 it('retains dimension labels and source endpoints across a split expert interior', async () => {
   const graph = referenceFixture('glm4').graph;
+  // Equal measured boxes with distinct source shapes must share geometry while
+  // keeping each expert's own dimension text and edge identity.
+  for (const [index, value] of [[0, 10], [1, 11]] as const) {
+    const expert = graph.nodes.find((node) => node.id === `layer-0-1-expert-${index}`)!;
+    expert.ports.find((port) => port.id === 'in')!.shape = [{ kind: 'constant', value }];
+  }
   const options = { scope: 'layer-0-1-routed-experts', expanded: [], exhaustive: true, dimensions: true };
   const projection = projectGraph(graph, options);
   const layout = await layoutGraph(graph, options);
@@ -67,5 +73,10 @@ it('retains dimension labels and source endpoints across a split expert interior
     const route = routes.get(edge.id)!;
     expect(route.labels).toHaveLength(1);
     expect(route.labels![0]!.lines.length).toBeGreaterThan(0);
+  }
+  for (const [index, value] of [[0, 10], [1, 11]] as const) {
+    const edge = projection.edges.find((edge) => edge.target.node_id === `layer-0-1-expert-${index}`)!;
+    expect(routes.get(edge.id)!.labels![0]!.lines.join(' ')).toContain(String(value));
+    expect(edge.originalEdgeIds.length).toBeGreaterThan(0);
   }
 }, 30_000);

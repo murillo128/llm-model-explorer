@@ -121,7 +121,9 @@ function structuralSignature(root: ElkNode) {
         options: port.layoutOptions, labels: port.labels?.map((label) => [label.width, label.height, label.text]) })),
       children: node.children?.length ?? 0 })),
     edges: (root.edges ?? []).map((edge) => ({ sources: edge.sources.map(role), targets: edge.targets.map(role),
-      labels: edge.labels?.map((label) => [label.width, label.height, label.text, label.layoutOptions]) })),
+      // ELK receives the measured label box. Its text does not change routing;
+      // instance-specific shape strings must not defeat repeated geometry reuse.
+      labels: edge.labels?.map((label) => [label.width, label.height, label.layoutOptions]) })),
   });
 }
 
@@ -144,5 +146,12 @@ function rebind(from: ElkNode, output: ElkNode, to: ElkNode): ElkNode {
     if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, clone(item)]));
     return value;
   };
-  return clone(output) as ElkNode;
+  const rebound = clone(output) as ElkNode;
+  for (const [index, edge] of (rebound.edges ?? []).entries()) {
+    for (const [labelIndex, label] of (edge.labels ?? []).entries()) {
+      const text = to.edges?.[index]?.labels?.[labelIndex]?.text;
+      if (text !== undefined) label.text = text;
+    }
+  }
+  return rebound;
 }
