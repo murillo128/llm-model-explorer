@@ -7,6 +7,7 @@ import copy
 import json
 import re
 import socket
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -325,8 +326,8 @@ def test_complete_graph_preserves_every_layer_expert_and_latent_path(
             assert f"expert index {expert}" in parameter.region.description
         elif name == "model.layers.1.self_attn.q_a_proj.weight":
             assert parameter.binding == "quantized"
-            assert isinstance(parameter.inspection, r.ArchitectureUnavailableInspection)
-            assert parameter.inspection.reason == "unsupported_representation"
+            assert isinstance(parameter.inspection, r.ArchitectureAvailableInspection)
+            assert parameter.inspection.tensor_id == "glm-packed-logical-view"
             assert {storage.role for storage in parameter.storage} == {
                 "packed_data",
                 "scales",
@@ -441,3 +442,36 @@ def test_individual_packed_expert_inventory_binds_the_exact_expert_matrix() -> N
         name.removesuffix(".weight") + ".weight_scale",
         name.removesuffix(".weight") + ".weight_shape",
     ]
+    assert selected.inspection == r.ArchitectureAvailableInspection(
+        status="available", tensor_id="glm-packed-logical-view"
+    )
+
+
+def test_two_compressed_experts_keep_their_own_logical_tensor_ids() -> None:
+    names = [f"model.layers.1.mlp.experts.{index}.gate_proj.weight" for index in (0, 1)]
+    data = inputs(compressed=names[0])
+    physical = dict(data.bindings.physical)
+    numeric = dict(data.bindings.numeric)
+    output, width = expected_parameters(REFERENCE)[names[1]]
+    prefix = names[1].removesuffix(".weight")
+    for suffix, dtype, dimensions in (
+        (".weight_packed", "I32", [output, width // 8]),
+        (".weight_scale", "BF16", [output, width // 32]),
+        (".weight_shape", "I64", [2]),
+    ):
+        name = prefix + suffix
+        physical[name] = r.ArchitectureStorage(name=name, dtype=dtype, shape=dimensions)
+    numeric["second-glm-expert"] = NumericTensor(
+        "second-glm-expert", names[1], (output, width), "I32", COMPRESSED_FORMAT
+    )
+    data = replace(data, bindings=replace(data.bindings, physical=physical, numeric=numeric))
+    result = registry().analyze(data)
+    assert result.status == "complete", result
+    assert result.graph is not None
+    parameters = {parameter.name: parameter for parameter in result.graph.parameters}
+    assert parameters[names[0]].inspection == r.ArchitectureAvailableInspection(
+        status="available", tensor_id="glm-packed-logical-view"
+    )
+    assert parameters[names[1]].inspection == r.ArchitectureAvailableInspection(
+        status="available", tensor_id="second-glm-expert"
+    )

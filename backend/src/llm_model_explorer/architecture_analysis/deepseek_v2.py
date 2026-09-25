@@ -13,7 +13,7 @@ from .semantic import operation_role
 from .validation import require
 
 SOURCE_REVISION = "slowfastai/DeepSeek-V2-Lite-bnb-4bit@9fc357346aeba67950a34a86f3520fc276ca2daf"
-PRODUCER = Producer("deepseek-v2-lite", "1", SOURCE_REVISION)
+PRODUCER = Producer("deepseek-v2-lite", "2", SOURCE_REVISION)
 
 REFERENCE = {
     "model_type": "deepseek_v2",
@@ -409,13 +409,20 @@ class DeepseekGraph:
             binding = "quantized"
             parameter_storage = self._parameter_storage(name)
             self.used_storage.update(value.name for value in parameter_storage)
-            inspection = r.ArchitectureUnavailableInspection(
-                status="unavailable",
-                reason="unsupported_representation",
-                message=(
-                    "The admitted packed weight has no logical inspection view in this analyzer."
-                ),
-            )
+            if numeric is not None and numeric.storage_format == "bnb-nf4-dq":
+                require(
+                    numeric.shape == dims and numeric.dtype == storage.dtype,
+                    "NF4 numeric inventory disagrees with parameter geometry.",
+                )
+                inspection = r.ArchitectureAvailableInspection(
+                    status="available", tensor_id=numeric.id
+                )
+            else:
+                inspection = r.ArchitectureUnavailableInspection(
+                    status="unavailable",
+                    reason="unsupported_representation",
+                    message="No admitted complete NF4 logical tensor exists.",
+                )
         elif storage is not None:
             parameter_storage = [storage]
             self.used_storage.add(name)

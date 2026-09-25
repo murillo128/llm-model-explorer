@@ -15,7 +15,7 @@ SOURCE_REVISION = (
     "huggingface/transformers@c8b81b63232be35ab1774dd3cabbf499d8b9808f; "
     "cyankiwi/GLM-4.7-Flash-AWQ-4bit@25624b53414e585bcf7dcb9584667c3106c6089b"
 )
-PRODUCER = Producer("glm4-moe-lite", "1", SOURCE_REVISION)
+PRODUCER = Producer("glm4-moe-lite", "2", SOURCE_REVISION)
 ARCHITECTURE = "Glm4MoeLiteForCausalLM"
 MODEL_TYPE = "glm4_moe_lite"
 
@@ -401,6 +401,8 @@ class Glm4MoeLiteGraph(DeepseekGraph):
             or prefix + ".weight_zero_point" in self.physical
         ):
             return None
+        if numeric.dtype != packed.dtype:
+            return None
         result = [
             packed.model_copy(update={"role": "packed_data"}),
             scale.model_copy(update={"role": "scales"}),
@@ -420,6 +422,7 @@ class Glm4MoeLiteGraph(DeepseekGraph):
         numeric = self.numeric.get(name)
         packed_storage = self._compressed_storage(name, dims)
         if packed_storage is not None:
+            assert numeric is not None
             pid = self.b.record_id("parameter", name)
             self.b.add_parameter(
                 r.ArchitectureDirectParameter(
@@ -428,13 +431,8 @@ class Glm4MoeLiteGraph(DeepseekGraph):
                     logical_shape=shape(*dims),
                     binding="quantized",
                     storage=packed_storage,
-                    inspection=r.ArchitectureUnavailableInspection(
-                        status="unavailable",
-                        reason="unsupported_representation",
-                        message=(
-                            "Architecture metadata retains the packed group; "
-                            "no logical view is attached."
-                        ),
+                    inspection=r.ArchitectureAvailableInspection(
+                        status="available", tensor_id=numeric.id
                     ),
                     provenance=self.b.producer.provenance()
                     + [

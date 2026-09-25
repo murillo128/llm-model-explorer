@@ -163,7 +163,7 @@ def inputs(
             dtype, dimensions = selected[name]
             physical[name] = r.ArchitectureStorage(name=name, dtype=dtype, shape=dimensions)
         numeric["quantized-w1"] = NumericTensor(
-            "quantized-w1", EXPERT, expected[EXPERT], "BF16", COMPRESSED_FORMAT
+            "quantized-w1", EXPERT, expected[EXPERT], "I32", COMPRESSED_FORMAT
         )
     return AnalysisInput(
         fingerprint,
@@ -199,9 +199,8 @@ def compressed_expert_inputs(*, missing: str | None = None) -> AnalysisInput:
             physical[storage_name] = r.ArchitectureStorage(
                 name=storage_name, dtype=dtype, shape=shape
             )
-        numeric[name] = NumericTensor(
-            f"packed-expert-{len(numeric)}", name, dimensions, "BF16", COMPRESSED_FORMAT
-        )
+        tensor_id = f"packed-expert-{len(numeric)}"
+        numeric[tensor_id] = NumericTensor(tensor_id, name, dimensions, "I32", COMPRESSED_FORMAT)
     return AnalysisInput(
         data.fingerprint,
         data.configuration,
@@ -266,7 +265,7 @@ def test_pinned_configuration_fixture_and_independent_geometry() -> None:
     ]
     assert configuration["layer_types"].count("kda") == 20
     assert configuration["layer_types"].count("full_attention") == 7
-    assert PRODUCER.revision == "3"
+    assert PRODUCER.revision == "4"
     assert parameter_shapes(REFERENCE) == expected_parameters(REFERENCE)
     assert FIXTURE["source"]["configuration_revision"] in PRODUCER.source_revision
     assert FIXTURE["source"]["modeling_revision"] in PRODUCER.source_revision
@@ -387,6 +386,10 @@ def test_complete_graph_preserves_kda_mla_moe_identity_and_budget(
     for name, parameter in parameters.items():
         if ".block_sparse_moe.experts." in name:
             assert parameter.binding == "quantized"
+            assert isinstance(parameter.inspection, r.ArchitectureAvailableInspection)
+            assert parameter.inspection.tensor_id == next(
+                tensor.id for tensor in data.bindings.numeric.values() if tensor.name == name
+            )
             assert [value.name for value in parameter.storage] == [
                 name.removesuffix(".weight") + ".weight_packed",
                 name.removesuffix(".weight") + ".weight_scale",
@@ -564,9 +567,41 @@ def test_missing_and_compressed_parameter_bindings_are_explicit() -> None:
         EXPERT.removesuffix(".weight") + ".weight_scale",
         EXPERT.removesuffix(".weight") + ".weight_shape",
     ]
-    assert packed.inspection.status == "unavailable"
-    assert packed.inspection.reason == "unsupported_representation"
+    assert packed.inspection.status == "available"
+    assert packed.inspection.tensor_id == "quantized-w1"
     assert all("weight_packed" not in node.label for node in builder._nodes)
+
+    for missing_scale in (True, False):
+        physical = dict(compressed_data.bindings.physical)
+        numeric = dict(compressed_data.bindings.numeric)
+        if missing_scale:
+            physical.pop(EXPERT.removesuffix(".weight") + ".weight_scale")
+        else:
+            numeric["quantized-w1"] = NumericTensor(
+                "quantized-w1", EXPERT, expected[EXPERT], "I32", "unknown-packed-format"
+            )
+        damaged = AnalysisInput(
+            compressed_data.fingerprint,
+            compressed_data.configuration,
+            BindingContext(physical, numeric, tokenizer_available=False),
+        )
+        damaged_builder = GraphBuilder(damaged, PRODUCER, "language_model")
+        damaged_description = KimiLinearGraph.__new__(KimiLinearGraph)
+        damaged_description.inputs = damaged
+        damaged_description.b = damaged_builder
+        damaged_description.c = compressed_config
+        damaged_description.physical = damaged.bindings.physical
+        damaged_description.numeric = {
+            tensor.name: tensor for tensor in damaged.bindings.numeric.values()
+        }
+        damaged_description.used_storage = set()
+        rejected = damaged_builder._parameter_by_id[
+            damaged_description.parameter(EXPERT, expected[EXPERT])
+        ]
+        assert rejected.binding == "unresolved"
+        assert rejected.inspection.status == "unavailable"
+        assert rejected.inspection.reason == "unresolved_binding"
+        assert damaged_builder._partial
 
     missing_data = inputs(missing=EXPERT)
     missing_builder = GraphBuilder(missing_data, PRODUCER, "language_model")

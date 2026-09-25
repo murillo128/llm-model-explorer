@@ -20,7 +20,7 @@ SOURCE_REVISION = (
     + "; cyankiwi/Kimi-Linear-48B-A3B-Instruct-AWQ-4bit/config.json@"
     + CONFIG_REVISION
 )
-PRODUCER = Producer("kimi-linear-kda-mla-moe", "3", SOURCE_REVISION)
+PRODUCER = Producer("kimi-linear-kda-mla-moe", "4", SOURCE_REVISION)
 ARCHITECTURE = "KimiLinearForCausalLM"
 MODEL_TYPE = "kimi_linear"
 
@@ -351,16 +351,15 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
         # names a second time in provenance.
         provenance = self.provenance()
         if packed is not None:
+            assert numeric is not None
             parameter = r.ArchitectureDirectParameter(
                 id=parameter_id,
                 name=name,
                 logical_shape=shape(*dimensions),
                 binding="quantized",
                 storage=packed,
-                inspection=r.ArchitectureUnavailableInspection(
-                    status="unavailable",
-                    reason="unsupported_representation",
-                    message="Packed W4A16 data is retained without decoding.",
+                inspection=r.ArchitectureAvailableInspection(
+                    status="available", tensor_id=numeric.id
                 ),
                 provenance=provenance,
             )
