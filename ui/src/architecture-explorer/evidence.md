@@ -47,3 +47,59 @@ display extent no longer shrinks, retaining the same bounded maximum and every
 downstream pixel/geometry assertion. No production camera behavior was changed.
 All ten native-scrollbar cases then passed locally in 34.5 seconds; the previously
 timed-out case completed in 7.5 seconds. Typecheck and lint also passed.
+
+## Issue #242: repeated GLM expert layout
+
+Measured 2026-09-25 on the #178 local reference host with Node 24.14.0, Vitest
+5.0.0 and elkjs 0.12.0. The prepared graph came from the pinned
+`cyankiwi/GLM-4.7-Flash-AWQ-4bit` revision
+`25624b53414e585bcf7dcb9584667c3106c6089b`; no model files are in Git.
+The 28 MB compact response has 2,486 node records, 19,082 edges and 46 compact
+expert families. Exact materialization creates 5,430 nodes; full projection has
+5,430 visible nodes and 17,956 routes, representing all 19,082 source edges.
+
+The same local graph and exhaustive projection options were profiled before and
+after the change. Stage timestamps were taken around projection, ELK input
+construction, ELK calls and output conversion. These are Node geometry timings,
+excluding browser worker transport and paint. `/usr/bin/time -v` measured the
+peak resident memory of the benchmark process, including Vitest.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Projection | 92 ms | 99 ms |
+| ELK input ready, cumulative | 140 ms | 240 ms |
+| Repeated interiors ready, cumulative | n/a | 996 ms |
+| Outer ELK ready, cumulative | 18,329 ms | 5,598 ms |
+| Routes converted, cumulative | 18,347 ms | 5,646 ms |
+| Complete geometry | 18,350 ms | 5,650 ms |
+| Peak benchmark RSS | 1,718,520 KiB | 850,668 KiB |
+
+Both runs produced 5,430 boxes, 20,491 real ports and 17,956 routes. The
+optimized run retained all 19,082 represented source edge IDs and every route
+met its exact source and target port (zero endpoint failures). The deterministic
+46-layer/64-expert UI fixture exercises the same repeated fan-out without a
+checkpoint in CI; one final expert has a deliberately different port and edge
+to verify that geometry reuse follows structure rather than names. The fixture
+has more than 18,000 explicit source edges, matching the reference fan-out
+scale.
+
+The production browser check used the pinned local GLM files from #178 (a
+hard-linked single-model root), this branch's backend, a production Vite build,
+headless Chromium 153 with SwiftShader, and a 1178 × 900 viewport at DPR 1.
+Playwright forwarded the backend's actual HTTP responses through Node because
+the sandboxed Chromium process could not connect to the local backend port;
+responses and graph records were not mocked. The first successful browser run
+completed the full expansion with a 4,523.5 ms worker layout and 11,590 ms
+from click to visible operations, without a layout error. It retained 5,430
+logical nodes, 17,956 visible routes and all 19,082 represented source edge
+IDs. Eight nodes were mounted in the viewport, including five operation cards.
+The final concrete expert was selected from the source browser, centered, and
+inspected successfully.
+
+After indexing ports and routes for React rendering, the final candidate's
+browser run completed worker layout in 4,605.6 ms and showed operation cards
+9,821 ms after the Expand all click. It again retained the same node, route and
+source-edge counts, with five operation cards mounted. CDP sampled a peak
+main-renderer JS heap of 511,756,404 bytes in that run; it did not provide a
+separate peak for the layout worker. The screenshot and raw browser observation
+remain outside Git under `/tmp/lmex-issue-242-*`.
