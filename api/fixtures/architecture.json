@@ -4800,6 +4800,39 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
+        }
       ]
     },
     {
@@ -4979,6 +5012,39 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
+        }
       ]
     },
     {
@@ -5124,6 +5190,39 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
+        }
       ]
     },
     {
@@ -5264,6 +5363,39 @@
               "storage_format": "gptq-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
           ]
         }
       ]
@@ -5408,6 +5540,39 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
+        }
       ]
     },
     {
@@ -5548,6 +5713,39 @@
               "storage_format": "gptq-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
           ]
         }
       ]
@@ -5716,6 +5914,39 @@
               "storage_format": "gptq-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
           ]
         }
       ]
@@ -5903,6 +6134,39 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
+        }
       ]
     },
     {
@@ -6043,6 +6307,39 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
+        }
       ]
     },
     {
@@ -6181,6 +6478,39 @@
               "storage_format": "gptq-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
           ]
         }
       ]
@@ -6324,6 +6654,39 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
+        }
       ]
     },
     {
@@ -6463,6 +6826,39 @@
             "storage_format"
           ],
           "value": "unknown"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
         }
       ]
     },
@@ -6604,6 +7000,39 @@
           ],
           "delete": true
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
+        }
       ]
     },
     {
@@ -6744,6 +7173,39 @@
           ],
           "value": "F16"
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
+        }
       ]
     },
     {
@@ -6883,6 +7345,39 @@
             "name"
           ],
           "value": "other.weight"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
         }
       ]
     },
@@ -7027,6 +7522,39 @@
             8
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.qweight",
+          "dtype": "I32",
+          "shape": [
+            16,
+            8
+          ]
+        },
+        {
+          "name": "packed.qzeros",
+          "dtype": "I32",
+          "shape": [
+            1,
+            1
+          ]
+        },
+        {
+          "name": "packed.scales",
+          "dtype": "F16",
+          "shape": [
+            1,
+            8
+          ]
+        },
+        {
+          "name": "packed.g_idx",
+          "dtype": "I32",
+          "shape": [
+            128
+          ]
+        }
       ]
     },
     {
@@ -7152,6 +7680,34 @@
               "logical_dtype": "float32"
             }
           ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
         }
       ]
     },
@@ -7327,6 +7883,34 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
+        }
       ]
     },
     {
@@ -7467,6 +8051,34 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
+        }
       ]
     },
     {
@@ -7603,6 +8215,34 @@
               "logical_dtype": "float32"
             }
           ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
         }
       ]
     },
@@ -7741,6 +8381,34 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
+        }
       ]
     },
     {
@@ -7877,6 +8545,34 @@
               "logical_dtype": "float32"
             }
           ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
         }
       ]
     },
@@ -8037,6 +8733,34 @@
               "logical_dtype": "float32"
             }
           ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
         }
       ]
     },
@@ -8213,6 +8937,34 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
+        }
       ]
     },
     {
@@ -8348,6 +9100,34 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
+        }
       ]
     },
     {
@@ -8482,6 +9262,34 @@
               "logical_dtype": "float32"
             }
           ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
         }
       ]
     },
@@ -8619,6 +9427,34 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
+        }
       ]
     },
     {
@@ -8753,6 +9589,34 @@
             "storage_format"
           ],
           "value": "unknown"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
         }
       ]
     },
@@ -8889,6 +9753,34 @@
           ],
           "delete": true
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
+        }
       ]
     },
     {
@@ -9024,6 +9916,34 @@
           ],
           "value": "F16"
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
+        }
       ]
     },
     {
@@ -9158,6 +10078,34 @@
             "name"
           ],
           "value": "other.weight"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
         }
       ]
     },
@@ -9297,6 +10245,34 @@
             2
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "fp4.weight",
+          "dtype": "U8",
+          "shape": [
+            2,
+            16
+          ]
+        },
+        {
+          "name": "fp4.weight_scale",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "name": "fp4.weight_scale_2",
+          "dtype": "F32",
+          "shape": []
+        },
+        {
+          "name": "fp4.input_scale",
+          "dtype": "F32",
+          "shape": []
+        }
       ]
     },
     {
@@ -9434,6 +10410,51 @@
               "storage_format": "bnb-nf4-dq",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
           ]
         }
       ]
@@ -9623,6 +10644,51 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
+          ]
+        }
       ]
     },
     {
@@ -9776,6 +10842,51 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
+          ]
+        }
       ]
     },
     {
@@ -9924,6 +11035,51 @@
               "storage_format": "bnb-nf4-dq",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
           ]
         }
       ]
@@ -10076,6 +11232,51 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
+          ]
+        }
       ]
     },
     {
@@ -10224,6 +11425,51 @@
               "storage_format": "bnb-nf4-dq",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
           ]
         }
       ]
@@ -10409,6 +11655,51 @@
               "storage_format": "bnb-nf4-dq",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
           ]
         }
       ]
@@ -10611,6 +11902,51 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
+          ]
+        }
       ]
     },
     {
@@ -10759,6 +12095,51 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
+          ]
+        }
       ]
     },
     {
@@ -10905,6 +12286,51 @@
               "storage_format": "bnb-nf4-dq",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
           ]
         }
       ]
@@ -11056,6 +12482,51 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
+          ]
+        }
       ]
     },
     {
@@ -11203,6 +12674,51 @@
             "storage_format"
           ],
           "value": "unknown"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
+          ]
         }
       ]
     },
@@ -11352,6 +12868,51 @@
           ],
           "delete": true
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
+          ]
+        }
       ]
     },
     {
@@ -11500,6 +13061,51 @@
           ],
           "value": "F16"
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
+          ]
+        }
       ]
     },
     {
@@ -11647,6 +13253,51 @@
             "name"
           ],
           "value": "other.weight"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
+          ]
         }
       ]
     },
@@ -11799,6 +13450,51 @@
             8
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight",
+          "dtype": "U8",
+          "shape": [
+            512,
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "packed.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "packed.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "packed.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            64
+          ]
+        }
       ]
     },
     {
@@ -11925,6 +13621,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -12103,6 +13824,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -12245,6 +13991,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -12382,6 +14153,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -12523,6 +14319,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -12660,6 +14481,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -12816,6 +14662,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -12991,6 +14862,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -13128,6 +15024,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -13263,6 +15184,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -13403,6 +15349,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -13539,6 +15510,31 @@
             "storage_format"
           ],
           "value": "unknown"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
         }
       ]
     },
@@ -13677,6 +15673,31 @@
           ],
           "delete": true
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -13814,6 +15835,31 @@
           ],
           "value": "F16"
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -13950,6 +15996,31 @@
             "name"
           ],
           "value": "other.weight"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
         }
       ]
     },
@@ -14089,6 +16160,31 @@
           "value": [
             96,
             64
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -14241,6 +16337,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -14383,6 +16504,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -14520,6 +16666,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -14662,6 +16833,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -14824,6 +17020,31 @@
           ],
           "value": 4032
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -14950,6 +17171,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -15128,6 +17374,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -15270,6 +17541,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -15407,6 +17703,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -15548,6 +17869,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -15685,6 +18031,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -15841,6 +18212,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -16016,6 +18412,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -16153,6 +18574,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -16288,6 +18734,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -16428,6 +18899,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -16564,6 +19060,31 @@
             "storage_format"
           ],
           "value": "unknown"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
         }
       ]
     },
@@ -16702,6 +19223,31 @@
           ],
           "delete": true
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -16839,6 +19385,31 @@
           ],
           "value": "F16"
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -16975,6 +19546,31 @@
             "name"
           ],
           "value": "other.weight"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
         }
       ]
     },
@@ -17116,6 +19712,31 @@
             64
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            64,
+            12
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            64,
+            3
+          ]
+        },
+        {
+          "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -17233,6 +19854,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -17402,6 +20048,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -17535,6 +20206,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -17663,6 +20359,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -17795,6 +20516,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -17923,6 +20669,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -18068,6 +20839,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -18230,6 +21026,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -18358,6 +21179,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -18484,6 +21330,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -18615,6 +21486,31 @@
             }
           ]
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -18742,6 +21638,31 @@
             "storage_format"
           ],
           "value": "unknown"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
         }
       ]
     },
@@ -18871,6 +21792,31 @@
           ],
           "delete": true
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -18999,6 +21945,31 @@
           ],
           "value": "F16"
         }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
+        }
       ]
     },
     {
@@ -19126,6 +22097,31 @@
             "name"
           ],
           "value": "other.weight"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
+          ]
         }
       ]
     },
@@ -19256,6 +22252,31 @@
           "value": [
             128,
             8
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "packed.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            8,
+            16
+          ]
+        },
+        {
+          "name": "packed.weight_scale",
+          "dtype": "F16",
+          "shape": [
+            8,
+            4
+          ]
+        },
+        {
+          "name": "packed.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]
@@ -19405,6 +22426,51 @@
               "storage_format": "bnb-nf4-dq",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.0.self_attn.q_proj.weight",
+          "dtype": "U8",
+          "shape": [
+            165888,
+            1
+          ]
+        },
+        {
+          "name": "model.layers.0.self_attn.q_proj.weight.absmax",
+          "dtype": "U8",
+          "shape": [
+            5184
+          ]
+        },
+        {
+          "name": "model.layers.0.self_attn.q_proj.weight.quant_map",
+          "dtype": "F32",
+          "shape": [
+            16
+          ]
+        },
+        {
+          "name": "model.layers.0.self_attn.q_proj.weight.nested_absmax",
+          "dtype": "F32",
+          "shape": [
+            21
+          ]
+        },
+        {
+          "name": "model.layers.0.self_attn.q_proj.weight.nested_quant_map",
+          "dtype": "F32",
+          "shape": [
+            256
+          ]
+        },
+        {
+          "name": "model.layers.0.self_attn.q_proj.weight.quant_state.bitsandbytes__nf4",
+          "dtype": "U8",
+          "shape": [
+            1
           ]
         }
       ]
@@ -20983,6 +24049,31 @@
               "storage_format": "compressed-tensors-w4a16-int4",
               "logical_dtype": "float32"
             }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "model.layers.1.mlp.experts.0.w1.weight_packed",
+          "dtype": "I32",
+          "shape": [
+            2,
+            4
+          ]
+        },
+        {
+          "name": "model.layers.1.mlp.experts.0.w1.weight_scale",
+          "dtype": "BF16",
+          "shape": [
+            2,
+            1
+          ]
+        },
+        {
+          "name": "model.layers.1.mlp.experts.0.w1.weight_shape",
+          "dtype": "I64",
+          "shape": [
+            2
           ]
         }
       ]

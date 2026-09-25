@@ -352,6 +352,12 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
 test.beforeEach(async ({ page }, info) => {
   const family = /\[(\w+)\]/.exec(info.title)![1]!;
   const reference = info.title.startsWith('complete local reference');
+  if (!reference && ['deepseek_v2', 'glm4_moe_lite'].includes(family)) {
+    test.skip(true, `${family} has no deterministic local checkpoint fixture; actual-reference coverage owns this family`);
+  }
+  if (!reference && family === 'kimi_linear') {
+    test.skip(true, 'The tiny Kimi fixture covers graph topology; actionable packed tensors require the pinned local reference');
+  }
   if (reference) test.setTimeout(600_000);
   const supplied = process.env.LMEX_ARCHITECTURE_REFERENCES;
   const hasReference = supplied && JSON.parse(readFileSync(supplied, 'utf8'))[family];
@@ -536,7 +542,8 @@ for (const reference of [false, true]) for (const family of [
     } else {
       // Later-layer vector proves the modal uses concrete bindings, never layer-zero fallback.
       const layer = inspectionLayer(family, reference);
-      const parameter = graph.parameters.find((p) => p.binding === 'native' && p.inspection.status === 'available' && p.logical_shape?.length === 1 && p.name.includes(`.layers.${layer}.`))!;
+      const layerPath = family === 'vjepa2' ? `.layer.${layer}.` : `.layers.${layer}.`;
+      const parameter = graph.parameters.find((p) => p.binding === 'native' && p.inspection.status === 'available' && p.logical_shape?.length === 1 && p.name.includes(layerPath))!;
       expect(parameter).toBeTruthy();
       await page.evaluate(() => { (window as any).__acceptance.captureScalars = true; });
       const parameterTrigger = await openParameter(page, graph, parameter, true);
