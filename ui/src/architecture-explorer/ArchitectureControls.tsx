@@ -48,6 +48,7 @@ export function ArchitectureControls(props: Props) {
   const index = useMemo(() => {
     const labels = new Map(graph.nodes.map((node) => [node.id, nodeLabel(node, graph)]));
     const records = new Map(graph.nodes.map((node) => [node.id, node]));
+    const parameters = new Map(graph.parameters.map((parameter) => [parameter.id, parameter.name]));
     const instances = new Map(graph.repetitions.flatMap((r) => r.instances.map((i) => [i.node_id, { r, i }] as const)));
     return graph.nodes.map((node) => {
       const parents: string[] = [];
@@ -65,8 +66,12 @@ export function ArchitectureControls(props: Props) {
       // names (for example a fixture or producer name) are not node identities.
       const sources = node.provenance.filter((p) => p.kind === 'description' &&
         p.rule === 'Semantic source key in the reviewed packaged description').map((p) => p.source).join(' ');
+      const resources = node.references.flatMap((reference) => reference.kind === 'parameter'
+        ? [parameters.get(reference.parameter_id) ?? reference.parameter_id]
+        : reference.kind === 'module' ? [reference.name] : []);
       return { id: node.id, label: labels.get(node.id)!, context, fullLabel: node.label,
-        search: `${labels.get(node.id)} ${context} ${node.label} ${node.id} ${sources} ${node.references.filter((r) => r.kind === 'module').map((r) => r.name).join(' ')}`.toLocaleLowerCase() };
+        search: [labels.get(node.id), context, node.label, node.id, sources,
+          ...node.parameter_ids.map((id) => parameters.get(id) ?? id), ...resources].join(' ').toLocaleLowerCase() };
     });
   }, [graph]);
   const matches = useMemo(() => {

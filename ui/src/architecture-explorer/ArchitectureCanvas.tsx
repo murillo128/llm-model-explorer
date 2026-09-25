@@ -7,7 +7,7 @@ import type { Graph, GraphNode, GraphView, Layout, PortPosition } from './graph'
 import { requestLayout } from './layout';
 import { useCanvasCallback } from './useCanvasCallback';
 import type { ProjectedNode, ProjectionOptions } from './projection';
-import { connectionSet, endpointKey } from './projection';
+import { connectionSet, endpointKey, sameProjectionOptions } from './projection';
 import { deriveMlpGroups } from './derived-groups';
 import { semanticRole } from './semantic-role';
 import { displayLabel, instanceOf } from './presentation';
@@ -278,10 +278,13 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   });
   const reveal = useCanvasCallback((id: string) => {
     const visibleBox = boxes.get(id);
-    if (!shared && visibleBox && result.layout && result.options === options && result.input === layoutInput.graph && !result.error) {
+    if (!shared && visibleBox && result.layout && result.options && result.input === layoutInput.graph &&
+      sameProjectionOptions(result.options, options)) {
       // Find and Center are camera/selection actions when the exact source node
-      // already has valid geometry. In particular, exhaustive MoE expansion must
-      // not clone and relayout the whole graph merely to inspect one expert.
+      // already has valid geometry. A pending dimension-label layout changes
+      // geometry, not the represented source identities. Center again when it
+      // completes, without replacing its request with an exhaustive relayout.
+      if (result.options !== options && !result.error) centerPending.current = id;
       select(id); focusContext(options.scope ?? instanceOf(graph, id)?.instance.node_id ?? id);
       void flow.setCenter(visibleBox.absoluteX + Math.min(visibleBox.width / 2, 360),
         visibleBox.absoluteY + Math.min(visibleBox.height / 2, 240), { zoom: Math.max(flow.getZoom(), 0.8) });
@@ -388,8 +391,11 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
         if (view.edge && !layout.projection.edges.some((e) => e.id === view.edge)) { view.update({ edge: null }); setPinned(null); setInspection(null); }
       }
     }, () => {
-      if (!controller.signal.aborted) setResult((previous) => ({ ...previous, invocation: layoutCount.current,
-        error: 'Layout failed or exceeded 10 seconds. Retry or collapse groups.' }));
+      if (!controller.signal.aborted) {
+        centerPending.current = null;
+        setResult((previous) => ({ ...previous, invocation: layoutCount.current,
+          error: 'Layout failed or exceeded 10 seconds. Retry or collapse groups.' }));
+      }
     });
     return () => controller.abort();
   }, [layoutInput, options, retry, view]);
