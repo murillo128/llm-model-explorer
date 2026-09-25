@@ -30,6 +30,7 @@ class Service:
         model_root=None,
         startup_timeout=30,
         kimi_architecture_fixture=False,
+        client_timeout=20,
     ):
         self.root = root
         self.startup_timeout = startup_timeout
@@ -41,7 +42,8 @@ class Service:
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             self.port = sock.getsockname()[1]
-        self.client = httpx.Client(base_url=f"http://127.0.0.1:{self.port}", timeout=20)
+        self.client = httpx.Client(base_url=f"http://127.0.0.1:{self.port}", timeout=client_timeout)
+        self.readiness_response = None
         self.process = None
         try:
             self.start()
@@ -104,7 +106,9 @@ class Service:
             if self.process.poll() is not None:
                 raise AssertionError((self.root / "service.log").read_text())
             try:
-                if self.client.get("/models").status_code == 200:
+                response = self.client.get("/models")
+                if response.status_code == 200:
+                    self.readiness_response = response
                     return
             except httpx.TransportError:
                 pass

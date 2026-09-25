@@ -5794,18 +5794,54 @@
             "graph",
             "parameters",
             "2",
-            "storage",
-            "3"
+            "storage"
           ],
-          "value": {
-            "name": "packed.qweight",
-            "dtype": "I32",
-            "shape": [
-              16,
-              8
-            ],
-            "role": "packed_data"
-          }
+          "value": [
+            {
+              "name": "packed.qweight",
+              "dtype": "I32",
+              "shape": [
+                16,
+                8
+              ],
+              "role": "packed_data"
+            },
+            {
+              "name": "packed.qzeros",
+              "dtype": "I32",
+              "shape": [
+                1,
+                1
+              ],
+              "role": "zero_points"
+            },
+            {
+              "name": "packed.scales",
+              "dtype": "F16",
+              "shape": [
+                1,
+                8
+              ],
+              "role": "scales"
+            },
+            {
+              "name": "packed.g_idx",
+              "dtype": "I32",
+              "shape": [
+                128
+              ],
+              "role": "group_indices"
+            },
+            {
+              "name": "packed.qweight",
+              "dtype": "I32",
+              "shape": [
+                16,
+                8
+              ],
+              "role": "packed_data"
+            }
+          ]
         }
       ],
       "context_edits": [
@@ -8073,18 +8109,49 @@
             "graph",
             "parameters",
             "2",
-            "storage",
-            "3"
+            "storage"
           ],
-          "value": {
-            "name": "fp4.weight",
-            "dtype": "U8",
-            "shape": [
-              2,
-              16
-            ],
-            "role": "packed_nvfp4"
-          }
+          "value": [
+            {
+              "name": "fp4.weight",
+              "dtype": "U8",
+              "shape": [
+                2,
+                16
+              ],
+              "role": "packed_nvfp4"
+            },
+            {
+              "name": "fp4.weight_scale",
+              "dtype": "F8_E4M3",
+              "shape": [
+                2,
+                2
+              ],
+              "role": "block_scale"
+            },
+            {
+              "name": "fp4.weight_scale_2",
+              "dtype": "F32",
+              "shape": [],
+              "role": "global_weight_scale"
+            },
+            {
+              "name": "fp4.input_scale",
+              "dtype": "F32",
+              "shape": [],
+              "role": "input_scale"
+            },
+            {
+              "name": "fp4.weight",
+              "dtype": "U8",
+              "shape": [
+                2,
+                16
+              ],
+              "role": "packed_nvfp4"
+            }
+          ]
         }
       ],
       "context_edits": [
@@ -9233,6 +9300,2508 @@
       ]
     },
     {
+      "name": "bnb-nf4-dq-complete-logical-inspection",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-complete-logical-alias",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "alias_of"
+          ],
+          "value": "quantized"
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "logical_shape"
+          ],
+          "value": [
+            {
+              "kind": "constant",
+              "value": 8
+            },
+            {
+              "kind": "constant",
+              "value": 128
+            }
+          ]
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "storage"
+          ],
+          "value": []
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "inspection"
+          ],
+          "value": {
+            "status": "available",
+            "tensor_id": "tensor_packed"
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-wrong-primary-geometry",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "shape"
+          ],
+          "value": [
+            1,
+            1
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-wrong-primary-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "dtype"
+          ],
+          "value": "F32"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-wrong-scale-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "2",
+            "dtype"
+          ],
+          "value": "F16"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-foreign-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "1",
+            "name"
+          ],
+          "value": "foreign.scale"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-missing-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage"
+          ],
+          "value": [
+            {
+              "name": "packed.weight",
+              "dtype": "U8",
+              "shape": [
+                512,
+                1
+              ]
+            },
+            {
+              "name": "packed.weight.absmax",
+              "dtype": "U8",
+              "shape": [
+                16
+              ]
+            },
+            {
+              "name": "packed.weight.quant_map",
+              "dtype": "F32",
+              "shape": [
+                16
+              ]
+            },
+            {
+              "name": "packed.weight.nested_absmax",
+              "dtype": "F32",
+              "shape": [
+                1
+              ]
+            },
+            {
+              "name": "packed.weight.nested_quant_map",
+              "dtype": "F32",
+              "shape": [
+                256
+              ]
+            }
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-duplicate-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage"
+          ],
+          "value": [
+            {
+              "name": "packed.weight",
+              "dtype": "U8",
+              "shape": [
+                512,
+                1
+              ]
+            },
+            {
+              "name": "packed.weight.absmax",
+              "dtype": "U8",
+              "shape": [
+                16
+              ]
+            },
+            {
+              "name": "packed.weight.quant_map",
+              "dtype": "F32",
+              "shape": [
+                16
+              ]
+            },
+            {
+              "name": "packed.weight.nested_absmax",
+              "dtype": "F32",
+              "shape": [
+                1
+              ]
+            },
+            {
+              "name": "packed.weight.nested_quant_map",
+              "dtype": "F32",
+              "shape": [
+                256
+              ]
+            },
+            {
+              "name": "packed.weight.quant_state.bitsandbytes__nf4",
+              "dtype": "U8",
+              "shape": [
+                64
+              ]
+            },
+            {
+              "name": "packed.weight",
+              "dtype": "U8",
+              "shape": [
+                512,
+                1
+              ]
+            }
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-wrong-logical-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "name"
+          ],
+          "value": "other.weight"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-auxiliary-logical-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "name"
+          ],
+          "value": "packed.scales"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-wrong-actionable-id",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "inspection",
+            "tensor_id"
+          ],
+          "value": "tensor_native"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-wrong-inventory-format",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_format"
+          ],
+          "value": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-missing-inventory-format",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_format"
+          ],
+          "delete": true
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-wrong-inventory-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_dtype"
+          ],
+          "value": "F16"
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-wrong-inventory-name",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "name"
+          ],
+          "value": "other.weight"
+        }
+      ]
+    },
+    {
+      "name": "bnb-nf4-dq-wrong-inventory-shape",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight",
+                "dtype": "U8",
+                "shape": [
+                  512,
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.absmax",
+                "dtype": "U8",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.quant_map",
+                "dtype": "F32",
+                "shape": [
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight.nested_absmax",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "packed.weight.nested_quant_map",
+                "dtype": "F32",
+                "shape": [
+                  256
+                ]
+              },
+              {
+                "name": "packed.weight.quant_state.bitsandbytes__nf4",
+                "dtype": "U8",
+                "shape": [
+                  64
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "U8",
+              "storage_format": "bnb-nf4-dq",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "shape"
+          ],
+          "value": [
+            128,
+            8
+          ]
+        }
+      ]
+    },
+    {
       "name": "compressed-tensors-bf16-complete-logical-inspection",
       "valid": true,
       "schema_valid": true,
@@ -10316,18 +12885,45 @@
             "graph",
             "parameters",
             "2",
-            "storage",
-            "2"
+            "storage"
           ],
-          "value": {
-            "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
-            "dtype": "I32",
-            "shape": [
-              64,
-              12
-            ],
-            "role": "packed_data"
-          }
+          "value": [
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+              "dtype": "I32",
+              "shape": [
+                64,
+                12
+              ],
+              "role": "packed_data"
+            },
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+              "dtype": "BF16",
+              "shape": [
+                64,
+                3
+              ],
+              "role": "scales"
+            },
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+              "dtype": "I64",
+              "shape": [
+                2
+              ],
+              "role": "logical_shape"
+            },
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+              "dtype": "I32",
+              "shape": [
+                64,
+                12
+              ],
+              "role": "packed_data"
+            }
+          ]
         }
       ],
       "context_edits": [
@@ -13314,18 +15910,45 @@
             "graph",
             "parameters",
             "2",
-            "storage",
-            "2"
+            "storage"
           ],
-          "value": {
-            "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
-            "dtype": "I32",
-            "shape": [
-              64,
-              12
-            ],
-            "role": "packed_data"
-          }
+          "value": [
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+              "dtype": "I32",
+              "shape": [
+                64,
+                12
+              ],
+              "role": "packed_data"
+            },
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_scale",
+              "dtype": "F16",
+              "shape": [
+                64,
+                3
+              ],
+              "role": "scales"
+            },
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_shape",
+              "dtype": "I64",
+              "shape": [
+                2
+              ],
+              "role": "logical_shape"
+            },
+            {
+              "name": "model.layers.0.mlp.experts.0.w1.weight_packed",
+              "dtype": "I32",
+              "shape": [
+                64,
+                12
+              ],
+              "role": "packed_data"
+            }
+          ]
         }
       ],
       "context_edits": [
@@ -14491,6 +17114,2148 @@
           "value": [
             96,
             64
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-complete-logical-inspection",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-complete-logical-alias",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "alias_of"
+          ],
+          "value": "quantized"
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "logical_shape"
+          ],
+          "value": [
+            {
+              "kind": "constant",
+              "value": 8
+            },
+            {
+              "kind": "constant",
+              "value": 128
+            }
+          ]
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "storage"
+          ],
+          "value": []
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "inspection"
+          ],
+          "value": {
+            "status": "available",
+            "tensor_id": "tensor_packed"
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-wrong-primary-geometry",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "shape"
+          ],
+          "value": [
+            1,
+            1
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-wrong-primary-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "dtype"
+          ],
+          "value": "F32"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-wrong-scale-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "1",
+            "dtype"
+          ],
+          "value": "F32"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-foreign-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "1",
+            "name"
+          ],
+          "value": "foreign.scale"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-missing-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage"
+          ],
+          "value": [
+            {
+              "name": "packed.weight_packed",
+              "dtype": "I32",
+              "shape": [
+                8,
+                16
+              ]
+            },
+            {
+              "name": "packed.weight_scale",
+              "dtype": "F16",
+              "shape": [
+                8,
+                4
+              ]
+            }
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-duplicate-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage"
+          ],
+          "value": [
+            {
+              "name": "packed.weight_packed",
+              "dtype": "I32",
+              "shape": [
+                8,
+                16
+              ]
+            },
+            {
+              "name": "packed.weight_scale",
+              "dtype": "F16",
+              "shape": [
+                8,
+                4
+              ]
+            },
+            {
+              "name": "packed.weight_shape",
+              "dtype": "I64",
+              "shape": [
+                2
+              ]
+            },
+            {
+              "name": "packed.weight_packed",
+              "dtype": "I32",
+              "shape": [
+                8,
+                16
+              ]
+            }
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-wrong-logical-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "name"
+          ],
+          "value": "other.weight"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-auxiliary-logical-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "name"
+          ],
+          "value": "packed.scales"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-wrong-actionable-id",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "inspection",
+            "tensor_id"
+          ],
+          "value": "tensor_native"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-wrong-inventory-format",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_format"
+          ],
+          "value": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-missing-inventory-format",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_format"
+          ],
+          "delete": true
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-wrong-inventory-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_dtype"
+          ],
+          "value": "F16"
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-wrong-inventory-name",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "name"
+          ],
+          "value": "other.weight"
+        }
+      ]
+    },
+    {
+      "name": "compressed-tensors-w4a16-int4-wrong-inventory-shape",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "packed.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 8
+              },
+              {
+                "kind": "constant",
+                "value": 128
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "packed.weight_packed",
+                "dtype": "I32",
+                "shape": [
+                  8,
+                  16
+                ]
+              },
+              {
+                "name": "packed.weight_scale",
+                "dtype": "F16",
+                "shape": [
+                  8,
+                  4
+                ]
+              },
+              {
+                "name": "packed.weight_shape",
+                "dtype": "I64",
+                "shape": [
+                  2
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "packed.weight",
+              "path": [
+                "packed",
+                "weight"
+              ],
+              "shape": [
+                8,
+                128
+              ],
+              "rank": 2,
+              "numel": 1024,
+              "storage_dtype": "I32",
+              "storage_format": "compressed-tensors-w4a16-int4",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "shape"
+          ],
+          "value": [
+            128,
+            8
           ]
         }
       ]
