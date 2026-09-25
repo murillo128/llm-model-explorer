@@ -166,9 +166,16 @@ test('search across scopes preserves independent stack context; explorer and mod
 test('layout failure allows retry and Back; queued late results cannot replace a newer scope or model', async ({ page }) => {
   await findComponent(page, 'layer-3.attention'); await ready(page);
   const before = await state(page);
+  const sourceIds = await panel(page).getAttribute('data-source-node-ids');
+  const edgeIds = await panel(page).getAttribute('data-represented-edge-ids');
   await page.evaluate(() => { window.isolationProbe.reject = true; });
   await page.getByRole('button', { name: 'Explore component', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Layout failed');
+  await expect(panel(page)).toHaveAttribute('aria-busy', 'false');
+  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(before.layout.boxes.length));
+  await expect(panel(page)).toHaveAttribute('data-source-node-ids', sourceIds!);
+  await expect(panel(page)).toHaveAttribute('data-represented-edge-ids', edgeIds!);
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(before.camera);
   await page.getByRole('button', { name: 'Retry layout', exact: true }).click(); await ready(page);
   await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-3.attention');
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
