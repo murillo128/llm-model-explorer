@@ -219,6 +219,25 @@ def validate_packed_binding(
             "weight.nested_quant_map": ("F32", (256,)),
             "weight.quant_state.bitsandbytes__nf4": ("U8", tuple(state_record.shape)),
         }
+    elif tensor.storage_format == "compressed-tensors-w4a16-int4":
+        require(
+            tensor.dtype == "I32" and inputs % 32 == 0,
+            "Unsupported compressed-tensors W4A16 representation.",
+        )
+        scale = next(
+            (item for item in parameter.storage if item.name == prefix + ".weight_scale"),
+            None,
+        )
+        require(
+            scale is not None and scale.dtype in ("F16", "BF16"),
+            "Invalid compressed-tensors scale storage.",
+        )
+        assert scale is not None
+        expected = {
+            "weight_packed": ("I32", (output, inputs // 8)),
+            "weight_scale": (scale.dtype, (output, inputs // 32)),
+            "weight_shape": ("I64", (2,)),
+        }
     else:
         raise GraphError("invalid_graph", "Unsupported packed numeric representation.")
     actual = {storage.name: (storage.dtype, tuple(storage.shape)) for storage in parameter.storage}

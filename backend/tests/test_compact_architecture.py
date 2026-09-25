@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import importlib
+import math
+from dataclasses import replace
 
 import pytest
 
 from llm_model_explorer.architecture_analysis import parse_graph
+from llm_model_explorer.architecture_analysis import records as r
 from llm_model_explorer.architecture_analysis.compact import compact_graph, expand_graph
-from llm_model_explorer.architecture_analysis.validation import GraphError, serialized_size
+from llm_model_explorer.architecture_analysis.validation import (
+    GraphError,
+    NumericTensor,
+    serialized_size,
+)
 
 
 @pytest.mark.parametrize(
@@ -82,3 +89,83 @@ def test_compact_experts_reconstruct_every_instance_and_detect_bad_bindings(
         )
         exceptional = compact_graph(changed)
         assert exceptional_id in {node.id for node in exceptional.nodes}
+
+
+def test_compact_nf4_experts_keep_distinct_admitted_logical_tensors() -> None:
+    fixture = importlib.import_module("test_deepseek_v2_architecture")
+    data = fixture.inputs(fixture.REFERENCE)
+    physical = dict(data.bindings.physical)
+    numeric = dict(data.bindings.numeric)
+    names = [f"model.layers.1.mlp.experts.{index}.gate_proj.weight" for index in (0, 1)]
+    for index, name in enumerate(names):
+        dims = fixture.expected_parameters(fixture.REFERENCE)[name]
+        output, inputs = dims
+        count = output * inputs
+        prefix = name.removesuffix(".weight")
+        physical.pop(name)
+        numeric = {key: value for key, value in numeric.items() if value.name != name}
+        companions = {
+            ".weight": ("U8", [(count + 1) // 2, 1]),
+            ".weight.absmax": ("U8", [math.ceil(count / 64)]),
+            ".weight.quant_map": ("F32", [16]),
+            ".weight.nested_absmax": ("F32", [math.ceil(math.ceil(count / 64) / 256)]),
+            ".weight.nested_quant_map": ("F32", [256]),
+            ".weight.quant_state.bitsandbytes__nf4": ("U8", [128]),
+        }
+        for suffix, (dtype, shape) in companions.items():
+            storage_name = prefix + suffix
+            physical[storage_name] = r.ArchitectureStorage(
+                name=storage_name, dtype=dtype, shape=shape
+            )
+        numeric[f"nf4-expert-{index}"] = NumericTensor(
+            f"nf4-expert-{index}", name, dims, "U8", "bnb-nf4-dq"
+        )
+    data = replace(data, bindings=replace(data.bindings, physical=physical, numeric=numeric))
+    result = fixture.registry().analyze(data, byte_limit=25_000_000)
+    assert result.status == "complete", result
+    assert result.graph is not None
+    graph = result.graph
+    parameters = {parameter.name: parameter for parameter in graph.parameters}
+    for index, name in enumerate(names):
+        assert parameters[name].binding == "quantized"
+        assert parameters[name].inspection == r.ArchitectureAvailableInspection(
+            status="available", tensor_id=f"nf4-expert-{index}"
+        )
+    family = next(
+        family
+        for family in graph.compact_components or []
+        if family.instances[0].prefix == "model.layers.1.mlp.experts.0"
+    )
+    for index, name in enumerate(names):
+        assert parameters[name].id in family.instances[index].parameter_ids
+    assert parse_graph(graph.document(), data.bindings) == graph
+
+    swapped = graph.document()
+    swapped_family = next(
+        family
+        for family in swapped["compact_components"]
+        if family["instances"][0]["prefix"] == "model.layers.1.mlp.experts.0"
+    )
+    swapped_family["instances"][1]["parameter_ids"][0] = swapped_family["instances"][0][
+        "parameter_ids"
+    ][0]
+    with pytest.raises(GraphError, match="missing or swapped"):
+        parse_graph(swapped, data.bindings)
+
+    deleted = graph.document()
+    deleted_family = next(
+        family
+        for family in deleted["compact_components"]
+        if family["instances"][0]["prefix"] == "model.layers.1.mlp.experts.0"
+    )
+    deleted_family["instances"][1]["parameter_ids"].pop()
+    with pytest.raises(GraphError, match="mapping length"):
+        parse_graph(deleted, data.bindings)
+
+    wrong_tensor = graph.document()
+    second = next(
+        parameter for parameter in wrong_tensor["parameters"] if parameter["name"] == names[1]
+    )
+    second["inspection"]["tensor_id"] = "nf4-expert-0"
+    with pytest.raises(GraphError, match="outside the admitted numeric inventory"):
+        parse_graph(wrong_tensor, data.bindings)
