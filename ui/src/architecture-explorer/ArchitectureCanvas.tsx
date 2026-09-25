@@ -136,6 +136,15 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const records = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph]);
   const boxes = useMemo(() => new Map(result.layout?.boxes.map((b) => [b.id, b])), [result.layout]);
   const projected = useMemo(() => new Map(result.layout?.projection.nodes.map((n) => [n.id, n])), [result.layout]);
+  const portsByNode = useMemo(() => {
+    const grouped = new Map<string, PortPosition[]>();
+    for (const port of result.layout?.ports ?? []) {
+      const current = grouped.get(port.nodeId) ?? [];
+      current.push(port); grouped.set(port.nodeId, current);
+    }
+    return grouped;
+  }, [result.layout]);
+  const routesById = useMemo(() => new Map(result.layout?.routes.map((route) => [route.id, route])), [result.layout]);
   const variants = useMemo(() => new Map(graph.repetitions.flatMap((r) => r.instances.map((i) => [i.node_id, `Instance ${i.index} · ${i.variant.replaceAll('_', ' ')}`] as const))), [graph]);
   const mlps = useMemo(() => [
     ...graph.nodes.flatMap((node) => node.kind === 'group' && node.parent_id && semanticRole(node) === 'mlp'
@@ -205,6 +214,22 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     if (!box) return;
     const camera = flow.getViewport();
     anchor.current = { id, sourceId: projected.get(id)?.sourceIds[0], x: box.absoluteX * camera.zoom + camera.x, y: box.absoluteY * camera.zoom + camera.y };
+  });
+  const rememberViewportAnchor = useCanvasCallback(() => {
+    const body = panel.current?.querySelector('.architecture-flow');
+    if (!body) return;
+    const { width, height } = body.getBoundingClientRect(), camera = flow.getViewport();
+    const distance = (box: Layout['boxes'][number]) => {
+      const x = box.absoluteX * camera.zoom + camera.x, y = box.absoluteY * camera.zoom + camera.y;
+      if (x + box.width * camera.zoom < 0 || x > width || y + box.height * camera.zoom < 0 || y > height) return Infinity;
+      return Math.hypot(x + Math.min(box.width * camera.zoom / 2, width / 2) - width / 2,
+        y + Math.min(box.height * camera.zoom / 2, height / 2) - height / 2);
+    };
+    const visible = [...boxes.values()].filter((box) => projected.get(box.id)?.kind !== 'context' &&
+      !projected.get(box.id)?.expanded && Number.isFinite(distance(box)));
+    const chosen = (selected && visible.find((box) => box.id === selected)) ??
+      visible.reduce<typeof visible[number] | undefined>((best, box) => !best || distance(box) < distance(best) ? box : best, undefined);
+    if (chosen) rememberAnchor(chosen.id);
   });
   const withAncestors = (id: string, expanded: Set<string>) => {
     let node = records.get(id);
@@ -410,15 +435,15 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       style: { width: box.width, height: box.height, pointerEvents: record.expanded ? 'none' : 'auto' }, zIndex: 200,
       selected: selected === cardSelection(record) || Boolean(selected && !projected.has(selected) && record.sourceIds.includes(selected)),
       data: { record, label: displayLabel(record, graph), subtitle: record.summary?.replaceAll('linear attention', 'linear').replaceAll('full attention', 'full') ?? variants.get(record.id)?.replace(/^Instance \d+ · /, '') ?? record.record?.operation?.replaceAll('_', ' ') ?? record.kind,
-        ports: result.layout!.ports.filter((p) => p.nodeId === box.id), diagnostic: diagnosed.has(box.id), toggle, select, activate, inspect,
+        ports: portsByNode.get(box.id) ?? [], diagnostic: diagnosed.has(box.id), toggle, select, activate, inspect,
         navigation: cardNavigation(record, Boolean(options.scope), sharedActive && !concreteInstance), navigate: navigateCard } };
-  }), [activate, diagnosed, graph, inspect, projected, result.layout, selected, toggle, variants, select, options.scope, sharedActive, concreteInstance, navigateCard]);
+  }), [activate, diagnosed, graph, inspect, portsByNode, projected, result.layout, selected, toggle, variants, select, options.scope, sharedActive, concreteInstance, navigateCard]);
   const edges = useMemo<ConnectionEdge[]>(() => (result.layout?.projection.edges ?? []).map((edge) => ({
     id: edge.id, source: edge.source.node_id, target: edge.target.node_id, sourceHandle: `source:${edge.source.port_id}`,
     targetHandle: `target:${edge.target.port_id}`, type: 'connection', focusable: false, selectable: false,
     zIndex: emphasis.has(edge.id) ? 100 : 2,
-    data: { connection: edge, route: result.layout!.routes.find((r) => r.id === edge.id)!, projection: result.layout!.projection, dimensions },
-  })), [dimensions, emphasis, result.layout]);
+    data: { connection: edge, route: routesById.get(edge.id)!, projection: result.layout!.projection, dimensions },
+  })), [dimensions, emphasis, result.layout, routesById]);
   const activeInspectionEdge = result.layout?.projection.edges.find((e) => e.id === inspection?.edgeId);
   const activeInspectionNode = inspection?.nodeId ? projected.get(inspection.nodeId) : undefined;
   const sourceNodeIds = useMemo(() => {
@@ -498,7 +523,16 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
         else if (!scope && mlps.some((g) => g.id === item.id)) focusMlp();
         else { const info = instanceOf(graph, item.id); if (info?.instance.node_id === item.id) chooseInstance(item.id); else reveal(item.id); }
       }} overview={overview} fit={fit} chooseInstance={chooseInstance} exploreStack={exploreStack} windowSize={windowSize}
-      expandAll={() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id), exhaustive: true, stateScope: undefined }); }}
+      expandAll={() => {
+        if (!scope) {
+          rememberViewportAnchor();
+          if (!anchor.current) centerPending.current = selected && records.has(selected) ? selected :
+            focusId && records.has(focusId) ? focusId : graph.nodes.find((node) => node.kind === 'operation')?.id ?? null;
+        }
+        const base = scope ? leaveIsolation() : options;
+        focusContext(null);
+        change({ ...base, scope: undefined, expanded: graph.nodes.filter((n) => n.kind === 'group').map((n) => n.id), exhaustive: true, stateScope: undefined });
+      }}
       collapseAll={() => { const base = scope ? leaveIsolation() : options; focusContext(null); change({ ...base, scope: undefined, expanded: [], repetitions: {}, exhaustive: false, stateScope: undefined }); }}
       focusLayer={!scope && instance ? focusLayer : undefined} focusMlp={!scope && instance && mlps.some((g) => g.parentId === instance.instance.node_id) ? focusMlp : undefined}
       stateFocus={!scope && instance ? stateFocus : undefined} toggleSelected={selected && projected.get(selected)?.kind === 'group' ? () => toggle(selected) : undefined}
