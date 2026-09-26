@@ -258,7 +258,9 @@ test('catalogue refresh preserves the selected prefix and cancelled view without
     expect(before.renderers[0]!.prefix).toBe(3);
     await page.evaluate(() => { window.explorerFixture.catalogue.paused = true; });
     await page.getByRole('button', { name: 'Refresh models' }).click();
-    await expect(page.getByText('Loading models…')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Refresh models' })).toBeDisabled();
+    await expect(page.getByRole('contentinfo')).toContainText('Connected');
+    await expect(page.getByText('Loading models…')).toHaveCount(0);
     expect(await snapshot()).toEqual(before);
     await page.evaluate(() => window.explorerFixture.catalogue.resume());
     await expect(page.getByRole('combobox')).toBeEnabled();

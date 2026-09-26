@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from ..tensor_source import PeftLoraComposition, PhysicalTensor, TensorDescriptor
 
 ANALYZER_REVISION = "static-graph-core-3"
-Scope = Literal["language_model", "visual_encoder_predictor"]
+Scope = Literal["language_model", "visual_encoder_predictor", "model_defined"]
 
 
 class MetadataSource(Protocol):

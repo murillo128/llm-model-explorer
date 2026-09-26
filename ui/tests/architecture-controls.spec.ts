@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Graph, Layout } from '../src/architecture-explorer/graph';
 import type { ProjectionOptions } from '../src/architecture-explorer/projection';
 import { assertTraceability } from './architecture-invariants';
-import { chooseInstance, findComponent, graphAction, viewOptions } from './architecture-controls';
+import { chooseInstance, findComponent, graphAction, graphPreference, viewOptions } from './architecture-controls';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
 interface ControlProbe { requests: { graph: Graph; options: ProjectionOptions }[]; layouts: Layout[] }
@@ -35,6 +35,10 @@ function assertTransportProjection(graph: Graph, layout: Layout, exhaustive = fa
     const source = graph.edges.find((e) => e.id === item.id)!;
     expect(item).toEqual(source); return source;
   }));
+  if (projection.boundaryPaths) projection.boundaryPaths = projection.boundaryPaths.map((path) => path.map((item) => {
+    const source = graph.edges.find((e) => e.id === item.id)!;
+    expect(item).toEqual(source); return source;
+  }));
   assertTraceability(graph, projection, exhaustive);
 }
 test.beforeEach(async ({ page }) => {
@@ -61,22 +65,23 @@ test('search and overflow preserve the canvas, projection, generated routes, cam
   const canvas = await page.locator('.react-flow').elementHandle();
   const before = await snapshot(page);
   assertTransportProjection(before.requests.at(-1)!.graph, before.layouts.at(-1)!);
-  await page.getByRole('button', { name: 'Find component', exact: true }).click();
-  const search = page.getByRole('combobox', { name: 'Search components', exact: true });
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).focus();
+  const search = page.getByRole('searchbox', { name: 'Search components', exact: true });
   await expect(search).toBeFocused();
   await search.fill('linear');
   await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowUp');
   await search.press('Home'); await search.type('absent ');
-  await expect(page.getByRole('dialog', { name: 'Find component', exact: true }).getByRole('status')).toContainText('No matching components');
+  await expect(page.getByRole('group', { name: 'Model search results', exact: true })).toContainText('No matching components');
   expect(await snapshot(page)).toEqual(before);
   await search.press('Escape');
-  await expect(page.getByRole('button', { name: 'Find component', exact: true })).toBeFocused();
+  await expect(page.getByRole('searchbox', { name: 'Search components', exact: true })).toBeFocused();
   const options = await viewOptions(page);
-  await expect(options.getByRole('button', { name: 'Show all operations' })).toBeFocused();
+  await expect(options.getByLabel('Show dimensions')).toBeFocused();
   await expect(options.getByLabel('Show dimensions')).not.toBeChecked();
-  for (const name of ['Collapse all', 'Center selection', 'Zoom graph in', 'Zoom graph out']) await expect(options.getByRole('button', { name, exact: true })).toBeVisible();
-  for (const name of ['Unused interfaces', 'Context', 'Group MLP']) await expect(options.getByLabel(name, { exact: true })).toBeVisible();
-  await options.locator('summary').click();
+  await expect(options.getByRole('button')).toHaveCount(0);
+  await expect(options.locator('details')).toHaveCount(0);
+  for (const name of ['Show unused interfaces', 'Show context']) await expect(options.getByLabel(name, { exact: true })).toBeVisible();
+  await expect(options.getByLabel('Group derived MLP blocks')).toHaveCount(0);
   expect(await snapshot(page)).toEqual(before);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'View options', exact: true })).toBeFocused();
@@ -84,13 +89,13 @@ test('search and overflow preserve the canvas, projection, generated routes, cam
   expect(await snapshot(page)).toEqual(before);
 });
 
-test('keyboard search reveals collapsed repeated names with parent context and exact source bindings', async ({ page }) => {
+test('keyboard search selects before explicit Center reveals collapsed repeated names with parent context and exact source bindings', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('mixed-stacks'); await ready(page);
   await expect(page.getByRole('combobox', { name: /Expand instance of/ })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Find component', exact: true }).click();
-  const search = page.getByRole('combobox', { name: 'Search components', exact: true });
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).focus();
+  const search = page.getByRole('searchbox', { name: 'Search components', exact: true });
   await search.fill('Q projection');
-  const options = page.getByRole('listbox', { name: 'Components', exact: true }).getByRole('option');
+  const options = page.getByRole('group', { name: 'Model search results', exact: true }).locator('[data-node-id]');
   await expect(options).toHaveCount(5); // Encoder full instances 0/2/3; predictor 0/1.
   const contexts = await options.allTextContents();
   expect(new Set(contexts).size).toBe(5);
@@ -99,7 +104,10 @@ test('keyboard search reveals collapsed repeated names with parent context and e
   await search.fill('Q projection encoder layer 3');
   await expect(options).toHaveCount(1);
   const id = await options.first().getAttribute('data-node-id');
+  const compact = await snapshot(page);
   await search.press('Enter'); await ready(page);
+  expect(await snapshot(page)).toEqual(compact);
+  await page.getByRole('button', { name: 'Center selected', exact: true }).click(); await ready(page);
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', id!);
   await expect(page.getByRole('combobox', { name: /Expand instance of Encoder/ })).toHaveValue('encoder.layer-3');
   const before = await snapshot(page);
@@ -117,6 +125,66 @@ test('keyboard search reveals collapsed repeated names with parent context and e
   await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
   await expect(page.locator('output')).toContainText(id!);
   expect(await snapshot(page)).toEqual(before);
+});
+
+test('browser and canvas disclosure preserve the same multi-instance window and neighboring cards', async ({ page }) => {
+  const results = [];
+  for (const surface of ['canvas', 'browser'] as const) {
+    await page.goto(`${harness}?fixture=components`); await ready(page);
+    await page.getByRole('button', { name: 'Explore stack Decoder layers', exact: true }).click();
+    await ready(page);
+    // Stack expansion preserves the initial camera; explicitly frame the cards
+    // that this pointer comparison is about to exercise on a narrow viewport.
+    await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+    const before = await snapshot(page), options = before.requests.at(-1)!.options;
+    const count = page.viewportSize()!.width <= 760 ? 2 : 4;
+    expect(options.repetitions).toEqual({ 'decoder-layers': { start: 0, count } });
+    const disclosure = surface === 'canvas' ? page.locator('[data-id="layer-0"] .architecture-expand') :
+      page.getByRole('tree', { name: 'Model components', exact: true }).locator('[data-node-id="layer-0"] .architecture-browser-disclosure');
+    await disclosure.click();
+    const opened = await snapshot(page), projection = opened.layouts.at(-1)!.projection;
+    expect(opened.requests.at(-1)!.options.repetitions).toEqual(options.repetitions);
+    expect(projection.nodes.find((node) => node.id === 'layer-0')?.expanded).toBe(true);
+    for (let index = 1; index < count; index++) {
+      expect(projection.nodes.find((node) => node.id === `layer-${index}`)?.expanded).toBe(false);
+    }
+    assertTransportProjection(opened.requests.at(-1)!.graph, opened.layouts.at(-1)!);
+    await disclosure.click();
+    const closed = await snapshot(page);
+    expect(closed.requests.at(-1)!.options.repetitions).toEqual(options.repetitions);
+    expect(closed.layouts.at(-1)!.projection).toEqual(before.layouts.at(-1)!.projection);
+    results.push({ options: opened.requests.at(-1)!.options, projection });
+  }
+  expect(results[1]).toEqual(results[0]);
+});
+
+for (const window of ['compact', 'multi-instance'] as const) test(`browser disclosure reveals only the hidden exact instance and preserves the ${window} window`, async ({ page }) => {
+  await page.goto(`${harness}?fixture=components-large`); await ready(page);
+  if (window === 'compact') {
+    // Establish the stack overview explicitly; initial Model policy is covered separately.
+    await page.locator('[data-node-id="model"] .architecture-browser-disclosure').click(); await ready(page);
+  }
+  if (window === 'multi-instance') await page.getByRole('button', { name: 'Explore stack Decoder layers', exact: true }).click();
+  const before = await snapshot(page), options = before.requests.at(-1)!.options;
+  const instanceIds = (layout: Layout) => layout.projection.nodes.filter((node) => /^layer-\d+$/.test(node.id)).map((node) => node.id);
+  const visible = instanceIds(before.layouts.at(-1)!);
+  expect(visible).not.toContain('layer-10');
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('layer-10');
+  const disclosure = page.getByRole('group', { name: 'Model search results', exact: true })
+    .locator('[data-node-id="layer-10"] .architecture-browser-disclosure');
+  await disclosure.click();
+  const opened = await snapshot(page);
+  expect(opened.requests.at(-1)!.options.repetitions).toEqual(options.repetitions);
+  expect(instanceIds(opened.layouts.at(-1)!)).toEqual([...visible, 'layer-10']);
+  expect(opened.layouts.at(-1)!.projection.nodes.find((node) => node.id === 'layer-10')?.expanded).toBe(true);
+  assertTransportProjection(opened.requests.at(-1)!.graph, opened.layouts.at(-1)!);
+  // Bring the acted-on geometry into view before contracting it. Anchoring an
+  // off-screen browser target need not make it visible without an explicit fit.
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  await disclosure.click();
+  const closed = await snapshot(page);
+  expect(closed.requests.at(-1)!.options.repetitions).toEqual(options.repetitions);
+  expect(closed.layouts.at(-1)!.projection).toEqual(before.layouts.at(-1)!.projection);
 });
 
 test('breadcrumbs, first/last and mixed variants preserve two independent stack windows and return context', async ({ page }) => {
@@ -173,9 +241,17 @@ for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack can
     return box !== undefined && box.width > 0 && box.height > 0 && box.x >= panel.x && box.y >= panel.y &&
       box.right <= panel.x + panel.width && box.bottom <= panel.y + panel.height;
   }, panel);
-  for (let i = 0; i < 16 && !await inView(); i++) { await graphAction(page, 'Zoom graph out'); await ready(page); }
+  for (let i = 0; i < 16 && !await inView(); i++) { await graphAction(page, 'Zoom out'); await ready(page); }
   expect(await inView()).toBe(true);
   const navigation = page.locator('[data-id="mlp:encoder.layer-3.gate"] .architecture-navigate');
+  // The bounded narrow canvas can expose a distant stack at subpixel scale.
+  // Focal camera zoom makes its native control actionable without changing focus.
+  for (let i = 0; i < 16 && (await navigation.boundingBox())!.width < 12; i++) {
+    const box = (await navigation.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.wheel(0, -400);
+    await expect.poll(async () => (await navigation.boundingBox())!.width).toBeGreaterThan(box.width);
+  }
   if (activation === 'pointer') await navigation.click();
   else { await navigation.focus(); await page.keyboard.press('Enter'); }
   await ready(page);
@@ -246,7 +322,7 @@ test('all operations and camera fit remain distinct; popovers stay in the panel 
   await graphAction(page, 'Show all operations'); await ready(page);
   const after = await snapshot(page);
   assertTransportProjection(after.requests.at(-1)!.graph, after.layouts.at(-1)!, true);
-  for (const label of ['Find component', 'View options']) {
+  for (const label of ['View options']) {
     await page.getByRole('button', { name: label, exact: true }).click();
     const panel = (await page.getByLabel('Architecture graph', { exact: true }).boundingBox())!;
     const popover = (await page.getByRole('dialog', { name: label, exact: true }).boundingBox())!;
@@ -259,15 +335,73 @@ test('all operations and camera fit remain distinct; popovers stay in the panel 
 });
 
 
-test('partial graphs without repetition retain component navigation and on-demand diagnostics', async ({ page }) => {
+test('partial graphs without repetition retain coverage and component navigation', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('partial'); await ready(page);
   await expect(page.getByText('Partial coverage', { exact: true })).toBeVisible();
   await expect(page.getByRole('combobox', { name: /Expand instance of/ })).toHaveCount(0);
   await findComponent(page, 'unknown-component'); await ready(page);
   await expect(page.getByRole('navigation', { name: 'Architecture focus' })).toContainText('Unknown component');
   const before = await snapshot(page);
-  const options = await viewOptions(page); await options.locator('summary').click();
-  await expect(options).toContainText('Fixture intentionally includes an unresolved component.');
+  const options = await viewOptions(page);
+  await expect(options.getByText('Graph details')).toHaveCount(0);
   expect(await snapshot(page)).toEqual(before);
   await page.keyboard.press('Escape');
+});
+
+
+test('camera dock is unique, fixed while panning and zooming, and has keyboard tooltips', async ({ page }, info) => {
+  const dock = page.getByRole('group', { name: 'Graph camera', exact: true });
+  const bounds = await dock.boundingBox(), before = await snapshot(page);
+  for (const label of ['Zoom in', 'Zoom out', 'Fit view']) {
+    const action = dock.getByRole('button', { name: label, exact: true });
+    await expect(page.getByRole('button', { name: label, exact: true })).toHaveCount(1);
+    await action.focus(); await expect(page.getByRole('tooltip')).toHaveText(label);
+  }
+  expect(await snapshot(page)).toEqual(before);
+  await graphAction(page, 'Zoom in');
+  await expect.poll(async () => (await snapshot(page)).camera).not.toBe(before.camera);
+  const zoomed = await snapshot(page);
+  const flow = (await page.locator('.architecture-flow').boundingBox())!;
+  await page.mouse.move(flow.x + flow.width - 20, flow.y + flow.height - 80);
+  await page.mouse.down(); await page.mouse.move(flow.x + flow.width - 70, flow.y + flow.height - 120, { steps: 4 }); await page.mouse.up();
+  expect((await snapshot(page)).camera).not.toBe(zoomed.camera);
+  expect(await dock.boundingBox()).toEqual(bounds);
+  expect((await snapshot(page)).layouts).toEqual(before.layouts);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const options = await viewOptions(page);
+  await expect(options.getByRole('checkbox')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Model overview', exact: true }).focus();
+  await expect(options).toHaveCount(0);
+  await viewOptions(page); await page.locator('.architecture-flow').click({ position: { x: 8, y: 8 } });
+  await expect(options).toHaveCount(0);
+  await viewOptions(page);
+  await page.screenshot({ path: info.outputPath('controls.png') });
+});
+
+for (const fixture of ['connections', 'components', 'contract']) test(`derived MLP preference follows source eligibility: ${fixture}`, async ({ page }, info) => {
+  await page.goto(`${harness}?fixture=${fixture}`); await ready(page);
+  if (fixture === 'connections') { await chooseInstance(page, 'Decoder layers', 'layer-0'); await ready(page); }
+  const before = await snapshot(page);
+  const options = await viewOptions(page), preference = options.getByLabel('Group derived MLP blocks', { exact: true });
+  if (fixture !== 'connections') {
+    await expect(preference).toHaveCount(0);
+    expect(await snapshot(page)).toEqual(before);
+    return;
+  }
+  expect(before.layouts.at(-1)!.projection.nodes.some((n) => n.presentation === 'mlp')).toBe(true);
+  await expect(preference).toBeChecked();
+  await expect(preference).toHaveAccessibleDescription('Groups recognized, otherwise ungrouped operation patterns for presentation.');
+  await page.keyboard.press('Escape');
+  await graphPreference(page, 'Group derived MLP blocks', false); await ready(page);
+  await viewOptions(page); await expect(preference).toBeVisible(); await expect(preference).not.toBeChecked();
+  await page.keyboard.press('Escape');
+  const off = await snapshot(page);
+  expect(off.layouts.at(-1)!.projection.nodes.some((n) => n.presentation === 'mlp')).toBe(false);
+  await graphPreference(page, 'Group derived MLP blocks', true); await ready(page);
+  const after = await snapshot(page);
+  expect(after.requests.at(-1)!.graph).toEqual(before.requests.at(-1)!.graph);
+  expect(off.requests.at(-1)!.graph).toEqual(before.requests.at(-1)!.graph);
+  expect(after.layouts.at(-1)!.projection).toEqual(before.layouts.at(-1)!.projection);
+  await viewOptions(page);
+  await page.screenshot({ path: info.outputPath('derived-mlp.png') });
 });

@@ -28,15 +28,35 @@ const released = (page: Page) => expect.poll(() => page.evaluate(() => ({
   retainedScalars: window.explorerFixture.renderers.filter((r) => Reflect.get(r, 'values') !== null).length,
 }))).toEqual({ textures: 0, displays: 0, liveRenderers: 0, retainedScalars: 0 });
 
-test('card gestures select, expand, and open the native modal without changing the retained view', async ({ page }) => {
+test('a rank-1 row opens the shared strip directly with statistics and no distributions', async ({ page }) => {
+  await open(page); await findComponent(page, 'linear1');
+  const graph = page.getByLabel('Architecture graph', { exact: true });
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const layout = await graph.getAttribute('data-layout-count');
+  const trigger = page.locator('.react-flow__node[data-id="linear1"] [data-parameter-id="vector-weight"] button');
+  await requests(page, 0); await trigger.click();
+  await expect(page.getByLabel('Inspect parameter')).toHaveValue('vector-weight');
+  await requests(page, 2);
+  expect(await page.evaluate(() => window.explorerFixture.requests.map((r) => [r.tensor, r.kind]))).toEqual([['vector', 'data'], ['vector', 'statistics']]);
+  await page.evaluate(() => { const f = window.explorerFixture; f.emit(0, 1, f.metadata(0)); f.data(0, [-5, 2, 7, -1, 3]); f.end(0); });
+  expect(await page.evaluate(() => window.explorerFixture.renderers[0]!.readCell(0, 2))).toMatchObject({ value: 7 });
+  await page.keyboard.press('Escape'); await released(page);
+  await expect(trigger).toBeFocused();
+  expect(await graph.getAttribute('data-layout-count')).toBe(layout);
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+});
+
+test('card gestures toggle expansion and explicit controls inspect without changing the retained view', async ({ page }) => {
   await open(page);
   await findComponent(page, 'layer1');
   const graph = page.getByLabel('Architecture graph', { exact: true });
   await expect(graph).toHaveAttribute('aria-busy', 'false');
   const group = page.locator('.react-flow__node[data-id="layer1"]');
+  const fetches = await page.evaluate(() => window.explorerFixture.metrics.fetches);
   const before = await graph.getAttribute('data-layout-count');
-  for (const target of ['.architecture-node-label', '.architecture-node-type']) {
-    await group.locator(target).click();
+  for (const target of ['.architecture-node-label', '.architecture-node-heading']) {
+    await group.locator(target).click(target === '.architecture-node-heading' ? { position: { x: 2, y: (await group.locator(target).boundingBox())!.height - 2 } } : {});
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(group.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'false');
     expect(await graph.getAttribute('data-layout-count')).toBe(before);
@@ -49,15 +69,16 @@ test('card gestures select, expand, and open the native modal without changing t
   const camera = await page.locator('.react-flow__viewport').getAttribute('style');
   const count = await graph.getAttribute('data-layout-count');
   for (const id of ['layer1', 'linear1']) {
-    const label = page.locator(`.react-flow__node[data-id="${id}"] .architecture-node-label`);
-    await label.dblclick();
+    const trigger = page.locator(`.react-flow__node[data-id="${id}"] .architecture-info`);
+    await trigger.dblclick();
     await expect(page.getByRole('dialog')).toHaveAccessibleName(id);
     await page.keyboard.press('Escape');
-    await expect(label).toBeFocused();
+    await expect(trigger).toBeFocused();
     await expect(group.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
     expect(await graph.getAttribute('data-layout-count')).toBe(count);
     expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
   }
+  expect(await page.evaluate(() => window.explorerFixture.metrics.fetches)).toBe(fetches);
   await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
   await expect(graph).toHaveAttribute('aria-busy', 'false');
@@ -93,11 +114,17 @@ test('concrete repeated weight preserves exact progressive values, independent p
   await open(page);
   await graphAction(page, 'Show all operations');
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '6');
-  await inspect(page);
+  await findComponent(page, 'linear1');
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  const matrixButton = page.locator('.react-flow__node[data-id="linear1"] [data-parameter-id="second"] button');
+  const name = page.locator('.react-flow__node[data-id="linear1"] .architecture-tensor-name').first();
+  await name.hover(); await name.locator('.architecture-summary-text').focus();
+  await requests(page, 0);
+  await matrixButton.focus(); await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Inspect parameter')).toHaveValue('second');
   const camera = await page.locator('.react-flow__viewport').getAttribute('style');
   const shell = await page.locator('dialog.architecture-inspection').boundingBox();
   await expect(page.getByText('Module: layers.1.linear')).toBeVisible();
-  await page.getByLabel('Inspect parameter').selectOption('second');
   await requests(page, 3);
   await expect(page.locator('.matrix-panel-header')).toHaveCount(1);
   await expect(page.locator('.architecture-inspection-heading')).toHaveCount(1);
@@ -153,15 +180,17 @@ test('concrete repeated weight preserves exact progressive values, independent p
   await page.screenshot({ path: info.outputPath('architecture-native-weight.png') });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Inspect selected', exact: true })).toBeFocused();
+  await expect(matrixButton).toBeFocused();
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '6');
   await released(page);
 });
 
 test('close, replace, and reopen fence callbacks and release all numeric resources', async ({ page }) => {
-  await open(page); await inspect(page);
-  await page.getByLabel('Inspect parameter').selectOption('second'); await requests(page, 3);
+  await open(page); await findComponent(page, 'linear1');
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  await page.locator('.react-flow__node[data-id="linear1"] [data-parameter-id="second"] button').click();
+  await expect(page.getByLabel('Inspect parameter')).toHaveValue('second'); await requests(page, 3);
   await page.getByLabel('Inspect parameter').selectOption('vector-weight'); await requests(page, 5);
   await expect.poll(() => page.evaluate(() => window.explorerFixture.cancelled.length)).toBe(3);
   expect(await page.evaluate(() => window.explorerFixture.renderers.slice(0, 3).map((r) => r.state))).toEqual(['disposed', 'disposed', 'disposed']);
@@ -214,8 +243,10 @@ test('renderer allocation failure remains local and retrying a fresh modal works
 });
 
 test('context loss during streaming leaves a closable graph-local error and releases resources', async ({ page }) => {
-  await open(page); await inspect(page);
-  await page.getByLabel('Inspect parameter').selectOption('second'); await requests(page, 3);
+  await open(page); await findComponent(page, 'linear1');
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  await page.locator('.react-flow__node[data-id="linear1"] [data-parameter-id="second"] button').click();
+  await expect(page.getByLabel('Inspect parameter')).toHaveValue('second'); await requests(page, 3);
   await page.evaluate(() => {
     const f = window.explorerFixture;
     f.emit(0, 1, f.metadata(0)); f.data(0, [-2, 0]);
@@ -231,8 +262,10 @@ test('context loss during streaming leaves a closable graph-local error and rele
 });
 
 test('model replacement during loading removes the modal and cancels its old session handles', async ({ page }) => {
-  await open(page); await inspect(page);
-  await page.getByLabel('Inspect parameter').selectOption('second'); await requests(page, 3);
+  await open(page); await findComponent(page, 'linear1');
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  await page.locator('.react-flow__node[data-id="linear1"] [data-parameter-id="second"] button').click();
+  await expect(page.getByLabel('Inspect parameter')).toHaveValue('second'); await requests(page, 3);
   // Simulate external session/model replacement while the modal makes shell input inert.
   await page.getByRole('combobox', { name: 'Model', exact: true, includeHidden: true }).evaluate((element) => {
     const select = element as HTMLSelectElement;

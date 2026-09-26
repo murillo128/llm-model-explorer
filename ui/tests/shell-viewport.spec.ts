@@ -24,7 +24,7 @@ async function geometry(page: Page) {
   expect(bounds.workspace.bottom).toBe(bounds.bottom.top);
   expect(bounds.workspace.height).toBe(bounds.height - 80);
   if (bounds.height >= 840) expect(bounds.workspace.height / bounds.height).toBeGreaterThanOrEqual(.85);
-  for (const name of ['Tensor Explorer', 'Tokenizer Explorer', 'Refresh models', 'Session options']) {
+  for (const name of ['Architecture Explorer', 'Tokenizer Explorer', 'Tensor Explorer', 'Refresh models', 'Session options']) {
     await expect(page.getByRole('button', { name, exact: true })).toBeInViewport({ ratio: 1 });
   }
   await expect(page.getByRole('combobox', { name: 'Model' })).toBeInViewport({ ratio: 1 });

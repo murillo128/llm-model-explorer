@@ -109,6 +109,8 @@ and error redaction need implementation tests in their owning issues.
 response/context and deterministic mutation cases. It is a structural oracle, not
 acceptance evidence for a real checkpoint or a runtime architecture route. The
 context pins the session model, logical inventory and tokenizer availability.
+[`fixtures/model-defined-diagnostics.json`](fixtures/model-defined-diagnostics.json)
+pins exact safe load findings shared by the backend CLI/startup/GET and UI tests.
 `edits` and `context_edits` contain string-key paths (array indices are decimal),
 with either a replacement `value` or `delete: true`.
 
@@ -117,10 +119,10 @@ in Python and the UI's Ajv runtime. `valid` additionally requires the graph/cont
 checks in `architecture_conformance.py`: identity/reference closure, containment,
 repetition order, directional group ports, declared symbols, alias termination,
 physical versus logical geometry, and real native inspection membership. Schema
-success alone does not establish graph conformance. Runtime implementation children
-must consume the contextual cases when adding retrieval and graph consumers; this
-publication was followed by the generated-type client and production architecture
-route. Their integrated checks are documented in
+success alone does not establish graph conformance. The Python oracle remains an
+independent contract test. Production semantic validation belongs to the backend;
+the UI checks the generated response schema and session identity without copying
+these graph rules. The integrated checks are documented in
 [architecture acceptance](../acceptance/architecture.md); full local reference
 acceptance remains a separate gate.
 

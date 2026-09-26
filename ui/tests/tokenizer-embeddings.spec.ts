@@ -34,14 +34,12 @@ async function start(page: Page) {
   return page.getByRole('textbox', { name: 'Prompt', exact: true });
 }
 
-test('empty, loading and unavailable embeddings share an integrated card while Prompt / Tokens keeps its composition', async ({ page }) => {
+test('empty, loading and unavailable embeddings share integrated title/body cards', async ({ page }) => {
   const editor = await start(page);
   const prompt = page.locator('.prompt-panel');
   const promptBounds = (await prompt.boundingBox())!;
-  expect(await prompt.locator('.matrix-panel-header').boundingBox()).toEqual({ ...promptBounds, height: 40 });
-  expect(await prompt.locator('.viewer-panel').evaluate(node => getComputedStyle(node).borderTopWidth)).toBe('0px');
-  expect(await prompt.locator('.matrix-panel-header').evaluate(node => getComputedStyle(node).borderTopLeftRadius)).toBe('0px');
-  expect(await prompt.locator('.viewer-panel-body').evaluate(node => getComputedStyle(node).borderTopWidth)).toBe('1px');
+  await integratedCard(prompt.locator('.viewer-panel'));
+  expect(await prompt.locator('.viewer-panel').boundingBox()).toEqual(promptBounds);
   async function fullWidthHeader() {
     const panel = page.locator('.input-embeddings');
     await expect(panel.locator('.matrix-panel-header')).toHaveCount(1);

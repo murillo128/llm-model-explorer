@@ -198,17 +198,24 @@ def calculate(
     device: str,
     cancellation: Cancellation,
 ) -> tuple[bytes, torch.Tensor | None]:
+    device_values: torch.Tensor | None = None
     try:
-        values = values.to(device)
+        device_values = values.to(device)
         cancellation.check()
         if kind == "tensor_statistics":
-            return statistics(values, cancellation), None
+            return statistics(device_values, cancellation), None
         rows, columns = shape
-        return distributions(values, rows, columns, cancellation)
+        return distributions(device_values, rows, columns, cancellation)
     finally:
         # The queue slot owns all kernels, including cancellation/error paths.
         if device != "cpu":
             torch.cuda.synchronize(device)
+            # No CUDA tensor escapes this calculation. Drop the final live
+            # reference before returning unused allocator blocks to the driver,
+            # so interactive inspection does not pin the operation's peak VRAM.
+            device_values = None
+            with torch.cuda.device(device):
+                torch.cuda.empty_cache()
 
 
 @dataclass(frozen=True)

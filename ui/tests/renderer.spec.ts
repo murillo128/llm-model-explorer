@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import type {} from './renderer-harness';
 import { readFile } from 'node:fs/promises';
 
+import { comparePixels } from './pixel-comparison';
+
 import { color, green, intensity, luminance } from './scalar-oracle';
 
 test.beforeEach(async ({ page }) => {
@@ -445,15 +447,21 @@ test('fractional zoom samples exact scalar cells across texture bands and preser
     r.dispose();
     return { output, initial, final };
   });
-  for (const { frame, cells, view, neighborhood } of results.output) {
-    for (let y = 0; y < frame.length; y++) for (let x = 0; x < frame[y]!.length; x++) {
-      const cell = cells[y]![x]!;
-      const index = cell.row * 19 + cell.column;
-      const expected = index >= 17 * 19 - 5 ? [46, 61, 76, 255] : green(index % 2 ? 1 : -1);
-      expect(frame[y]![x], `scale ${view.scaleX}, device pixel ${x}:${y}, cell ${cell.row}:${cell.column}`).toEqual(expected);
+  expect(results.output).toHaveLength(5);
+  await test.step('Compare every fractional-zoom pixel', async () => {
+    for (const { frame, cells, view, neighborhood } of results.output) {
+      const finite = [green(-1), green(1)];
+      const pending = [46, 61, 76, 255];
+      expect(comparePixels({ scenario: `scale ${view.scaleX}`, frame, cells, width: view.width, height: view.height,
+        expected: (cell) => {
+          const index = cell.row * 19 + cell.column;
+          return index >= 17 * 19 - 5 ? pending : finite[index % 2]!;
+        },
+      })).toBe(view.width * view.height * 4);
+      expect(neighborhood).toHaveLength(9 * 9 * 4);
+      expect(neighborhood).toEqual(results.output[0]!.neighborhood);
     }
-    expect(neighborhood).toEqual(results.output[0]!.neighborhood);
-  }
+  });
   expect(results.final.scalarUploadCalls).toBe(results.initial.scalarUploadCalls);
   expect(results.final.scalarBytes).toBe(results.initial.scalarBytes);
   await testInfo.attach('zoom-geometry', { body: JSON.stringify(results.output.map(({ view }) => view)), contentType: 'application/json' });
@@ -482,6 +490,7 @@ test('fractional selection guides stay inside the exact cell with one-pixel thic
     r.dispose();
     return { output, initial, final };
   });
+  expect(results.output).toHaveLength(21);
   for (const { frame, cells, selected, view } of results.output) {
     const rowPixels = new Set<number>(), columnPixels = new Set<number>();
     let intersections = 0;
@@ -501,10 +510,11 @@ test('fractional selection guides stay inside the exact cell with one-pixel thic
     expect(columnPixels.size).toBe(1);
     expect(intersections).toBe(1);
     const guideY = [...rowPixels][0]!, guideX = [...columnPixels][0]!;
-    for (let y = 0; y < frame.length; y++) for (let x = 0; x < frame[y]!.length; x++) {
-      const expected = [...color(.5, y === guideY && x === guideX ? .9 : y === guideY || x === guideX ? .65 : 0), 255];
-      frame[y]![x]!.forEach((v, i) => expect(Math.abs(v - expected[i]!)).toBeLessThanOrEqual(1));
-    }
+    const colors = [0, .65, .9].map(alpha => [...color(.5, alpha), 255]);
+    expect(comparePixels({ scenario: `guides scale ${view.scaleX}, origin ${view.x}`, frame, cells,
+      width: view.width, height: view.height, tolerance: 1,
+      expected: (_cell, x, y) => colors[y === guideY && x === guideX ? 2 : y === guideY || x === guideX ? 1 : 0]!,
+    })).toBe(view.width * view.height * 4);
   }
   expect(results.final.scalarUploadCalls).toBe(results.initial.scalarUploadCalls);
   expect(results.final.scalarBytes).toBe(results.initial.scalarBytes);

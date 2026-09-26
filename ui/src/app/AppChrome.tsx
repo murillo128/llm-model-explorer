@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { ModelDiagnosticInformation } from './ModelDiagnostics';
 import { Button } from '../components/Button';
 import type { ModelSummary, SessionController, ShellState } from './session-controller';
 
@@ -16,7 +17,7 @@ export function AppBar({ state, controller, model, backend }: {
   return <header className="app-bar">
     <span className="product-name" title="LLM Model Explorer">LLM Model Explorer</span>
     <nav className="explorer-nav" aria-label="Explorers">
-      {(['Tensor Explorer', 'Tokenizer Explorer', 'Architecture Explorer'] as const).map((name) =>
+      {(['Architecture Explorer', 'Tokenizer Explorer', 'Tensor Explorer'] as const).map((name) =>
         <button key={name} type="button" className="explorer-link" aria-label={name}
           aria-current={state.explorer === name ? 'page' : undefined}
           onClick={() => controller.switchExplorer(name)}>
@@ -49,6 +50,7 @@ export function AppBar({ state, controller, model, backend }: {
         {state.session && <Button disabled={state.sessionStatus === 'closing'} onClick={() => {
           controller.closeSession(); setExpanded(false); trigger.current?.focus();
         }}>Close session</Button>}
+        <h2>Model information</h2>
         <dl className="model-metadata metadata">
           <dt>Backend</dt><dd data-testid="backend-url">{backend}</dd>
           <dt>Session</dt><dd>{state.session?.id ?? 'Inactive'}</dd>
@@ -59,17 +61,27 @@ export function AppBar({ state, controller, model, backend }: {
           {model?.parameter_count !== undefined && <><dt>Parameters</dt><dd>{model.parameter_count.toLocaleString()}</dd></>}
           {model?.size_bytes !== undefined && <><dt>Size (bytes)</dt><dd>{model.size_bytes.toLocaleString()}</dd></>}
         </dl>
+        {expanded && state.session && <ModelDiagnosticInformation store={controller.diagnostics} />}
       </section>
     </div>
   </header>;
 }
 
-export function AppStatusBar({ state, model }: { state: ShellState; model: ModelSummary | undefined }) {
+export function AppStatusBar({ state, model, onRetry }: { state: ShellState; model: ModelSummary | undefined; onRetry: () => void }) {
   const feedback = state.sessionStatus === 'loading' ? 'Loading session…'
     : state.sessionStatus === 'closing' ? 'Closing session…'
+    : state.sessionStatus === 'failed' ? 'Session unavailable.'
     : state.session ? 'Session active.' : 'Session inactive.';
   return <footer className="app-status-bar" aria-label="Application status">
-    <span role="status" data-state={state.sessionStatus}>{feedback}</span>
+    <div className="connection-slot">
+      <span role="status" aria-live="polite" aria-atomic="true" data-state={state.connection}>
+        <span className="connection-icon" aria-hidden="true">{state.connection === 'connected' ? '●' : '○'}</span>
+        {{ connecting: 'Connecting…', connected: 'Connected', reconnecting: 'Reconnecting…', disconnected: 'Disconnected' }[state.connection]}
+      </span>
+      {(state.connection === 'disconnected' || state.connection === 'reconnecting') && <button type="button"
+        className="connection-retry" aria-label="Retry connection" disabled={state.catalogue === 'loading'} onClick={onRetry}>Retry</button>}
+    </div>
+    <span className="session-status" role="status" title={feedback} data-state={state.sessionStatus}>{feedback}</span>
     {model && <div className="status-metadata metadata">
       {(model.architectures.length > 0 || model.model_type) &&
         <span title={[...model.architectures, model.model_type].filter(Boolean).join(' · ')}>

@@ -10,7 +10,7 @@ const ep = (node_id: string, port_id: string) => ({ node_id, port_id });
 const fixture = () => makeProjectionFixture({ variants: ['full_attention', 'linear_attention', 'full_attention'], hiddenSize: 29 });
 function validate(graph: Graph) {
   validateArchitecture({ status: 'available', model_id: 'oracle', diagnostics: [], graph }, {
-    modelId: 'oracle', tokenizerAvailable: true, inventory: { tensors: [], coverage: 'partial', diagnostics: [] },
+    modelId: 'oracle',
   });
 }
 
@@ -174,8 +174,8 @@ describe('reusable exhaustive and focused source assertions', () => {
   });
 
   it('catches loss of a duplicate signal even when every source-edge ID is still accounted for', () => {
-    const graph = fixture(); graph.edges.push({ ...structuredClone(graph.edges[0]!), id: 'parallel-path' });
-    graph.edges.push({ ...structuredClone(graph.edges.find((edge) => edge.target.node_id === 'embedding')!), id: 'parallel-exit' });
+    const graph = fixture(); graph.edges.push({ ...structuredClone(graph.edges.find((e) => e.target.node_id === 'layer-0.attention' && e.target.port_id === 'x')!), id: 'parallel-path' });
+    graph.edges.push({ ...structuredClone(graph.edges.find((edge) => edge.source.node_id === 'layer-0.attention' && edge.source.port_id === 'x')!), id: 'parallel-exit' });
     const projected = projectGraph(graph, { expanded: [], exhaustive: true });
     assertTraceability(graph, projected, true);
     const edge = projected.edges.find((item) => item.paths.length > 1)!;

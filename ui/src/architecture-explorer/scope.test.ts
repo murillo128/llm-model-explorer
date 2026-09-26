@@ -1,3 +1,5 @@
+import { assertAttentionInputProvenance } from '../../tests/architecture-boundary-provenance';
+import type { BoundarySegment } from '../../tests/architecture-boundary-provenance';
 import { describe, expect, it } from 'vitest';
 import { assertTraceability } from '../../tests/architecture-invariants';
 import { makeProjectionFixture } from '../../tests/architecture-projection-fixture';
@@ -10,7 +12,7 @@ import { validateArchitecture } from '../api/architecture-validation';
 const ep = (node_id: string, port_id: string) => ({ node_id, port_id });
 const sourcePaths = (graph: Graph, scope: string) => projectGraph(graph, { scope, expanded: [scope], showUnused: true });
 const validate = (graph: Graph) => validateArchitecture({ status: 'available', model_id: 'fixture', diagnostics: [], graph },
-  { modelId: 'fixture', inventory: { tensors: [], coverage: 'complete', diagnostics: [] }, tokenizerAvailable: false });
+  { modelId: 'fixture' });
 
 describe('isolated component projection', () => {
   it.each(['layer-3', 'layer-3.attention', 'layer-3.attention.core', 'mlp:layer-3.gate'])(
@@ -26,7 +28,7 @@ describe('isolated component projection', () => {
       expect(projection.nodes.filter((node) => node.presentation !== 'external').flatMap((node) => node.sourceIds)
         .every((id) => members.has(id))).toBe(true);
       expect(projection.nodes.find((node) => node.id === scope)?.parentId).toBeUndefined();
-      const represented = new Set(projection.edges.flatMap((edge) => edge.originalEdgeIds));
+      const represented = new Set([...projection.edges.flatMap((edge) => edge.originalEdgeIds), ...(projection.boundaryPaths ?? []).flat().map((e) => e.id)]);
       for (const edge of graph.edges) {
         const crossing = members.has(edge.source.node_id) !== members.has(edge.target.node_id);
         if (crossing) expect(represented.has(edge.id), edge.id).toBe(true);
@@ -38,22 +40,53 @@ describe('isolated component projection', () => {
       expect(projectGraph(graph, { expanded: ['model', 'layer-3'], scope: undefined })).toEqual(global);
     });
 
+  it('conserves ordered split Attention paths and rejects broken connectivity', () => {
+    const graph = makeProjectionFixture({ count: 4 }), projection = sourcePaths(graph, 'layer-3.attention');
+    assertTraceability(graph, projection); // Also checks original endpoint/port evidence and source object identity.
+    const segments: BoundarySegment[] = projection.edges.map((edge) => ({
+      source: edge.source, target: edge.target, paths: edge.paths.map((path) => path.map((e) => e.id)),
+    }));
+    assertAttentionInputProvenance(graph, segments);
+    const upstream = segments.findIndex((s) => s.target.node_id === 'layer-3.attention' && s.target.port_id === 'x');
+    const branch = segments.findIndex((s) => s.target.node_id === 'layer-3.attention.Q' && s.target.port_id === 'x');
+    const faults: [string, (broken: BoundarySegment[]) => void][] = [
+      ['missing external segment', (s) => { s.splice(upstream, 1); }],
+      ['missing internal segment', (s) => { s.splice(branch, 1); }],
+      ['wrong boundary port', (s) => { s[upstream]!.target.port_id = 'positions'; }],
+      ['wrong consumer', (s) => { s[branch]!.target.node_id = 'layer-3.attention.K'; }],
+      ['duplicate branch', (s) => { s.push(structuredClone(s[branch]!)); }],
+      ['duplicate source path', (s) => { s[upstream]!.paths.push([...s[upstream]!.paths[0]!]); }],
+      ['unrelated source', (s) => { s[upstream]!.source.node_id = 'external:output:["positions","out"]'; }],
+      ['wrong ordered evidence', (s) => { s[branch]!.paths[0] = [...s[upstream]!.paths[0]!]; }],
+    ];
+    for (const [name, fault] of faults) {
+      const broken = structuredClone(segments); fault(broken);
+      expect(() => assertAttentionInputProvenance(graph, broken), name).toThrow();
+    }
+  });
+
   it('retains true external fan-out, mask/positions and independent K/V states', () => {
     const graph = makeProjectionFixture({ count: 4 }), projection = sourcePaths(graph, 'layer-3.attention');
-    const branches = projection.edges.filter((edge) => edge.paths.some((path) => path[0]!.source.node_id === 'layer-3.input-norm'));
+    const trunk = projection.edges.find((edge) => edge.paths.some((path) => path[0]!.source.node_id === 'layer-3.input-norm'))!;
+    const branches = projection.edges.filter((edge) => edge.source.node_id === 'layer-3.attention' && edge.source.port_id === 'x');
     expect(branches.map((edge) => edge.paths[0]!.at(-1)!.target.node_id).sort()).toEqual(
       ['layer-3.attention.K', 'layer-3.attention.Q', 'layer-3.attention.V']);
     expect(new Set(branches.map((edge) => edge.source.node_id)).size).toBe(1);
-    expect(connectionSet(projection, { port: branches[0]!.source }).sort()).toEqual(branches.map((edge) => edge.id).sort());
-    for (const edge of branches) expect(connectionSet(projection, { port: edge.target })).toEqual([edge.id]);
+    expect(trunk.target).toEqual(ep('layer-3.attention', 'x'));
+    expect(connectionSet(projection, { port: trunk.source }).sort()).toEqual([trunk.id, ...branches.map((edge) => edge.id)].sort());
+    for (const edge of branches) expect(connectionSet(projection, { port: edge.target }).sort()).toEqual([trunk.id, edge.id].sort());
     const paths = projection.edges.flatMap((edge) => edge.paths.map((path) => [path[0]!.source, path.at(-1)!.target]));
     expect(paths).toEqual(expect.arrayContaining([
-      [ep('layer-3.prior-K', 'out'), ep('layer-3.attention.core', 'prior_K')],
-      [ep('layer-3.prior-V', 'out'), ep('layer-3.attention.core', 'prior_V')],
-      [ep('layer-3.attention.core', 'next_K'), ep('layer-3.next-K', 'x')],
-      [ep('layer-3.attention.core', 'next_V'), ep('layer-3.next-V', 'x')],
-      [ep('layer-3', 'positions'), ep('layer-3.attention.rope-Q', 'positions')],
-      [ep('layer-3', 'mask'), ep('layer-3.attention.core', 'mask')],
+      [ep('layer-3.prior-K', 'out'), ep('layer-3.attention', 'prior_K')],
+      [ep('layer-3.attention', 'prior_K'), ep('layer-3.attention.core', 'prior_K')],
+      [ep('layer-3.prior-V', 'out'), ep('layer-3.attention', 'prior_V')],
+      [ep('layer-3.attention', 'prior_V'), ep('layer-3.attention.core', 'prior_V')],
+      [ep('layer-3.attention.core', 'next_K'), ep('layer-3.attention', 'next_K')],
+      [ep('layer-3.attention', 'next_K'), ep('layer-3.next-K', 'x')],
+      [ep('layer-3.attention.core', 'next_V'), ep('layer-3.attention', 'next_V')],
+      [ep('layer-3.attention', 'next_V'), ep('layer-3.next-V', 'x')],
+      [ep('layer-3.attention', 'positions'), ep('layer-3.attention.rope-Q', 'positions')],
+      [ep('layer-3.attention', 'mask'), ep('layer-3.attention.core', 'mask')],
     ]));
     expect(projection.scope!.excludedNodeIds).toContain('layer-3.residual-1');
     const residual = graph.edges.find((edge) => edge.target.node_id === 'layer-3.residual-1' && edge.target.port_id === 'residual')!;
@@ -117,7 +150,11 @@ describe('isolated component projection', () => {
       ] };
     validate(graph);
     const projection = sourcePaths(graph, 'component');
-    expect(projection.edges.flatMap((edge) => edge.paths.map((path) => path.map((item) => item.id)))).toEqual([['exit-internal', 'exit'], ['reenter', 'reenter-internal']]);
+    expect(projection.edges.flatMap((edge) => edge.paths.map((path) => path.map((item) => item.id)))).toEqual([['exit-internal'], ['exit'], ['reenter'], ['reenter-internal']]);
+    for (const [port, expected] of [['out', ['exit-internal', 'exit']], ['in', ['reenter', 'reenter-internal']]] as const) {
+      const selected = connectionSet(projection, { port: ep('component', port) });
+      expect(projection.edges.filter((e) => selected.includes(e.id)).flatMap((e) => e.originalEdgeIds)).toEqual(expected);
+    }
     expect(projection.scope!.excludedEdgeIds).toEqual(['external-in', 'external-out', 'bypass']);
     expect(projection.edges.some((edge) => edge.source.node_id === 'a' && edge.target.node_id === 'b')).toBe(false);
     expect(projection.nodes.filter((node) => node.presentation === 'external')).toHaveLength(2);
@@ -139,7 +176,8 @@ describe('isolated component projection', () => {
       const options = { scope, expanded: ['component'], showUnused: true };
       const shown = projectGraph(graph, { ...options, showContext: true });
       const hidden = projectGraph(graph, { ...options, showContext: false });
-      expect(shown.edges).toHaveLength(1); expect(hidden.edges).toHaveLength(0);
+      expect(shown.edges).toHaveLength(scope ? 2 : 1); expect(hidden.edges).toHaveLength(0);
+      expect(shown.edges.flatMap((e) => e.originalEdgeIds)).toEqual(['enter', 'use']);
       expect(hidden.filteredEdgeIds).toEqual(['enter', 'use']);
       expect(hidden.nodes.some((node) => node.presentation === 'external')).toBe(false);
       expect(projectGraph(graph, { ...options, showContext: true })).toEqual(shown);

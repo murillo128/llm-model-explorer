@@ -211,3 +211,19 @@ it('remains usable when tab storage is denied', async () => {
   expect(controller.getSnapshot().session).toBeNull();
   controller.dispose();
 });
+
+it('keeps expired sessions reachable and suppresses late failed close feedback after replacement', async () => {
+  const { controller, client } = setup(); await tick();
+  vi.mocked(client.getSession).mockRejectedValueOnce(expired);
+  controller.recover(sessionA.id); await tick();
+  expect(controller.getSnapshot()).toMatchObject({ connection: 'connected', sessionStatus: 'expired-session', toasts: [] });
+  controller.chooseModel(models[0]!.id); await tick();
+  const closing = deferred<void>();
+  vi.mocked(client.deleteSession).mockReturnValueOnce(closing.promise);
+  controller.closeSession();
+  vi.mocked(client.createSession).mockResolvedValueOnce(sessionB);
+  controller.chooseModel(models[1]!.id); await tick();
+  closing.reject(new ApiFailure('transport', 'private')); await tick();
+  expect(controller.getSnapshot()).toMatchObject({ session: sessionB, connection: 'connected', toasts: [] });
+  controller.dispose();
+});

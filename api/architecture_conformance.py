@@ -1,7 +1,8 @@
 """Independent structural/contextual oracles for the published architecture contract.
 
 No application imports, graph execution, checkpoint access, or HTTP implementation.
-Consumers must combine generated schema validation with these semantic cases.
+This test-only oracle checks semantic cases independently of the backend producer;
+browser clients use generated schema validation without duplicating these rules.
 """
 from copy import deepcopy
 import json
@@ -686,6 +687,8 @@ def fixtures():
     case('url-safe-opaque-id', [set_('graph/graph_id', 'analysis.1~revision')], True)
     case('partial-architecture', [set_('graph/coverage', 'partial')], True)
     case('visual-no-tokenizer', [set_('graph/scope', 'visual_encoder_predictor'), set_('graph/nodes/5/references', [])], True,
+         context_edits=[set_('tokenizer_available', False)])
+    case('model-defined-no-tokenizer', [set_('graph/scope', 'model_defined'), set_('graph/nodes/5/references', [])], True,
          context_edits=[set_('tokenizer_available', False)])
     case('explicit-partial-inventory', valid=True, context_edits=[set_('inventory/coverage', 'partial'),
         set_('inventory/diagnostics', [dict(code='excluded_quantized', message='Packed parameters remain descriptive.')])])

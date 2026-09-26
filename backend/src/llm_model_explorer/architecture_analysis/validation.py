@@ -21,6 +21,15 @@ class GraphError(ValueError):
         super().__init__(message)
 
 
+def model_finding(code: str, stage: str, pointer: str, message: str) -> GraphError:
+    """Render one bounded, path-free model-owned authoring finding."""
+    if len(pointer) > 160:
+        pointer = ""
+    if len(message) > 512:
+        message = "Validation failed; detail exceeds the diagnostic limit."
+    return GraphError(code, f"architecture.json{pointer} [{stage}]: {message}")
+
+
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise GraphError("invalid_graph", message)

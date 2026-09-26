@@ -1,4 +1,3 @@
-import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 export async function viewOptions(page: Page) {
@@ -7,22 +6,31 @@ export async function viewOptions(page: Page) {
   return page.getByRole('dialog', { name: 'View options', exact: true });
 }
 export async function graphAction(page: Page, name: string | RegExp) {
-  const options = await viewOptions(page);
-  await options.getByRole('button', { name, exact: true }).click();
-  if (await options.isVisible()) await page.keyboard.press('Escape');
+  await page.getByRole('button', { name, exact: true }).click();
 }
 export async function graphPreference(page: Page, name: string, checked: boolean) {
   const options = await viewOptions(page);
   await options.getByLabel(name, { exact: true }).setChecked(checked);
   await page.keyboard.press('Escape');
 }
+export async function selectComponent(page: Page, id: string) {
+  const restore = page.getByRole('button', { name: 'Expand browser', exact: true });
+  if (await restore.isVisible()) await restore.click();
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill(id);
+  await page.getByRole('group', { name: 'Model search results', exact: true }).locator(`[data-node-id=${JSON.stringify(id)}] [data-browser-name]`).click();
+}
+/** Existing navigation scenarios explicitly opt into reveal after selection. */
 export async function findComponent(page: Page, id: string) {
-  await page.getByRole('button', { name: 'Find component', exact: true }).click();
-  await page.getByRole('combobox', { name: 'Search components', exact: true }).fill(id);
-  // IDs locate the exact authored target; user-facing result content is a concise
-  // label plus containment context. All results come from received graph records.
-  await page.locator(`[role="option"][data-node-id=${JSON.stringify(id)}]`).click();
-  await expect(page.getByRole('button', { name: 'Find component', exact: true })).toBeFocused();
+  await selectComponent(page, id);
+  await page.getByRole('button', { name: 'Center selected', exact: true }).click();
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('');
+}
+export async function openShared(page: Page, id: string) {
+  const restore = page.getByRole('button', { name: 'Expand browser', exact: true });
+  if (await restore.isVisible()) await restore.click();
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('');
+  await page.locator(`[data-family-id=${JSON.stringify(id)}]`).getByRole('button', { name: /^Select shared family/ }).click();
+  await page.getByLabel('Graph selection', { exact: true }).getByRole('button', { name: 'Explore structure', exact: true }).click();
 }
 export async function chooseInstance(page: Page, stack: string, id: string) {
   const picker = page.getByRole('combobox', { name: `Expand instance of ${stack}`, exact: true });

@@ -54,6 +54,14 @@ segments (shared across models with matching paths); never use filesystem identi
 Visibility, preferred desktop width, and branch choices persist in local browser
 storage across explorer visits and reloads. If storage is unavailable or malformed,
 use safe defaults and retain working interactions in memory.
+Resolve pane visibility and preferred width before the first workspace frame.
+The Inventory pane starts expanded when no valid preference exists and remains
+present while a model session or its inventory loads. Its fixed header and
+collapse control precede a truthful loading, error, or empty body; a saved
+collapsed pane shows its restore rail immediately. Model changes and inventory
+arrival replace navigation content without changing the pane choice or central
+card bounds. Explicit collapse and resize during loading take precedence over
+the response, and a previous model's tree is not actionable for the new model.
 
 The selected tensor has one persistent title bar, composed through the reusable Matrix Explorer title/body primitive. The title bar is the full-width header inside the same rounded card as the scientific body, using the border, radius, padding and internal separator defined in `visual-language.md`. Use a single compact `40 px` row with its soft-neutral header background. Keep it stationary while the scientific content scrolls. Emphasize its logical breadcrumb/path with the existing scientific green accent, keeping shape/storage dtype visually secondary on the same row and the accessible standard information icon adjacent to this identity metadata. Long paths may truncate while retaining their full accessible identity. The scientific surfaces occupy the padded body directly below the title separator without a reserved secondary metadata row. Empty tensors and tensors available only for metadata inspection retain the same full-width title/body structure. Changes to title slots, status or popover state preserve mounted sources, subscriptions, renderer uploads, camera/history and cancellation ownership. Do not repeat identity in global chrome, a large title, a permanent logical-path field, or a second metadata block. Use public descriptors supplied by the inventory/API, never inferred names or filesystem paths.
 

@@ -10,6 +10,15 @@ Production analysis must not call `forward()` or `generate()`, trace a real or d
 
 TorchLens, TransformerBridge, and an upgrade of Transformers are not prerequisites for this static increment. Existing compatible code/knowledge may be reused with provenance and license attribution. Inference/instrumentation dependencies can be selected by a later design; do not impose their numerical loading path on this analysis.
 
+## Model-supplied definitions
+
+The optional data-only `architecture.json` path is defined by
+[model-owned architecture](model-owned-architecture.md). It takes precedence over
+packaged selection and uses the same graph/binding validator. It describes what
+the author declares, with explicit model-supplied provenance, rather than claiming
+a packaged source review. Arbitrary operation names remain static explanatory
+records. No checkpoint Python is imported and no numerical model is constructed.
+
 ## Description selection and coverage
 
 Select descriptions by supported configuration discriminators, architecture classes, relevant options, per-layer types, and checked storage bindings, not a marketing name or one matching tensor suffix. In addition to the existing families, the bounded discriminators include `deepseek_v2` / `DeepseekV2ForCausalLM`, `glm4_moe_lite` / `Glm4MoeLiteForCausalLM`, and `kimi_linear` / `KimiLinearForCausalLM`, for the pinned reference variants in [product scope](../product.md#architecture-reference-checkpoints-and-bounded-coverage). Normalize known configuration defaults only from the reviewed reference implementation. Unrecognized fields that can change structure, contradictory metadata, or missing required parameters must prevent a complete-coverage claim. Unrelated training metadata need not invalidate an otherwise recognized architecture.

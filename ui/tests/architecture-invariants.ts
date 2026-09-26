@@ -19,8 +19,8 @@ export interface SemanticNames {
   repetitions?: Record<string, string>;
 }
 
-function contractedWires(graph: Graph): Wire[] {
-  let wires: Wire[] = graph.edges.map((edge) => ({ source: edge.source, target: edge.target, kinds: [edge.kind] }));
+function contractedWires(graph: Graph, input?: Wire[]): Wire[] {
+  let wires: Wire[] = input ?? graph.edges.map((edge) => ({ source: edge.source, target: edge.target, kinds: [edge.kind] }));
   // Eliminate boundary endpoints by relational composition, preserving a multiset.
   // A computational input and output are NEVER joined, even for identity/reshape.
   for (const node of graph.nodes) if (node.kind === 'group') for (const port of node.ports) {
@@ -116,7 +116,7 @@ export function assertTraceability(graph: Graph, projected: Projection, exhausti
   assert.equal(nodes.size, projected.nodes.length);
   const paths = new Set<string>();
   for (const node of projected.nodes) {
-    assert(node.sourceIds.length > 0);
+    assert(node.sourceIds.length > 0 || node.presentation === 'model');
     for (const id of node.sourceIds) assert(sourceNodes.has(id));
     if (node.record) assert.equal(node.record, sourceNodes.get(node.id), 'Source record identity changed');
     for (const port of node.ports) for (const original of port.endpoints) {
@@ -127,23 +127,9 @@ export function assertTraceability(graph: Graph, projected: Projection, exhausti
   for (const edge of projected.edges) {
     const source = nodes.get(edge.source.node_id)?.ports.find((port) => port.id === edge.source.port_id);
     const target = nodes.get(edge.target.node_id)?.ports.find((port) => port.id === edge.target.port_id);
-    const conventionalDirection = source?.direction === 'output' && target?.direction === 'input';
-    const groupBoundaryForwarding = edge.paths.some((path) => {
-      const first = path[0]!, last = path.at(-1)!;
-      const firstSource = sourceNodes.get(first.source.node_id)!;
-      const firstTarget = sourceNodes.get(first.target.node_id)!;
-      const lastSource = sourceNodes.get(last.source.node_id)!;
-      const lastTarget = sourceNodes.get(last.target.node_id)!;
-      const firstSourcePort = firstSource.ports.find((port) => port.id === first.source.port_id)!;
-      const firstTargetPort = firstTarget.ports.find((port) => port.id === first.target.port_id)!;
-      const lastSourcePort = lastSource.ports.find((port) => port.id === last.source.port_id)!;
-      const lastTargetPort = lastTarget.ports.find((port) => port.id === last.target.port_id)!;
-      return (firstSource.kind === 'group' && firstTarget.parent_id === firstSource.id &&
-        firstSourcePort.direction === 'input' && firstTargetPort.direction === 'input') ||
-        (lastTarget.kind === 'group' && lastSource.parent_id === lastTarget.id &&
-          lastSourcePort.direction === 'output' && lastTargetPort.direction === 'output');
-    });
-    assert(conventionalDirection || groupBoundaryForwarding, 'Invalid projected edge directions');
+    assert(source); assert(target);
+    if (source.direction !== 'output') assert.equal(nodes.get(edge.source.node_id)!.kind, 'group', 'Only a boundary input may source an internal route');
+    if (target.direction !== 'input') assert.equal(nodes.get(edge.target.node_id)!.kind, 'group', 'Only a boundary output may receive an internal route');
     const originals = new Set<string>();
     assert(edge.paths.length > 0);
     for (const path of edge.paths) {
@@ -164,17 +150,42 @@ export function assertTraceability(graph: Graph, projected: Projection, exhausti
     assert.equal(new Set(edge.originalEdgeIds).size, edge.originalEdgeIds.length);
     assert.deepEqual(new Set(edge.originalEdgeIds), originals);
   }
-  const represented = new Set(projected.edges.flatMap((edge) => edge.originalEdgeIds));
+  for (const path of projected.boundaryPaths ?? []) for (const edge of path) assert.equal(edge, sourceEdges.get(edge.id), 'Absorbed boundary must preserve source evidence');
+  const represented = new Set([...projected.edges.flatMap((edge) => edge.originalEdgeIds), ...(projected.boundaryPaths ?? []).flat().map((e) => e.id)]);
   const hidden = new Set(projected.hiddenEdgeIds), filtered = new Set(projected.filteredEdgeIds);
   assert(![...represented].some((id) => hidden.has(id) || filtered.has(id)));
   assert(![...hidden].some((id) => filtered.has(id)));
   assert.deepEqual(new Set([...represented, ...hidden, ...filtered]), new Set(sourceEdges.keys()));
   if (exhaustive) {
-    assert.deepEqual(new Set(nodes.keys()), new Set(sourceNodes.keys()));
+    assertInterfaceCoverage(graph, projected);
     assert.deepEqual(projected.hiddenEdgeIds, []); assert.deepEqual(projected.filteredEdgeIds, []);
     const wires = projected.edges.flatMap((edge) => edge.paths.map((path) => ({
       source: path[0]!.source, target: path.at(-1)!.target, kinds: kinds(path.map((item) => item.kind)),
     })));
-    assert.deepEqual(sorted(wires), sorted(contractedWires(graph)), 'Exhaustive directed signal multiset changed');
+    const boundary = (projected.boundaryPaths ?? []).map((path) => ({ source: path[0]!.source, target: path.at(-1)!.target, kinds: kinds(path.map((e) => e.kind)) }));
+    assert.deepEqual(sorted(contractedWires(graph, [...wires, ...boundary])), sorted(contractedWires(graph)), 'Exhaustive directed signal multiset changed');
   }
+}
+
+/** Independent conservation check: removing an operation is never licensed by a
+ * renderer's eligibility result. Every omitted declaration needs exact metadata. */
+export function assertInterfaceCoverage(graph: Graph, projected: Projection) {
+  const shown = new Set(projected.nodes.filter((n) => n.presentation !== 'model').map((n) => n.id));
+  for (const node of graph.nodes) {
+    if (shown.has(node.id)) continue;
+    const edges = graph.edges.filter((e) => e.source.node_id === node.id || e.target.node_id === node.id);
+    if (node.kind === 'context' && node.references.some((r) => r.kind === 'tokenizer')) {
+      assert.equal(node.ports.length, 0); assert.equal(edges.length, 0);
+      assert.equal(node.parameter_ids.length, 0); assert(!node.operation && !node.formula);
+      assert(node.references.every((r) => r.kind === 'tokenizer')); continue;
+    }
+    assert(node.kind === 'input' || node.kind === 'output', `Lost computational component ${node.id}`);
+    assert(!node.formula && !node.parameter_ids.length && !node.references.length);
+    assert(edges.every((e) => e.kind === 'data'));
+    const ports = node.ports.filter((p) => p.direction === (node.kind === 'input' ? 'output' : 'input'));
+    assert(ports.length > 0);
+    for (const port of ports) assert(projected.nodes.some((n) => n.ports.some((p) =>
+      p.interfaces?.includes(node.id) && p.endpoints.some((e) => e.node_id === node.id && e.port_id === port.id))), `Lost interface ${node.id}:${port.id}`);
+  }
+  assert(projected.nodes.filter((n) => n.presentation === 'model').length <= 1);
 }

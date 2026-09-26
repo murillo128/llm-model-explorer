@@ -1,6 +1,8 @@
 import type { Graph, GraphNode, GraphView, Layout } from './graph';
 import { snapshotView } from './scope-navigation';
 import { endpointKey } from './projection';
+import { interfaceIndex, resolveInterfaceEndpoints } from './interfaces';
+import type { BoundarySelection, TemplatePortTarget } from './interfaces';
 
 export type Template = NonNullable<Graph['templates']>[number];
 export type TemplateInstance = Template['instances'][number];
@@ -39,11 +41,23 @@ export function commonNode(node: GraphNode, role: string, label?: string): Graph
     attributes: node.attributes.map((a) => ({ ...a, provenance: [] })) };
 }
 
+export function bindTemplatePortSelection(graph: Graph, template: Template, anchor: TemplateInstance,
+  chosen: TemplateInstance | null, target: TemplatePortTarget): BoundarySelection | undefined {
+  if (target.templateId !== template.id) return undefined;
+  const instance = chosen ?? anchor;
+  const owner = instance.nodes.find((n) => n.role === target.nodeRole);
+  const port = instance.ports.find((p) => p.role === target.portRole);
+  if (!owner || !port) return undefined;
+  return { kind: 'boundary', templatePort: target, owner: { kind: chosen ? 'source' : 'presentation', id: owner.node_id },
+    endpoints: chosen ? resolveInterfaceEndpoints(graph, [{ node_id: port.node_id, port_id: port.port_id }]) : [] };
+}
+
 /** Geometry and presentation identities stay fixed; only exact source references change.
  * Always bind from the original layout, so switching cannot retain prior generations. */
 export function bindTemplateLayout(layout: Layout, graph: Graph, template: Template,
   from: TemplateInstance, chosen: TemplateInstance | null): Layout {
   const to = chosen ?? from;
+  const interfaces = interfaceIndex(graph);
   const records = new Map(graph.nodes.map((n) => [n.id, n]));
   const sourceEdges = new Map(graph.edges.map((e) => [e.id, e]));
   const nodeTargets = new Map(to.nodes.map((m) => [m.role, m.node_id]));
@@ -65,17 +79,25 @@ export function bindTemplateLayout(layout: Layout, graph: Graph, template: Templ
       const common = commonNode(record, roles.get(node.id)!, node.id === from.node_id ? template.label : undefined);
       return { ...node, label: chosen ? record.label : common.label, record: chosen ? record : common,
         sourceIds: chosen ? node.sourceIds.map((id) => nodes.get(id)!) : [],
-        ports: node.ports.map((p) => ({ ...p, label: chosen ? record.ports.find((port) => port.id === p.id)!.label : p.id,
-          endpoints: chosen ? p.endpoints.map((e) => {
+        ports: node.ports.map((p) => {
+          const sourcePort = from.ports.find((m) => m.node_id === node.id && m.port_id === p.id) ??
+            from.ports.find((m) => p.endpoints.some((e) => endpointKey(e) === endpointKey(m)));
+          const endpoints = chosen ? resolveInterfaceEndpoints(graph, p.endpoints.map((e) => {
             const target = ports.get(endpointKey(e));
             if (!target) throw new Error('Shared structure port correspondence is no longer available.');
             return target;
-          }) : [] })) };
+          })) : [];
+          return { ...p, label: chosen ? record.ports.find((port) => port.id === p.id)?.label ?? p.label : p.id,
+            ...(sourcePort ? { templatePort: { kind: 'template-port' as const, templateId: template.id,
+              nodeRole: roles.get(node.id)!, portRole: sourcePort.role } } : {}),
+            interfaces: [...new Set(endpoints.filter((e) => interfaces.declarations.has(e.node_id)).map((e) => e.node_id))], endpoints };
+        }) };
     }),
     edges: layout.projection.edges.map((edge) => ({ ...edge,
       originalEdgeIds: chosen ? edge.originalEdgeIds.map(mappedEdge) : [],
       paths: edge.paths.map((path) => path.map((e) => sourceEdges.get(mappedEdge(e.id))!)) })),
     hiddenEdgeIds: layout.projection.hiddenEdgeIds.map(mappedEdge),
+    ...(layout.projection.boundaryPaths ? { boundaryPaths: layout.projection.boundaryPaths.map((path) => path.map((e) => sourceEdges.get(mappedEdge(e.id))!)) } : {}),
     filteredEdgeIds: layout.projection.filteredEdgeIds.map(mappedEdge),
     unusedInputs: layout.projection.unusedInputs.map((e) => ports.get(endpointKey(e))!),
   };
@@ -88,9 +110,9 @@ export function enterSharedStructure(view: GraphView, template: Template,
   const previous = snapshotView(view, viewport);
   if (!view.scope) view.globalView = previous;
   view.history = [...view.history, previous].slice(-16);
-  view.update({ shared: { templateId: template.id, anchorId: anchor.node_id, instanceId },
+  view.update({ selectionMode: instanceId ? 'source' : 'structure', shared: { templateId: template.id, anchorId: anchor.node_id, instanceId },
     scope: anchor.node_id, expanded: anchor.nodes.map((m) => m.node_id), repetitions: {},
     selected: instanceId && anchor.nodes.some((n) => n.node_id === view.selected) ? view.selected : anchor.node_id,
-    edge: null, focus: anchor.node_id, activeStack: null, exhaustive: false, deriveMlp: false, showUnused: true,
+    edge: null, boundary: undefined, focus: anchor.node_id, activeStack: null, exhaustive: false, deriveMlp: false, showUnused: true,
     stateScope: undefined, viewport: undefined });
 }

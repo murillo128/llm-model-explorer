@@ -155,7 +155,7 @@ class ArchitectureArtifactSpec:
         }
         if any(not isinstance(value, str) or not value for value in fields.values()):
             raise ValueError("architecture identity fields must be nonempty strings")
-        if scope not in ("language_model", "visual_encoder_predictor"):
+        if scope not in ("language_model", "visual_encoder_predictor", "model_defined"):
             raise ValueError("invalid architecture scope")
         options = _canonical(dict(analysis_options))
         canonical = _canonical(dict(fields, analysis_options=json.loads(options)))

@@ -1,16 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Instrument native browser calls without changing their arguments/results. */
 /** Test-only observers injected before the production bundle, never shipped. */
-export function installProbe() {
+export interface ProbeOptions { capturePixels: boolean }
+
+export function installProbe({ capturePixels }: ProbeOptions) {
   const textures = new Map<WebGLTexture, number>();
   const bound = new WeakMap<WebGL2RenderingContext, WebGLTexture>();
-  const snapshots = new WeakMap<HTMLCanvasElement, { width: number; height: number; bytes: Uint8Array }>();
+  const snapshots = new WeakMap<HTMLCanvasElement, { width: number; height: number; dpr: number; bytes: Uint8Array }>();
   const arrays: WeakRef<Float32Array | Uint32Array>[] = [];
   const scalarValues: number[] = [];
   const countValues: { rows: number[]; columns: number[] } = { rows: [], columns: [] };
   const uniformNames = new WeakMap<WebGLUniformLocation, string>();
   const transfers = new WeakMap<HTMLCanvasElement, Record<string, number[]>>();
   const metrics = { readers: 0, peakReaders: 0, createdTextures: 0, peakTextures: 0,
-    errors: [] as { code: number; stack: string | undefined }[], contextLosses: 0, peakGpuBytes: 0, uploads: 0, firstUpload: 0, firstRender: 0, maxUploadBytes: 0 };
+    errors: [] as { code: number; stack: string | undefined }[], contextLosses: 0, peakGpuBytes: 0, uploads: 0, firstUpload: 0, firstRender: 0, maxUploadBytes: 0, framebufferReadbacks: 0, framebufferBytesRead: 0, snapshotAllocations: 0, pixelQueries: 0 };
   const wrap = (name: string, observe: (gl: WebGL2RenderingContext, args: any[], result: any) => void) => {
     const proto = WebGL2RenderingContext.prototype as any;
     const original = proto[name];
@@ -20,7 +22,17 @@ export function installProbe() {
       return result;
     };
   };
-  window.addEventListener('webglcontextlost', () => { metrics.contextLosses++; }, true);
+  // Canvas dimension attributes reset the buffer, even at the same numeric size.
+  // Flush records synchronously before capture/query so callbacks cannot discard
+  // a newer draw. MutationObserver's node list is weak (DOM Standard §4.3.1).
+  const invalidate = (records: MutationRecord[]) => {
+    for (const record of records) snapshots.delete(record.target as HTMLCanvasElement);
+  };
+  const dimensions = capturePixels ? new MutationObserver(invalidate) : null;
+  window.addEventListener('webglcontextlost', (event) => {
+    metrics.contextLosses++;
+    if (event.target instanceof HTMLCanvasElement) snapshots.delete(event.target);
+  }, true);
   wrap('getError', (_gl, _args, result) => { if (result) metrics.errors.push({ code: result, stack: new Error().stack }); });
   wrap('createTexture', (_gl, _args, texture) => {
     textures.set(texture, 0); metrics.createdTextures++;
@@ -60,12 +72,21 @@ export function installProbe() {
     if (gl.getParameter(gl.FRAMEBUFFER_BINDING)) return;
     const canvas = gl.canvas as HTMLCanvasElement;
     if (metrics.uploads && canvas.closest('.matrix-scroll')) metrics.firstRender ||= performance.now();
-    if (!(window as any).__acceptance.capture) return;
+    if (!capturePixels) return;
+    dimensions!.observe(canvas, { attributes: true, attributeFilter: ['width', 'height'] });
+    invalidate(dimensions!.takeRecords());
     const width = gl.drawingBufferWidth, height = gl.drawingBufferHeight;
-    const bytes = new Uint8Array(width * height * 4);
+    const previous = snapshots.get(canvas);
+    snapshots.delete(canvas);
+    if (!width || !height || gl.isContextLost()) return;
+    // At most one retained readback per live canvas; reuse it at unchanged dimensions.
+    const reuse = previous?.width === width && previous.height === height;
+    const bytes = reuse ? previous.bytes : new Uint8Array(width * height * 4);
+    if (!reuse) metrics.snapshotAllocations++;
     gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
-    snapshots.set(canvas, { width, height, bytes });
-    if (metrics.uploads && canvas.closest('.matrix-scroll')) metrics.firstRender ||= performance.now();
+    metrics.framebufferReadbacks++;
+    metrics.framebufferBytesRead += bytes.byteLength;
+    snapshots.set(canvas, { width, height, dpr: devicePixelRatio, bytes });
   });
   for (const name of ['Float32Array', 'Uint32Array'] as const) {
     const original = window[name];
@@ -89,17 +110,28 @@ export function installProbe() {
     return reader;
   };
   (window as any).__acceptance = {
-    capture: true,
     captureScalars: false,
     scalarValues, countValues, captureCounts: false,
     transfer: (selector = '.matrix-scroll canvas') => transfers.get(document.querySelector(selector) as HTMLCanvasElement),
-    metrics: () => ({ ...metrics, textures: textures.size,
+    metrics: () => ({ ...metrics, capturePixels, textures: textures.size,
       gpuBytes: [...textures.values()].reduce((a, b) => a + b, 0),
       arrays: arrays.flatMap((ref) => { const a = ref.deref(); return a ? [a.byteLength] : []; }),
     }),
     pixel: (selector: string, x: number, y: number) => {
-      const canvas = document.querySelector(selector) as HTMLCanvasElement;
-      const snapshot = snapshots.get(canvas)!;
+      if (!capturePixels) throw new Error('Pixel capture is disabled; declare capturePixels: true for this test');
+      invalidate(dimensions!.takeRecords());
+      const canvas = document.querySelector(selector);
+      if (!(canvas instanceof HTMLCanvasElement)) throw new Error(`Pixel evidence requires a canvas: ${selector}`);
+      const snapshot = snapshots.get(canvas);
+      if (!snapshot) throw new Error(`Missing pixel snapshot: ${selector}`);
+      if (snapshot.width !== canvas.width || snapshot.height !== canvas.height ||
+          snapshot.dpr !== devicePixelRatio || snapshot.bytes.length !== snapshot.width * snapshot.height * 4) {
+        throw new Error(`Invalid pixel snapshot dimensions/DPR: ${selector}; redraw before querying`);
+      }
+      if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= snapshot.width || y >= snapshot.height) {
+        throw new Error(`Pixel coordinates ${x}:${y} outside ${snapshot.width}×${snapshot.height}: ${selector}`);
+      }
+      metrics.pixelQueries++;
       const offset = ((snapshot.height - 1 - y) * snapshot.width + x) * 4;
       return [...snapshot.bytes.slice(offset, offset + 4)];
     },

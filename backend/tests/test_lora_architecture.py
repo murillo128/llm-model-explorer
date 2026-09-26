@@ -18,6 +18,7 @@ from llm_model_explorer.architecture_analysis import (
     register_dense_descriptions,
 )
 from llm_model_explorer.architecture_analysis import records as r
+from llm_model_explorer.architecture_analysis.validation import GraphError, validate_graph
 from llm_model_explorer.models import ModelCatalogue
 from llm_model_explorer.tensor_source import ModelSource, PeftLoraComposition, PeftLoraTarget
 
@@ -378,3 +379,37 @@ def test_lora_metadata_types_are_explicit_and_path_free(tmp_path: Path) -> None:
     assert isinstance(composition, PeftLoraComposition)
     assert all(isinstance(target, PeftLoraTarget) for target in composition.targets)
     assert all("/" not in target.a_tensor_name for target in composition.targets)
+
+
+def test_published_lora_factor_storage_geometry_is_rejected_by_semantic_authorities(
+    tmp_path: Path,
+) -> None:
+    _, source = make_smollm2_lora(tmp_path)
+    inputs, graph = analyze(source)
+    damaged = graph.model_copy(deep=True)
+    factor = next(
+        parameter
+        for parameter in damaged.parameters
+        if parameter.storage and parameter.storage[0].role == "adapter_factor"
+    )
+    factor.storage[0].shape[0] = 1
+    with pytest.raises(GraphError, match="Unverified physical storage descriptor"):
+        validate_graph(damaged, inputs.bindings)
+    with pytest.raises(ValueError):
+        validate_api_architecture(
+            {
+                "status": "available",
+                "model_id": source.model_id,
+                "diagnostics": [],
+                "graph": damaged.document(),
+            },
+            {
+                "session": {"id": "fixture-session", "model_id": source.model_id},
+                "inventory": {
+                    "tensors": [tensor.model_dump(mode="json") for tensor in source.tensors()],
+                    "coverage": "complete",
+                    "diagnostics": [],
+                },
+                "tokenizer_available": False,
+            },
+        )

@@ -18,6 +18,16 @@ The detailed behavior of these explorers lives in their dedicated specifications
 
 Future work will extend the same architecture to execution of transformer layers, attention and matrix/vector operations, plus activations, token generation, KV cache, sampling and other intermediate inference state. Execution remains UI-driven: even a continuous Play mode is conceptually a sequence of explicit steps requested by the UI rather than an autonomous backend process.
 
+## Model-owned architecture definitions
+
+A local checkpoint can include an optional `architecture.json` to describe its
+own static graph without an Explorer family adapter. See the
+[format and trust boundary](docs/spec/backend/model-owned-architecture.md) and
+[worked example](examples/model-owned-architecture/README.md). The definition is
+validated against the pinned inventory and marked as model-supplied, not verified
+against `forward()`. Invalid definitions never silently fall back; absent JSON
+preserves the built-in descriptions. Checkpoint Python is never executed.
+
 ## System architecture
 
 The **backend** is Python with FastAPI/Starlette for HTTP and PyTorch for tensor computation. CUDA is the optimized path when configured and available; CPU remains supported with the same logical API behavior. Local Hugging Face models are discovered below a configured model root, opened lazily, and treated as read-only.

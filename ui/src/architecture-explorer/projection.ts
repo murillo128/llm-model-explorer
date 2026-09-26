@@ -2,6 +2,8 @@ import type { components } from '../api/generated/types';
 import type { Graph, GraphNode } from './graph';
 import { deriveMlpGroups } from './derived-groups';
 import { componentScope } from './scope';
+import { projectInterfaces } from './interface-projection';
+import type { TemplatePortTarget } from './interfaces';
 
 export type Endpoint = components['schemas']['ArchitectureEdge']['source'];
 type SourceEdge = Graph['edges'][number];
@@ -10,11 +12,15 @@ export interface ProjectedPort {
   id: string; label: string; direction: 'input' | 'output'; shape: SourcePort['shape'];
   /** Exact source endpoints represented by this presentation alias. */
   endpoints: Endpoint[];
+  interfaces?: string[];
+  interfaceLabel?: string;
+  templatePort?: TemplatePortTarget;
 }
 export interface ProjectedNode {
   id: string; parentId?: string; kind: GraphNode['kind']; label: string;
   sourceIds: string[]; record?: GraphNode; ports: ProjectedPort[]; expanded: boolean;
-  presentation?: 'repetition' | 'range' | 'mlp' | 'external'; repetitionId?: string;
+  presentation?: 'repetition' | 'range' | 'mlp' | 'external' | 'model'; repetitionId?: string;
+  componentCount?: number;
   instances?: Graph['repetitions'][number]['instances']; summary?: string;
 }
 export interface ProjectedEdge {
@@ -34,12 +40,13 @@ export interface ProjectionOptions {
   stateScope?: string | undefined;
   /** Layout-only label visibility; it never changes source projection semantics. */
   dimensions?: boolean;
+  modelCollapsed?: boolean;
 }
 
 /** Shape labels change route geometry, but not which source records are shown. */
 export function sameProjectionOptions(a: ProjectionOptions, b: ProjectionOptions): boolean {
   if (a === b) return true;
-  if (a.scope !== b.scope || a.exhaustive !== b.exhaustive || a.deriveMlp !== b.deriveMlp ||
+  if (a.modelCollapsed !== b.modelCollapsed || a.scope !== b.scope || a.exhaustive !== b.exhaustive || a.deriveMlp !== b.deriveMlp ||
     a.showUnused !== b.showUnused || a.showContext !== b.showContext || a.stateScope !== b.stateScope ||
     a.expanded.length !== b.expanded.length || !a.expanded.every((id, index) => id === b.expanded[index])) return false;
   const first = a.repetitions ?? {}, second = b.repetitions ?? {};
@@ -52,6 +59,8 @@ export interface Projection {
   /** Every omitted source edge has an explicit reason, for inspection/tests. */
   hiddenEdgeIds: string[]; filteredEdgeIds: string[];
   unusedInputs: Endpoint[];
+  boundaryPaths?: SourceEdge[][];
+  notices?: string[];
   scope?: { id: string; nodeIds: string[]; excludedNodeIds: string[]; excludedEdgeIds: string[] };
 }
 export const endpointKey = (e: Endpoint): string => JSON.stringify([e.node_id, e.port_id]);
@@ -67,6 +76,10 @@ export function variantSummary(instances: Graph['repetitions'][number]['instance
  * remain untouched. Only group interfaces are transparent; computations stop
  * traversal, even when two operation ports have the same shape or label. */
 export function projectGraph(graph: Graph, options: ProjectionOptions): Projection {
+  return projectInterfaces(graph, projectSourceGraph(graph, options), options);
+}
+
+function projectSourceGraph(graph: Graph, options: ProjectionOptions): Projection {
   const records = new Map(graph.nodes.map((n) => [n.id, n]));
   const scope = options.scope ? componentScope(graph, options.scope) : undefined;
   // Stop at the first external endpoint. In particular, an external bypass or
@@ -142,7 +155,7 @@ export function projectGraph(graph: Graph, options: ProjectionOptions): Projecti
     }
     if (mlp && parentId !== mlp.id) return;
     const n: ProjectedNode = { id, ...(parentId ? { parentId } : {}), kind: record.kind, label: record.label,
-      sourceIds: [id], record, ports: [], expanded: record.kind === 'group' && (exhaustive || expanded.has(id)) };
+      sourceIds: [id], record, ports: [], expanded: record.kind === 'group' && record.children.length > 0 && (exhaustive || expanded.has(id)) };
     add(n); owners.set(id, n);
     if (record.kind === 'group') {
       if (n.expanded) for (const child of record.children) visit(child, id);
@@ -297,7 +310,18 @@ export function projectGraph(graph: Graph, options: ProjectionOptions): Projecti
 /** Exact visible endpoints, including genuine fan-out; never traverse through
  * a computational operation during hover/focus. */
 export function connectionSet(projection: Projection, target: { edgeId: string } | { port: Endpoint }): string[] {
-  if ('edgeId' in target) return projection.edges.filter((e) => e.id === target.edgeId).map((e) => e.id);
-  const key = endpointKey(target.port);
-  return projection.edges.filter((e) => endpointKey(e.source) === key || endpointKey(e.target) === key).map((e) => e.id);
+  const nodes = new Map(projection.nodes.map((n) => [n.id, n]));
+  const result = new Set<string>();
+  const initial = projection.edges.filter((e) => 'edgeId' in target ? e.id === target.edgeId :
+    endpointKey(e.source) === endpointKey(target.port) || endpointKey(e.target) === endpointKey(target.port));
+  const walk = (edge: ProjectedEdge, direction: 'input' | 'output', seen = new Set<string>()) => {
+    if (seen.has(edge.id)) return;
+    seen.add(edge.id); result.add(edge.id);
+    const endpoint = direction === 'input' ? edge.source : edge.target;
+    const node = nodes.get(endpoint.node_id);
+    if (!node?.expanded || node.kind !== 'group') return;
+    for (const next of projection.edges) if (endpointKey(direction === 'input' ? next.target : next.source) === endpointKey(endpoint)) walk(next, direction, seen);
+  };
+  for (const edge of initial) { walk(edge, 'input'); walk(edge, 'output'); }
+  return projection.edges.filter((e) => result.has(e.id)).map((e) => e.id);
 }

@@ -8,6 +8,9 @@ import type { RuntimeConfig } from './runtime-config';
 import { uuidPattern, validateResponse, validateSchema } from './validation';
 import type { Metadata } from './validation';
 
+export type RequestActivity = { id: symbol; phase: 'start' | 'response' | 'end'; failure?: ApiFailure | undefined; quiet?: boolean };
+export type ActivityObserver = (activity: RequestActivity) => void;
+
 export const streamMediaType = 'application/vnd.llm-model-explorer.stream';
 type Schemas = components['schemas'];
 export interface StreamOptions extends DecoderCallbacks {
@@ -65,8 +68,27 @@ async function checkStatus(response: Response, expected: number, limit?: number)
 /** Construct once from loadRuntimeConfig's result. No React or same-origin dependency. */
 export class ApiClient {
   private readonly base: string;
-  constructor(config: RuntimeConfig, private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis)) {
+  constructor(config: RuntimeConfig, private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis), private readonly observer?: ActivityObserver) {
     this.base = config.backendBaseUrl.replace(/\/+$/, '');
+  }
+  /** A consumer-scoped observer; transport and operation ownership remain unchanged. */
+  observe(observer: ActivityObserver) {
+    return new ApiClient({ backendBaseUrl: this.base }, this.fetcher, observer);
+  }
+  private activity(signal?: AbortSignal, quiet = false) {
+    const id = Symbol('api-request');
+    let ended = false;
+    const abort = () => emit('end');
+    const emit = (phase: RequestActivity['phase'], failure?: ApiFailure) => {
+      if (ended) return;
+      if (phase === 'end') {
+        ended = true;
+        signal?.removeEventListener('abort', abort);
+        this.observer?.({ id, phase, failure: signal?.aborted ? undefined : failure, quiet });
+      } else if (!signal?.aborted) this.observer?.({ id, phase });
+    };
+    signal?.addEventListener('abort', abort, { once: true });
+    return emit;
   }
   private sessionPath(id: string): string { return `/sessions/${encodeURIComponent(id)}`; }
   private tensorPath(session: string, tensor: string): string {
@@ -74,19 +96,26 @@ export class ApiClient {
   }
   private async request<T>(path: string, method: string, status: number, schema?: Parameters<typeof validateResponse>[0], body?: unknown, signal?: AbortSignal): Promise<T> {
     let response: Response | undefined;
+    const activity = this.activity(signal, method === 'DELETE');
+    activity('start');
     try {
       response = await this.fetcher(this.base + path, {
         method, cache: 'no-store', ...(signal ? { signal } : {}),
         headers: { Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
+      activity('response');
       await checkStatus(response, status, schema === 'getArchitecture' ? architectureByteLimit : undefined);
       if (!schema) return undefined as T;
       const result = await readJson(response, schema === 'getArchitecture' ? architectureByteLimit : undefined);
       validateResponse(schema, result);
       return result as T;
-    } catch (error) { throw transportFailure(error, signal); }
-    finally { if (response?.body && !response.body.locked) await response.body.cancel().catch(() => {}); }
+    } catch (error) {
+      const failure = transportFailure(error, signal);
+      activity('end', failure);
+      throw failure;
+    }
+    finally { activity('end'); if (response?.body && !response.body.locked) await response.body.cancel().catch(() => {}); }
   }
   listModels(signal?: AbortSignal) {
     return this.request<operations['listModels']['responses'][200]['content']['application/json']>('/models', 'GET', 200, 'listModels', undefined, signal);
@@ -148,6 +177,8 @@ export class ApiClient {
     const abort = () => controller.abort();
     options.signal?.addEventListener('abort', abort, { once: true });
     if (options.signal?.aborted) abort();
+    const activity = this.activity(controller.signal);
+    activity('start');
     const done = (async (): Promise<StreamOutcome> => {
       let response: Response | undefined;
       let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
@@ -156,6 +187,7 @@ export class ApiClient {
           headers: { Accept: streamMediaType, ...(body ? { 'Content-Type': 'application/json' } : {}) },
           ...(body ? { method: 'POST', body: JSON.stringify(body) } : {}),
         });
+        activity('response');
         await checkStatus(response, 200);
         const id = response.headers.get('X-Operation-Id');
         requireProtocol(id && uuidPattern.test(id), 'Missing or invalid X-Operation-Id (check CORS exposure)');
@@ -180,8 +212,11 @@ export class ApiClient {
         }
       } catch (error) {
         if (controller.signal.aborted) return { kind: 'cancelled' };
-        throw transportFailure(error);
+        const failure = transportFailure(error);
+        activity('end', failure);
+        throw failure;
       } finally {
+        activity('end');
         settled = true;
         options.signal?.removeEventListener('abort', abort);
         if (reader) {
