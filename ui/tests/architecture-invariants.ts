@@ -127,7 +127,23 @@ export function assertTraceability(graph: Graph, projected: Projection, exhausti
   for (const edge of projected.edges) {
     const source = nodes.get(edge.source.node_id)?.ports.find((port) => port.id === edge.source.port_id);
     const target = nodes.get(edge.target.node_id)?.ports.find((port) => port.id === edge.target.port_id);
-    assert.equal(source?.direction, 'output'); assert.equal(target?.direction, 'input');
+    const conventionalDirection = source?.direction === 'output' && target?.direction === 'input';
+    const groupBoundaryForwarding = edge.paths.some((path) => {
+      const first = path[0]!, last = path.at(-1)!;
+      const firstSource = sourceNodes.get(first.source.node_id)!;
+      const firstTarget = sourceNodes.get(first.target.node_id)!;
+      const lastSource = sourceNodes.get(last.source.node_id)!;
+      const lastTarget = sourceNodes.get(last.target.node_id)!;
+      const firstSourcePort = firstSource.ports.find((port) => port.id === first.source.port_id)!;
+      const firstTargetPort = firstTarget.ports.find((port) => port.id === first.target.port_id)!;
+      const lastSourcePort = lastSource.ports.find((port) => port.id === last.source.port_id)!;
+      const lastTargetPort = lastTarget.ports.find((port) => port.id === last.target.port_id)!;
+      return (firstSource.kind === 'group' && firstTarget.parent_id === firstSource.id &&
+        firstSourcePort.direction === 'input' && firstTargetPort.direction === 'input') ||
+        (lastTarget.kind === 'group' && lastSource.parent_id === lastTarget.id &&
+          lastSourcePort.direction === 'output' && lastTargetPort.direction === 'output');
+    });
+    assert(conventionalDirection || groupBoundaryForwarding, 'Invalid projected edge directions');
     const originals = new Set<string>();
     assert(edge.paths.length > 0);
     for (const path of edge.paths) {

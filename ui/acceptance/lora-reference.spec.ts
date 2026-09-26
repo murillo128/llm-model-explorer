@@ -4,7 +4,7 @@ import { findComponent } from '../tests/architecture-controls';
 import { installProbe } from './probe';
 import { installArchitectureProbe } from './architecture-probe';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
@@ -35,6 +35,35 @@ let serviceLog = '';
 
 test.use({ headless: true });
 
+function isolatedCompositionRoot(sourceRoot: string, destination: string) {
+  mkdirSync(destination, { recursive: true });
+  const models = readdirSync(sourceRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => join(sourceRoot, entry.name));
+  const native = models.find((directory) => {
+    const config = JSON.parse(readFileSync(join(directory, 'config.json'), 'utf8'));
+    return config.model_type === 'llama' && !config.quantization_config &&
+      statSync(join(directory, 'model.safetensors')).isFile();
+  });
+  const quantized = models.find((directory) => {
+    const config = JSON.parse(readFileSync(join(directory, 'config.json'), 'utf8'));
+    return config.model_type === 'llama' && config.quantization_config?.quant_method === 'bitsandbytes';
+  });
+  const adapter = models.find((directory) => {
+    try { return statSync(join(directory, 'adapter_config.json')).isFile(); } catch { return false; }
+  });
+  if (!native || !quantized || !adapter) throw new Error('Pinned SmolLM2 base/adapter set is incomplete');
+  for (const source of [native, quantized, adapter]) {
+    const target = join(destination, source.split('/').at(-1)!);
+    mkdirSync(target);
+    for (const name of readdirSync(source)) {
+      const original = join(source, name);
+      if (statSync(original).isFile()) linkSync(original, join(target, name));
+    }
+  }
+  return destination;
+}
+
 function sourceKey(node: Graph['nodes'][number]) {
   return node.provenance.find((record) => record.rule === sourceRule)?.source ?? node.label;
 }
@@ -53,14 +82,15 @@ function hasEdge(graph: Graph, from: string, sourcePort: string, to: string, tar
 }
 
 test.beforeEach(async ({ page }, info) => {
-  const modelRoot = process.env.LMEX_LORA_REFERENCE_MODEL_ROOT;
-  test.skip(!modelRoot, 'LMEX_LORA_REFERENCE_MODEL_ROOT not supplied; local SmolLM2 LoRA pair not tested');
+  const sourceRoot = process.env.LMEX_LORA_REFERENCE_MODEL_ROOT;
+  test.skip(!sourceRoot, 'LMEX_LORA_REFERENCE_MODEL_ROOT not supplied; local SmolLM2 LoRA pair not tested');
   info.setTimeout(600_000);
   serviceLog = '';
   const ports = acceptancePorts(info.project.name);
   backend = `http://127.0.0.1:${ports.backend}`;
   const origin = `http://127.0.0.1:${ports.ui}`;
   cacheRoot = mkdtempSync(join(tmpdir(), 'lmex-smollm2-lora-ui-'));
+  const modelRoot = isolatedCompositionRoot(sourceRoot!, join(cacheRoot, 'models'));
   service = spawn(python, [
     '-m', 'llm_model_explorer', '--model-root', modelRoot!,
     '--cache-dir', join(cacheRoot, 'cache'), '--port', String(ports.backend), '--cors-origin', origin,
@@ -106,8 +136,8 @@ test('SmolLM2 LoRA reference graph navigates and inspects actual A/B weights', a
   const composites = catalogue.models.filter((model) =>
     model.id.includes('+peft-lora:') && model.id.endsWith(':smollm2-135m-smoltalk-lora'),
   );
-  expect(composites).toHaveLength(1);
-  const modelId = composites[0]!.id;
+  expect(composites).toHaveLength(2);
+  const modelId = composites.find((model) => model.id.startsWith('SmolLM2-135M+'))!.id;
   const architectureResponse = page.waitForResponse((response) =>
     response.url().startsWith(backend) && response.url().endsWith('/architecture') &&
     response.request().method() === 'GET' && response.status() === 200,
@@ -176,8 +206,9 @@ test('SmolLM2 LoRA reference graph navigates and inspects actual A/B weights', a
     await card.locator('.architecture-node-label').dblclick();
     await expect(page.getByLabel('Inspect parameter', { exact: true })).toBeVisible();
     const tensorPath = `/tensors/${parameter.inspection.tensor_id}/data`;
-    const tensorResponse = page.waitForResponse((candidate) =>
-      candidate.url().includes(tensorPath) && candidate.request().method() === 'GET',
+    const tensorResponse = page.waitForResponse(
+      (candidate) => candidate.url().includes(tensorPath) && candidate.request().method() === 'GET',
+      { timeout: 15_000 },
     );
     await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
     expect((await tensorResponse).status()).toBe(200);
@@ -206,6 +237,82 @@ test('SmolLM2 LoRA reference graph navigates and inspects actual A/B weights', a
       tensorRequests: requests.filter((path) => path.includes('/tensors/') && path.endsWith('/data')),
       viewport: page.viewportSize(),
       browser: page.context().browser()!.version(),
+    }),
+    contentType: 'application/json',
+  });
+});
+
+test('SmolLM2 QLoRA reference graph selects NF4 base and actual adapter weights', async ({ page }, info) => {
+  const response = await fetch(`${backend}/models`);
+  expect(response.ok).toBe(true);
+  const catalogue = await response.json() as { models: { id: string }[]; diagnostics: unknown[] };
+  expect(catalogue.diagnostics).toEqual([]);
+  const modelId = catalogue.models.find((model) =>
+    model.id.startsWith('HuggingFaceTB/SmolLM2-135M@bnb-nf4-dq+') &&
+    model.id.endsWith(`:${'smollm2-135m-smoltalk-lora'}`),
+  )!.id;
+  const architectureResponse = page.waitForResponse((candidate) =>
+    candidate.url().startsWith(backend) && candidate.url().endsWith('/architecture') &&
+    candidate.request().method() === 'GET' && candidate.status() === 200,
+  );
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(modelId);
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  const body = await (await architectureResponse).json() as { status: string; graph: Graph };
+  expect(body.status).toBe('available');
+  const graph = body.graph;
+  expect(graph.coverage).toBe('complete');
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute(
+    'data-graph-id', graph.graph_id,
+  );
+  const baseWeight = graph.parameters.find((parameter) =>
+    parameter.name === 'model.layers.0.self_attn.q_proj.weight',
+  )!;
+  expect(baseWeight.binding).toBe('quantized');
+  expect(baseWeight.inspection.status).toBe('available');
+  const factors = graph.parameters.filter((parameter) =>
+    targetPattern.test(parameter.name),
+  );
+  expect(factors).toHaveLength(120);
+
+  const nodes = new Map(graph.nodes.map((node) => [sourceKey(node), node]));
+  const baseNode = nodes.get('model.layers.0.self_attn.q_proj')!;
+  await findComponent(page, baseNode.id);
+  const baseCard = page.locator(`.react-flow__node[data-id=${JSON.stringify(baseNode.id)}]`);
+  await baseCard.locator('.architecture-node-label').dblclick();
+  await expect(page.getByLabel('Inspect parameter', { exact: true })).toBeVisible();
+  const basePath = `/tensors/${baseWeight.inspection.status === 'available' ? baseWeight.inspection.tensor_id : ''}/data`;
+  const baseStream = page.waitForResponse((candidate) => candidate.url().includes(basePath) && candidate.status() === 200);
+  await page.getByLabel('Inspect parameter', { exact: true }).selectOption(baseWeight.id);
+  await baseStream;
+  await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  const factor = graph.parameters.find((parameter) =>
+    parameter.name.endsWith('.model.layers.0.self_attn.q_proj.lora_A.weight'),
+  )!;
+  expect(factor.binding).toBe('native');
+  expect(factor.inspection.status).toBe('available');
+  if (factor.inspection.status !== 'available') throw new Error('Expected an inspectable QLoRA factor');
+  const factorNode = graph.nodes.find((node) => node.parameter_ids.includes(factor.id))!;
+  await findComponent(page, factorNode.id);
+  await page.locator(`.react-flow__node[data-id=${JSON.stringify(factorNode.id)}] .architecture-node-label`).dblclick();
+  await expect(page.getByLabel('Inspect parameter', { exact: true })).toBeVisible();
+  const factorPath = `/tensors/${factor.inspection.tensor_id}/data`;
+  const factorStream = page.waitForResponse((candidate) => candidate.url().includes(factorPath) && candidate.status() === 200);
+  await page.getByLabel('Inspect parameter', { exact: true }).selectOption(factor.id);
+  await factorStream;
+  await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
+  await info.attach('qlora-browser-summary', {
+    body: JSON.stringify({
+      modelId,
+      coverage: graph.coverage,
+      graphNodes: graph.nodes.length,
+      graphEdges: graph.edges.length,
+      targetBranches: 60,
+      inspectedQuantizedBase: baseWeight.name,
+      inspectedAdapterFactor: factor.name,
+      browser: page.context().browser()!.version(),
+      viewport: page.viewportSize(),
     }),
     contentType: 'application/json',
   });

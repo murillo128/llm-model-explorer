@@ -20,6 +20,15 @@ const state = (page: Page) => page.evaluate(() => {
     resources: f.resources(), uploads: f.metrics.uploads, subscriptions: f.subscriptions.length,
     windowScroll: [scrollX, scrollY] };
 });
+async function waitForCameraToMatchNativeScroll(page: Page) {
+  await expect.poll(() => page.evaluate(() => {
+    const v = window.matrixFixture.viewports.at(-1)!, view = v.renderer.view!;
+    const origin = (scroll: number, scale: number, size: number, cells: number) =>
+      Math.max(0, Math.min(cells * scale - size, Math.round(scroll * devicePixelRatio))) / scale;
+    return view.x === origin(v.host.scrollLeft, view.scaleX, view.width, v.renderer.geometry.columns) &&
+      view.y === origin(v.host.scrollTop, view.scaleY, view.height, v.renderer.geometry.rows);
+  })).toBe(true);
+}
 
 for (const dpr of [1, 2]) test.describe(`overlay scrolling DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
@@ -35,12 +44,14 @@ for (const dpr of [1, 2]) test.describe(`overlay scrolling DPR ${dpr}`, () => {
       }, { x, y });
       await expect(page.getByRole('scrollbar')).toHaveCount(Number(x) + Number(y));
       await page.mouse.move(0, 0);
+      await waitForCameraToMatchNativeScroll(page);
       const before = await state(page);
       expect(before.chrome).toEqual([0, 0]);
       for (const name of [horizontal, vertical]) {
         const bar = page.getByRole('scrollbar', { name });
         if (!await bar.count()) continue;
         await bar.focus();
+        await waitForCameraToMatchNativeScroll(page);
         const now = await state(page);
         expect(now).toEqual(before);
         await bar.press('End');

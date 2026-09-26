@@ -151,7 +151,7 @@ def test_independently_reviewed_graph_cases(case: dict[str, Any]) -> None:
         response["graph"]["parameters"][1]["storage"] = copy.deepcopy(
             response["graph"]["parameters"][0]["storage"]
         )
-    if case["name"] in ("zero-product", "bnb-nf4-dq-complete-logical-inspection"):
+    if case["name"] == "zero-product":
         # These independent API cases omit the backend's physical descriptor map.
         binding = replace(
             binding,
@@ -161,6 +161,16 @@ def test_independently_reviewed_graph_cases(case: dict[str, Any]) -> None:
                 for s in p["storage"]
             },
         )
+    if case.get("physical_storage"):
+        # API cases carry an independent physical inventory for alternate packed groups.
+        physical = dict(binding.physical)
+        physical.update(
+            {
+                storage["name"]: r.ArchitectureStorage.model_validate(storage)
+                for storage in case["physical_storage"]
+            }
+        )
+        binding = replace(binding, physical=physical)
     if case["valid"]:
         result = parse_graph(response["graph"], binding)
         assert json.loads(serialize_graph(result)) == response["graph"]

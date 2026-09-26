@@ -157,6 +157,15 @@ def validate_packed_storage(parameter, geometry, tensor=None):
         expected = {'weight': ('U8', [output, inputs // 2]),
                     'weight_scale': ('F8_E4M3', [output, inputs // 16]),
                     'weight_scale_2': ('F32', []), 'input_scale': ('F32', [])}
+    elif representation == 'compressed-tensors-w4a16-int4':
+        dtype = 'I32'
+        scales = next((record for record in parameter['storage']
+                       if record['name'] == prefix + '.weight_scale'), None)
+        require(scales is not None and scales['dtype'] in ('F16', 'BF16'),
+                'Compressed INT4 scale dtype')
+        expected = {'weight_packed': ('I32', [output, inputs // 8]),
+                    'weight_scale': (scales['dtype'], [output, inputs // 32]),
+                    'weight_shape': ('I64', [2])}
     else:
         raise ValueError('unsupported packed representation')
     require(tensor is None or tensor['storage_dtype'] == dtype, 'packed inventory dtype')
@@ -165,7 +174,7 @@ def validate_packed_storage(parameter, geometry, tensor=None):
             {prefix + '.' + name: record for name, record in expected.items()}, 'packed storage group')
 
 
-def validate_architecture(value, context=None):
+def validate_architecture(value, context=None, *, validate_storage=True):
     """Run after generated JSON Schema validation. Context pins model/inventory/tokenizer."""
     serialized_size(value)
     if context is not None:
@@ -328,7 +337,7 @@ def validate_architecture(value, context=None):
                                  s.get('role') == 'adapter_factor') and
                                 s['dtype'] == tensor['storage_dtype'] and s['shape'] == tensor['shape']
                                 for s in native['storage']), 'inventory storage identity')
-            if native['binding'] == 'quantized':
+            if native['binding'] == 'quantized' and validate_storage:
                 validate_packed_storage(native, geometry, tensor)
 
     validate_templates(graph)
@@ -594,7 +603,9 @@ def compact_cases(inventory):
         storage_dtype='I32', storage_format='compressed-tensors-w4a16-int4', logical_dtype='float32')]
     cases.append(dict(name='compact-experts-compressed-tensors-storage', base='compact_response',
         edits=[edit('parameters/0', compressed_parameter)], valid=True, schema_valid=True,
-        context_edits=[dict(path=['inventory', 'tensors'], value=compact_inventory)]))
+        context_edits=[dict(path=['inventory', 'tensors'], value=compact_inventory)],
+        physical_storage=[dict(name=s['name'], dtype=s['dtype'], shape=s['shape'])
+                          for s in compressed_parameter['storage']]))
     return response, cases
 
 
@@ -663,8 +674,12 @@ def fixtures():
     context = dict(session=dict(id='12345678-1234-4234-8234-123456789abc', model_id=response['model_id']),
                    tokenizer_available=True, inventory=inventory)
     cases = []
-    def case(name, edits=(), valid=False, schema_valid=True, context_edits=()):
-        cases.append(dict(name=name, valid=valid, schema_valid=schema_valid, edits=list(edits), context_edits=list(context_edits)))
+    def case(name, edits=(), valid=False, schema_valid=True, context_edits=(), physical_storage=()):
+        result = dict(name=name, valid=valid, schema_valid=schema_valid,
+                      edits=list(edits), context_edits=list(context_edits))
+        if physical_storage:
+            result['physical_storage'] = list(physical_storage)
+        cases.append(result)
     def set_(path, value): return dict(path=path.split('/'), value=value)
     def delete(path): return dict(path=path.split('/'), delete=True)
     case('complete-native-alias-fused-quantized-rank-limited-symbolic', valid=True)
@@ -810,35 +825,58 @@ def fixtures():
             storage=[dict(name=compressed_prefix + '.weight_packed', dtype='I32', shape=[64,12], role='packed_data'),
                      dict(name=compressed_prefix + '.weight_scale', dtype=scale_dtype, shape=[64,3], role='scales'),
                      dict(name=compressed_prefix + '.weight_shape', dtype='I64', shape=[2], role='logical_shape')])
-    for label, parameter, dtype, representation in [
-        ('gptq', packed, 'I32', 'gptq-int4'), ('nvfp4', nvfp4, 'U8', 'nvfp4'),
-        ('compressed-tensors-bf16', compressed('BF16'), 'I32', 'compressed-tensors-w4a16-int4'),
-        ('compressed-tensors-f16', compressed('F16'), 'I32', 'compressed-tensors-w4a16-int4')]:
+    bnb_nf4 = dict(id='quantized', name='packed.weight', logical_shape=[dim(8), dim(128)],
+        binding='quantized', inspection=dict(status='available', tensor_id='tensor_packed'), provenance=[],
+        storage=[dict(name='packed.weight', dtype='U8', shape=[512,1]),
+                 dict(name='packed.weight.absmax', dtype='U8', shape=[16]),
+                 dict(name='packed.weight.quant_map', dtype='F32', shape=[16]),
+                 dict(name='packed.weight.nested_absmax', dtype='F32', shape=[1]),
+                 dict(name='packed.weight.nested_quant_map', dtype='F32', shape=[256]),
+                 dict(name='packed.weight.quant_state.bitsandbytes__nf4', dtype='U8', shape=[64])])
+    compressed_int4 = dict(id='quantized', name='packed.weight', logical_shape=[dim(8), dim(128)],
+        binding='quantized', inspection=dict(status='available', tensor_id='tensor_packed'), provenance=[],
+        storage=[dict(name='packed.weight_packed', dtype='I32', shape=[8,16]),
+                 dict(name='packed.weight_scale', dtype='F16', shape=[8,4]),
+                 dict(name='packed.weight_shape', dtype='I64', shape=[2])])
+    for label, parameter, dtype, representation, bad_scale_index, bad_scale_dtype in [
+        ('gptq', packed, 'I32', 'gptq-int4', 2, 'F32'),
+        ('nvfp4', nvfp4, 'U8', 'nvfp4', 1, 'F32'),
+        ('bnb-nf4-dq', bnb_nf4, 'U8', 'bnb-nf4-dq', 2, 'F16'),
+        ('compressed-tensors-bf16', compressed('BF16'), 'I32', 'compressed-tensors-w4a16-int4', 1, 'F32'),
+        ('compressed-tensors-f16', compressed('F16'), 'I32', 'compressed-tensors-w4a16-int4', 1, 'F32'),
+        ('compressed-tensors-w4a16-int4', compressed_int4, 'I32',
+         'compressed-tensors-w4a16-int4', 1, 'F32')]:
         dims = [d['value'] for d in parameter['logical_shape']]
         descriptor = dict(id='tensor_packed', name=parameter['name'], path=parameter['name'].split('.'),
             shape=dims, rank=2, numel=product(dims), storage_dtype=dtype,
             storage_format=representation, logical_dtype='float32')
         base_edits = [set_('graph/parameters/2', parameter)]
         base_context = [set_('inventory/tensors', inventory['tensors'] + [descriptor])]
-        case(label+'-complete-logical-inspection', base_edits, True, context_edits=base_context)
+        physical_storage = [dict(name=s['name'], dtype=s['dtype'], shape=s['shape'])
+                            for s in parameter['storage']]
+        case(label+'-complete-logical-inspection', base_edits, True,
+             context_edits=base_context, physical_storage=physical_storage)
         case(label+'-complete-logical-alias', base_edits + [
             set_('graph/parameters/1/alias_of', 'quantized'),
             set_('graph/parameters/1/logical_shape', parameter['logical_shape']),
             set_('graph/parameters/1/storage', []),
             set_('graph/parameters/1/inspection', parameter['inspection'])], True,
-            context_edits=base_context)
+            context_edits=base_context, physical_storage=physical_storage)
         for suffix, changes in [
             ('wrong-primary-geometry', [set_('graph/parameters/2/storage/0/shape', [1,1])]),
             ('wrong-primary-dtype', [set_('graph/parameters/2/storage/0/dtype', 'F32')]),
-            ('wrong-scale-dtype', [set_('graph/parameters/2/storage/'+('2' if label == 'gptq' else '1')+'/dtype', 'F32')]),
+            ('wrong-scale-dtype', [set_('graph/parameters/2/storage/'+str(bad_scale_index)+'/dtype',
+                                        bad_scale_dtype)]),
             ('foreign-companion', [set_('graph/parameters/2/storage/1/name', 'foreign.scale')]),
             ('missing-companion', [set_('graph/parameters/2/storage', parameter['storage'][:-1])]),
-            ('duplicate-companion', [set_('graph/parameters/2/storage/'+str(len(parameter['storage'])-1), parameter['storage'][0])]),
+            ('duplicate-companion', [set_('graph/parameters/2/storage',
+                                           parameter['storage'] + [parameter['storage'][0]])]),
             ('wrong-logical-identity', [set_('graph/parameters/2/name', 'other.weight')]),
             ('auxiliary-logical-identity', [set_('graph/parameters/2/name', 'packed.scales')]),
             ('wrong-actionable-id', [set_('graph/parameters/2/inspection/tensor_id', 'tensor_native')]),
         ]:
-            case(label+'-'+suffix, base_edits + changes, context_edits=base_context)
+            case(label+'-'+suffix, base_edits + changes, context_edits=base_context,
+                 physical_storage=physical_storage)
         for suffix, changes in [
             ('wrong-inventory-format', [set_('inventory/tensors/2/storage_format', 'unknown')]),
             ('missing-inventory-format', [delete('inventory/tensors/2/storage_format')]),
@@ -846,7 +884,8 @@ def fixtures():
             ('wrong-inventory-name', [set_('inventory/tensors/2/name', 'other.weight')]),
             ('wrong-inventory-shape', [set_('inventory/tensors/2/shape', list(reversed(dims)))]),
         ]:
-            case(label+'-'+suffix, base_edits, context_edits=base_context + changes)
+            case(label+'-'+suffix, base_edits, context_edits=base_context + changes,
+                 physical_storage=physical_storage)
         if label == 'compressed-tensors-bf16':
             for suffix, changes, extra_context in [
                 ('swapped-companions', [
@@ -860,7 +899,8 @@ def fixtures():
                     set_('inventory/tensors/2/numel', 64 * 63)]),
             ]:
                 case(label+'-'+suffix, base_edits + changes,
-                     context_edits=base_context + extra_context)
+                     context_edits=base_context + extra_context,
+                     physical_storage=physical_storage)
     # SmolLM2-135M's q_proj is a 576x576 NF4 matrix in the pinned QLoRA reference.
     # The serialized quantization-state bytes are opaque to this contract fixture.
     nf4_elements = 576 * 576
@@ -881,7 +921,10 @@ def fixtures():
         storage_format='bnb-nf4-dq', logical_dtype='float32')
     nf4_base_edits = [set_('graph/parameters/2', nf4)]
     nf4_context = [set_('inventory/tensors', inventory['tensors'] + [nf4_descriptor])]
-    case('bnb-nf4-dq-complete-logical-inspection', nf4_base_edits, True, context_edits=nf4_context)
+    nf4_physical_storage = [dict(name=s['name'], dtype=s['dtype'], shape=s['shape'])
+                            for s in nf4['storage']]
+    case('bnb-nf4-dq-complete-logical-inspection', nf4_base_edits, True,
+         context_edits=nf4_context, physical_storage=nf4_physical_storage)
     template_graph, additional_cases = template_cases()
     cases.extend(additional_cases)
     compact_response, compact_additional = compact_cases(inventory)
