@@ -170,11 +170,11 @@ async function inspectActualMoeWeightAtWidth(
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
   const layoutCountBeforeFind = await canvas.getAttribute('data-layout-count');
   const trigger = await openParameter(page, graph, parameter);
   await expect(canvas).toHaveAttribute('data-layout-count', layoutCountBeforeFind!);
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
   await expect(page.getByRole('dialog')).toContainText(parameter.name);
   const node = graph.nodes.find((item) => item.parameter_ids.includes(parameter.id))!;
   await expect(page.locator(`.react-flow__node[data-id=${JSON.stringify(node.id)}]`)).toBeInViewport();
@@ -847,11 +847,11 @@ for (const reference of [false, true]) for (const family of [
         await page.setViewportSize({ width: 1178, height: 1000 });
         await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
         await expect(canvas).toHaveAttribute('aria-busy', 'false');
-        await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+        await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
         const layoutCountBeforeFind = await canvas.getAttribute('data-layout-count');
         const trigger = await openParameter(page, graph, packed);
         await expect(canvas).toHaveAttribute('data-layout-count', layoutCountBeforeFind!);
-        await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+        await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
         await expect(page.getByRole('dialog')).toContainText(packed.name);
         const node = graph.nodes.find((item) => item.parameter_ids.includes(packed.id))!;
         await expect(page.locator(`.react-flow__node[data-id=${JSON.stringify(node.id)}]`)).toBeInViewport();
@@ -873,8 +873,8 @@ for (const reference of [false, true]) for (const family of [
         });
         await page.keyboard.press('Escape'); await released(page);
         await expect(trigger).toBeFocused();
-        await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
-        expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((n) => n.id));
+        await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
+        expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((n) => n.id));
         expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((e) => e.id));
       }
     }
@@ -911,9 +911,10 @@ test('complete local reference [kimi_linear] issue 178 full expansion and focuse
   expect(graph.coverage).toBe('complete');
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   await graphAction(page, 'Show all operations');
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
-  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((node) => node.id));
   expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
+  assertInterfaceCoverage(graph, projectGraph(graph, { expanded: [], exhaustive: true }));
   await recordGraph(page, info, 'issue-178-kimi-full-graph', graph);
   const parameter = graph.parameters.find((p) => p.binding === 'native' && p.inspection.status === 'available' &&
     p.logical_shape?.length === 2 && p.name.includes('.layers.26.') && p.name.endsWith('.block_sparse_moe.gate.weight'))!;
@@ -929,7 +930,7 @@ test('complete local reference [kimi_linear] issue 178 full expansion and focuse
 
 test('deterministic production [kimi_linear] complete repeated experts remain reachable after Find', async ({ page }, info) => {
   test.setTimeout(300_000);
-  const graph = await selectGraph(page);
+  const graph = expandCompactGraph(await selectGraph(page));
   expect(graph.coverage).toBe('complete');
 
   const experts = graph.parameters.filter((parameter) =>
@@ -939,14 +940,13 @@ test('deterministic production [kimi_linear] complete repeated experts remain re
 
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
-  await page.getByRole('button', { name: 'Find component', exact: true }).click();
-  const ids = await page.getByRole('listbox', { name: 'Components', exact: true })
-    .getByRole('option').evaluateAll((options) => options.map((option) => (option as HTMLElement).dataset.nodeId));
-  expect(ids).toEqual(graph.nodes.map((node) => node.id));
-  await page.keyboard.press('Escape');
   await graphAction(page, 'Show all operations');
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
-  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  const ids = await page.getByRole('tree', { name: 'Model components', exact: true })
+    .locator('[data-node-id]').evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.nodeId));
+  expect(new Set(ids)).toEqual(new Set(componentsOf(graph).map((node) => node.id)));
+  assertInterfaceCoverage(graph, projectGraph(graph, { expanded: [], exhaustive: true }));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((node) => node.id));
   expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
   await recordGraph(page, info, 'kimi-linear-full-graph', graph);
 
@@ -956,8 +956,8 @@ test('deterministic production [kimi_linear] complete repeated experts remain re
   await findComponent(page, target.id);
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
   await expect(canvas).toHaveAttribute('data-layout-count', layoutCount!);
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
-  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((node) => node.id));
   expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
   const card = page.locator(`.react-flow__node[data-id=${JSON.stringify(target.id)}]`);
   await expect(card).toBeInViewport();
