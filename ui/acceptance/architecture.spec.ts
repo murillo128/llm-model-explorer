@@ -34,6 +34,11 @@ const visibleCount = (graph: Graph) => {
 const repo = fileURLToPath(new URL('../../', import.meta.url));
 const diagnosticCases = JSON.parse(readFileSync(join(repo, 'api/fixtures/model-defined-diagnostics.json'), 'utf8')) as { name: string; code: string; message: string }[];
 const python = `${repo}backend/.venv/bin/python`;
+// Automatic DOM snapshots of complete MoE canvases produced a 457 MiB trace
+// and exhausted the reference deadline during explorer restoration. Retain
+// call/network traces; explicit screenshots, graph/memory records and numeric
+// oracles below still cover the complete graph at the required widths.
+test.use({ trace: { mode: 'retain-on-failure', snapshots: false, screenshots: false } });
 let service: ReturnType<typeof spawn>;
 let root: string;
 let backend: string;
