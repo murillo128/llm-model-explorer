@@ -220,12 +220,11 @@ test('exhaustive Find and parameter-resource search reuse valid geometry during 
   await graphPreference(page, 'Show dimensions', true);
   await expect.poll(() => page.evaluate(() => window.isolationProbe.requests.length)).toBe(before.count + 1);
   await expect(panel(page)).toHaveAttribute('aria-busy', 'true');
-  await page.getByRole('button', { name: 'Find component', exact: true }).click();
-  await page.getByRole('combobox', { name: 'Search components', exact: true }).fill('model.layers.3.mlp.gate_proj.weight');
-  const results = page.getByRole('listbox', { name: 'Components', exact: true }).getByRole('option');
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('model.layers.3.mlp.gate_proj.weight');
+  const results = page.getByRole('group', { name: 'Model search results', exact: true }).locator('[data-node-id]');
   await expect(results).toHaveCount(1);
   await expect(results).toHaveAttribute('data-node-id', target);
-  await results.click();
+  await results.locator('[data-browser-name]').click();
   await page.getByRole('button', { name: 'Center selected', exact: true }).click();
   expect(await page.evaluate(() => window.isolationProbe.requests.length)).toBe(before.count + 1);
   await expect(panel(page)).toHaveAttribute('data-source-node-ids', sourceIds!);
