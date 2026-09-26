@@ -119,6 +119,9 @@ for (const target of ['selected', 'connection'] as const) {
   test(`explicit Center ${target} supersedes pending shared-scope initialization`, async ({ page }, info) => {
     await page.goto(`${harness}?fixture=templates`); await ready(page);
     await findComponent(page, 'layer-2.attention.Q'); await ready(page);
+    // Keep the connection within the retained viewport when shared-scope
+    // geometry replaces the overview; selection and the pending camera oracle stay exact.
+    if (target === 'connection') { await graphAction(page, 'Fit view'); await ready(page); }
     const previous = await sample(page);
     await pending(page);
     await page.getByRole('button', { name: 'Explore structure', exact: true }).click();

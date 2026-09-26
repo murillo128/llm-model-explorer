@@ -196,11 +196,11 @@ test('nested expansion and exact hidden selection survive parent controls, explo
   // Keyboard reopening independently preserves the retained camera and hidden selection.
   await card(page, 'layer-3').locator('.architecture-expand').focus();
   await page.keyboard.press('Enter'); await ready(page);
-  await expect(card(page, 'layer-3.attention').locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
   expect((await state(page)).camera).toBe(contracted.camera);
   // Return to the overview explicitly so viewport culling cannot hide the child
   // whose retained selection and subsequent scope/Back behavior we inspect.
   await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
+  await expect(card(page, 'layer-3.attention').locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
   await expect(card(page, 'layer-3.attention.Q').locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
   const restored = await state(page);
   await card(page, 'layer-3.attention').locator('.architecture-navigate').click(); await ready(page);
