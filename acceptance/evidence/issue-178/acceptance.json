@@ -9,13 +9,16 @@
         "v_proj"
       ]
     },
+    "adapter_source_fingerprint": "cc86bebbba61987d0ebc04c17bdcb3e8724630d5928ac8d4d54d0d0fb8ac3d07",
     "compositions": {
       "HuggingFaceTB/SmolLM2-135M@bnb-nf4-dq": {
         "adapter_factor_values_streamed": 15360,
         "base_binding": "quantized",
         "base_graph_preserved": true,
+        "explorer_content_fingerprint": "072a1569f93ef248fc203d47929adc922c25dea5a7e18521144fe5d3b6238b93",
         "graph_edges": 1896,
         "graph_nodes": 1271,
+        "model_id": "HuggingFaceTB/SmolLM2-135M@bnb-nf4-dq+peft-lora:smollm2-135m-smoltalk-lora",
         "role": "QLoRA-compatible composition",
         "targets": 60
       },
@@ -23,12 +26,15 @@
         "adapter_factor_values_streamed": 15360,
         "base_binding": "native",
         "base_graph_preserved": true,
+        "explorer_content_fingerprint": "e83ebf1e29379815252e4419d8a2647ff333d77057df881a4a454a15b5d313f6",
         "graph_edges": 1896,
         "graph_nodes": 1271,
+        "model_id": "SmolLM2-135M+peft-lora:smollm2-135m-smoltalk-lora",
         "role": "native LoRA composition",
         "targets": 60
       }
     },
+    "fingerprint_composition_semantics": "peft-lora-causal-lm-alpha-over-r-v1",
     "historical_training_method_claim": null,
     "native_and_quantized_base_vocab_sizes": {
       "native": 49152,
@@ -510,6 +516,7 @@
     "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
     "python": "3.12.14"
   },
+  "identity_fingerprint_method": "Backend FileSnapshot.fingerprint (SHA-256 over sorted recognized local Hugging Face files, without filesystem paths); PEFT compositions use combined_fingerprint with peft-lora-causal-lm-alpha-over-r-v1.",
   "integration_branch": "codex/epic-issue-179",
   "issue": 178,
   "kind": "Actual local reference acceptance; checkpoint bytes, absolute local paths, screenshots, and traces excluded.",
@@ -522,7 +529,7 @@
       "architectures": [
         "LlamaForCausalLM"
       ],
-      "explorer_content_fingerprint": null,
+      "explorer_content_fingerprint": "aeda1cbf6516239fa4d305117c5a70ca5f4a3af06ef7575544dc97914c61e57e",
       "id": "smollm2",
       "model_type": "llama",
       "quantization": null,
