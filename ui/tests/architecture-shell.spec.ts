@@ -1,7 +1,11 @@
 import { selectComponent, graphAction } from './architecture-controls';
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { BrowserContext, Route } from '@playwright/test';
 import { contractInventory, contractResponse, referenceFixture } from './architecture-fixtures';
+const architectureCases = JSON.parse(readFileSync(new URL('../../api/fixtures/architecture.json', import.meta.url), 'utf8')) as {
+  compact_response: typeof contractResponse;
+};
 
 async function backend(context: BrowserContext) {
   const visual = referenceFixture('vjepa2');
@@ -12,7 +16,7 @@ async function backend(context: BrowserContext) {
     if (path === '/models') return r.fulfill({ json: { models: [
       { id: contractResponse.model_id, display_name: 'Contract', architectures: [], tokenizer_available: true },
       { id: visual.model_id, display_name: 'Visual', architectures: [], tokenizer_available: false },
-    ] } });
+    ], diagnostics: [] } });
     if (path === '/sessions') return r.fulfill({ status: 201, json: {
       id: r.request().postDataJSON().model_id === visual.model_id ? 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' : 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       model_id: r.request().postDataJSON().model_id,
@@ -69,6 +73,20 @@ test('malformed architecture responses stay local and partial inventories remain
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(referenceFixture('vjepa2').model_id);
   await expect(page.getByText(/Partial tensor inventory:/)).toBeVisible();
   await expect(page.getByText('Fixture has no native weights.')).toBeVisible();
+});
+
+test('compact routed experts decode into distinct browser and canvas targets', async ({ page, context }) => {
+  await backend(context);
+  await context.route('**/architecture', (route) => route.fulfill({ json: architectureCases.compact_response }));
+  await page.goto('/');
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(contractResponse.model_id);
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  const graph = page.getByLabel('Architecture graph', { exact: true });
+  await expect(graph).toHaveAttribute('data-node-count', '3');
+  await graphAction(page, 'Show all operations');
+  await expect(page.getByRole('button', { name: 'Select Routed expert 1', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Select Routed expert 1', exact: true }).click();
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'expert1');
 });
 
 test('loading and unavailable Architecture cards keep the compact soft title row', async ({ page, context }) => {

@@ -173,7 +173,7 @@ test('standalone explorer displays successful endpoint results in the existing s
   await page.route('**/runtime-config.json', (route) => route.fulfill({ json: { backend_base_url: 'https://backend.example' } }));
   await page.route('https://backend.example/**', (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === '/models') return route.fulfill({ json: { models } });
+    if (path === '/models') return route.fulfill({ json: { models, diagnostics: [] } });
     if (path === '/sessions') return route.fulfill({ status: 201, json: sessionA });
     if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors, coverage: 'complete', diagnostics: [] } });
     if (path.endsWith('/tokenize')) {
@@ -202,7 +202,7 @@ test('standalone shell calls the typed endpoint and reports tokenizer unavailabi
   const requests: unknown[] = [];
   await page.route('https://backend.example/**', (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === '/models') return route.fulfill({ json: { models } });
+    if (path === '/models') return route.fulfill({ json: { models, diagnostics: [] } });
     if (path === '/sessions') return route.fulfill({ status: 201, json: sessionA });
     if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors, coverage: 'complete', diagnostics: [] } });
     if (path.endsWith('/tokenize')) {

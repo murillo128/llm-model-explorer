@@ -25,7 +25,7 @@ from .validation import (
 )
 
 if TYPE_CHECKING:
-    from ..tensor_source import PhysicalTensor, TensorDescriptor
+    from ..tensor_source import PeftLoraComposition, PhysicalTensor, TensorDescriptor
 
 ANALYZER_REVISION = "static-graph-core-3"
 Scope = Literal["language_model", "visual_encoder_predictor", "model_defined"]
@@ -41,12 +41,16 @@ class MetadataSource(Protocol):
     def tensors(self) -> tuple[TensorDescriptor, ...]: ...
     def check_unchanged(self, *, rehash: bool = False) -> None: ...
 
+    @property
+    def lora_composition(self) -> PeftLoraComposition | None: ...
+
 
 @dataclass(frozen=True)
 class AnalysisInput:
     fingerprint: str
     configuration: Mapping[str, object]
     bindings: BindingContext
+    lora_composition: PeftLoraComposition | None = None
 
     @classmethod
     def from_source(cls, source: MetadataSource, *, tokenizer_available: bool) -> AnalysisInput:
@@ -69,8 +73,23 @@ class AnalysisInput:
             source.fingerprint,
             MappingProxyType(config),
             BindingContext(
-                MappingProxyType(physical), MappingProxyType(numeric), tokenizer_available
+                physical=MappingProxyType(physical),
+                numeric=MappingProxyType(numeric),
+                tokenizer_available=tokenizer_available,
+                adapter_tensor_storage=MappingProxyType(
+                    {
+                        name: storage
+                        for target in (
+                            source.lora_composition.targets if source.lora_composition else ()
+                        )
+                        for name, storage in (
+                            (target.a_tensor_name, target.a_storage_name),
+                            (target.b_tensor_name, target.b_storage_name),
+                        )
+                    }
+                ),
             ),
+            source.lora_composition,
         )
 
 
@@ -146,13 +165,19 @@ class GraphBuilder:
         scope: Scope,
         *,
         byte_limit: int = MAX_BYTES,
+        work_limit: int | None = None,
     ) -> None:
         require(0 < byte_limit <= MAX_BYTES, "Invalid architecture byte budget.")
+        require(
+            work_limit is None or byte_limit <= work_limit <= 2 * MAX_BYTES,
+            "Invalid compact construction budget.",
+        )
         self.inputs = inputs
         self.producer = producer
         self.scope = scope
         self.graph_id = producer.graph_id(inputs.fingerprint, scope)
-        self.byte_limit = byte_limit
+        self.response_limit = byte_limit
+        self.byte_limit = work_limit or byte_limit
         self._numeric_by_name = {t.name: t for t in inputs.bindings.numeric.values()}
         self._used = 0
         self._ids: set[str] = set()
@@ -308,6 +333,56 @@ class GraphBuilder:
             )
         return parameter_id
 
+    def adapter_parameter(
+        self,
+        key: str,
+        logical_name: str,
+        storage_name: str,
+        logical_shape: r.ArchitectureShape,
+        provenance: Sequence[r.ArchitectureProvenance],
+    ) -> str:
+        """Bind a composite logical factor ID to its verified native adapter storage."""
+        storage = self.inputs.bindings.physical.get(storage_name)
+        matches = [t for t in self.inputs.bindings.numeric.values() if t.name == logical_name]
+        if storage is None or len(matches) != 1:
+            raise GraphError("lora_missing_factor", "A required LoRA factor binding is missing.")
+        tensor = matches[0]
+        geometry = constants(logical_shape)
+        if (
+            self.inputs.bindings.adapter_tensor_storage.get(logical_name) != storage_name
+            or geometry is None
+            or tuple(storage.shape) != geometry
+            or tensor.shape != geometry
+            or tensor.dtype != storage.dtype
+            or storage.dtype not in {"F32", "F16", "BF16"}
+        ):
+            raise GraphError(
+                "lora_factor_geometry", "LoRA factor storage disagrees with its logical tensor."
+            )
+        parameter_id = self.record_id("parameter", key)
+        self.add_parameter(
+            r.ArchitectureDirectParameter(
+                id=parameter_id,
+                name=logical_name,
+                logical_shape=logical_shape,
+                binding="native",
+                storage=[
+                    r.ArchitectureStorage(
+                        name=storage.name,
+                        dtype=storage.dtype,
+                        shape=list(storage.shape),
+                        role="adapter_factor",
+                    )
+                ],
+                inspection=r.ArchitectureAvailableInspection(
+                    status="available", tensor_id=tensor.id
+                ),
+                provenance=list(provenance)
+                + [r.ArchitectureProvenance(kind="storage", source=storage.name)],
+            )
+        )
+        return parameter_id
+
     def finish(self) -> r.ArchitectureGraph:
         graph = r.ArchitectureGraph(
             graph_id=self.graph_id,
@@ -325,7 +400,14 @@ class GraphBuilder:
         graph = self.templates.annotate(graph, self)
         serialized_size(graph.document(), self.byte_limit)
         validate_graph(graph, self.inputs.bindings)
-        return graph
+        if serialized_size(graph.document(), self.byte_limit) <= self.response_limit:
+            return graph
+        from .compact import compact_graph, expand_graph
+
+        compact = compact_graph(graph)
+        serialized_size(compact.document(), self.response_limit)
+        validate_graph(expand_graph(compact), self.inputs.bindings)
+        return compact
 
 
 def parse_graph(
@@ -335,7 +417,9 @@ def parse_graph(
     try:
         serialized_size(document, byte_limit)
         graph = r.ArchitectureGraph.model_validate(document)
-        validate_graph(graph, context)
+        from .compact import expand_graph
+
+        validate_graph(expand_graph(graph), context)
         return graph
     except GraphError:
         raise
@@ -358,6 +442,7 @@ class Description:
     # Returning False leaves the checkpoint unsupported; it must not guess a fallback.
     supports: Callable[[AnalysisInput], bool]
     build: Callable[[AnalysisInput, GraphBuilder], None]
+    compact_experts: bool = False
 
 
 class DescriptionRegistry:
@@ -403,11 +488,19 @@ class DescriptionRegistry:
                     "description_selection",
                     "No unique verified architecture description matches this metadata.",
                 )
-            builder = GraphBuilder(inputs, selected.producer, selected.scope, byte_limit=byte_limit)
+            builder = GraphBuilder(
+                inputs,
+                selected.producer,
+                selected.scope,
+                byte_limit=byte_limit,
+                work_limit=2 * MAX_BYTES if selected.compact_experts else None,
+            )
             selected.build(inputs, builder)
             graph = builder.finish()
             return AnalysisResult(graph, None)
         except GraphError as exc:
+            if exc.code.startswith("lora_"):
+                return unavailable("analysis_failed", exc.code, str(exc))
             reason: Literal["unsupported_size", "analysis_failed"] = (
                 "unsupported_size" if exc.code == "unsupported_size" else "analysis_failed"
             )

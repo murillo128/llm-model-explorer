@@ -12,7 +12,7 @@ afterEach(() => sessionStorage.clear());
 function mockBackend() {
   const fetcher = vi.fn(async (input: string | URL | Request, options?: RequestInit) => {
     const url = String(input);
-    if (url.endsWith('/models')) return json({ models });
+    if (url.endsWith('/models')) return json({ models, diagnostics: [] });
     if (url.endsWith('/tokenize')) return json({ ...JSON.parse(options!.body as string), tokens: [] });
     if (url.endsWith('/tensors')) return json({ tensors, coverage: 'complete', diagnostics: [] });
     if (options?.method === 'DELETE') return new Response(null, { status: 204 });
@@ -85,7 +85,7 @@ it('recovers then expires a session honestly and allows fresh creation', async (
   const fetcher = mockBackend();
   sessionStorage.setItem(sessionStorageKey(config.backendBaseUrl), sessionA.id);
   fetcher.mockImplementation(async (input, options) => {
-    if (String(input).endsWith('/models')) return json({ models });
+    if (String(input).endsWith('/models')) return json({ models, diagnostics: [] });
     if (options?.method === 'POST') return json(sessionA, 201);
     if (String(input).endsWith('/tensors')) return json({ tensors, coverage: 'complete', diagnostics: [] });
     return json({ code: 'session_not_found', message: '/srv/private/models' }, 404);
@@ -99,10 +99,10 @@ it('recovers then expires a session honestly and allows fresh creation', async (
 
 it('shows empty, malformed, and unreachable catalogues with working refresh', async () => {
   const fetcher = mockBackend();
-  fetcher.mockResolvedValueOnce(json({ models: [] }));
+  fetcher.mockResolvedValueOnce(json({ models: [], diagnostics: [] }));
   render(<App config={config} />);
   expect(await screen.findByText('No models available on this backend.')).toBeInTheDocument();
-  fetcher.mockResolvedValueOnce(json({ models: [{ ...models[0], local_path: '/private/weights' }] }));
+  fetcher.mockResolvedValueOnce(json({ models: [{ ...models[0], local_path: '/private/weights' }], diagnostics: [] }));
   await userEvent.click(screen.getByRole('button', { name: 'Refresh models' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('invalid response');
   expect(document.body.textContent).not.toContain('/private/weights');
@@ -111,6 +111,24 @@ it('shows empty, malformed, and unreachable catalogues with working refresh', as
   expect(await screen.findByRole('alert')).toHaveTextContent('unreachable');
   await userEvent.click(screen.getByRole('button', { name: 'Refresh models' }));
   await chooseAlpha();
+});
+
+it('shows rejected adapter diagnostics without offering an invalid composition as a model', async () => {
+  const fetcher = mockBackend();
+  fetcher.mockResolvedValueOnce(json({
+    models: [],
+    diagnostics: [{
+      code: 'peft_composition_rejected', candidate: 'bad-adapter', base_model_id: 'org/base',
+      message: 'LoRA composition with the local base was rejected: PEFT LoRA A/B dimensions do not match the base weight.',
+    }],
+  }));
+  render(<App config={config} />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('bad-adapter · org/base');
+  expect(screen.getByRole('alert')).toHaveTextContent('A/B dimensions do not match the base weight');
+  expect(screen.getByText('No selectable models are available.')).toBeInTheDocument();
+  expect(screen.queryByRole('option', { name: /bad-adapter/ })).not.toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Model' })).toBeDisabled();
+  expect(fetcher.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
 });
 
 it('backend replacement disposes the old view, fences old inventory, and uses backend-specific recovery', async () => {
@@ -133,7 +151,7 @@ it('backend replacement disposes the old view, fences old inventory, and uses ba
 
 it('keeps model/session API actions in compact accessible controls and discloses raw metadata', async () => {
   const fetcher = mockBackend();
-  fetcher.mockResolvedValueOnce(json({ models: [{ ...models[0], size_bytes: 272400000 }] }));
+  fetcher.mockResolvedValueOnce(json({ models: [{ ...models[0], size_bytes: 272400000 }], diagnostics: [] }));
   render(<App config={config} />);
   await chooseAlpha();
   expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();

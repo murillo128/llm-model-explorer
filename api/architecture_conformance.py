@@ -48,6 +48,71 @@ def unique(records, field='id'):
     return result
 
 
+def expand_compact_graph(source):
+    """Independent expansion of the public repeated-component wire form."""
+    if not source.get('compact_components'):
+        return source
+    graph = deepcopy(source)
+    families = graph.pop('compact_components')
+    parameters = unique(graph['parameters'])
+    repetitions = unique(graph['repetitions'])
+    symbols = unique(graph['symbols'], 'name')
+    seen = {record['id'] for key in ('nodes', 'edges', 'parameters', 'repetitions') for record in graph[key]}
+    prefixes = set()
+
+    def replace(value, ids, before, after):
+        if isinstance(value, str):
+            return ids.get(value, value.replace(before, after))
+        if isinstance(value, list):
+            return [replace(item, ids, before, after) for item in value]
+        if isinstance(value, dict):
+            return {key: replace(item, ids, before, after) for key, item in value.items()}
+        return value
+
+    for family in families:
+        require(family['id'] not in seen, 'duplicate compact family')
+        seen.add(family['id'])
+        repetition = repetitions.get(family['repetition_id'])
+        require(repetition is not None and family['nodes'][0]['kind'] == 'group', 'compact root')
+        require(all(item['variant'] in ('routed_expert', 'routed_swiglu') for item in repetition['instances']),
+                'compact routed variant')
+        require([(item['node_id'], item['index']) for item in repetition['instances']] ==
+                [(item['node_id'], item['index']) for item in family['instances']], 'compact repetition order')
+        names = [parameters[pid]['name'] for pid in family['parameter_ids']]
+        require(all(name.startswith(family['base_prefix'] + '.') for name in names), 'compact prototype parameter scope')
+        require(all(name in symbols for name in family['symbols']), 'compact prototype symbols')
+        for instance in family['instances']:
+            require(instance['prefix'] not in prefixes, 'duplicate compact prefix')
+            prefixes.add(instance['prefix'])
+            require(len(instance['node_ids']) == len(family['nodes']) and
+                    len(instance['edge_ids']) == len(family['edges']) and
+                    len(instance['parameter_ids']) == len(family['parameter_ids']) and
+                    len(instance['symbols']) == len(family['symbols']) and
+                    instance['node_ids'][0] == instance['node_id'], 'compact mapping length')
+            require(all(name in symbols for name in instance['symbols']), 'compact instance symbols')
+            for name, pid in zip(names, instance['parameter_ids'], strict=True):
+                parameter = parameters.get(pid)
+                require(parameter is not None and parameter['name'] == name.replace(family['base_prefix'], instance['prefix']),
+                        'compact expert binding is missing or swapped')
+            ids = {record['id']: target for record, target in zip(family['nodes'], instance['node_ids'], strict=True)}
+            ids.update((record['id'], target) for record, target in zip(family['edges'], instance['edge_ids'], strict=True))
+            ids.update(zip(family['parameter_ids'], instance['parameter_ids'], strict=True))
+            ids.update(zip(family['symbols'], instance['symbols'], strict=True))
+            nodes = replace(family['nodes'], ids, family['base_prefix'], instance['prefix'])
+            edges = replace(family['edges'], ids, family['base_prefix'], instance['prefix'])
+            nodes[0]['label'] = instance['label']
+            for attribute in nodes[0]['attributes']:
+                if attribute['name'] == 'expert_index':
+                    attribute['value'] = float(instance['index'])
+            require(nodes[0]['parent_id'] == repetition['parent_id'], 'compact parent')
+            for record in nodes + edges:
+                require(record['id'] not in seen, 'duplicate compact record')
+                seen.add(record['id'])
+            graph['nodes'].extend(nodes)
+            graph['edges'].extend(edges)
+    return graph
+
+
 def validate_packed_storage(parameter, geometry, tensor=None):
     """Logical matrices require a complete admitted group, never raw auxiliary IDs."""
     require(parameter['name'].endswith('.weight') and len(geometry) == 2 and min(geometry) > 0,
@@ -62,12 +127,46 @@ def validate_packed_storage(parameter, geometry, tensor=None):
         expected = {'qweight': ('I32', [inputs // 8, output]),
                     'qzeros': ('I32', [inputs // 128, output // 8]),
                     'scales': ('F16', [inputs // 128, output]), 'g_idx': ('I32', [inputs])}
+    elif representation == 'bnb-nf4-dq':
+        dtype = 'U8'
+        elements = product(geometry)
+        absmax_count = (elements + 63) // 64
+        nested_count = (absmax_count + 255) // 256
+        state_name = prefix + '.weight.quant_state.bitsandbytes__nf4'
+        states = [record for record in parameter['storage'] if record['name'] == state_name]
+        require(len(states) == 1 and states[0]['dtype'] == 'U8' and len(states[0]['shape']) == 1 and
+                0 < states[0]['shape'][0] <= 4096, 'NF4 quantization state metadata')
+        expected = {'weight': ('U8', [(elements + 1) // 2, 1]),
+                    'weight.absmax': ('U8', [absmax_count]),
+                    'weight.quant_map': ('F32', [16]),
+                    'weight.nested_absmax': ('F32', [nested_count]),
+                    'weight.nested_quant_map': ('F32', [256]),
+                    'weight.quant_state.bitsandbytes__nf4': ('U8', states[0]['shape'])}
+    elif representation == 'compressed-tensors-w4a16-int4':
+        require(inputs % 32 == 0, 'compressed-tensors logical geometry')
+        dtype = 'I32'
+        scale = next((record for record in parameter['storage']
+                      if record['name'] == prefix + '.weight_scale'), None)
+        require(scale is not None and scale['dtype'] in ('F16', 'BF16'),
+                'compressed-tensors scale dtype')
+        expected = {'weight_packed': ('I32', [output, inputs // 8]),
+                    'weight_scale': (scale['dtype'], [output, inputs // 32]),
+                    'weight_shape': ('I64', [2])}
     elif representation == 'nvfp4':
         require(inputs % 16 == 0, 'NVFP4 logical geometry')
         dtype = 'U8'
         expected = {'weight': ('U8', [output, inputs // 2]),
                     'weight_scale': ('F8_E4M3', [output, inputs // 16]),
                     'weight_scale_2': ('F32', []), 'input_scale': ('F32', [])}
+    elif representation == 'compressed-tensors-w4a16-int4':
+        dtype = 'I32'
+        scales = next((record for record in parameter['storage']
+                       if record['name'] == prefix + '.weight_scale'), None)
+        require(scales is not None and scales['dtype'] in ('F16', 'BF16'),
+                'Compressed INT4 scale dtype')
+        expected = {'weight_packed': ('I32', [output, inputs // 8]),
+                    'weight_scale': (scales['dtype'], [output, inputs // 32]),
+                    'weight_shape': ('I64', [2])}
     else:
         raise ValueError('unsupported packed representation')
     require(tensor is None or tensor['storage_dtype'] == dtype, 'packed inventory dtype')
@@ -76,7 +175,7 @@ def validate_packed_storage(parameter, geometry, tensor=None):
             {prefix + '.' + name: record for name, record in expected.items()}, 'packed storage group')
 
 
-def validate_architecture(value, context=None):
+def validate_architecture(value, context=None, *, validate_storage=True):
     """Run after generated JSON Schema validation. Context pins model/inventory/tokenizer."""
     serialized_size(value)
     if context is not None:
@@ -87,7 +186,7 @@ def validate_architecture(value, context=None):
         if value['reason'] in ('restart_required', 'cache_unavailable'):
             require(value['requires_restart'], 'restart required')
         return
-    graph = value['graph']
+    graph = expand_compact_graph(value['graph'])
     nodes = unique(graph['nodes'])
     params = unique(graph['parameters'])
     unique(graph['edges'])
@@ -216,10 +315,18 @@ def validate_architecture(value, context=None):
                     native['inspection']['tensor_id'] == inspection['tensor_id'],
                     'alias logical identity/geometry')
             if native['binding'] == 'native':
-                require(any(s['name'] == native['name'] and s['shape'] == geometry and
-                        s['dtype'] in ('F32', 'F16', 'BF16', 'float32', 'float16', 'bfloat16') and
-                        s.get('role') not in ('scales', 'packed', 'packed_data')
-                        for s in native['storage']), 'native storage geometry')
+                adapter_factors = [s for s in native['storage'] if s.get('role') == 'adapter_factor']
+                if adapter_factors:
+                    require(len(native['storage']) == len(adapter_factors) == 1 and
+                            adapter_factors[0]['shape'] == geometry and
+                            adapter_factors[0]['dtype'] in ('F32', 'F16', 'BF16',
+                                                            'float32', 'float16', 'bfloat16'),
+                            'adapter factor storage geometry')
+                else:
+                    require(any(s['name'] == native['name'] and s['shape'] == geometry and
+                            s['dtype'] in ('F32', 'F16', 'BF16', 'float32', 'float16', 'bfloat16') and
+                            s.get('role') not in ('scales', 'packed', 'packed_data')
+                            for s in native['storage']), 'native storage geometry')
             tensor = None
             if inventory is not None:
                 tensor = inventory.get(inspection['tensor_id'])
@@ -227,9 +334,11 @@ def validate_architecture(value, context=None):
                         tensor['name'] == native['name'] and tensor['rank'] == len(geometry) and
                         tensor['numel'] == product(geometry), 'session inventory membership/geometry')
                 if native['binding'] == 'native':
-                    require(any(s['name'] == tensor['name'] and s['dtype'] == tensor['storage_dtype']
+                    require(any((s['name'] == tensor['name'] or
+                                 s.get('role') == 'adapter_factor') and
+                                s['dtype'] == tensor['storage_dtype'] and s['shape'] == tensor['shape']
                                 for s in native['storage']), 'inventory storage identity')
-            if native['binding'] == 'quantized':
+            if native['binding'] == 'quantized' and validate_storage:
                 validate_packed_storage(native, geometry, tensor)
 
     validate_templates(graph)
@@ -435,6 +544,72 @@ def template_cases():
     return graph, cases
 
 
+def compact_cases(inventory):
+    """Small authored routed-expert wire document with distinct exact bindings."""
+    provenance = [dict(kind='description', source='independent-compact-fixture', revision='1')]
+    prefix = 'model.layers.1.mlp.experts.0'
+    root = dict(id='root',kind='group',label='MoE',children=['expert0','expert1'],ports=[],
+                parameter_ids=[],references=[],attributes=[],provenance=provenance)
+    prototype = dict(id='expert0',kind='group',parent_id='root',label='Routed expert 0',
+                     operation='weighted_swiglu_mlp',children=[],ports=[],parameter_ids=['p0'],
+                     references=[dict(kind='module',name=prefix),dict(kind='parameter',parameter_id='p0')],
+                     attributes=[dict(name='semantic_role',value='mlp',provenance=provenance),
+                                 dict(name='expert_index',value=0.0,provenance=provenance)],
+                     provenance=provenance)
+    def parameter(index):
+        return dict(id=f'p{index}',name=f'model.layers.1.mlp.experts.{index}.w1.weight',
+                    logical_shape=[dict(kind='constant',value=2),dict(kind='constant',value=2)],
+                    binding='unresolved',storage=[],inspection=dict(status='unavailable',
+                    reason='unresolved_binding',message='Independent fixture has no storage.'),provenance=provenance)
+    def instance(index):
+        return dict(node_id=f'expert{index}',prefix=f'model.layers.1.mlp.experts.{index}',
+                    label=f'Routed expert {index}',index=index,node_ids=[f'expert{index}'],
+                    edge_ids=[],parameter_ids=[f'p{index}'],symbols=[])
+    graph = dict(graph_id='independent-compact',scope='language_model',coverage='complete',symbols=[],
+                 nodes=[root],edges=[],parameters=[parameter(0),parameter(1)],diagnostics=[],
+                 repetitions=[dict(id='experts',parent_id='root',label='Routed experts',instances=[
+                     dict(node_id='expert0',index=0,variant='routed_expert'),
+                     dict(node_id='expert1',index=1,variant='routed_expert')])],
+                 compact_components=[dict(id='compact_experts',repetition_id='experts',base_prefix=prefix,
+                     nodes=[prototype],edges=[],parameter_ids=['p0'],symbols=[],instances=[instance(0),instance(1)])])
+    response = dict(status='available',model_id='test/architecture',diagnostics=[],graph=graph)
+    def edit(path,value): return dict(path=('graph/'+path).split('/'),value=value)
+    cases = [
+        dict(name='compact-experts-valid',base='compact_response',edits=[],valid=True,schema_valid=True,context_edits=[]),
+        dict(name='compact-experts-missing-binding',base='compact_response',
+             edits=[edit('compact_components/0/instances/1/parameter_ids',['missing'])],valid=False,
+             schema_valid=True,context_edits=[]),
+        dict(name='compact-experts-swapped-binding',base='compact_response',
+             edits=[edit('compact_components/0/instances/1/parameter_ids',['p0'])],valid=False,
+             schema_valid=True,context_edits=[]),
+        dict(name='compact-experts-wrong-index',base='compact_response',
+             edits=[edit('compact_components/0/instances/1/index',0)],valid=False,
+             schema_valid=True,context_edits=[]),
+        dict(name='compact-experts-duplicate-node',base='compact_response',
+             edits=[edit('compact_components/0/instances/1/node_ids',['expert0'])],valid=False,
+             schema_valid=True,context_edits=[]),
+    ]
+    compressed_prefix = 'model.layers.1.mlp.experts.0.w1'
+    compressed_parameter = dict(
+        id='p0', name=compressed_prefix + '.weight',
+        logical_shape=[dict(kind='constant', value=2), dict(kind='constant', value=32)],
+        binding='quantized',
+        storage=[dict(name=compressed_prefix + '.weight_packed', dtype='I32', shape=[2,4], role='packed_data'),
+                 dict(name=compressed_prefix + '.weight_scale', dtype='BF16', shape=[2,1], role='scales'),
+                 dict(name=compressed_prefix + '.weight_shape', dtype='I64', shape=[2], role='logical_shape')],
+        inspection=dict(status='available', tensor_id='tensor_compact_packed'), provenance=provenance)
+    compact_inventory = deepcopy(inventory['tensors']) + [dict(
+        id='tensor_compact_packed', name=compressed_parameter['name'],
+        path=compressed_parameter['name'].split('.'), shape=[2,32], rank=2, numel=64,
+        storage_dtype='I32', storage_format='compressed-tensors-w4a16-int4', logical_dtype='float32')]
+    cases.append(dict(name='compact-experts-compressed-tensors-storage', base='compact_response',
+        edits=[edit('parameters/0', compressed_parameter)], valid=True, schema_valid=True,
+        context_edits=[dict(path=['inventory', 'tensors'], value=compact_inventory)],
+        physical_storage=[dict(name=s['name'], dtype=s['dtype'], shape=s['shape'])
+                          for s in compressed_parameter['storage']]))
+    return response, cases
+
+
 def fixtures():
     """Compact base documents plus mutation cases; never repeat a full graph per defect."""
     dim = lambda n: {'kind': 'constant', 'value': n}
@@ -500,8 +675,12 @@ def fixtures():
     context = dict(session=dict(id='12345678-1234-4234-8234-123456789abc', model_id=response['model_id']),
                    tokenizer_available=True, inventory=inventory)
     cases = []
-    def case(name, edits=(), valid=False, schema_valid=True, context_edits=()):
-        cases.append(dict(name=name, valid=valid, schema_valid=schema_valid, edits=list(edits), context_edits=list(context_edits)))
+    def case(name, edits=(), valid=False, schema_valid=True, context_edits=(), physical_storage=()):
+        result = dict(name=name, valid=valid, schema_valid=schema_valid,
+                      edits=list(edits), context_edits=list(context_edits))
+        if physical_storage:
+            result['physical_storage'] = list(physical_storage)
+        cases.append(result)
     def set_(path, value): return dict(path=path.split('/'), value=value)
     def delete(path): return dict(path=path.split('/'), delete=True)
     case('complete-native-alias-fused-quantized-rank-limited-symbolic', valid=True)
@@ -641,33 +820,66 @@ def fixtures():
                  dict(name='fp4.weight_scale', dtype='F8_E4M3', shape=[2,2], role='block_scale'),
                  dict(name='fp4.weight_scale_2', dtype='F32', shape=[], role='global_weight_scale'),
                  dict(name='fp4.input_scale', dtype='F32', shape=[], role='input_scale')])
-    for label, parameter, dtype, representation in [
-        ('gptq', packed, 'I32', 'gptq-int4'), ('nvfp4', nvfp4, 'U8', 'nvfp4')]:
+    compressed_prefix = 'model.layers.0.mlp.experts.0.w1'
+    def compressed(scale_dtype):
+        return dict(id='quantized', name=compressed_prefix + '.weight',
+            logical_shape=[dim(64), dim(96)], binding='quantized',
+            inspection=dict(status='available', tensor_id='tensor_packed'), provenance=[],
+            storage=[dict(name=compressed_prefix + '.weight_packed', dtype='I32', shape=[64,12], role='packed_data'),
+                     dict(name=compressed_prefix + '.weight_scale', dtype=scale_dtype, shape=[64,3], role='scales'),
+                     dict(name=compressed_prefix + '.weight_shape', dtype='I64', shape=[2], role='logical_shape')])
+    bnb_nf4 = dict(id='quantized', name='packed.weight', logical_shape=[dim(8), dim(128)],
+        binding='quantized', inspection=dict(status='available', tensor_id='tensor_packed'), provenance=[],
+        storage=[dict(name='packed.weight', dtype='U8', shape=[512,1]),
+                 dict(name='packed.weight.absmax', dtype='U8', shape=[16]),
+                 dict(name='packed.weight.quant_map', dtype='F32', shape=[16]),
+                 dict(name='packed.weight.nested_absmax', dtype='F32', shape=[1]),
+                 dict(name='packed.weight.nested_quant_map', dtype='F32', shape=[256]),
+                 dict(name='packed.weight.quant_state.bitsandbytes__nf4', dtype='U8', shape=[64])])
+    compressed_int4 = dict(id='quantized', name='packed.weight', logical_shape=[dim(8), dim(128)],
+        binding='quantized', inspection=dict(status='available', tensor_id='tensor_packed'), provenance=[],
+        storage=[dict(name='packed.weight_packed', dtype='I32', shape=[8,16]),
+                 dict(name='packed.weight_scale', dtype='F16', shape=[8,4]),
+                 dict(name='packed.weight_shape', dtype='I64', shape=[2])])
+    for label, parameter, dtype, representation, bad_scale_index, bad_scale_dtype in [
+        ('gptq', packed, 'I32', 'gptq-int4', 2, 'F32'),
+        ('nvfp4', nvfp4, 'U8', 'nvfp4', 1, 'F32'),
+        ('bnb-nf4-dq', bnb_nf4, 'U8', 'bnb-nf4-dq', 2, 'F16'),
+        ('compressed-tensors-bf16', compressed('BF16'), 'I32', 'compressed-tensors-w4a16-int4', 1, 'F32'),
+        ('compressed-tensors-f16', compressed('F16'), 'I32', 'compressed-tensors-w4a16-int4', 1, 'F32'),
+        ('compressed-tensors-w4a16-int4', compressed_int4, 'I32',
+         'compressed-tensors-w4a16-int4', 1, 'F32')]:
         dims = [d['value'] for d in parameter['logical_shape']]
         descriptor = dict(id='tensor_packed', name=parameter['name'], path=parameter['name'].split('.'),
             shape=dims, rank=2, numel=product(dims), storage_dtype=dtype,
             storage_format=representation, logical_dtype='float32')
         base_edits = [set_('graph/parameters/2', parameter)]
         base_context = [set_('inventory/tensors', inventory['tensors'] + [descriptor])]
-        case(label+'-complete-logical-inspection', base_edits, True, context_edits=base_context)
+        physical_storage = [dict(name=s['name'], dtype=s['dtype'], shape=s['shape'])
+                            for s in parameter['storage']]
+        case(label+'-complete-logical-inspection', base_edits, True,
+             context_edits=base_context, physical_storage=physical_storage)
         case(label+'-complete-logical-alias', base_edits + [
             set_('graph/parameters/1/alias_of', 'quantized'),
             set_('graph/parameters/1/logical_shape', parameter['logical_shape']),
             set_('graph/parameters/1/storage', []),
             set_('graph/parameters/1/inspection', parameter['inspection'])], True,
-            context_edits=base_context)
+            context_edits=base_context, physical_storage=physical_storage)
         for suffix, changes in [
             ('wrong-primary-geometry', [set_('graph/parameters/2/storage/0/shape', [1,1])]),
             ('wrong-primary-dtype', [set_('graph/parameters/2/storage/0/dtype', 'F32')]),
-            ('wrong-scale-dtype', [set_('graph/parameters/2/storage/'+('2' if label == 'gptq' else '1')+'/dtype', 'F32')]),
+            ('wrong-scale-dtype', [set_('graph/parameters/2/storage/'+str(bad_scale_index)+'/dtype',
+                                        bad_scale_dtype)]),
             ('foreign-companion', [set_('graph/parameters/2/storage/1/name', 'foreign.scale')]),
             ('missing-companion', [set_('graph/parameters/2/storage', parameter['storage'][:-1])]),
-            ('duplicate-companion', [set_('graph/parameters/2/storage/3', parameter['storage'][0])]),
+            ('duplicate-companion', [set_('graph/parameters/2/storage',
+                                           parameter['storage'] + [parameter['storage'][0]])]),
             ('wrong-logical-identity', [set_('graph/parameters/2/name', 'other.weight')]),
             ('auxiliary-logical-identity', [set_('graph/parameters/2/name', 'packed.scales')]),
             ('wrong-actionable-id', [set_('graph/parameters/2/inspection/tensor_id', 'tensor_native')]),
         ]:
-            case(label+'-'+suffix, base_edits + changes, context_edits=base_context)
+            case(label+'-'+suffix, base_edits + changes, context_edits=base_context,
+                 physical_storage=physical_storage)
         for suffix, changes in [
             ('wrong-inventory-format', [set_('inventory/tensors/2/storage_format', 'unknown')]),
             ('missing-inventory-format', [delete('inventory/tensors/2/storage_format')]),
@@ -675,9 +887,51 @@ def fixtures():
             ('wrong-inventory-name', [set_('inventory/tensors/2/name', 'other.weight')]),
             ('wrong-inventory-shape', [set_('inventory/tensors/2/shape', list(reversed(dims)))]),
         ]:
-            case(label+'-'+suffix, base_edits, context_edits=base_context + changes)
+            case(label+'-'+suffix, base_edits, context_edits=base_context + changes,
+                 physical_storage=physical_storage)
+        if label == 'compressed-tensors-bf16':
+            for suffix, changes, extra_context in [
+                ('swapped-companions', [
+                    set_('graph/parameters/2/storage/0/name', compressed_prefix + '.weight_scale'),
+                    set_('graph/parameters/2/storage/1/name', compressed_prefix + '.weight_packed')], []),
+                ('wrong-scale-geometry', [set_('graph/parameters/2/storage/1/shape', [64,1])], []),
+                ('wrong-shape-dtype', [set_('graph/parameters/2/storage/2/dtype', 'F32')], []),
+                ('wrong-shape-record-geometry', [set_('graph/parameters/2/storage/2/shape', [64,96])], []),
+                ('input-not-group-aligned', [set_('graph/parameters/2/logical_shape/1/value', 63)], [
+                    set_('inventory/tensors/2/shape', [64,63]),
+                    set_('inventory/tensors/2/numel', 64 * 63)]),
+            ]:
+                case(label+'-'+suffix, base_edits + changes,
+                     context_edits=base_context + extra_context,
+                     physical_storage=physical_storage)
+    # SmolLM2-135M's q_proj is a 576x576 NF4 matrix in the pinned QLoRA reference.
+    # The serialized quantization-state bytes are opaque to this contract fixture.
+    nf4_elements = 576 * 576
+    nf4_absmax_count = (nf4_elements + 63) // 64
+    nf4_nested_count = (nf4_absmax_count + 255) // 256
+    nf4_prefix = 'model.layers.0.self_attn.q_proj'
+    nf4 = dict(id='quantized', name=nf4_prefix + '.weight',
+        logical_shape=[dim(576), dim(576)], binding='quantized',
+        inspection=dict(status='available', tensor_id='tensor_packed'), provenance=[],
+        storage=[dict(name=nf4_prefix + '.weight', dtype='U8', shape=[(nf4_elements + 1) // 2, 1], role='packed_data'),
+                 dict(name=nf4_prefix + '.weight.absmax', dtype='U8', shape=[nf4_absmax_count], role='scales'),
+                 dict(name=nf4_prefix + '.weight.quant_map', dtype='F32', shape=[16], role='codebook'),
+                 dict(name=nf4_prefix + '.weight.nested_absmax', dtype='F32', shape=[nf4_nested_count], role='scales'),
+                 dict(name=nf4_prefix + '.weight.nested_quant_map', dtype='F32', shape=[256], role='codebook'),
+                 dict(name=nf4_prefix + '.weight.quant_state.bitsandbytes__nf4', dtype='U8', shape=[1], role='quantization_state')])
+    nf4_descriptor = dict(id='tensor_packed', name=nf4['name'], path=nf4['name'].split('.'),
+        shape=[576, 576], rank=2, numel=nf4_elements, storage_dtype='U8',
+        storage_format='bnb-nf4-dq', logical_dtype='float32')
+    nf4_base_edits = [set_('graph/parameters/2', nf4)]
+    nf4_context = [set_('inventory/tensors', inventory['tensors'] + [nf4_descriptor])]
+    nf4_physical_storage = [dict(name=s['name'], dtype=s['dtype'], shape=s['shape'])
+                            for s in nf4['storage']]
+    case('bnb-nf4-dq-complete-logical-inspection', nf4_base_edits, True,
+         context_edits=nf4_context, physical_storage=nf4_physical_storage)
     template_graph, additional_cases = template_cases()
     cases.extend(additional_cases)
+    compact_response, compact_additional = compact_cases(inventory)
+    cases.extend(compact_additional)
     # Large-size tests use repeated fixed chunks, never a 32 MiB fixture/object allocation.
     bounds = [dict(name='exact-limit', chunk_bytes=4096, repeat=8192, tail_bytes=0, valid=True),
               dict(name='one-byte-over', chunk_bytes=4096, repeat=8192, tail_bytes=1, valid=False)]
@@ -691,7 +945,8 @@ def fixtures():
             dict(code='excluded', message='Descriptive only.', node_id='foreign')]), valid=False),
     ]
     return dict(inventory_cases=inventory_cases, response=response,
-                template_response={**response, 'graph': template_graph}, context=context, cases=cases, byte_cases=bounds,
+                template_response={**response, 'graph': template_graph}, compact_response=compact_response,
+                context=context, cases=cases, byte_cases=bounds,
                 http_cases=[dict(status=409, value=dict(code='model_content_changed',message='Pinned model content changed.'))])
 
 

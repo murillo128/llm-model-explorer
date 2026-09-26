@@ -92,7 +92,7 @@ it('does not mistake an existing stream for a recovery attempt; cancel cleanup f
     .observe(feedback.observe(lifetime, true));
   await expect(client.cancelOperation('id')).rejects.toMatchObject({ kind: 'transport' });
   expect(state().toasts).toHaveLength(0);
-  const recovery = new ApiClient({ backendBaseUrl: 'https://backend.example' }, vi.fn().mockResolvedValue(json({ models })))
+  const recovery = new ApiClient({ backendBaseUrl: 'https://backend.example' }, vi.fn().mockResolvedValue(json({ models, diagnostics: [] })))
     .observe(feedback.observe(lifetime));
   await recovery.listModels();
   expect(state().connection).toBe('connected');

@@ -16,7 +16,7 @@ async function mockConfig(page: Page, body = '{"backend_base_url":"https://backe
   await page.route('https://backend.example/**', (route) => {
     const path = new URL(route.request().url()).pathname;
     requests.push(path);
-    return path === '/models' ? route.fulfill({ json: { models: [] } }) : route.fulfill({ status: 404 });
+    return path === '/models' ? route.fulfill({ json: { models: [], diagnostics: [] } }) : route.fulfill({ status: 404 });
   });
   await page.route('**/runtime-config.json', (route) => route.fulfill({ status, contentType: 'application/json', body }));
   return requests;
@@ -32,7 +32,7 @@ test('one production build accepts two deployed backend URLs', async ({ page }, 
   page.on('request', (request) => {
     if (new URL(request.url()).origin !== new URL(testInfo.project.use.baseURL!).origin) backendRequests.push(request.url());
   });
-  await page.route('**/models', (route) => route.fulfill({ json: { models: [] } }));
+  await page.route('**/models', (route) => route.fulfill({ json: { models: [], diagnostics: [] } }));
   await page.route('**/runtime-config.json', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify({ backend_base_url: deployedBackend }),
   }));

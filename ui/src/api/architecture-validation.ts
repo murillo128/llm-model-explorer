@@ -1,6 +1,7 @@
 import type { components } from './generated/types';
 import { requireProtocol } from './errors';
 import { validateSchema } from './validation';
+import { expandCompactGraph } from './compact-architecture';
 
 type S = components['schemas'];
 export interface ArchitectureContext {
@@ -14,6 +15,7 @@ export function validateArchitecture(value: unknown, context: ArchitectureContex
   if (response.status === 'unavailable') {
     requireProtocol(response.diagnostics.every((d) => !d.node_id && !d.parameter_id), 'Unavailable diagnostic target');
     requireProtocol(!['restart_required', 'cache_unavailable'].includes(response.reason) || response.requires_restart, 'Restart required');
+    return response;
   }
-  return response;
+  return { ...response, graph: expandCompactGraph(response.graph) };
 }

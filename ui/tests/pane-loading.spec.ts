@@ -63,7 +63,7 @@ test('saved pane width is applied in the first rendered frame for both explorers
       observer.observe(document, { childList: true, subtree: true });
     }
   });
-  await configure(page, async (path) => path === '/models' ? { json: { models } } : { json: sessionA });
+  await configure(page, async (path) => path === '/models' ? { json: { models, diagnostics: [] } } : { json: sessionA });
   await page.goto('/');
   const samples = () => page.evaluate(() => (window as typeof window & { paneFirstFrames: PaneFrames }).paneFirstFrames);
   await expect.poll(async () => (await samples()).tensor.length).toBe(3);
@@ -79,7 +79,7 @@ test('inventory shell survives delayed session and inventory changes without rep
   const session = gate(), inventory = gate();
   let inventoryCalls = 0;
   await configure(page, async (path, method) => {
-    if (path === '/models') return { json: { models } };
+    if (path === '/models') return { json: { models, diagnostics: [] } };
     if (path === '/sessions' && method === 'POST') { await session.wait; return { status: 201, json: sessionA }; }
     if (path.endsWith('/tensors')) { inventoryCalls++; await inventory.wait; return { json: { tensors, coverage: 'complete', diagnostics: [] } }; }
     return { json: sessionA };
@@ -123,7 +123,7 @@ test('saved collapsed browser stays collapsed through graph retrieval and keeps 
   const graph = gate();
   let architectureCalls = 0;
   await configure(page, async (path, method) => {
-    if (path === '/models') return { json: { models } };
+    if (path === '/models') return { json: { models, diagnostics: [] } };
     if (path === '/sessions' && method === 'POST') return { status: 201, json: sessionA };
     if (path.endsWith('/tensors')) return { json: contractInventory };
     if (path.endsWith('/architecture')) {
@@ -180,7 +180,7 @@ test('saved collapsed browser stays collapsed through graph retrieval and keeps 
 test('unavailable architecture and model replacement keep the browser shell without stale rows', async ({ page }) => {
   const modelB = gate();
   await configure(page, async (path, method, modelId) => {
-    if (path === '/models') return { json: { models } };
+    if (path === '/models') return { json: { models, diagnostics: [] } };
     if (path === '/sessions' && method === 'POST') return { status: 201, json: modelId === sessionB.model_id ? sessionB : sessionA };
     if (path.endsWith('/tensors')) return { json: contractInventory };
     if (path.endsWith('/architecture')) {
@@ -209,7 +209,7 @@ test('architecture retrieval error and retry retain the open browser and pending
   const retry = gate();
   let architectureCalls = 0;
   await configure(page, async (path, method) => {
-    if (path === '/models') return { json: { models } };
+    if (path === '/models') return { json: { models, diagnostics: [] } };
     if (path === '/sessions' && method === 'POST') return { status: 201, json: sessionA };
     if (path.endsWith('/tensors')) return { json: contractInventory };
     if (path.endsWith('/architecture')) {
@@ -241,7 +241,7 @@ test('late graph for a replaced model cannot restore obsolete browser content or
   const oldGraph = gate();
   let requestedA = false, deliveredA = false;
   await configure(page, async (path, method, modelId) => {
-    if (path === '/models') return { json: { models } };
+    if (path === '/models') return { json: { models, diagnostics: [] } };
     if (path === '/sessions' && method === 'POST') return { status: 201, json: modelId === sessionB.model_id ? sessionB : sessionA };
     if (path.endsWith('/tensors')) return { json: contractInventory };
     if (path.endsWith('/architecture')) {

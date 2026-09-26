@@ -1,0 +1,1733 @@
+{
+  "adapter": {
+    "adapter_config": {
+      "lora_alpha": 16,
+      "peft_type": "LORA",
+      "r": 8,
+      "target_modules": [
+        "q_proj",
+        "v_proj"
+      ]
+    },
+    "adapter_source_fingerprint": "cc86bebbba61987d0ebc04c17bdcb3e8724630d5928ac8d4d54d0d0fb8ac3d07",
+    "compositions": {
+      "HuggingFaceTB/SmolLM2-135M@bnb-nf4-dq": {
+        "adapter_factor_values_streamed": 15360,
+        "base_binding": "quantized",
+        "base_graph_preserved": true,
+        "explorer_content_fingerprint": "072a1569f93ef248fc203d47929adc922c25dea5a7e18521144fe5d3b6238b93",
+        "graph_edges": 1896,
+        "graph_nodes": 1271,
+        "model_id": "HuggingFaceTB/SmolLM2-135M@bnb-nf4-dq+peft-lora:smollm2-135m-smoltalk-lora",
+        "role": "QLoRA-compatible composition",
+        "targets": 60
+      },
+      "SmolLM2-135M": {
+        "adapter_factor_values_streamed": 15360,
+        "base_binding": "native",
+        "base_graph_preserved": true,
+        "explorer_content_fingerprint": "e83ebf1e29379815252e4419d8a2647ff333d77057df881a4a454a15b5d313f6",
+        "graph_edges": 1896,
+        "graph_nodes": 1271,
+        "model_id": "SmolLM2-135M+peft-lora:smollm2-135m-smoltalk-lora",
+        "role": "native LoRA composition",
+        "targets": 60
+      }
+    },
+    "fingerprint_composition_semantics": "peft-lora-causal-lm-alpha-over-r-v1",
+    "historical_training_method_claim": null,
+    "native_and_quantized_base_vocab_sizes": {
+      "native": 49152,
+      "quantized": 49153
+    },
+    "repository": "hfm8tr/smollm2-135m-smoltalk-lora",
+    "revision": "fb39c7012c3b125f94d2bb1a093254994053f4ca",
+    "sampled_base_weights": [
+      {
+        "base_id": "SmolLM2-135M",
+        "coordinates": [
+          [
+            0,
+            0
+          ],
+          [
+            17,
+            23
+          ],
+          [
+            575,
+            575
+          ]
+        ],
+        "oracle": {
+          "package": "safetensors",
+          "tolerance_absolute": 0.0,
+          "version": "0.7.0"
+        },
+        "shape": [
+          576,
+          576
+        ],
+        "tensor": "model.layers.1.self_attn.q_proj.weight",
+        "values": [
+          0.052734375,
+          0.07470703125,
+          0.00701904296875
+        ]
+      },
+      {
+        "base_id": "HuggingFaceTB/SmolLM2-135M@bnb-nf4-dq",
+        "coordinates": [
+          [
+            0,
+            0
+          ],
+          [
+            17,
+            23
+          ],
+          [
+            575,
+            575
+          ]
+        ],
+        "oracle": {
+          "package": "bitsandbytes",
+          "source_revision": "833649043474794b8fe7a4136e0c40faf077b2e0",
+          "tolerance_absolute": 1e-07,
+          "version": "0.50.2"
+        },
+        "shape": [
+          576,
+          576
+        ],
+        "tensor": "model.layers.1.self_attn.q_proj.weight",
+        "values": [
+          0.061606839299201965,
+          0.09611766785383224,
+          0.0
+        ]
+      }
+    ],
+    "selected_bytes": 5385572,
+    "selected_file_count": 6,
+    "selected_files": [
+      {
+        "bytes": 1821,
+        "name": "README.md"
+      },
+      {
+        "bytes": 1027,
+        "name": "adapter_config.json"
+      },
+      {
+        "bytes": 1858776,
+        "name": "adapter_model.safetensors"
+      },
+      {
+        "bytes": 302,
+        "name": "chat_template.jinja"
+      },
+      {
+        "bytes": 3522871,
+        "name": "tokenizer.json"
+      },
+      {
+        "bytes": 775,
+        "name": "tokenizer_config.json"
+      }
+    ]
+  },
+  "architecture": {
+    "deepseek_v2": {
+      "cold": {
+        "analysis_seconds": 40.697751,
+        "cache_read_seconds": 3.2e-05,
+        "hashing_seconds": 13.395507,
+        "mode": "analysis",
+        "outcome": "complete",
+        "preparation_seconds": 64.260173
+      },
+      "compact_families": 26,
+      "coverage": "complete",
+      "edges": 20627,
+      "explorer_content_fingerprint": "f13417c180caa37733cff47882ed7b9b92cb714be0c2af5568405369e08ebead",
+      "graph_id": "d37f5962beafb5c2522a6edf859386db0dd7875d69676e1a0ef6dad01cf227dc",
+      "nodes": 7955,
+      "parameters": 5291,
+      "warm_cache": {
+        "analysis_seconds": 0.0,
+        "cache_read_seconds": 7.166307,
+        "hashing_seconds": 8.213833,
+        "mode": "cache",
+        "outcome": "available",
+        "preparation_seconds": 15.447436
+      },
+      "wire_edges": 13971,
+      "wire_nodes": 2963
+    },
+    "glm4_moe_lite": {
+      "cold": {
+        "analysis_seconds": 32.097459,
+        "cache_read_seconds": 3.8e-05,
+        "hashing_seconds": 39.960661,
+        "mode": "analysis",
+        "outcome": "complete",
+        "preparation_seconds": 81.732723
+      },
+      "compact_families": 46,
+      "coverage": "complete",
+      "edges": 19082,
+      "explorer_content_fingerprint": "adb8f74b5975279a3ef550503526ab1af54f4c271498513f4c0e0b4e2c2978a6",
+      "graph_id": "eecb21d960f7956e227c974f95b510e1c961a6906b99d68bc49a287ca9187856",
+      "nodes": 5430,
+      "parameters": 9491,
+      "warm_cache": {
+        "analysis_seconds": 0.0,
+        "cache_read_seconds": 6.899198,
+        "hashing_seconds": 19.974416,
+        "mode": "cache",
+        "outcome": "available",
+        "preparation_seconds": 27.050123
+      },
+      "wire_edges": 19082,
+      "wire_nodes": 2486
+    },
+    "kimi_linear": {
+      "cold": {
+        "analysis_seconds": 10.464398,
+        "cache_read_seconds": 3e-05,
+        "hashing_seconds": 64.405575,
+        "mode": "analysis",
+        "outcome": "complete",
+        "preparation_seconds": 82.859006
+      },
+      "compact_families": 0,
+      "coverage": "complete",
+      "edges": 2351,
+      "explorer_content_fingerprint": "807d6bf1add29a27a2573f719026d7197b61403be22988b8d44f5e54a3c1ad66",
+      "graph_id": "4671fa54a05f5641b73b2c891bfcbff7af1f02fa3aeee874f1976ef18e5f9845",
+      "nodes": 7868,
+      "parameters": 20493,
+      "warm_cache": {
+        "analysis_seconds": 0.0,
+        "cache_read_seconds": 5.273918,
+        "hashing_seconds": 31.160824,
+        "mode": "cache",
+        "outcome": "available",
+        "preparation_seconds": 36.696128
+      },
+      "wire_edges": 2351,
+      "wire_nodes": 7868
+    },
+    "smollm2_bnb": {
+      "cold": {
+        "analysis_seconds": 1.276672,
+        "cache_read_seconds": 3.3e-05,
+        "hashing_seconds": 0.201945,
+        "mode": "analysis",
+        "outcome": "complete",
+        "preparation_seconds": 2.205886
+      },
+      "compact_families": 0,
+      "coverage": "complete",
+      "edges": 1596,
+      "explorer_content_fingerprint": "53100e543b29d11986acabf10b442d50790fb629063724f0d8d6f94d0fa2b446",
+      "graph_id": "daa3f252e35c44c0fbf264a47dee61e45ed662d229a4c79d55092032ce35bbf4",
+      "nodes": 1031,
+      "parameters": 273,
+      "warm_cache": {
+        "analysis_seconds": 0.0,
+        "cache_read_seconds": 0.473366,
+        "hashing_seconds": 0.073998,
+        "mode": "cache",
+        "outcome": "available",
+        "preparation_seconds": 0.553446
+      },
+      "wire_edges": 1596,
+      "wire_nodes": 1031
+    }
+  },
+  "browser_acceptance": {
+    "actual_architecture_graphs": {
+      "deepseek_v2": {
+        "browser": "153.0.8010.12",
+        "duration_ms": 343413,
+        "focused_weights": [
+          {
+            "kind": "expert",
+            "layout_count_after_find": 10,
+            "layout_count_before_find": 10,
+            "logical_nodes_visible": 7955,
+            "parameter": "model.layers.26.mlp.experts.0.gate_proj.weight",
+            "sample": {
+              "column": 0,
+              "row": 0,
+              "value": 0.007255269214510918
+            },
+            "viewport_width": 1440
+          },
+          {
+            "kind": "router",
+            "layout_count_after_find": 10,
+            "layout_count_before_find": 10,
+            "logical_nodes_visible": 7955,
+            "parameter": "model.layers.26.mlp.gate.weight",
+            "sample": {
+              "column": 0,
+              "row": 0,
+              "value": 0.016845703125
+            },
+            "viewport_width": 1178
+          },
+          {
+            "kind": "router",
+            "layout_count_after_find": 10,
+            "layout_count_before_find": 10,
+            "logical_nodes_visible": 7955,
+            "parameter": "model.layers.26.mlp.gate.weight",
+            "sample": {
+              "column": 0,
+              "row": 0,
+              "value": 0.016845703125
+            },
+            "viewport_width": 1440
+          }
+        ],
+        "full_graph": {
+          "browser_process_memory": {
+            "aggregate_rss_kib": 2450328,
+            "largest_process_rss_kib": 1360184,
+            "process_count": 11
+          },
+          "edges": 20627,
+          "heap_snapshot": {
+            "backingStorageSize": 6816555,
+            "embedderHeapUsedSize": 29412664,
+            "totalSize": 304218112,
+            "usedSize": 164148900
+          },
+          "layout_ms": 2536.7000000476837,
+          "nodes": 7955
+        },
+        "project": "dpr1",
+        "status": "passed",
+        "viewport_widths": [
+          1178,
+          1440
+        ]
+      },
+      "glm4_moe_lite": {
+        "browser": "153.0.8010.12",
+        "duration_ms": 406949,
+        "focused_weights": [
+          {
+            "kind": "expert",
+            "layout_count_after_find": 10,
+            "layout_count_before_find": 10,
+            "logical_nodes_visible": 5430,
+            "parameter": "model.layers.46.mlp.experts.0.gate_proj.weight",
+            "sample": {
+              "column": 0,
+              "row": 0,
+              "value": 0
+            },
+            "viewport_width": 1440
+          },
+          {
+            "kind": "router",
+            "layout_count_after_find": 10,
+            "layout_count_before_find": 10,
+            "logical_nodes_visible": 5430,
+            "parameter": "model.layers.46.mlp.gate.weight",
+            "sample": {
+              "column": 0,
+              "row": 0,
+              "value": 0.00142669677734375
+            },
+            "viewport_width": 1178
+          },
+          {
+            "kind": "router",
+            "layout_count_after_find": 10,
+            "layout_count_before_find": 10,
+            "logical_nodes_visible": 5430,
+            "parameter": "model.layers.46.mlp.gate.weight",
+            "sample": {
+              "column": 0,
+              "row": 0,
+              "value": 0.00142669677734375
+            },
+            "viewport_width": 1440
+          }
+        ],
+        "full_graph": {
+          "browser_process_memory": {
+            "aggregate_rss_kib": 2506652,
+            "largest_process_rss_kib": 1399940,
+            "process_count": 11
+          },
+          "edges": 19082,
+          "heap_snapshot": {
+            "backingStorageSize": 4281997,
+            "embedderHeapUsedSize": 38890592,
+            "totalSize": 345964544,
+            "usedSize": 212624280
+          },
+          "layout_ms": 4803.5,
+          "nodes": 5430
+        },
+        "project": "dpr1",
+        "status": "passed",
+        "viewport_widths": [
+          1178,
+          1440
+        ]
+      },
+      "kimi_linear": {
+        "browser": "153.0.8010.12",
+        "duration_ms": 581781,
+        "focused_weights": [
+          {
+            "kind": "expert",
+            "layout_count_after_find": 10,
+            "layout_count_before_find": 10,
+            "logical_nodes_visible": 7868,
+            "parameter": "model.layers.26.block_sparse_moe.experts.255.w1.weight",
+            "sample": {
+              "column": 0,
+              "row": 0,
+              "value": 0.05517578125
+            },
+            "viewport_width": 1440
+          },
+          {
+            "kind": "router",
+            "layout_count_after_find": 10,
+            "layout_count_before_find": 10,
+            "logical_nodes_visible": 7868,
+            "parameter": "model.layers.26.block_sparse_moe.gate.weight",
+            "sample": {
+              "column": 0,
+              "row": 0,
+              "value": 0.0537109375
+            },
+            "viewport_width": 1178
+          },
+          {
+            "kind": "router",
+            "layout_count_after_find": 10,
+            "layout_count_before_find": 10,
+            "logical_nodes_visible": 7868,
+            "parameter": "model.layers.26.block_sparse_moe.gate.weight",
+            "sample": {
+              "column": 0,
+              "row": 0,
+              "value": 0.0537109375
+            },
+            "viewport_width": 1440
+          }
+        ],
+        "full_graph": {
+          "browser_process_memory": {
+            "aggregate_rss_kib": 2141528,
+            "largest_process_rss_kib": 1030112,
+            "process_count": 11
+          },
+          "edges": 2351,
+          "heap_snapshot": {
+            "backingStorageSize": 4549701,
+            "embedderHeapUsedSize": 324926424,
+            "totalSize": 283533312,
+            "usedSize": 214926808
+          },
+          "layout_ms": 1614.5999999642372,
+          "nodes": 7868
+        },
+        "project": "dpr1",
+        "status": "passed",
+        "viewport_widths": [
+          1178,
+          1440
+        ]
+      }
+    },
+    "bare_smollm2": {
+      "project": "dpr1",
+      "status": "passed"
+    },
+    "native_lora_and_qlora": {
+      "projects": [
+        "dpr1",
+        "dpr2"
+      ],
+      "status": "passed",
+      "tests": 4
+    }
+  },
+  "checks": {
+    "actual_lora_qlora_backend": {
+      "status": "passed",
+      "tests": 1
+    },
+    "actual_quantized_reference_backend": {
+      "cold_warm_graph_semantics_equal": true,
+      "complete_coverage": true,
+      "status": "passed",
+      "tests": 1
+    },
+    "api_contract": {
+      "architecture_cases": 261,
+      "instance_cases": 118,
+      "openapi_references": 365,
+      "status": "passed",
+      "wire_fixtures": 132
+    },
+    "ui_check": {
+      "api_generation_check": "passed",
+      "lint": "passed",
+      "node": "24.14.0",
+      "production_build": "passed",
+      "status": "passed",
+      "test_files": 41,
+      "typecheck": "passed",
+      "unit_tests": 1113
+    }
+  },
+  "cold_warm_startup": [
+    {
+      "backend_peak_rss_kib": 1431052,
+      "mode": "cold",
+      "startup_seconds": 315.74404425697867
+    },
+    {
+      "backend_peak_rss_kib": 1240568,
+      "mode": "warm",
+      "startup_seconds": 162.09479982900666
+    }
+  ],
+  "environment": {
+    "browser": "153.0.8010.12",
+    "browser_acceptance_project": "dpr1",
+    "cpu_count": 16,
+    "device": "cpu",
+    "machine": "x86_64",
+    "node": "24.14.0",
+    "platform": "Linux-6.8.0-139-generic-x86_64-with-glibc2.39",
+    "python": "3.12.14"
+  },
+  "identity_fingerprint_method": "Backend FileSnapshot.fingerprint (SHA-256 over sorted recognized local Hugging Face files, without filesystem paths); PEFT compositions use combined_fingerprint with peft-lora-causal-lm-alpha-over-r-v1.",
+  "integration_branch": "codex/epic-issue-179",
+  "issue": 178,
+  "kind": "Actual local reference acceptance; checkpoint bytes, absolute local paths, screenshots, and traces excluded.",
+  "limitations": [
+    "Actual checkpoint browser layout ran at DPR 1; DPR 2 browser acceptance covered native LoRA and QLoRA compositions.",
+    "This acceptance validates static architecture and bounded tensor inspection, not model inference or generation equivalence."
+  ],
+  "model_references": [
+    {
+      "architectures": [
+        "LlamaForCausalLM"
+      ],
+      "explorer_content_fingerprint": "aeda1cbf6516239fa4d305117c5a70ca5f4a3af06ef7575544dc97914c61e57e",
+      "id": "smollm2",
+      "model_type": "llama",
+      "quantization": null,
+      "repository": "HuggingFaceTB/SmolLM2-135M",
+      "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+      "revision_source": "operator manifest",
+      "selected_bytes": 272443805,
+      "selected_file_count": 9,
+      "selected_files": [
+        {
+          "bytes": 6340,
+          "name": "README.md"
+        },
+        {
+          "bytes": 704,
+          "name": "config.json"
+        },
+        {
+          "bytes": 111,
+          "name": "generation_config.json"
+        },
+        {
+          "bytes": 466391,
+          "name": "merges.txt"
+        },
+        {
+          "bytes": 269060552,
+          "name": "model.safetensors"
+        },
+        {
+          "bytes": 831,
+          "name": "special_tokens_map.json"
+        },
+        {
+          "bytes": 2104556,
+          "name": "tokenizer.json"
+        },
+        {
+          "bytes": 3658,
+          "name": "tokenizer_config.json"
+        },
+        {
+          "bytes": 800662,
+          "name": "vocab.json"
+        }
+      ],
+      "tensor_inventory_coverage": null,
+      "tensor_inventory_diagnostic_codes": null,
+      "tokenizer_available": true
+    },
+    {
+      "architectures": [
+        "DeepseekV2ForCausalLM"
+      ],
+      "explorer_content_fingerprint": "f13417c180caa37733cff47882ed7b9b92cb714be0c2af5568405369e08ebead",
+      "id": "deepseek_v2",
+      "model_type": "deepseek_v2",
+      "quantization": {
+        "_load_in_4bit": true,
+        "_load_in_8bit": false,
+        "bnb_4bit_compute_dtype": "bfloat16",
+        "bnb_4bit_quant_storage": "uint8",
+        "bnb_4bit_quant_type": "nf4",
+        "bnb_4bit_use_double_quant": true,
+        "llm_int8_enable_fp32_cpu_offload": false,
+        "llm_int8_has_fp16_weight": false,
+        "llm_int8_skip_modules": null,
+        "llm_int8_threshold": 6.0,
+        "load_in_4bit": true,
+        "load_in_8bit": false,
+        "quant_method": "bitsandbytes"
+      },
+      "repository": "slowfastai/DeepSeek-V2-Lite-bnb-4bit",
+      "revision": "9fc357346aeba67950a34a86f3520fc276ca2daf",
+      "revision_source": "operator manifest",
+      "selected_bytes": 8751563826,
+      "selected_file_count": 13,
+      "selected_files": [
+        {
+          "bytes": 13759,
+          "name": "LICENSE"
+        },
+        {
+          "bytes": 1327,
+          "name": "README.md"
+        },
+        {
+          "bytes": 2188,
+          "name": "config.json"
+        },
+        {
+          "bytes": 10338,
+          "name": "configuration_deepseek.py"
+        },
+        {
+          "bytes": 181,
+          "name": "generation_config.json"
+        },
+        {
+          "bytes": 5000837269,
+          "name": "model-00001-of-00002.safetensors"
+        },
+        {
+          "bytes": 3739910129,
+          "name": "model-00002-of-00002.safetensors"
+        },
+        {
+          "bytes": 3205406,
+          "name": "model.safetensors.index.json"
+        },
+        {
+          "bytes": 78677,
+          "name": "modeling_deepseek.py"
+        },
+        {
+          "bytes": 482,
+          "name": "special_tokens_map.json"
+        },
+        {
+          "bytes": 1368,
+          "name": "tokenization_deepseek_fast.py"
+        },
+        {
+          "bytes": 7501329,
+          "name": "tokenizer.json"
+        },
+        {
+          "bytes": 1373,
+          "name": "tokenizer_config.json"
+        }
+      ],
+      "tensor_inventory_coverage": "complete",
+      "tensor_inventory_diagnostic_codes": {},
+      "tokenizer_available": true
+    },
+    {
+      "architectures": [
+        "Glm4MoeLiteForCausalLM"
+      ],
+      "explorer_content_fingerprint": "adb8f74b5975279a3ef550503526ab1af54f4c271498513f4c0e0b4e2c2978a6",
+      "id": "glm4_moe_lite",
+      "model_type": "glm4_moe_lite",
+      "quantization": {
+        "config_groups": {
+          "group_0": {
+            "format": "pack-quantized",
+            "input_activations": null,
+            "output_activations": null,
+            "targets": [
+              "Linear"
+            ],
+            "weights": {
+              "actorder": null,
+              "block_structure": null,
+              "dynamic": false,
+              "group_size": 32,
+              "num_bits": 4,
+              "observer": "mse",
+              "observer_kwargs": {},
+              "scale_dtype": null,
+              "strategy": "group",
+              "symmetric": true,
+              "type": "int",
+              "zp_dtype": null
+            }
+          }
+        },
+        "format": "pack-quantized",
+        "global_compression_ratio": null,
+        "ignore": [
+          "model.layers.0.self_attn.q_a_proj",
+          "model.layers.0.self_attn.q_b_proj",
+          "model.layers.0.self_attn.kv_a_proj_with_mqa",
+          "model.layers.0.self_attn.kv_b_proj",
+          "model.layers.0.self_attn.o_proj",
+          "model.layers.0.mlp.gate_proj",
+          "model.layers.0.mlp.up_proj",
+          "model.layers.0.mlp.down_proj",
+          "model.layers.1.mlp.shared_experts.gate_proj",
+          "model.layers.1.mlp.shared_experts.up_proj",
+          "model.layers.1.mlp.shared_experts.down_proj",
+          "model.layers.2.mlp.shared_experts.gate_proj",
+          "model.layers.2.mlp.shared_experts.up_proj",
+          "model.layers.2.mlp.shared_experts.down_proj",
+          "model.layers.3.mlp.shared_experts.gate_proj",
+          "model.layers.3.mlp.shared_experts.up_proj",
+          "model.layers.3.mlp.shared_experts.down_proj",
+          "model.layers.4.mlp.shared_experts.gate_proj",
+          "model.layers.4.mlp.shared_experts.up_proj",
+          "model.layers.4.mlp.shared_experts.down_proj",
+          "model.layers.5.mlp.shared_experts.gate_proj",
+          "model.layers.5.mlp.shared_experts.up_proj",
+          "model.layers.5.mlp.shared_experts.down_proj",
+          "model.layers.6.mlp.shared_experts.gate_proj",
+          "model.layers.6.mlp.shared_experts.up_proj",
+          "model.layers.6.mlp.shared_experts.down_proj",
+          "model.layers.7.mlp.shared_experts.gate_proj",
+          "model.layers.7.mlp.shared_experts.up_proj",
+          "model.layers.7.mlp.shared_experts.down_proj",
+          "model.layers.8.mlp.shared_experts.gate_proj",
+          "model.layers.8.mlp.shared_experts.up_proj",
+          "model.layers.8.mlp.shared_experts.down_proj",
+          "model.layers.9.mlp.shared_experts.gate_proj",
+          "model.layers.9.mlp.shared_experts.up_proj",
+          "model.layers.9.mlp.shared_experts.down_proj",
+          "model.layers.10.mlp.shared_experts.gate_proj",
+          "model.layers.10.mlp.shared_experts.up_proj",
+          "model.layers.10.mlp.shared_experts.down_proj",
+          "model.layers.11.mlp.shared_experts.gate_proj",
+          "model.layers.11.mlp.shared_experts.up_proj",
+          "model.layers.11.mlp.shared_experts.down_proj",
+          "model.layers.12.mlp.shared_experts.gate_proj",
+          "model.layers.12.mlp.shared_experts.up_proj",
+          "model.layers.12.mlp.shared_experts.down_proj",
+          "model.layers.13.mlp.shared_experts.gate_proj",
+          "model.layers.13.mlp.shared_experts.up_proj",
+          "model.layers.13.mlp.shared_experts.down_proj",
+          "model.layers.14.mlp.shared_experts.gate_proj",
+          "model.layers.14.mlp.shared_experts.up_proj",
+          "model.layers.14.mlp.shared_experts.down_proj",
+          "model.layers.15.mlp.shared_experts.gate_proj",
+          "model.layers.15.mlp.shared_experts.up_proj",
+          "model.layers.15.mlp.shared_experts.down_proj",
+          "model.layers.16.mlp.shared_experts.gate_proj",
+          "model.layers.16.mlp.shared_experts.up_proj",
+          "model.layers.16.mlp.shared_experts.down_proj",
+          "model.layers.17.mlp.shared_experts.gate_proj",
+          "model.layers.17.mlp.shared_experts.up_proj",
+          "model.layers.17.mlp.shared_experts.down_proj",
+          "model.layers.18.mlp.shared_experts.gate_proj",
+          "model.layers.18.mlp.shared_experts.up_proj",
+          "model.layers.18.mlp.shared_experts.down_proj",
+          "model.layers.19.mlp.shared_experts.gate_proj",
+          "model.layers.19.mlp.shared_experts.up_proj",
+          "model.layers.19.mlp.shared_experts.down_proj",
+          "model.layers.20.mlp.shared_experts.gate_proj",
+          "model.layers.20.mlp.shared_experts.up_proj",
+          "model.layers.20.mlp.shared_experts.down_proj",
+          "model.layers.21.mlp.shared_experts.gate_proj",
+          "model.layers.21.mlp.shared_experts.up_proj",
+          "model.layers.21.mlp.shared_experts.down_proj",
+          "model.layers.22.mlp.shared_experts.gate_proj",
+          "model.layers.22.mlp.shared_experts.up_proj",
+          "model.layers.22.mlp.shared_experts.down_proj",
+          "model.layers.23.mlp.shared_experts.gate_proj",
+          "model.layers.23.mlp.shared_experts.up_proj",
+          "model.layers.23.mlp.shared_experts.down_proj",
+          "model.layers.24.mlp.shared_experts.gate_proj",
+          "model.layers.24.mlp.shared_experts.up_proj",
+          "model.layers.24.mlp.shared_experts.down_proj",
+          "model.layers.25.mlp.shared_experts.gate_proj",
+          "model.layers.25.mlp.shared_experts.up_proj",
+          "model.layers.25.mlp.shared_experts.down_proj",
+          "model.layers.26.mlp.shared_experts.gate_proj",
+          "model.layers.26.mlp.shared_experts.up_proj",
+          "model.layers.26.mlp.shared_experts.down_proj",
+          "model.layers.27.mlp.shared_experts.gate_proj",
+          "model.layers.27.mlp.shared_experts.up_proj",
+          "model.layers.27.mlp.shared_experts.down_proj",
+          "model.layers.28.mlp.shared_experts.gate_proj",
+          "model.layers.28.mlp.shared_experts.up_proj",
+          "model.layers.28.mlp.shared_experts.down_proj",
+          "model.layers.29.mlp.shared_experts.gate_proj",
+          "model.layers.29.mlp.shared_experts.up_proj",
+          "model.layers.29.mlp.shared_experts.down_proj",
+          "model.layers.30.mlp.shared_experts.gate_proj",
+          "model.layers.30.mlp.shared_experts.up_proj",
+          "model.layers.30.mlp.shared_experts.down_proj",
+          "model.layers.31.mlp.shared_experts.gate_proj",
+          "model.layers.31.mlp.shared_experts.up_proj",
+          "model.layers.31.mlp.shared_experts.down_proj",
+          "model.layers.32.mlp.shared_experts.gate_proj",
+          "model.layers.32.mlp.shared_experts.up_proj",
+          "model.layers.32.mlp.shared_experts.down_proj",
+          "model.layers.33.mlp.shared_experts.gate_proj",
+          "model.layers.33.mlp.shared_experts.up_proj",
+          "model.layers.33.mlp.shared_experts.down_proj",
+          "model.layers.34.mlp.shared_experts.gate_proj",
+          "model.layers.34.mlp.shared_experts.up_proj",
+          "model.layers.34.mlp.shared_experts.down_proj",
+          "model.layers.35.mlp.shared_experts.gate_proj",
+          "model.layers.35.mlp.shared_experts.up_proj",
+          "model.layers.35.mlp.shared_experts.down_proj",
+          "model.layers.36.mlp.shared_experts.gate_proj",
+          "model.layers.36.mlp.shared_experts.up_proj",
+          "model.layers.36.mlp.shared_experts.down_proj",
+          "model.layers.37.mlp.shared_experts.gate_proj",
+          "model.layers.37.mlp.shared_experts.up_proj",
+          "model.layers.37.mlp.shared_experts.down_proj",
+          "model.layers.38.mlp.shared_experts.gate_proj",
+          "model.layers.38.mlp.shared_experts.up_proj",
+          "model.layers.38.mlp.shared_experts.down_proj",
+          "model.layers.39.mlp.shared_experts.gate_proj",
+          "model.layers.39.mlp.shared_experts.up_proj",
+          "model.layers.39.mlp.shared_experts.down_proj",
+          "model.layers.40.mlp.shared_experts.gate_proj",
+          "model.layers.40.mlp.shared_experts.up_proj",
+          "model.layers.40.mlp.shared_experts.down_proj",
+          "model.layers.41.mlp.shared_experts.gate_proj",
+          "model.layers.41.mlp.shared_experts.up_proj",
+          "model.layers.41.mlp.shared_experts.down_proj",
+          "model.layers.42.mlp.shared_experts.gate_proj",
+          "model.layers.42.mlp.shared_experts.up_proj",
+          "model.layers.42.mlp.shared_experts.down_proj",
+          "model.layers.43.mlp.shared_experts.gate_proj",
+          "model.layers.43.mlp.shared_experts.up_proj",
+          "model.layers.43.mlp.shared_experts.down_proj",
+          "model.layers.44.mlp.shared_experts.gate_proj",
+          "model.layers.44.mlp.shared_experts.up_proj",
+          "model.layers.44.mlp.shared_experts.down_proj",
+          "model.layers.45.mlp.shared_experts.gate_proj",
+          "model.layers.45.mlp.shared_experts.up_proj",
+          "model.layers.45.mlp.shared_experts.down_proj",
+          "model.layers.46.mlp.shared_experts.gate_proj",
+          "model.layers.46.mlp.shared_experts.up_proj",
+          "model.layers.46.mlp.shared_experts.down_proj",
+          "model.layers.47.mlp.shared_experts.gate_proj",
+          "model.layers.47.mlp.shared_experts.up_proj",
+          "model.layers.47.mlp.shared_experts.down_proj",
+          "lm_head"
+        ],
+        "kv_cache_scheme": null,
+        "quant_method": "compressed-tensors",
+        "quantization_status": "compressed",
+        "sparsity_config": {},
+        "transform_config": {},
+        "version": "0.13.1.a20260219"
+      },
+      "repository": "cyankiwi/GLM-4.7-Flash-AWQ-4bit",
+      "revision": "25624b53414e585bcf7dcb9584667c3106c6089b",
+      "revision_source": "operator manifest",
+      "selected_bytes": 20193152546,
+      "selected_file_count": 11,
+      "selected_files": [
+        {
+          "bytes": 8204,
+          "name": "README.md"
+        },
+        {
+          "bytes": 3120,
+          "name": "chat_template.jinja"
+        },
+        {
+          "bytes": 10750,
+          "name": "config.json"
+        },
+        {
+          "bytes": 181,
+          "name": "generation_config.json"
+        },
+        {
+          "bytes": 5369424480,
+          "name": "model-00001-of-00004.safetensors"
+        },
+        {
+          "bytes": 5368234096,
+          "name": "model-00002-of-00004.safetensors"
+        },
+        {
+          "bytes": 5368506008,
+          "name": "model-00003-of-00004.safetensors"
+        },
+        {
+          "bytes": 4064035344,
+          "name": "model-00004-of-00004.safetensors"
+        },
+        {
+          "bytes": 2712517,
+          "name": "model.safetensors.index.json"
+        },
+        {
+          "bytes": 20217541,
+          "name": "tokenizer.json"
+        },
+        {
+          "bytes": 305,
+          "name": "tokenizer_config.json"
+        }
+      ],
+      "tensor_inventory_coverage": "partial",
+      "tensor_inventory_diagnostic_codes": {
+        "unsupported_representation": 47
+      },
+      "tokenizer_available": true
+    },
+    {
+      "architectures": [
+        "LlamaForCausalLM"
+      ],
+      "explorer_content_fingerprint": "53100e543b29d11986acabf10b442d50790fb629063724f0d8d6f94d0fa2b446",
+      "id": "smollm2_bnb",
+      "model_type": "llama",
+      "quantization": {
+        "_load_in_4bit": true,
+        "_load_in_8bit": false,
+        "bnb_4bit_compute_dtype": "bfloat16",
+        "bnb_4bit_quant_storage": "uint8",
+        "bnb_4bit_quant_type": "nf4",
+        "bnb_4bit_use_double_quant": true,
+        "llm_int8_enable_fp32_cpu_offload": false,
+        "llm_int8_has_fp16_weight": false,
+        "llm_int8_skip_modules": null,
+        "llm_int8_threshold": 6.0,
+        "load_in_4bit": true,
+        "load_in_8bit": false,
+        "quant_method": "bitsandbytes"
+      },
+      "repository": "unsloth/SmolLM2-135M-bnb-4bit",
+      "revision": "738fd459cdfaf82f75846cf075738987ed6eb2b8",
+      "revision_source": "operator manifest",
+      "selected_bytes": 116681490,
+      "selected_file_count": 10,
+      "selected_files": [
+        {
+          "bytes": 4567,
+          "name": "README.md"
+        },
+        {
+          "bytes": 29,
+          "name": "added_tokens.json"
+        },
+        {
+          "bytes": 1298,
+          "name": "config.json"
+        },
+        {
+          "bytes": 158,
+          "name": "generation_config.json"
+        },
+        {
+          "bytes": 466391,
+          "name": "merges.txt"
+        },
+        {
+          "bytes": 111880910,
+          "name": "model.safetensors"
+        },
+        {
+          "bytes": 742,
+          "name": "special_tokens_map.json"
+        },
+        {
+          "bytes": 3522845,
+          "name": "tokenizer.json"
+        },
+        {
+          "bytes": 3888,
+          "name": "tokenizer_config.json"
+        },
+        {
+          "bytes": 800662,
+          "name": "vocab.json"
+        }
+      ],
+      "tensor_inventory_coverage": "complete",
+      "tensor_inventory_diagnostic_codes": {},
+      "tokenizer_available": true
+    },
+    {
+      "architectures": [
+        "KimiLinearForCausalLM"
+      ],
+      "explorer_content_fingerprint": "807d6bf1add29a27a2573f719026d7197b61403be22988b8d44f5e54a3c1ad66",
+      "id": "kimi_linear",
+      "model_type": "kimi_linear",
+      "quantization": {
+        "config_groups": {
+          "group_0": {
+            "format": "pack-quantized",
+            "input_activations": null,
+            "output_activations": null,
+            "targets": [
+              "Linear"
+            ],
+            "weights": {
+              "actorder": null,
+              "block_structure": null,
+              "dynamic": false,
+              "group_size": 32,
+              "num_bits": 4,
+              "observer": "mse",
+              "observer_kwargs": {},
+              "strategy": "group",
+              "symmetric": true,
+              "type": "int"
+            }
+          }
+        },
+        "format": "pack-quantized",
+        "global_compression_ratio": null,
+        "ignore": [
+          "model.layers.0.self_attn.q_proj",
+          "model.layers.0.self_attn.k_proj",
+          "model.layers.0.self_attn.v_proj",
+          "model.layers.0.self_attn.f_a_proj",
+          "model.layers.0.self_attn.f_b_proj",
+          "model.layers.0.self_attn.b_proj",
+          "model.layers.0.self_attn.g_a_proj",
+          "model.layers.0.self_attn.g_b_proj",
+          "model.layers.0.self_attn.o_proj",
+          "model.layers.0.mlp.gate_proj",
+          "model.layers.0.mlp.up_proj",
+          "model.layers.0.mlp.gate_up_proj",
+          "model.layers.0.mlp.down_proj",
+          "model.layers.1.self_attn.q_proj",
+          "model.layers.1.self_attn.k_proj",
+          "model.layers.1.self_attn.v_proj",
+          "model.layers.1.self_attn.f_a_proj",
+          "model.layers.1.self_attn.f_b_proj",
+          "model.layers.1.self_attn.b_proj",
+          "model.layers.1.self_attn.g_a_proj",
+          "model.layers.1.self_attn.g_b_proj",
+          "model.layers.1.self_attn.o_proj",
+          "model.layers.1.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.1.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.1.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.1.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.2.self_attn.q_proj",
+          "model.layers.2.self_attn.k_proj",
+          "model.layers.2.self_attn.v_proj",
+          "model.layers.2.self_attn.f_a_proj",
+          "model.layers.2.self_attn.f_b_proj",
+          "model.layers.2.self_attn.b_proj",
+          "model.layers.2.self_attn.g_a_proj",
+          "model.layers.2.self_attn.g_b_proj",
+          "model.layers.2.self_attn.o_proj",
+          "model.layers.2.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.2.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.2.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.2.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.3.self_attn.q_proj",
+          "model.layers.3.self_attn.kv_a_proj_with_mqa",
+          "model.layers.3.self_attn.kv_b_proj",
+          "model.layers.3.self_attn.o_proj",
+          "model.layers.3.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.3.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.3.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.3.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.4.self_attn.q_proj",
+          "model.layers.4.self_attn.k_proj",
+          "model.layers.4.self_attn.v_proj",
+          "model.layers.4.self_attn.f_a_proj",
+          "model.layers.4.self_attn.f_b_proj",
+          "model.layers.4.self_attn.b_proj",
+          "model.layers.4.self_attn.g_a_proj",
+          "model.layers.4.self_attn.g_b_proj",
+          "model.layers.4.self_attn.o_proj",
+          "model.layers.4.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.4.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.4.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.4.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.5.self_attn.q_proj",
+          "model.layers.5.self_attn.k_proj",
+          "model.layers.5.self_attn.v_proj",
+          "model.layers.5.self_attn.f_a_proj",
+          "model.layers.5.self_attn.f_b_proj",
+          "model.layers.5.self_attn.b_proj",
+          "model.layers.5.self_attn.g_a_proj",
+          "model.layers.5.self_attn.g_b_proj",
+          "model.layers.5.self_attn.o_proj",
+          "model.layers.5.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.5.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.5.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.5.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.6.self_attn.q_proj",
+          "model.layers.6.self_attn.k_proj",
+          "model.layers.6.self_attn.v_proj",
+          "model.layers.6.self_attn.f_a_proj",
+          "model.layers.6.self_attn.f_b_proj",
+          "model.layers.6.self_attn.b_proj",
+          "model.layers.6.self_attn.g_a_proj",
+          "model.layers.6.self_attn.g_b_proj",
+          "model.layers.6.self_attn.o_proj",
+          "model.layers.6.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.6.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.6.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.6.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.7.self_attn.q_proj",
+          "model.layers.7.self_attn.kv_a_proj_with_mqa",
+          "model.layers.7.self_attn.kv_b_proj",
+          "model.layers.7.self_attn.o_proj",
+          "model.layers.7.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.7.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.7.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.7.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.8.self_attn.q_proj",
+          "model.layers.8.self_attn.k_proj",
+          "model.layers.8.self_attn.v_proj",
+          "model.layers.8.self_attn.f_a_proj",
+          "model.layers.8.self_attn.f_b_proj",
+          "model.layers.8.self_attn.b_proj",
+          "model.layers.8.self_attn.g_a_proj",
+          "model.layers.8.self_attn.g_b_proj",
+          "model.layers.8.self_attn.o_proj",
+          "model.layers.8.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.8.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.8.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.8.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.9.self_attn.q_proj",
+          "model.layers.9.self_attn.k_proj",
+          "model.layers.9.self_attn.v_proj",
+          "model.layers.9.self_attn.f_a_proj",
+          "model.layers.9.self_attn.f_b_proj",
+          "model.layers.9.self_attn.b_proj",
+          "model.layers.9.self_attn.g_a_proj",
+          "model.layers.9.self_attn.g_b_proj",
+          "model.layers.9.self_attn.o_proj",
+          "model.layers.9.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.9.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.9.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.9.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.10.self_attn.q_proj",
+          "model.layers.10.self_attn.k_proj",
+          "model.layers.10.self_attn.v_proj",
+          "model.layers.10.self_attn.f_a_proj",
+          "model.layers.10.self_attn.f_b_proj",
+          "model.layers.10.self_attn.b_proj",
+          "model.layers.10.self_attn.g_a_proj",
+          "model.layers.10.self_attn.g_b_proj",
+          "model.layers.10.self_attn.o_proj",
+          "model.layers.10.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.10.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.10.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.10.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.11.self_attn.q_proj",
+          "model.layers.11.self_attn.kv_a_proj_with_mqa",
+          "model.layers.11.self_attn.kv_b_proj",
+          "model.layers.11.self_attn.o_proj",
+          "model.layers.11.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.11.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.11.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.11.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.12.self_attn.q_proj",
+          "model.layers.12.self_attn.k_proj",
+          "model.layers.12.self_attn.v_proj",
+          "model.layers.12.self_attn.f_a_proj",
+          "model.layers.12.self_attn.f_b_proj",
+          "model.layers.12.self_attn.b_proj",
+          "model.layers.12.self_attn.g_a_proj",
+          "model.layers.12.self_attn.g_b_proj",
+          "model.layers.12.self_attn.o_proj",
+          "model.layers.12.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.12.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.12.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.12.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.13.self_attn.q_proj",
+          "model.layers.13.self_attn.k_proj",
+          "model.layers.13.self_attn.v_proj",
+          "model.layers.13.self_attn.f_a_proj",
+          "model.layers.13.self_attn.f_b_proj",
+          "model.layers.13.self_attn.b_proj",
+          "model.layers.13.self_attn.g_a_proj",
+          "model.layers.13.self_attn.g_b_proj",
+          "model.layers.13.self_attn.o_proj",
+          "model.layers.13.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.13.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.13.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.13.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.14.self_attn.q_proj",
+          "model.layers.14.self_attn.k_proj",
+          "model.layers.14.self_attn.v_proj",
+          "model.layers.14.self_attn.f_a_proj",
+          "model.layers.14.self_attn.f_b_proj",
+          "model.layers.14.self_attn.b_proj",
+          "model.layers.14.self_attn.g_a_proj",
+          "model.layers.14.self_attn.g_b_proj",
+          "model.layers.14.self_attn.o_proj",
+          "model.layers.14.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.14.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.14.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.14.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.15.self_attn.q_proj",
+          "model.layers.15.self_attn.kv_a_proj_with_mqa",
+          "model.layers.15.self_attn.kv_b_proj",
+          "model.layers.15.self_attn.o_proj",
+          "model.layers.15.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.15.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.15.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.15.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.16.self_attn.q_proj",
+          "model.layers.16.self_attn.k_proj",
+          "model.layers.16.self_attn.v_proj",
+          "model.layers.16.self_attn.f_a_proj",
+          "model.layers.16.self_attn.f_b_proj",
+          "model.layers.16.self_attn.b_proj",
+          "model.layers.16.self_attn.g_a_proj",
+          "model.layers.16.self_attn.g_b_proj",
+          "model.layers.16.self_attn.o_proj",
+          "model.layers.16.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.16.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.16.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.16.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.17.self_attn.q_proj",
+          "model.layers.17.self_attn.k_proj",
+          "model.layers.17.self_attn.v_proj",
+          "model.layers.17.self_attn.f_a_proj",
+          "model.layers.17.self_attn.f_b_proj",
+          "model.layers.17.self_attn.b_proj",
+          "model.layers.17.self_attn.g_a_proj",
+          "model.layers.17.self_attn.g_b_proj",
+          "model.layers.17.self_attn.o_proj",
+          "model.layers.17.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.17.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.17.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.17.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.18.self_attn.q_proj",
+          "model.layers.18.self_attn.k_proj",
+          "model.layers.18.self_attn.v_proj",
+          "model.layers.18.self_attn.f_a_proj",
+          "model.layers.18.self_attn.f_b_proj",
+          "model.layers.18.self_attn.b_proj",
+          "model.layers.18.self_attn.g_a_proj",
+          "model.layers.18.self_attn.g_b_proj",
+          "model.layers.18.self_attn.o_proj",
+          "model.layers.18.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.18.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.18.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.18.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.19.self_attn.q_proj",
+          "model.layers.19.self_attn.kv_a_proj_with_mqa",
+          "model.layers.19.self_attn.kv_b_proj",
+          "model.layers.19.self_attn.o_proj",
+          "model.layers.19.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.19.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.19.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.19.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.20.self_attn.q_proj",
+          "model.layers.20.self_attn.k_proj",
+          "model.layers.20.self_attn.v_proj",
+          "model.layers.20.self_attn.f_a_proj",
+          "model.layers.20.self_attn.f_b_proj",
+          "model.layers.20.self_attn.b_proj",
+          "model.layers.20.self_attn.g_a_proj",
+          "model.layers.20.self_attn.g_b_proj",
+          "model.layers.20.self_attn.o_proj",
+          "model.layers.20.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.20.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.20.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.20.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.21.self_attn.q_proj",
+          "model.layers.21.self_attn.k_proj",
+          "model.layers.21.self_attn.v_proj",
+          "model.layers.21.self_attn.f_a_proj",
+          "model.layers.21.self_attn.f_b_proj",
+          "model.layers.21.self_attn.b_proj",
+          "model.layers.21.self_attn.g_a_proj",
+          "model.layers.21.self_attn.g_b_proj",
+          "model.layers.21.self_attn.o_proj",
+          "model.layers.21.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.21.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.21.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.21.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.22.self_attn.q_proj",
+          "model.layers.22.self_attn.k_proj",
+          "model.layers.22.self_attn.v_proj",
+          "model.layers.22.self_attn.f_a_proj",
+          "model.layers.22.self_attn.f_b_proj",
+          "model.layers.22.self_attn.b_proj",
+          "model.layers.22.self_attn.g_a_proj",
+          "model.layers.22.self_attn.g_b_proj",
+          "model.layers.22.self_attn.o_proj",
+          "model.layers.22.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.22.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.22.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.22.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.23.self_attn.q_proj",
+          "model.layers.23.self_attn.kv_a_proj_with_mqa",
+          "model.layers.23.self_attn.kv_b_proj",
+          "model.layers.23.self_attn.o_proj",
+          "model.layers.23.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.23.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.23.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.23.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.24.self_attn.q_proj",
+          "model.layers.24.self_attn.k_proj",
+          "model.layers.24.self_attn.v_proj",
+          "model.layers.24.self_attn.f_a_proj",
+          "model.layers.24.self_attn.f_b_proj",
+          "model.layers.24.self_attn.b_proj",
+          "model.layers.24.self_attn.g_a_proj",
+          "model.layers.24.self_attn.g_b_proj",
+          "model.layers.24.self_attn.o_proj",
+          "model.layers.24.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.24.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.24.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.24.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.25.self_attn.q_proj",
+          "model.layers.25.self_attn.k_proj",
+          "model.layers.25.self_attn.v_proj",
+          "model.layers.25.self_attn.f_a_proj",
+          "model.layers.25.self_attn.f_b_proj",
+          "model.layers.25.self_attn.b_proj",
+          "model.layers.25.self_attn.g_a_proj",
+          "model.layers.25.self_attn.g_b_proj",
+          "model.layers.25.self_attn.o_proj",
+          "model.layers.25.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.25.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.25.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.25.block_sparse_moe.shared_experts.down_proj",
+          "model.layers.26.self_attn.q_proj",
+          "model.layers.26.self_attn.kv_a_proj_with_mqa",
+          "model.layers.26.self_attn.kv_b_proj",
+          "model.layers.26.self_attn.o_proj",
+          "model.layers.26.block_sparse_moe.shared_experts.gate_proj",
+          "model.layers.26.block_sparse_moe.shared_experts.up_proj",
+          "model.layers.26.block_sparse_moe.shared_experts.gate_up_proj",
+          "model.layers.26.block_sparse_moe.shared_experts.down_proj",
+          "lm_head"
+        ],
+        "kv_cache_scheme": null,
+        "quant_method": "compressed-tensors",
+        "quantization_status": "compressed",
+        "sparsity_config": {},
+        "transform_config": {},
+        "version": "0.12.3.dev20+gd429903"
+      },
+      "repository": "cyankiwi/Kimi-Linear-48B-A3B-Instruct-AWQ-4bit",
+      "revision": "5d029d1844aa64ec302e14466be7d0353c6e697f",
+      "revision_source": "operator manifest",
+      "selected_bytes": 30541637438,
+      "selected_file_count": 19,
+      "selected_files": [
+        {
+          "bytes": 6592,
+          "name": "README.md"
+        },
+        {
+          "bytes": 1850,
+          "name": "chat_template.jinja"
+        },
+        {
+          "bytes": 18665,
+          "name": "config.json"
+        },
+        {
+          "bytes": 4948,
+          "name": "configuration_kimi.py"
+        },
+        {
+          "bytes": 147,
+          "name": "generation_config.json"
+        },
+        {
+          "bytes": 4999923056,
+          "name": "model-00001-of-00007.safetensors"
+        },
+        {
+          "bytes": 5000490864,
+          "name": "model-00002-of-00007.safetensors"
+        },
+        {
+          "bytes": 5000367704,
+          "name": "model-00003-of-00007.safetensors"
+        },
+        {
+          "bytes": 5000501200,
+          "name": "model-00004-of-00007.safetensors"
+        },
+        {
+          "bytes": 5000369848,
+          "name": "model-00005-of-00007.safetensors"
+        },
+        {
+          "bytes": 4775872992,
+          "name": "model-00006-of-00007.safetensors"
+        },
+        {
+          "bytes": 754974848,
+          "name": "model-00007-of-00007.safetensors"
+        },
+        {
+          "bytes": 6249875,
+          "name": "model.safetensors.index.json"
+        },
+        {
+          "bytes": 40793,
+          "name": "modeling_kimi.py"
+        },
+        {
+          "bytes": 1774,
+          "name": "recipe.yaml"
+        },
+        {
+          "bytes": 760,
+          "name": "special_tokens_map.json"
+        },
+        {
+          "bytes": 2795286,
+          "name": "tiktoken.model"
+        },
+        {
+          "bytes": 12541,
+          "name": "tokenization_kimi.py"
+        },
+        {
+          "bytes": 3695,
+          "name": "tokenizer_config.json"
+        }
+      ],
+      "tensor_inventory_coverage": "partial",
+      "tensor_inventory_diagnostic_codes": {
+        "unsupported_representation": 46
+      },
+      "tokenizer_available": false
+    }
+  ],
+  "numeric_samples": [
+    {
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          23
+        ],
+        [
+          3071,
+          2047
+        ]
+      ],
+      "family": "deepseek_v2",
+      "oracle": {
+        "package": "bitsandbytes",
+        "source_revision": "833649043474794b8fe7a4136e0c40faf077b2e0",
+        "tolerance_absolute": 1e-07,
+        "version": "0.50.2"
+      },
+      "shape": [
+        3072,
+        2048
+      ],
+      "tensor": "model.layers.0.self_attn.q_proj.weight",
+      "values": [
+        -0.018558239564299583,
+        0.0,
+        0.02647208794951439
+      ]
+    },
+    {
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          23
+        ],
+        [
+          1407,
+          2047
+        ]
+      ],
+      "family": "deepseek_v2",
+      "oracle": {
+        "package": "bitsandbytes",
+        "source_revision": "833649043474794b8fe7a4136e0c40faf077b2e0",
+        "tolerance_absolute": 1e-07,
+        "version": "0.50.2"
+      },
+      "shape": [
+        1408,
+        2048
+      ],
+      "tensor": "model.layers.1.mlp.experts.0.gate_proj.weight",
+      "values": [
+        -0.026850447058677673,
+        0.0,
+        0.0447736531496048
+      ]
+    },
+    {
+      "family": "deepseek_v2",
+      "native_stream_bytes": 8192,
+      "samples": [
+        {
+          "offset": 0,
+          "value": 0.3515625
+        },
+        {
+          "offset": 8,
+          "value": 0.50390625
+        },
+        {
+          "offset": 2047,
+          "value": 0.51953125
+        }
+      ],
+      "tensor": "model.layers.0.input_layernorm.weight"
+    },
+    {
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          23
+        ],
+        [
+          767,
+          2047
+        ]
+      ],
+      "family": "glm4_moe_lite",
+      "oracle": {
+        "package": "compressed-tensors",
+        "source_revision": "4a696625b7ada2cb857c75f67ce02dc56b381323",
+        "tolerance_absolute": 1e-07,
+        "version": "source-derived scalar oracle"
+      },
+      "shape": [
+        768,
+        2048
+      ],
+      "tensor": "model.layers.1.self_attn.q_a_proj.weight",
+      "values": [
+        -0.0024261474609375,
+        -0.004913330078125,
+        -0.028076171875
+      ]
+    },
+    {
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          23
+        ],
+        [
+          1535,
+          2047
+        ]
+      ],
+      "family": "glm4_moe_lite",
+      "oracle": {
+        "package": "compressed-tensors",
+        "source_revision": "4a696625b7ada2cb857c75f67ce02dc56b381323",
+        "tolerance_absolute": 1e-07,
+        "version": "source-derived scalar oracle"
+      },
+      "shape": [
+        1536,
+        2048
+      ],
+      "tensor": "model.layers.1.mlp.experts.0.gate_proj.weight",
+      "values": [
+        0.014892578125,
+        0.0238037109375,
+        0.0
+      ]
+    },
+    {
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          23
+        ],
+        [
+          1023,
+          2303
+        ]
+      ],
+      "family": "kimi_linear",
+      "oracle": {
+        "package": "compressed-tensors",
+        "source_revision": "4a696625b7ada2cb857c75f67ce02dc56b381323",
+        "tolerance_absolute": 1e-07,
+        "version": "source-derived scalar oracle"
+      },
+      "shape": [
+        1024,
+        2304
+      ],
+      "tensor": "model.layers.1.block_sparse_moe.experts.0.w1.weight",
+      "values": [
+        0.0272216796875,
+        -0.0255126953125,
+        0.0391845703125
+      ]
+    },
+    {
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          23
+        ],
+        [
+          1023,
+          2303
+        ]
+      ],
+      "family": "kimi_linear",
+      "oracle": {
+        "package": "compressed-tensors",
+        "source_revision": "4a696625b7ada2cb857c75f67ce02dc56b381323",
+        "tolerance_absolute": 1e-07,
+        "version": "source-derived scalar oracle"
+      },
+      "shape": [
+        1024,
+        2304
+      ],
+      "tensor": "model.layers.1.block_sparse_moe.experts.1.w1.weight",
+      "values": [
+        -0.0306396484375,
+        0.0,
+        -0.0103759765625
+      ]
+    },
+    {
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          23
+        ],
+        [
+          575,
+          575
+        ]
+      ],
+      "family": "smollm2_bnb",
+      "oracle": {
+        "package": "bitsandbytes",
+        "source_revision": "833649043474794b8fe7a4136e0c40faf077b2e0",
+        "tolerance_absolute": 1e-07,
+        "version": "0.50.2"
+      },
+      "shape": [
+        576,
+        576
+      ],
+      "tensor": "model.layers.0.self_attn.q_proj.weight",
+      "values": [
+        -0.10777439177036285,
+        -0.3513457179069519,
+        -0.21254119277000427
+      ]
+    },
+    {
+      "coordinates": [
+        [
+          0,
+          0
+        ],
+        [
+          17,
+          23
+        ],
+        [
+          191,
+          575
+        ]
+      ],
+      "family": "smollm2_bnb",
+      "oracle": {
+        "package": "bitsandbytes",
+        "source_revision": "833649043474794b8fe7a4136e0c40faf077b2e0",
+        "tolerance_absolute": 1e-07,
+        "version": "0.50.2"
+      },
+      "shape": [
+        192,
+        576
+      ],
+      "tensor": "model.layers.0.self_attn.k_proj.weight",
+      "values": [
+        -0.13305456936359406,
+        0.12213314324617386,
+        0.34709808230400085
+      ]
+    }
+  ],
+  "observed_date": "2026-09-25",
+  "preflight": {
+    "catalogue_entries": 7,
+    "free_bytes_before_large_downloads": 181729411072,
+    "selected_bytes_total": 59880864677,
+    "selected_file_count": 68,
+    "tokenizer_tokens": 9
+  },
+  "tested_head": "3fbbfc22405fca0f0acd411bbe09a26a87655649"
+}

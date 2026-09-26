@@ -27,7 +27,7 @@ test('footer observes real attempts, accessible retry and HTTP errors without co
     await pending;
     if (result === 'transport') return route.abort('connectionrefused');
     if (result === 'http') return route.fulfill({ status: 503, json: { code: 'resource_exhausted', message: 'private' } });
-    return route.fulfill({ json: { models } });
+    return route.fulfill({ json: { models, diagnostics: [] } });
   });
   await page.goto('/');
   await expect(footer(page).getByRole('status').first()).toHaveText('○Connecting…');
@@ -121,7 +121,7 @@ test('failed close remains retryable after dismissal and success timer never rea
   await page.route('https://backend.example/**', route => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
-    if (path === '/models') return route.fulfill({ json: { models } });
+    if (path === '/models') return route.fulfill({ json: { models, diagnostics: [] } });
     if (request.method() === 'DELETE') { deletes++; return fails ? route.abort('connectionrefused') : route.fulfill({ status: 204 }); }
     if (path === '/sessions') return route.fulfill({ status: 201, json: sessionA });
     if (path.endsWith('/tensors')) return route.fulfill({ json: { tensors, coverage: 'complete', diagnostics: [] } });

@@ -2,7 +2,7 @@
 
 import json
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel
@@ -121,6 +121,7 @@ class BindingContext:
     physical: Mapping[str, r.ArchitectureStorage]
     numeric: Mapping[str, NumericTensor]
     tokenizer_available: bool
+    adapter_tensor_storage: Mapping[str, str] = field(default_factory=dict)
 
 
 def unique(records: Iterable[Any], field: str = "id") -> dict[str, Any]:
@@ -203,6 +204,48 @@ def validate_packed_binding(
             "weight_scale": ("F8_E4M3", (output, inputs // 16)),
             "weight_scale_2": ("F32", ()),
             "input_scale": ("F32", ()),
+        }
+    elif tensor.storage_format == "bnb-nf4-dq":
+        require(tensor.dtype == "U8", "Unsupported bitsandbytes NF4 representation.")
+        numel = output * inputs
+        absmax_count = (numel + 63) // 64
+        nested_count = (absmax_count + 255) // 256
+        state_name = prefix + ".weight.quant_state.bitsandbytes__nf4"
+        state_record = next((item for item in parameter.storage if item.name == state_name), None)
+        require(
+            state_record is not None
+            and state_record.dtype == "U8"
+            and len(state_record.shape) == 1
+            and 0 < state_record.shape[0] <= 4096,
+            "Invalid bitsandbytes quantization-state storage.",
+        )
+        assert state_record is not None
+        expected = {
+            "weight": ("U8", ((numel + 1) // 2, 1)),
+            "weight.absmax": ("U8", (absmax_count,)),
+            "weight.quant_map": ("F32", (16,)),
+            "weight.nested_absmax": ("F32", (nested_count,)),
+            "weight.nested_quant_map": ("F32", (256,)),
+            "weight.quant_state.bitsandbytes__nf4": ("U8", tuple(state_record.shape)),
+        }
+    elif tensor.storage_format == "compressed-tensors-w4a16-int4":
+        require(
+            tensor.dtype == "I32" and inputs % 32 == 0,
+            "Unsupported compressed-tensors W4A16 representation.",
+        )
+        scale = next(
+            (item for item in parameter.storage if item.name == prefix + ".weight_scale"),
+            None,
+        )
+        require(
+            scale is not None and scale.dtype in ("F16", "BF16"),
+            "Invalid compressed-tensors scale storage.",
+        )
+        assert scale is not None
+        expected = {
+            "weight_packed": ("I32", (output, inputs // 8)),
+            "weight_scale": (scale.dtype, (output, inputs // 32)),
+            "weight_shape": ("I64", (2,)),
         }
     else:
         raise GraphError("invalid_graph", "Unsupported packed numeric representation.")
@@ -330,10 +373,19 @@ def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
             )
         if parameter.binding == "native":
             geometry = constants(parameter.logical_shape)
-            require(
-                len(parameter.storage) == 1 and parameter.storage[0].name == parameter.name,
-                "Native binding must name one complete tensor.",
-            )
+            adapter_storage = context.adapter_tensor_storage.get(parameter.name)
+            if adapter_storage is not None:
+                require(
+                    len(parameter.storage) == 1
+                    and parameter.storage[0].name == adapter_storage
+                    and parameter.storage[0].role == "adapter_factor",
+                    "Adapter factor binding disagrees with the verified composition.",
+                )
+            else:
+                require(
+                    len(parameter.storage) == 1 and parameter.storage[0].name == parameter.name,
+                    "Native binding must name one complete tensor.",
+                )
             require(
                 geometry is not None and list(geometry) == parameter.storage[0].shape,
                 "Native logical and physical geometry disagree.",
@@ -370,7 +422,13 @@ def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
             continue
         require(
             any(
-                s.name == tensor.name
+                (
+                    s.name == tensor.name
+                    or (
+                        s.role == "adapter_factor"
+                        and context.adapter_tensor_storage.get(tensor.name) == s.name
+                    )
+                )
                 and s.dtype == tensor.dtype
                 and s.dtype in ("F32", "F16", "BF16", "float32", "float16", "bfloat16")
                 and s.role not in ("scales", "packed", "packed_data")

@@ -1,0 +1,42 @@
+{
+  "evidence_method": "Hub config and safetensors headers inspected with HTTP Range requests; no weight payloads downloaded",
+  "checkpoint_value_oracle": "not run: the reference weight payloads were not available locally",
+  "serialization_source": "https://github.com/vllm-project/compressed-tensors/tree/4a696625b7ada2cb857c75f67ce02dc56b381323/src/compressed_tensors/compressors/pack_quantized",
+  "references": {
+    "GLM": {
+      "repository": "cyankiwi/GLM-4.7-Flash-AWQ-4bit",
+      "revision": "25624b53414e585bcf7dcb9584667c3106c6089b",
+      "config_sha256": "079f8fcd477b07378deafc21ecc5c3b974bf109ce5c9115854d97f88fa7622b9",
+      "compressed_tensors_version": "0.13.1.a20260219",
+      "shards": 4,
+      "packed_groups": 9259,
+      "ignore_entries": 150,
+      "ignore_sha256": "4e8aed7ea04ffc887195e45b945d41034c581c9a2f51403c0054d949da3252fc",
+      "sample": {
+        "module": "model.layers.1.mlp.experts.0.down_proj",
+        "weight_packed": {"dtype": "I32", "shape": [2048, 192]},
+        "weight_scale": {"dtype": "BF16", "shape": [2048, 48]},
+        "weight_shape": {"dtype": "I64", "shape": [2], "values": [2048, 1536]},
+        "weight_zero_point": "absent"
+      }
+    },
+    "Kimi": {
+      "repository": "cyankiwi/Kimi-Linear-48B-A3B-Instruct-AWQ-4bit",
+      "revision": "5d029d1844aa64ec302e14466be7d0353c6e697f",
+      "config_sha256": "5ae21d4b11c57634354a8dacca93062347882f3cc727a9f69e9249e4fdc45eb8",
+      "compressed_tensors_version": "0.12.3.dev20+gd429903",
+      "shards": 7,
+      "packed_groups": 19968,
+      "ignore_entries": 317,
+      "ignore_sha256": "ceac540c7a991221f2db757353ce2df755b0e0292c38a08a1c8b099d2f4d900c",
+      "sample": {
+        "module": "model.layers.1.block_sparse_moe.experts.0.w1",
+        "weight_packed": {"dtype": "I32", "shape": [1024, 288]},
+        "weight_scale": {"dtype": "BF16", "shape": [1024, 72]},
+        "weight_shape": {"dtype": "I64", "shape": [2], "values": [1024, 2304]},
+        "weight_zero_point": "absent"
+      },
+      "ignored_entries_without_standalone_weight": 27
+    }
+  }
+}

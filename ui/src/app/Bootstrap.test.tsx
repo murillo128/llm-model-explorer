@@ -28,7 +28,7 @@ it('offers a working retry after invalid configuration', async () => {
   const fetchMock = vi.fn()
     .mockResolvedValueOnce(new Response('{}'))
     .mockResolvedValueOnce(new Response('{"backend_base_url":"http://localhost:9000"}'))
-    .mockResolvedValue(new Response('{"models":[]}', { headers: { 'Content-Type': 'application/json' } }));
+    .mockResolvedValue(new Response('{"models":[],"diagnostics":[]}', { headers: { 'Content-Type': 'application/json' } }));
   vi.stubGlobal('fetch', fetchMock);
   render(<Bootstrap />);
   expect(await screen.findByRole('alert')).toHaveTextContent('Set backend_base_url');

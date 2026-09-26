@@ -12,7 +12,14 @@ import pytest
 import torch
 from cache_helpers import numeric_manifests
 from fastapi.testclient import TestClient
-from quantized_oracles import PackedFixture, Stored, gptq_fixture, nvfp4_fixture
+from quantized_oracles import (
+    PackedFixture,
+    Stored,
+    bnb_nf4_fixture,
+    compressed_tensors_fixture,
+    gptq_fixture,
+    nvfp4_fixture,
+)
 from test_models import mutate_last_byte
 from test_operations import run
 from test_streaming import Frames, forgotten, server
@@ -29,23 +36,33 @@ from llm_model_explorer.settings import Settings
 from llm_model_explorer.tensor_analysis import TensorAnalysis
 
 
-@pytest.fixture(params=["gptq-int4", "nvfp4"])
+@pytest.fixture(params=["gptq-int4", "nvfp4", "compressed-tensors-w4a16-int4", "bnb-nf4-dq"])
 def packed(request: pytest.FixtureRequest) -> PackedFixture:
-    return gptq_fixture() if request.param == "gptq-int4" else nvfp4_fixture()
+    if request.param == "gptq-int4":
+        return gptq_fixture()
+    if request.param == "nvfp4":
+        return nvfp4_fixture()
+    if request.param == "compressed-tensors-w4a16-int4":
+        return compressed_tensors_fixture()
+    return bnb_nf4_fixture()
 
 
 def tensor_id(packed: PackedFixture) -> str:
     return hashlib.sha256(packed.name.encode()).hexdigest()
 
 
+def model_id(packed: PackedFixture) -> str:
+    return f"numeric@{packed.encoding}"
+
+
 def address(client: TestClient, packed: PackedFixture) -> str:
-    session = client.post("/sessions", json={"model_id": "numeric"})
+    session = client.post("/sessions", json={"model_id": model_id(packed)})
     assert session.status_code == 201
     return f"/sessions/{session.json()['id']}/tensors/{tensor_id(packed)}/"
 
 
 async def async_address(client: httpx.AsyncClient, packed: PackedFixture) -> str:
-    session = await client.post("/sessions", json={"model_id": "numeric"})
+    session = await client.post("/sessions", json={"model_id": model_id(packed)})
     assert session.status_code == 201
     return f"/sessions/{session.json()['id']}/tensors/{tensor_id(packed)}/"
 
@@ -62,7 +79,7 @@ def test_logical_identity_shape_coverage_and_shard_independence(
     for split in [False, True]:
         root = tmp_path / str(split)
         packed.write(root, split=split)
-        source = ModelCatalogue(root).pin("numeric")
+        source = ModelCatalogue(root).pin(model_id(packed))
         (descriptor,) = source.tensors()
         descriptors.append(descriptor)
         assert descriptor.id == tensor_id(packed)
@@ -70,11 +87,13 @@ def test_logical_identity_shape_coverage_and_shard_independence(
         assert descriptor.shape == packed.shape
         assert descriptor.rank == 2 and descriptor.numel == len(expected) // 4
         assert descriptor.logical_dtype == "float32"
-        assert descriptor.storage_dtype == ("I32" if packed.encoding == "gptq-int4" else "U8")
+        assert descriptor.storage_dtype == (
+            "U8" if packed.encoding in {"nvfp4", "bnb-nf4-dq"} else "I32"
+        )
         assert descriptor.storage_format == packed.encoding
         inventory = source.inventory()
         assert inventory["coverage"] == "complete" and inventory["diagnostics"] == []
-        assert len(source.physical_tensors()) == 4
+        assert len(source.physical_tensors()) == len(packed.storage)
         chunks = list(source.iter_tensor(descriptor.id, chunk_elements=131))
         assert all(block.numel() <= 131 for block in chunks)
         assert raw(torch.cat(chunks)) == expected
@@ -91,7 +110,7 @@ def test_unresolved_physical_records_keep_precise_partial_inventory(
     unknown = Stored(unknown_name, dtype, (2,), struct.pack("<2I", 0, 1))
     fixture = replace(packed, storage=(*packed.storage, unknown))
     fixture.write(settings.model_root, split=True)
-    source = ModelCatalogue(settings.model_root).pin("numeric")
+    source = ModelCatalogue(settings.model_root).pin(model_id(packed))
     assert [descriptor.name for descriptor in source.tensors()] == [packed.name]
     inventory = source.inventory()
     assert inventory["coverage"] == "partial"
@@ -110,7 +129,7 @@ def test_rows_keep_requested_order_duplicates_and_unaligned_chunks(
     tmp_path: Path, packed: PackedFixture
 ) -> None:
     packed.write(tmp_path, split=True)
-    source = ModelCatalogue(tmp_path).pin("numeric")
+    source = ModelCatalogue(tmp_path).pin(model_id(packed))
     rows = (packed.shape[0] - 1, 0, 1, 1, 1, 0)
     width = packed.shape[1] * 4
     expected = packed.expected()
@@ -133,7 +152,7 @@ def test_long_unknown_name_keeps_inventory_diagnostic_within_api_contract(
     unknown = Stored(name, "I32", (1,), struct.pack("<i", 1))
     replace(packed, storage=(*packed.storage, unknown)).write(settings.model_root, split=True)
     with TestClient(create_app(settings)) as client:
-        session = client.post("/sessions", json={"model_id": "numeric"}).json()
+        session = client.post("/sessions", json={"model_id": model_id(packed)}).json()
         response = client.get(f"/sessions/{session['id']}/tensors")
         assert response.status_code == 200
         inventory = response.json()

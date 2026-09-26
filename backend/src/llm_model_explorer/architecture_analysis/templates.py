@@ -60,10 +60,22 @@ class ComponentTemplates:
             candidate.nodes.append(r.ArchitectureTemplateNodeRole(role=role, node_id=node.id))
             for parameter_id in node.parameter_ids:
                 name = parameters[parameter_id].name
-                if not name.startswith(candidate.base):
+                if name.startswith(candidate.base):
+                    candidate.parameters[parameter_id] = name.removeprefix(candidate.base)
+                elif name.startswith("__peft__."):
+                    # Adapter-qualified names carry the repeated base module after
+                    # the adapter identity. Normalize only that reviewed target
+                    # suffix so repeated LoRA components can use ordinary templates.
+                    qualified = name.removeprefix("__peft__.")
+                    marker = qualified.find(candidate.base)
+                    if marker > 0 and qualified[marker - 1] == ".":
+                        candidate.parameters[parameter_id] = qualified[
+                            marker + len(candidate.base) :
+                        ]
+                    else:
+                        candidate.valid = False
+                else:
                     candidate.valid = False
-                    continue
-                candidate.parameters[parameter_id] = name.removeprefix(candidate.base)
         except (ValueError, KeyError):
             # Invalid optional role metadata never invalidates an ordinary source record.
             candidate.valid = False

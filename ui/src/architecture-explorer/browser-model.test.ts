@@ -69,3 +69,11 @@ it('admits the authored V-JEPA browser fixture with ordered 24/12 stacks and sep
     ['Encoder attention', 24], ['Encoder MLP', 24], ['Predictor attention', 12], ['Predictor MLP', 12],
   ]);
 });
+
+it('searches exact logical weights on their owning source components', () => {
+  const graph = makeTemplateFixture();
+  const parameter = graph.parameters.find((item) => item.name.includes('layer-2')) ?? graph.parameters.at(-1)!;
+  const owner = graph.nodes.find((node) => node.parameter_ids.includes(parameter.id))!;
+  const entries = browserIndex(graph).filter((entry) => entry.search.includes(parameter.name.toLocaleLowerCase()));
+  expect(entries.map((entry) => entry.node.id)).toContain(owner.id);
+});

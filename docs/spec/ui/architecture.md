@@ -29,6 +29,8 @@ Explorer in DOM, keyboard, and visual order. This ordering does not determine th
 active view: a fresh application still starts in Tensor Explorer, while an
 explicitly selected explorer remains active across ordinary shell updates.
 
+Keep path-free catalogue diagnostics for rejected PEFT adapter candidates visible in the workspace notices, including when no selectable model is available. Rejected adapter compositions never appear as model options and cannot start sessions.
+
 ## Progressive results
 
 Consume numerical long-operation responses incrementally; begin rendering before the entire tensor arrives. Cancellation aborts the active stream and uses operation cancellation where required.

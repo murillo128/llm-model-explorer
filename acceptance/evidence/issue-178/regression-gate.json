@@ -1,0 +1,70 @@
+{
+  "issue": 178,
+  "tested_head": "a3277adcbca963c59d5c081acf63fc5bc81be597",
+  "integration_base": "3fbbfc22405fca0f0acd411bbe09a26a87655649",
+  "run_date": "2026-09-25",
+  "host": {
+    "platform": "Linux x86_64",
+    "python": "3.12.14",
+    "node": "24.14.0",
+    "playwright": "1.63.0",
+    "browser": "Chromium 153.0.8010.12",
+    "device": "CPU",
+    "cuda_available": false
+  },
+  "checks": {
+    "api_contract": {
+      "status": "passed",
+      "openapi_references": 365,
+      "instance_cases": 118,
+      "architecture_cases": 261,
+      "wire_fixtures": 132
+    },
+    "backend": {
+      "total": 1683,
+      "passed": 1663,
+      "skipped": 20,
+      "failed": 0
+    },
+    "tcp_acceptance": {
+      "total": 42,
+      "passed": 32,
+      "skipped": 10,
+      "failed": 0
+    },
+    "ui": {
+      "api_generation": "passed",
+      "typecheck": "passed",
+      "lint": "passed",
+      "unit_tests": 1113,
+      "production_build": "passed"
+    },
+    "component_browser": {
+      "passed": 588,
+      "skipped": 0,
+      "failed": 0,
+      "flaky": 0
+    },
+    "production_browser": {
+      "passed": 86,
+      "skipped": 32,
+      "failed": 0,
+      "flaky": 0,
+      "skip_scope": "Configuration-gated local references and absent deterministic DeepSeek/GLM fixtures; strict actual-reference results are retained in acceptance.json."
+    }
+  },
+  "scrollbar_oracle": {
+    "change": "Wait for the renderer camera origin to match native scroll offsets before asserting that focus preserves viewport geometry.",
+    "repeat_validation": {
+      "runs_per_dpr": 20,
+      "dpr_values": [1, 2],
+      "passed": 40,
+      "failed": 0
+    }
+  },
+  "actual_reference_evidence": {
+    "path": "acceptance/evidence/issue-178/acceptance.json",
+    "tested_head": "3fbbfc22405fca0f0acd411bbe09a26a87655649",
+    "status": "passed"
+  }
+}

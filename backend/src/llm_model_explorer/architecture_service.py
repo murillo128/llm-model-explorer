@@ -11,6 +11,9 @@ from time import perf_counter
 
 from .architecture_analysis import AnalysisInput, DescriptionRegistry, register_dense_descriptions
 from .architecture_analysis.core import AnalysisResult, Scope
+from .architecture_analysis.deepseek_v2 import register_deepseek_v2
+from .architecture_analysis.glm4_moe_lite import register_glm4_moe_lite
+from .architecture_analysis.kimi_linear import register_kimi_linear
 from .architecture_analysis.model_defined import (
     ModelDefinedValidator,
     diagnostic_for_model_error,
@@ -58,6 +61,9 @@ class ArchitectureService:
         self.work = work
         self.registry = DescriptionRegistry()
         register_dense_descriptions(self.registry)
+        register_deepseek_v2(self.registry)
+        register_glm4_moe_lite(self.registry)
+        register_kimi_linear(self.registry)
         register_qwen35(self.registry)
         register_vjepa2(self.registry)
         self._prepared: dict[tuple[str, str], Prepared] = {}

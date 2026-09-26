@@ -8,10 +8,11 @@ that guarded inventory to backend analysis. `ModelSource.configuration()` remain
 a bounded, snapshot-checked read. Processor JSON remains a fingerprinted local
 asset; it is not executed. Filesystem protections and hashing are unchanged.
 
-Admission recognizes the reviewed Qwen3 GPTQ Int4 and Qwen3.5 ModelOpt NVFP4
-configuration/layout combinations. Unknown options/encodings and incomplete or
-inconsistent physical groups fail admission. Validation does not read or decode
-packed values, check calibration quality, or promise other GPTQ/NVFP4 formats.
+Admission recognizes the reviewed Qwen3 GPTQ Int4, Qwen3.5 ModelOpt NVFP4, and
+pinned bitsandbytes NF4/double-quantized configuration/layout combinations.
+Unknown options/encodings and incomplete or inconsistent physical groups fail
+admission. Validation does not check calibration quality or promise other
+GPTQ/NVFP4/bitsandbytes formats.
 
 For these encodings, complete F32/F16/BF16 `weight` and rank-one `bias`, `A_log`,
 and `dt_bias` fields retain their physical shape as their full logical shape.
@@ -22,16 +23,20 @@ fused weight, or invent a region endpoint. Generic higher-rank native tensor dat
 continues to work. Unquantized inventories retain all native records, including
 buffers, scalars, and names that resemble quantization auxiliaries.
 
-Quantized HTTP inventories explicitly report `coverage: partial` and a safe
-exclusion diagnostic, including when the logical inventory is empty. Packed or
-auxiliary IDs return `tensor_not_found` on data/statistics/distributions and
-internal row access. Existing embedding resolution remains restricted to verified
-native Llama input tables and rejects both newly admitted variants and V-JEPA.
+Unknown/orphan physical records produce `coverage: partial` and a safe exclusion
+diagnostic; fully accounted inventories can report complete coverage. Packed
+companions never receive logical IDs and return `tensor_not_found` on
+data/statistics/distributions and internal row access. Embedding resolution
+accepts verified native Llama input tables and the admitted NF4 table through
+shared logical row access; GPTQ/NVFP4 tables and V-JEPA remain unsupported there.
 
 ## Reviewed metadata and fixture provenance
 
-Only JSON metadata and the Safetensors length prefix/header were fetched. No
-checkpoint weight payload, decoder, or remote model-loading code was used.
+For the following three earlier references, only JSON metadata and the
+Safetensors length prefix/header were fetched. No weight payload, decoder, or
+remote model-loading code was used for those metadata checks. NF4 range evidence
+uses one complete saved projection from its pinned reference and is recorded
+separately in [the SmolLM2 NF4 comparison](bnb-nf4-smollm2-reference.md).
 The following exact upstream revisions were inspected:
 
 | Reference | Revision | Header bytes (excluding 8-byte prefix) | Physical / native logical records |

@@ -1,0 +1,92 @@
+{
+  "checkpoint_transformers_version": "4.46.1",
+  "environment": {
+    "bitsandbytes": "0.50.2",
+    "python": "3.12.14",
+    "safetensors": "0.8.0",
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.6"
+  },
+  "oracle": {
+    "decoded_sha256": "7e74057c56c5d437e1bda98aa30df1cc735c666dc7f311cf71d01819b76e8e6d",
+    "description": "bitsandbytes.functional.get_4bit_type('nf4') and dequantize_blockwise for nested scales, using the pinned high-first NF4 nibble mapping",
+    "float32_bit_mismatches": 0,
+    "limitation": "The installed CPU wheel has no CPU kernel for functional.dequantize_4bit; the comparison composes its CPU codebook and nested-scale APIs with the pinned kernel's documented high-first mapping.",
+    "maximum_absolute_error": 0.0,
+    "nibble_mapping_source": "https://github.com/bitsandbytes-foundation/bitsandbytes/blob/0.50.2/csrc/kernels.cu#L517-L522",
+    "oracle_sha256": "7e74057c56c5d437e1bda98aa30df1cc735c666dc7f311cf71d01819b76e8e6d"
+  },
+  "physical_group": [
+    {
+      "bytes": 55296,
+      "dtype": "U8",
+      "name": "model.layers.0.self_attn.k_proj.weight",
+      "sha256": "1bd072552f674c83ff84b4990cb10013ec3d9a42b8daf00fc9f9640dd3dc4d6e",
+      "shape": [
+        55296,
+        1
+      ]
+    },
+    {
+      "bytes": 1728,
+      "dtype": "U8",
+      "name": "model.layers.0.self_attn.k_proj.weight.absmax",
+      "sha256": "b9951dc1ce3e1cb658da5744bf0ed9908ff60680021739e67a8f33f3de276765",
+      "shape": [
+        1728
+      ]
+    },
+    {
+      "bytes": 64,
+      "dtype": "F32",
+      "name": "model.layers.0.self_attn.k_proj.weight.quant_map",
+      "sha256": "8501941daa1b8a90ad1bbfeb632e5101b5dddbc4bb52d6e55abcfd777e60c06a",
+      "shape": [
+        16
+      ]
+    },
+    {
+      "bytes": 28,
+      "dtype": "F32",
+      "name": "model.layers.0.self_attn.k_proj.weight.nested_absmax",
+      "sha256": "f4b034d1053af346d1b1584d998cef388f7f856ea8d65de510d5c245e720df14",
+      "shape": [
+        7
+      ]
+    },
+    {
+      "bytes": 1024,
+      "dtype": "F32",
+      "name": "model.layers.0.self_attn.k_proj.weight.nested_quant_map",
+      "sha256": "e732639a65f497b4ad684bb166a4467708255edd5207757de8b8f0c7e1fda89c",
+      "shape": [
+        256
+      ]
+    },
+    {
+      "bytes": 169,
+      "dtype": "U8",
+      "name": "model.layers.0.self_attn.k_proj.weight.quant_state.bitsandbytes__nf4",
+      "sha256": "175e42fd82e2a24fa4760e989cc74f135049b59219f65d4db24d5b0973857a80",
+      "shape": [
+        169
+      ]
+    }
+  ],
+  "range": {
+    "count": 4096,
+    "start": 0
+  },
+  "reference": {
+    "repository": "unsloth/SmolLM2-135M-bnb-4bit",
+    "revision": "738fd459cdfaf82f75846cf075738987ed6eb2b8"
+  },
+  "tensor": {
+    "name": "model.layers.0.self_attn.k_proj.weight",
+    "shape": [
+      192,
+      576
+    ]
+  },
+  "weight_bytes_committed": false
+}

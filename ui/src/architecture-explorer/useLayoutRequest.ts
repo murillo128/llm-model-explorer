@@ -37,7 +37,7 @@ export function useLayoutRequest(input: { graph: Graph; error?: never } | { erro
     const controller = new AbortController(); count.current++;
     if (!input.graph) {
       // Failure is local to this optional view; ordinary navigation stays available.
-      void Promise.resolve().then(() => { if (!controller.signal.aborted) setResult({ error: input.error, options }); });
+      void Promise.resolve().then(() => { if (!controller.signal.aborted) setResult((previous) => ({ ...previous, error: input.error })); });
       return () => controller.abort();
     }
     void (async () => {
@@ -60,8 +60,8 @@ export function useLayoutRequest(input: { graph: Graph; error?: never } | { erro
         }
       }
     })().catch(() => {
-      if (!controller.signal.aborted) setResult({ options, input: input.graph, invocation: count.current,
-        error: 'Layout failed or exceeded 10 seconds. Retry or collapse groups.' });
+      if (!controller.signal.aborted) setResult((previous) => ({ ...previous, invocation: count.current,
+        error: 'Layout failed or exceeded 10 seconds. Retry or collapse groups.' }));
     });
     return () => controller.abort();
   }, [input, options, retry, view, rememberAnchor, setResult, clearInspection, container]);

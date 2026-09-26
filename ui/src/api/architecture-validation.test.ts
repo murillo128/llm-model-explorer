@@ -22,4 +22,13 @@ describe('architecture transport boundary', () => {
     const unavailable = { status: 'unavailable', model_id: context.modelId, reason: 'cache_unavailable', requires_restart: false, diagnostics: [] };
     expect(() => validateArchitecture(unavailable, context)).toThrow('Restart required');
   });
+
+  it('reconstructs compact expert identities before navigation', () => {
+    const response = validateArchitecture(fixtures.compact_response, context);
+    expect(response.status).toBe('available');
+    if (response.status !== 'available') throw new Error('Expected an available graph');
+    expect(response.graph.compact_components).toBeUndefined();
+    expect(response.graph.nodes.map((node) => node.id)).toEqual(['root', 'expert0', 'expert1']);
+    expect(fixtures.compact_response.graph.nodes.map((node) => node.id)).toEqual(['root']);
+  });
 });

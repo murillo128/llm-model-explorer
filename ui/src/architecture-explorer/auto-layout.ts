@@ -6,6 +6,7 @@ import { formatShape } from './graph';
 import { cardMetrics, cardSummary } from './card-summary';
 import { endpointKey, projectGraph } from './projection';
 import type { ProjectionOptions } from './projection';
+import { layoutRepeatedInteriors } from './repeated-layout';
 import { assertProtectedRoutes } from './routing-clearance';
 
 export const groupHeaderHeight = 64;
@@ -148,9 +149,15 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
   if (nodeAdapter) engine = new (await import('elkjs/lib/elk.bundled.js')).default({ algorithms: ['layered'] });
   else engine = new ELK({ algorithms: ['layered'], workerFactory: () => new Worker(elkWorkerUrl) });
   let laidOut: ElkNode;
+  let stubs: Awaited<ReturnType<typeof layoutRepeatedInteriors>>['stubs'];
   const abort = () => { if (!nodeAdapter) engine.terminateWorker(); };
   signal?.addEventListener('abort', abort, { once: true });
-  try { laidOut = await engine.layout(root); }
+  try {
+    const repeated = await layoutRepeatedInteriors(graph, projection, elkNodes, root, engine, signal);
+    stubs = repeated.stubs;
+    laidOut = await engine.layout(root);
+    repeated.restore(laidOut);
+  }
   finally { signal?.removeEventListener('abort', abort); if (!nodeAdapter) engine.terminateWorker(); }
   if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
   if (contexts.length) {
@@ -188,7 +195,8 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
       boxes.push({ id, ...(parentId ? { parentId } : {}), x: node.x ?? 0, y: node.y ?? 0,
         absoluteX, absoluteY, width: node.width!, height: node.height! });
       for (const port of node.ports ?? []) {
-        const identity = portIds.get(port.id)!;
+        const identity = portIds.get(port.id);
+        if (!identity) continue; // Internal routing proxy, never a source port.
         const x = (port.x ?? 0) + (port.width ?? 0) / 2, y = (port.y ?? 0) + (port.height ?? 0) / 2;
         const metric = metricsByNode.get(id)!.portLabels[identity.portId]!;
         ports.push({ ...identity, x, y, absoluteX: absoluteX + x, absoluteY: absoluteY + y,
@@ -200,19 +208,43 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
     for (const child of node.children ?? []) collect(child, node);
   }
   collect(laidOut, undefined);
+  const pendingStubs = new Map<string, { side: 'source' | 'target'; route: Route }[]>();
+  const foundStubs = new Set<string>();
   for (const { edge, parent } of routed) {
-    const id = edgeIds.get(edge.id);
+    const stub = stubs.get(edge.id);
+    const id = edgeIds.get(edge.id) ?? stub?.edgeId;
     if (!id) continue;
     const origin = origins.get(edge.container ?? parent);
     if (!origin || !edge.sections?.length) throw new Error('A connection could not be routed. Collapse groups and retry.');
     const absolute = (point: Point) => ({ x: origin.x + point.x, y: origin.y + point.y });
-    routes.push({ id, sections: edge.sections.map((section) =>
+    const route: Route = { id, sections: edge.sections.map((section) =>
       [section.startPoint, ...(section.bendPoints ?? []), section.endPoint].map(absolute)),
     junctions: (edge.junctionPoints ?? []).map(absolute),
     labels: (edge.labels ?? []).map((label) => ({ x: origin.x + (label.x ?? 0), y: origin.y + (label.y ?? 0),
-      width: label.width ?? 0, height: label.height ?? 0, lines: labelLines.get(edge.id) ?? [] })) });
+      width: label.width ?? 0, height: label.height ?? 0, lines: labelLines.get(edge.id) ?? [] })) };
+    if (stub) {
+      if (foundStubs.has(edge.id)) throw new Error('A repeated interior route was duplicated. Collapse groups and retry.');
+      foundStubs.add(edge.id);
+      pendingStubs.set(id, [...(pendingStubs.get(id) ?? []), { side: stub.side, route }]);
+    }
+    else routes.push(route);
   }
-  if (routes.length !== projection.edges.length) throw new Error('Layout did not route every connection. Collapse groups and retry.');
+  if (foundStubs.size !== stubs.size) throw new Error('Layout did not route every interior connection. Collapse groups and retry.');
+  const samePoint = (a?: Point, b?: Point) => a && b && Math.abs(a.x - b.x) < 0.01 && Math.abs(a.y - b.y) < 0.01;
+  for (const route of routes) for (const stub of pendingStubs.get(route.id) ?? []) {
+    if (stub.side === 'source') {
+      if (!samePoint(stub.route.sections.at(-1)?.at(-1), route.sections[0]?.[0]))
+        throw new Error('An interior connection did not meet its boundary route. Collapse groups and retry.');
+      route.sections.unshift(...stub.route.sections);
+    } else {
+      if (!samePoint(route.sections.at(-1)?.at(-1), stub.route.sections[0]?.[0]))
+        throw new Error('An interior connection did not meet its boundary route. Collapse groups and retry.');
+      route.sections.push(...stub.route.sections);
+    }
+    route.junctions.push(...stub.route.junctions);
+  }
+  if (routes.length !== projection.edges.length || new Set(routes.map((route) => route.id)).size !== projection.edges.length)
+    throw new Error('Layout did not route every connection. Collapse groups and retry.');
   const byEndpoint = new Map(ports.map((p) => [endpointKey({ node_id: p.nodeId, port_id: p.portId }), p]));
   const byRoute = new Map(routes.map((route) => [route.id, route]));
   const near = (a: Point, b: Point) => Math.abs(a.x - b.x) < 0.001 && Math.abs(a.y - b.y) < 0.001;

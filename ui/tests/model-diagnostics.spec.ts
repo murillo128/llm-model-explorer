@@ -24,7 +24,7 @@ async function backend(context: BrowserContext, initial: Response) {
   await context.route('**/runtime-config.json', (r) => r.fulfill({ json: { backend_base_url: 'https://diagnostics.example' } }));
   await context.route('https://diagnostics.example/**', (r) => {
     const path = new URL(r.request().url()).pathname; requests.push(path);
-    if (path === '/models') return r.fulfill({ json: { models: [contractResponse.model_id, 'visual-model'].map((id) => ({ id, display_name: id, architectures: [], tokenizer_available: id === contractResponse.model_id })) } });
+    if (path === '/models') return r.fulfill({ json: { models: [contractResponse.model_id, 'visual-model'].map((id) => ({ id, display_name: id, architectures: [], tokenizer_available: id === contractResponse.model_id })), diagnostics: [] } });
     if (path === '/sessions') return r.fulfill({ status: 201, json: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', model_id: r.request().postDataJSON().model_id } });
     if (path.endsWith('/tensors')) return r.fulfill({ json: contractInventory });
     if (path.endsWith('/architecture')) return r.fulfill({ json: response });

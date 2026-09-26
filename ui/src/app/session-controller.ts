@@ -17,6 +17,7 @@ export const sessionStorageKey = (backend: string) => `llm-model-explorer:sessio
 
 export interface ShellState extends FeedbackState {
   models: ModelSummary[];
+  catalogueDiagnostics: Schemas['CatalogueDiagnostic'][];
   catalogue: 'loading' | 'complete' | 'failed';
   session: Session | null;
   sessionStatus: 'idle' | 'loading' | 'ready' | 'closing' | 'failed' | 'expired-session';
@@ -48,7 +49,7 @@ function failureMessage(error: unknown, action: string) {
 export class SessionController {
   private state: ShellState = {
     connection: 'connecting', toasts: [],
-    models: [], catalogue: 'loading', session: null, sessionStatus: 'idle', message: '',
+    models: [], catalogueDiagnostics: [], catalogue: 'loading', session: null, sessionStatus: 'idle', message: '',
     tensors: [], inventoryCoverage: 'complete', inventoryDiagnostics: [], inventory: 'idle', selected: null, explorer: 'Tensor Explorer',
     view: new Lifetime(), viewRevision: 0, viewStatus: 'idle', storageAvailable: true,
   };
@@ -102,8 +103,8 @@ export class SessionController {
     this.catalogueRequest.dispose();
     const request = this.catalogueRequest = new Lifetime();
     this.update({ catalogue: 'loading' });
-    void this.feedback.track(request, () => this.client.listModels(request.signal)).then(request.guard(({ models }) => {
-      this.update({ catalogue: 'complete', models });
+    void this.feedback.track(request, () => this.client.listModels(request.signal)).then(request.guard(({ models, diagnostics }) => {
+      this.update({ catalogue: 'complete', models, catalogueDiagnostics: diagnostics });
     }), request.guard((error: unknown) => {
       this.update({ catalogue: 'failed' });
       if (session && this.state.session === session && error instanceof ApiFailure && error.kind !== 'transport' && error.kind !== 'cancelled') {

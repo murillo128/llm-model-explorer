@@ -136,7 +136,7 @@ def test_installed_server_starts_and_stops_on_cpu(model_root: Path, tmp_path: Pa
                     except httpx.TransportError:
                         time.sleep(0.05)
             assert response.status_code == 200
-            assert response.json() == {"models": []}
+            assert response.json() == {"models": [], "diagnostics": []}
         finally:
             process.terminate()
             try:

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Page, Route, TestInfo } from '@playwright/test';
 import type { Tokenization } from '../src/tokenizer/annotations';
 import { models, sessionA } from '../src/test/shell-fixtures';
-import { data, frame, meta } from './embedding-fixtures';
+import { analysis, data, frame, meta } from './embedding-fixtures';
 import { nativeCamera } from './native-camera';
 
 // Exercise the built application shell with deterministic transport responses.
@@ -27,7 +27,7 @@ async function start(page: Page) {
   await page.route('https://backend.example/**', route => {
     const path = new URL(route.request().url()).pathname;
     if (route.request().method() === 'DELETE') return route.fulfill({ status: 204 });
-    if (path === '/models') return route.fulfill({ json: { models } });
+    if (path === '/models') return route.fulfill({ json: { models, diagnostics: [] } });
     if (path === '/sessions') return route.fulfill({ status: 201, json: sessionA });
     if (path.endsWith('/tensors')) return route.fulfill({ json: { coverage: 'complete', diagnostics: [], tensors: [] } });
     if (path.endsWith('/tokenize')) {
@@ -40,6 +40,14 @@ async function start(page: Page) {
         headers: { 'Access-Control-Expose-Headers': 'X-Operation-Id',
           'X-Operation-Id': `01234567-89ab-cdef-0123-${String(++operation).padStart(12, '0')}` },
         body: Buffer.from([...meta(token_ids, 64), ...data(token_ids, 64), ...frame(4)]) });
+    }
+    if (path.endsWith('/embeddings/statistics') || path.endsWith('/embeddings/distributions')) {
+      const { token_ids } = route.request().postDataJSON() as { token_ids: number[] };
+      const result = analysis(token_ids, 64);
+      return route.fulfill({ contentType: 'application/vnd.llm-model-explorer.stream',
+        headers: { 'Access-Control-Expose-Headers': 'X-Operation-Id',
+          'X-Operation-Id': `01234567-89ab-cdef-0123-${String(++operation).padStart(12, '0')}` },
+        body: Buffer.from(path.endsWith('/statistics') ? result.statisticsStream : result.distributionStream) });
     }
     return route.abort();
   });

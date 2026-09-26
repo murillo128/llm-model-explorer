@@ -23,17 +23,27 @@ MATRIX = "model.layers.0.mlp.down_proj.weight"
 
 
 class Service:
-    def __init__(self, root, device="cpu", model_root=None, startup_timeout=30):
+    def __init__(
+        self,
+        root,
+        device="cpu",
+        model_root=None,
+        startup_timeout=30,
+        kimi_architecture_fixture=False,
+        client_timeout=20,
+    ):
         self.root = root
         self.startup_timeout = startup_timeout
         self.device = device
         self.model_root = model_root
-        if model_root is None:
+        self.kimi_architecture_fixture = kimi_architecture_fixture
+        if model_root is None and not kimi_architecture_fixture:
             generate(root / "models")
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             self.port = sock.getsockname()[1]
-        self.client = httpx.Client(base_url=f"http://127.0.0.1:{self.port}", timeout=20)
+        self.client = httpx.Client(base_url=f"http://127.0.0.1:{self.port}", timeout=client_timeout)
+        self.readiness_response = None
         self.process = None
         try:
             self.start()
@@ -55,7 +65,18 @@ class Service:
             "--device",
             self.device,
         ]
-        if self.model_root is not None:
+        if self.kimi_architecture_fixture:
+            command = [
+                sys.executable,
+                "-m",
+                "acceptance.server",
+                "--root",
+                str(self.root),
+                "--port",
+                str(self.port),
+                "--kimi-architecture-fixture",
+            ]
+        elif self.model_root is not None:
             command = [
                 sys.executable,
                 "-m",
@@ -85,7 +106,9 @@ class Service:
             if self.process.poll() is not None:
                 raise AssertionError((self.root / "service.log").read_text())
             try:
-                if self.client.get("/models").status_code == 200:
+                response = self.client.get("/models")
+                if response.status_code == 200:
+                    self.readiness_response = response
                     return
             except httpx.TransportError:
                 pass

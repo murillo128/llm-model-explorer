@@ -308,6 +308,16 @@ export interface components {
             size_bytes?: number;
             tokenizer_available: boolean;
         };
+        CatalogueDiagnostic: {
+            /** @enum {string} */
+            code: "peft_adapter_rejected" | "peft_composition_rejected" | "peft_base_unmatched";
+            /** @description Path-free adapter candidate label, never a filesystem path. */
+            candidate: string;
+            /** @description Path-free public identity of the compatible local base, when one was matched. */
+            base_model_id?: string;
+            /** @description Safe, precise reason the adapter candidate was not made selectable. */
+            message: string;
+        };
         CreateSessionRequest: {
             model_id: string;
         };
@@ -335,8 +345,11 @@ export interface components {
             numel: number;
             /** @description Physical dtype/representation reported by the backend. */
             storage_dtype: string;
-            /** @description Optional additional physical format such as a quantization scheme. */
-            storage_format?: string;
+            /**
+             * @description Validated backend physical format for this logical tensor.
+             * @enum {string}
+             */
+            storage_format?: "safetensors" | "gptq-int4" | "nvfp4" | "bnb-nf4-dq" | "compressed-tensors-w4a16-int4";
             /** @enum {string} */
             logical_dtype: "float32";
         };
@@ -834,6 +847,26 @@ export interface components {
             provenance: components["schemas"]["ArchitectureProvenance"][];
             instances: components["schemas"]["ArchitectureTemplateInstance"][];
         };
+        ArchitectureCompactInstance: {
+            node_id: components["schemas"]["ArchitectureId"];
+            prefix: components["schemas"]["ArchitectureName"];
+            label: components["schemas"]["ArchitectureName"];
+            index: components["schemas"]["SafeInteger"];
+            node_ids: components["schemas"]["ArchitectureId"][];
+            edge_ids: components["schemas"]["ArchitectureId"][];
+            parameter_ids: components["schemas"]["ArchitectureId"][];
+            symbols: components["schemas"]["ArchitectureName"][];
+        };
+        ArchitectureCompactComponent: {
+            id: components["schemas"]["ArchitectureId"];
+            repetition_id: components["schemas"]["ArchitectureId"];
+            base_prefix: components["schemas"]["ArchitectureName"];
+            nodes: components["schemas"]["ArchitectureNode"][];
+            edges: components["schemas"]["ArchitectureEdge"][];
+            parameter_ids: components["schemas"]["ArchitectureId"][];
+            symbols: components["schemas"]["ArchitectureName"][];
+            instances: components["schemas"]["ArchitectureCompactInstance"][];
+        };
         ArchitectureGraph: {
             graph_id: components["schemas"]["ArchitectureId"];
             /** @enum {string} */
@@ -847,6 +880,7 @@ export interface components {
             parameters: components["schemas"]["ArchitectureParameter"][];
             diagnostics: components["schemas"]["ArchitectureDiagnostic"][];
             templates?: components["schemas"]["ArchitectureTemplate"][];
+            compact_components?: components["schemas"]["ArchitectureCompactComponent"][];
         };
         ArchitectureAvailableResponse: {
             /**
@@ -1000,6 +1034,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         models: components["schemas"]["ModelSummary"][];
+                        diagnostics: components["schemas"]["CatalogueDiagnostic"][];
                     };
                 };
             };

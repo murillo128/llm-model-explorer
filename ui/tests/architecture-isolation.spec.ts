@@ -173,9 +173,16 @@ test('search across scopes preserves independent stack context; explorer and mod
 test('layout failure allows retry and Back; queued late results cannot replace a newer scope or model', async ({ page }) => {
   await findComponent(page, 'layer-3.attention'); await ready(page);
   const before = await state(page);
+  const sourceIds = await panel(page).getAttribute('data-source-node-ids');
+  const edgeIds = await panel(page).getAttribute('data-represented-edge-ids');
   await page.evaluate(() => { window.isolationProbe.reject = true; });
   await page.getByRole('button', { name: 'Explore component', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Layout failed');
+  await expect(panel(page)).toHaveAttribute('aria-busy', 'false');
+  await expect(panel(page)).toHaveAttribute('data-visible-nodes', String(before.layout.boxes.length));
+  await expect(panel(page)).toHaveAttribute('data-source-node-ids', sourceIds!);
+  await expect(panel(page)).toHaveAttribute('data-represented-edge-ids', edgeIds!);
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(before.camera);
   await page.getByRole('button', { name: 'Retry layout', exact: true }).click(); await ready(page);
   await expect(panel(page)).toHaveAttribute('data-scope-id', 'layer-3.attention');
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
@@ -193,6 +200,57 @@ test('layout failure allows retry and Back; queued late results cannot replace a
   const replacement = await state(page);
   await page.evaluate(() => window.isolationProbe.release?.()); await ready(page);
   expect(await state(page)).toEqual(replacement);
+});
+
+test('exhaustive Find and parameter-resource search reuse valid geometry during a pending label layout', async ({ page }) => {
+  await graphAction(page, 'Show all operations'); await ready(page);
+  const before = await state(page);
+  const sourceIds = await panel(page).getAttribute('data-source-node-ids');
+  const edgeIds = await panel(page).getAttribute('data-represented-edge-ids');
+  const target = 'layer-3.gate';
+
+  // A direct rendered source target changes only selection, focus and camera.
+  await findComponent(page, target); await ready(page);
+  expect((await state(page)).count).toBe(before.count);
+  await expect(page.getByLabel('Graph selection')).toHaveAttribute('data-node-id', target);
+  await expect(page.locator(`[data-id="${target}"] .architecture-node`)).toHaveAttribute('data-source-ids', `["${target}"]`);
+  await expect(page.locator(`[data-id="${target}"]`)).toBeInViewport();
+
+  await page.evaluate(() => { window.isolationProbe.hold = true; });
+  await graphPreference(page, 'Show dimensions', true);
+  await expect.poll(() => page.evaluate(() => window.isolationProbe.requests.length)).toBe(before.count + 1);
+  await expect(panel(page)).toHaveAttribute('aria-busy', 'true');
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('model.layers.3.mlp.gate_proj.weight');
+  const results = page.getByRole('group', { name: 'Model search results', exact: true }).locator('[data-node-id]');
+  await expect(results).toHaveCount(1);
+  await expect(results).toHaveAttribute('data-node-id', target);
+  await results.locator('[data-browser-name]').click();
+  await page.getByRole('button', { name: 'Center selected', exact: true }).click();
+  expect(await page.evaluate(() => window.isolationProbe.requests.length)).toBe(before.count + 1);
+  await expect(panel(page)).toHaveAttribute('data-source-node-ids', sourceIds!);
+  await expect(panel(page)).toHaveAttribute('data-represented-edge-ids', edgeIds!);
+  await expect(page.locator(`[data-id="${target}"]`)).toBeInViewport();
+  await expect(page.getByLabel('Graph selection')).toHaveAttribute('data-node-id', target);
+  await page.evaluate(() => window.isolationProbe.release?.()); await ready(page);
+  expect((await state(page)).count).toBe(before.count + 1);
+});
+
+test('Find reveals an exact compact-instance target with one bounded projection change', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('mixed-stacks'); await ready(page);
+  const before = await state(page);
+  const target = 'encoder.layer-3.attention.Q';
+  expect(before.layout.projection.nodes.some((node) => node.id === target)).toBe(false);
+  await findComponent(page, target); await ready(page);
+  const revealed = await state(page);
+  expect(revealed.count).toBe(before.count + 1);
+  expect(revealed.options.exhaustive).toBe(false);
+  expect(revealed.options.repetitions?.['encoder-layers']).toEqual({ start: 3, count: 1 });
+  expect(revealed.layout.projection.nodes.find((node) => node.id === target)?.record?.id).toBe(target);
+  expect(revealed.layout.projection.nodes.length).toBeLessThan(await page.evaluate(() => window.isolationProbe.requests.at(-1)!.graph.nodes.length));
+  expect(JSON.parse((await panel(page).getAttribute('data-represented-edge-ids'))!)).toEqual(revealed.layout.edgeIds);
+  await expect(page.getByLabel('Graph selection')).toHaveAttribute('data-node-id', target);
+  await expect(page.locator(`[data-id="${target}"]`)).toBeInViewport();
+  await expect(page.getByRole('navigation', { name: 'Architecture focus' })).toContainText('Layer 3');
 });
 
 test('optional shared-view failures recover to ordinary exploration and reject cancelled layout callbacks', async ({ page }) => {

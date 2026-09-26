@@ -3,7 +3,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_REVISION = "ff386813a00de0f59a86281fe379846f05eb138801788fea343f1a80cc090307"
+SCHEMA_REVISION = "6d4f6ea778590ff68d919adb59962eb97951240df7b521b3ca08c4846fd68b88"
 
 
 class Record(BaseModel):
@@ -309,6 +309,30 @@ class ArchitectureTemplate(Record):
     ]
 
 
+class ArchitectureCompactInstance(Record):
+    node_id: ArchitectureId
+    prefix: ArchitectureName
+    label: ArchitectureName
+    index: SafeInteger
+    node_ids: Annotated[list[ArchitectureId], Field(min_length=1, max_length=33554432)]
+    edge_ids: Annotated[list[ArchitectureId], Field(max_length=33554432)]
+    parameter_ids: Annotated[list[ArchitectureId], Field(max_length=33554432)]
+    symbols: Annotated[list[ArchitectureName], Field(max_length=33554432)]
+
+
+class ArchitectureCompactComponent(Record):
+    id: ArchitectureId
+    repetition_id: ArchitectureId
+    base_prefix: ArchitectureName
+    nodes: Annotated[list[ArchitectureNode], Field(min_length=1, max_length=33554432)]
+    edges: Annotated[list[ArchitectureEdge], Field(max_length=33554432)]
+    parameter_ids: Annotated[list[ArchitectureId], Field(max_length=33554432)]
+    symbols: Annotated[list[ArchitectureName], Field(max_length=33554432)]
+    instances: Annotated[
+        list[ArchitectureCompactInstance], Field(min_length=2, max_length=33554432)
+    ]
+
+
 class ArchitectureGraph(Record):
     graph_id: ArchitectureId
     scope: Literal["language_model", "visual_encoder_predictor", "model_defined"]
@@ -320,3 +344,6 @@ class ArchitectureGraph(Record):
     parameters: Annotated[list[ArchitectureParameter], Field(max_length=33554432)]
     diagnostics: Annotated[list[ArchitectureDiagnostic], Field(max_length=33554432)]
     templates: Annotated[list[ArchitectureTemplate], Field(max_length=33554432)] | None = None
+    compact_components: (
+        Annotated[list[ArchitectureCompactComponent], Field(max_length=33554432)] | None
+    ) = None

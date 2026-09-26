@@ -12,6 +12,7 @@ export function componentLabel(node: GraphNode, graph: Graph) {
 export function browserIndex(graph: Graph) {
   const interfaces = interfaceIndex(graph);
   const records = new Map(graph.nodes.map((node) => [node.id, node]));
+  const parameters = new Map(graph.parameters.map((parameter) => [parameter.id, parameter.name]));
   const entries: { node: GraphNode; label: string; path: string; search: string; depth: number }[] = [];
   const instances = new Map(graph.repetitions.flatMap((repetition) => repetition.instances.map((instance) => [instance.node_id, { repetition, instance }] as const)));
   type Instance = { repetition: Graph['repetitions'][number]; instance: Graph['repetitions'][number]['instances'][number] };
@@ -24,9 +25,12 @@ export function browserIndex(graph: Graph) {
     const path = [...parents, label].join(' / ');
     const sources = node.provenance.filter((p) => p.kind === 'description' &&
       p.rule === 'Semantic source key in the reviewed packaged description').map((p) => p.source);
-    const modules = node.references.filter((r) => r.kind === 'module').map((r) => r.name);
+    const resources = node.references.flatMap((reference) => reference.kind === 'parameter'
+      ? [parameters.get(reference.parameter_id) ?? reference.parameter_id]
+      : reference.kind === 'module' ? [reference.name] : []);
+    const weights = node.parameter_ids.map((id) => parameters.get(id) ?? id);
     if (interfaces.eligible(node.id)) entries.push({ node, label, depth: parents.length, path: `${path}${context ? ` · ${context}` : ''}`,
-      search: [path, context, node.label, node.id, ...sources, ...modules, ...interfaces.interfaces.filter((item) => item.owner.id === node.id).map((item) => interfaceSearch(item.node))].join(' ').toLocaleLowerCase() });
+      search: [path, context, node.label, node.id, ...sources, ...resources, ...weights, ...interfaces.interfaces.filter((item) => item.owner.id === node.id).map((item) => interfaceSearch(item.node))].join(' ').toLocaleLowerCase() });
     if (node.kind === 'group') for (const id of [...node.children].reverse()) {
       const child = records.get(id); if (child) pending.push({ node: child, parents: [...parents, label], inherited: info });
     }

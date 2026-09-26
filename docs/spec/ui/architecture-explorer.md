@@ -63,7 +63,7 @@ expansion or user camera command supersedes pending collapse framing. Ordinary
 card/browser plus/minus actions continue to preserve their anchor and never fit
 the whole graph.
 
-Viewport culling and asynchronous layout are allowed optimizations; discarding graph records or silently reducing detail is not. Bound layout work and provide an explicit recoverable failure rather than an indefinitely frozen canvas. All reference graphs must be usable when fully expanded on the documented acceptance environment. Record actual layout time, memory, and graph size rather than inventing a performance guarantee.
+Viewport culling and asynchronous layout are allowed optimizations; discarding graph records or silently reducing detail is not. A compact routed-expert response is decoded from its explicit definition and instance mappings before source navigation, projection or inspection. The decoded graph retains every concrete expert and exact weight binding. Bound layout work and provide an explicit recoverable failure rather than an indefinitely frozen canvas. All reference graphs must be usable when fully expanded on the documented acceptance environment. Record actual layout time, memory, and graph size rather than inventing a performance guarantee.
 
 React Flow and ELK are implementation candidates, not mandatory backend dependencies or reasons to change the graph contract. The layout implementation may be replaced without changing model semantics. Do not add a second matrix renderer, graph editor, export suite, or complex navigation framework in this increment.
 
@@ -209,7 +209,7 @@ expansion, presentation preferences and camera commands retain their effects.
 
 ## Source-preserving visible projection
 
-Keep the received graph unchanged. Visible presentation records retain source node IDs, repetition/instance identity, and exact original edge/port references. Compose boundary forwarding without traversing computational operations. Model, stack, layer, MLP and state focus are expansion/filter states of the same canvas, with an explicit return to global context. Stack window size depends on the view/context rather than a globally fixed layer count.
+Keep the decoded source graph unchanged. Visible presentation records retain source node IDs, repetition/instance identity, and exact original edge/port references. Compose boundary forwarding without traversing computational operations. Model, stack, layer, MLP and state focus are expansion/filter states of the same canvas, with an explicit return to global context. Stack window size depends on the view/context rather than a globally fixed layer count.
 
 A reversible derived MLP group requires matching parameter/module ownership and exact gate/up/SiLU/multiply/down topology. Mark it as derived; unmatched operations remain explicit. A presentation boundary alias is not a new mathematical operation or backend identity.
 
@@ -518,7 +518,7 @@ An unavailable representation, fused region, unresolved binding, or higher-rank 
 
 Closing the modal restores focus and leaves camera/expansion intact. Escape closes it; focus stays contained while open. Keyboard users can select/expand/inspect components and connections without pointer-only access. Release numeric subscriptions, operation handles, CPU/GPU resources, and obsolete callbacks on close or replacement. A late result, including a same-shaped or same-ID return from an obsolete generation, must not populate a newer selection. Restore focus to the activating matrix button when it remains connected. Existing stream cancellation must preserve other consumers of shared work.
 
-Resource references are semantic: model scope, modules, parameters, and an optional tokenizer. They contain no UI routes. The initial numeric action is weight inspection; future Tokenizer Explorer or computation-view links can be added by the UI without rewriting the static graph. Do not display buttons for unimplemented endpoints or fabricate runtime activation resources.
+Resource references are semantic: model scope, modules, parameters, and an optional tokenizer. They contain no UI routes. The numeric action remains weight inspection; for a selected PEFT composition, its verified `lora_A` and `lora_B` parameters open through the same weight-inspection modal as base tensors. Do not present a merged delta as a tensor or imply that the static graph executed the adapter. Future Tokenizer Explorer or computation-view links can be added by the UI without rewriting the static graph. Do not display buttons for unimplemented endpoints or fabricate runtime activation resources.
 
 ## Language and V-JEPA presentation
 

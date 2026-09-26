@@ -21,9 +21,17 @@ async def list_models(
     work: Annotated[BlockingWork, Depends(get_blocking_work)],
 ) -> JSONResponse:
     try:
-        models = await work.run(catalogue.list_models)
+        listing = await work.run(catalogue.list_catalogue)
         return JSONResponse(
-            {"models": [model.model_dump(mode="json", exclude_none=True) for model in models]},
+            {
+                "models": [
+                    model.model_dump(mode="json", exclude_none=True) for model in listing.models
+                ],
+                "diagnostics": [
+                    diagnostic.model_dump(mode="json", exclude_none=True)
+                    for diagnostic in listing.diagnostics
+                ],
+            },
             headers={"Cache-Control": "no-store"},
         )
     except ModelError as exc:

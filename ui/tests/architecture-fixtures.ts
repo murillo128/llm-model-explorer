@@ -13,8 +13,12 @@ export const references = [
   { name: 'vjepa2', model: 'facebook/vjepa2-vitl-fpc64-256', revision: 'b3c1679b7c34d3255ef3547f27c7b226aefab26f', stacks: [24, 12], hybrid: false, visual: true },
   { name: 'smollm2', model: 'HuggingFaceTB/SmolLM2-135M', revision: '93efa2f097d58c2a74874c7e644dbc9b0cee75a2', stacks: [30], hybrid: false, visual: false },
 ] as const;
+
+const glmReference = { name: 'glm4', model: 'cyankiwi/GLM-4.7-Flash-AWQ-4bit',
+  revision: '25624b53414e585bcf7dcb9584667c3106c6089b', stacks: [47], hybrid: false, visual: false, experts: 64 } as const;
+
 export function referenceFixture(name: string): S['ArchitectureAvailableResponse'] {
-  const reference = references.find((r) => r.name === name)!;
+  const reference = name === glmReference.name ? glmReference : references.find((r) => r.name === name)!;
   const graph: Graph = { graph_id: `fixture-${name}`, scope: reference.visual ? 'visual_encoder_predictor' : 'language_model', coverage: 'partial',
     symbols: [{ name: 'B', meaning: 'Batch' }, { name: 'S', meaning: reference.visual ? 'Visual sequence' : 'Token sequence' }],
     nodes: [], edges: [], parameters: [], repetitions: [], diagnostics: [{ code: 'ui_stress_fixture', message: 'Synthetic branch topology with reference configuration counts; not checkpoint support evidence.' }] };
@@ -41,7 +45,8 @@ export function referenceFixture(name: string): S['ArchitectureAvailableResponse
     graph.repetitions.push(repetition);
     let last: GraphNode | undefined;
     for (let i = 0; i < count; i++) {
-      const variant = reference.hybrid && i % 4 !== 3 ? 'linear_attention' : 'full_attention';
+      const variant = 'experts' in reference ? (i === 0 ? 'dense' : 'sparse')
+        : reference.hybrid && i % 4 !== 3 ? 'linear_attention' : 'full_attention';
       const layer = group(`layer-${stackIndex}-${i}`, `${stack.label} layer ${i}`, stack);
       repetition.instances.push({ node_id: layer.id, index: i, variant });
       if (last) edge(last, layer); else edge(stack, layer, 'in'); last = layer;
@@ -53,10 +58,26 @@ export function referenceFixture(name: string): S['ArchitectureAvailableResponse
         const op = node(`${layer.id}-op-${j}`, `${variant} operation ${j}`, layer);
         edge(tail, op, j === 0 ? 'in' : 'out'); tail = op; ops.push(op);
       }
-      edge(tail, layer, 'out', 'out');
       edge(ops[0]!, ops[14]!); edge(ops[15]!, ops[31]!); // two long residual-like crossings
       edge(ops[3]!, ops[8]!); edge(ops[4]!, ops[8]!); // converging branches
       if (variant === 'linear_attention') edge(ops[25]!, ops[5]!, 'out', 'in', 'state');
+      if ('experts' in reference && i > 0) {
+        const expertsGroup = group(`${layer.id}-routed-experts`, 'Routed experts', layer);
+        const router = node(`${layer.id}-router`, 'Top-4 router', expertsGroup);
+        const scatter = node(`${layer.id}-scatter`, 'Weighted scatter sum', expertsGroup);
+        const instances: S['ArchitectureRepetition']['instances'] = [];
+        edge(tail, expertsGroup, 'out', 'in'); edge(expertsGroup, router, 'in', 'in');
+        for (let expert = 0; expert < reference.experts; expert++) {
+          const item = group(`${layer.id}-expert-${expert}`, `Routed expert ${expert}`, expertsGroup);
+          instances.push({ node_id: item.id, index: expert, variant: 'routed_expert' });
+          edge(router, item); edge(item, scatter);
+        }
+        edge(scatter, expertsGroup, 'out', 'out'); edge(expertsGroup, layer, 'out', 'out');
+        graph.repetitions.push({ id: `repeat-experts-${stackIndex}-${i}`, parent_id: expertsGroup.id,
+          label: 'Routed experts', instances });
+      } else {
+        edge(tail!, layer, 'out', 'out');
+      }
     }
     edge(last!, stack, 'out', 'out');
   }
