@@ -18,9 +18,9 @@ backend/.venv/bin/ruff format --check --config backend/pyproject.toml acceptance
   .venv/bin/ruff check .
   .venv/bin/ruff format --check .
   .venv/bin/mypy
-  .venv/bin/pytest -o junit_family=legacy --junitxml="$LMEX_EVIDENCE_DIR/backend.xml"
+  .venv/bin/pytest --durations=25 -o junit_family=legacy --junitxml="$LMEX_EVIDENCE_DIR/backend.xml"
 )
-"$python_bin" -m pytest acceptance -ra -o junit_family=legacy --junitxml="$LMEX_EVIDENCE_DIR/network.xml"
+"$python_bin" -m pytest acceptance -ra --durations=25 -o junit_family=legacy --junitxml="$LMEX_EVIDENCE_DIR/network.xml"
 (
   cd ui
   npm run api:check

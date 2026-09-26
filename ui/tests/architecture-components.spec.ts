@@ -34,9 +34,9 @@ test('authored components retain labels, focus, raw inspection and reversible de
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
   await expect(page.locator('.react-flow__node[data-id="layer-3.gate"]')).toHaveCount(1);
   await expect(page.locator('.react-flow__node[data-id^="mlp:"]')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Find component', exact: true }).click();
-  await page.getByRole('combobox', { name: 'Search components', exact: true }).fill('model.layers.3.mlp.activation');
-  const results = page.getByRole('listbox', { name: 'Components', exact: true }).getByRole('option');
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).focus();
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('model.layers.3.mlp.activation');
+  const results = page.getByRole('group', { name: 'Model search results', exact: true }).locator('[data-node-id]');
   await expect(results).toHaveCount(1);
   await expect(results).toHaveAttribute('data-node-id', 'layer-3.silu');
 });

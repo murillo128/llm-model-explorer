@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 llm-model-explorer-backend = "llm_model_explorer.cli:main"
+llm-model-explorer-validate-architecture = "llm_model_explorer.validate_architecture_cli:main"
 
 [dependency-groups]
 dev = ["pytest==9.1.1", "ruff==0.16.7", "mypy==2.3.1", "httpx==0.28.1"]

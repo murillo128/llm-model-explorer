@@ -11,8 +11,7 @@ import { validateArchitecture } from '../api/architecture-validation';
 const graph = validateSchema('ArchitectureAvailableResponse', fixture.response).graph;
 it.each(references)('validates full-size $name fixtures and preserves exact configured instance order', async (reference) => {
   const response = referenceFixture(reference.name);
-  expect(() => validateArchitecture(response, { modelId: reference.model, tokenizerAvailable: !reference.visual,
-    inventory: { tensors: [], coverage: 'partial', diagnostics: [] } })).not.toThrow();
+  expect(() => validateArchitecture(response, { modelId: reference.model })).not.toThrow();
   const layout = await layoutGraph(response.graph, { expanded: [], exhaustive: true });
   expect(layout.boxes).toHaveLength(response.graph.nodes.length);
   expect(layout.edgeIds).toEqual(response.graph.edges.map((e) => e.id));
@@ -22,8 +21,7 @@ it.each(references)('validates full-size $name fixtures and preserves exact conf
 }, 60_000);
 it('projects and lays out the GLM layer stack and a focused routed-expert window', async () => {
   const response = referenceFixture('glm4');
-  expect(() => validateArchitecture(response, { modelId: response.model_id, tokenizerAvailable: true,
-    inventory: { tensors: [], coverage: 'partial', diagnostics: [] } })).not.toThrow();
+  expect(() => validateArchitecture(response, { modelId: response.model_id })).not.toThrow();
   const source = response.graph;
   const layers = source.repetitions.find((item) => item.id === 'repeat-0')!;
   expect(layers.instances).toHaveLength(47);

@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "architecture_revision": "encoder-v1",
+  "name": "Example experimental encoder",
+  "scope": "feature_encoder",
+  "symbols": [
+    {
+      "name": "B",
+      "meaning": "Symbolic batch size; no input was executed."
+    }
+  ],
+  "nodes": [
+    {
+      "id": "observations",
+      "kind": "input",
+      "label": "Observations",
+      "ports": [
+        {
+          "id": "out",
+          "direction": "output",
+          "label": "out",
+          "shape": [
+            {
+              "kind": "symbol",
+              "name": "B"
+            },
+            {
+              "kind": "constant",
+              "value": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "encoder",
+      "kind": "group",
+      "label": "Encoder",
+      "ports": [
+        {
+          "id": "x",
+          "direction": "input",
+          "label": "x",
+          "shape": [
+            {
+              "kind": "symbol",
+              "name": "B"
+            },
+            {
+              "kind": "constant",
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "out",
+          "direction": "output",
+          "label": "out",
+          "shape": [
+            {
+              "kind": "symbol",
+              "name": "B"
+            },
+            {
+              "kind": "constant",
+              "value": 4
+            }
+          ]
+        }
+      ],
+      "children": [
+        "projection",
+        "activation"
+      ]
+    },
+    {
+      "id": "projection",
+      "kind": "operation",
+      "parent_id": "encoder",
+      "label": "Projection",
+      "operation": "linear",
+      "ports": [
+        {
+          "id": "x",
+          "direction": "input",
+          "label": "x",
+          "shape": [
+            {
+              "kind": "symbol",
+              "name": "B"
+            },
+            {
+              "kind": "constant",
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "out",
+          "direction": "output",
+          "label": "out",
+          "shape": [
+            {
+              "kind": "symbol",
+              "name": "B"
+            },
+            {
+              "kind": "constant",
+              "value": 4
+            }
+          ]
+        }
+      ],
+      "parameter_ids": [
+        "weight",
+        "bias"
+      ],
+      "formula": "y = x W^T + b"
+    },
+    {
+      "id": "activation",
+      "kind": "operation",
+      "parent_id": "encoder",
+      "label": "GELU",
+      "operation": "gelu",
+      "ports": [
+        {
+          "id": "x",
+          "direction": "input",
+          "label": "x",
+          "shape": [
+            {
+              "kind": "symbol",
+              "name": "B"
+            },
+            {
+              "kind": "constant",
+              "value": 4
+            }
+          ]
+        },
+        {
+          "id": "out",
+          "direction": "output",
+          "label": "out",
+          "shape": [
+            {
+              "kind": "symbol",
+              "name": "B"
+            },
+            {
+              "kind": "constant",
+              "value": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "latents",
+      "kind": "output",
+      "label": "Latents",
+      "ports": [
+        {
+          "id": "x",
+          "direction": "input",
+          "label": "x",
+          "shape": [
+            {
+              "kind": "symbol",
+              "name": "B"
+            },
+            {
+              "kind": "constant",
+              "value": 4
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "input",
+      "source": {
+        "node_id": "observations",
+        "port_id": "out"
+      },
+      "target": {
+        "node_id": "encoder",
+        "port_id": "x"
+      }
+    },
+    {
+      "id": "project",
+      "source": {
+        "node_id": "encoder",
+        "port_id": "x"
+      },
+      "target": {
+        "node_id": "projection",
+        "port_id": "x"
+      }
+    },
+    {
+      "id": "activate",
+      "source": {
+        "node_id": "projection",
+        "port_id": "out"
+      },
+      "target": {
+        "node_id": "activation",
+        "port_id": "x"
+      }
+    },
+    {
+      "id": "return",
+      "source": {
+        "node_id": "activation",
+        "port_id": "out"
+      },
+      "target": {
+        "node_id": "encoder",
+        "port_id": "out"
+      }
+    },
+    {
+      "id": "output",
+      "source": {
+        "node_id": "encoder",
+        "port_id": "out"
+      },
+      "target": {
+        "node_id": "latents",
+        "port_id": "x"
+      }
+    }
+  ],
+  "parameters": [
+    {
+      "id": "weight",
+      "name": "encoder.proj.weight",
+      "shape": [
+        {
+          "kind": "constant",
+          "value": 4
+        },
+        {
+          "kind": "constant",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "bias",
+      "name": "encoder.proj.bias",
+      "shape": [
+        {
+          "kind": "constant",
+          "value": 4
+        }
+      ]
+    }
+  ]
+}

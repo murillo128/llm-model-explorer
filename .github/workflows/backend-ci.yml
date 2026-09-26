@@ -48,7 +48,7 @@ jobs:
       - run: uv run --locked ruff check .
       - run: uv run --locked ruff format --check .
       - run: uv run --locked mypy
-      - run: uv run --locked pytest
+      - run: uv run --locked pytest --durations=25
       - name: Build and smoke-test the installed wheel outside the source tree
         run: |
           uv build

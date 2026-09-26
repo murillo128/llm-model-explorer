@@ -81,7 +81,8 @@ Tokenizer Explorer composes two vertically stacked, visually distinct panels:
 **Input Embeddings** uses the same reusable `MatrixExplorer` as Tensor Explorer.
 Input Embeddings uses the integrated Matrix Explorer header and scientific body
 inside one rounded card, as defined in `visual-language.md`. Prompt / Tokens
-retains its separately owned full-width compact title above the editor card. The surrounding
+uses the same continuous card edge and soft-neutral compact title above its
+white editor body while retaining its separately owned content. The surrounding
 workspace is a neutral layout container, with no third enclosing card. Empty,
 loading, unavailable and failed embeddings retain the full-width title/body.
 Wrapping the prompt must preserve its inline text/bracket/ID layout and native editor behavior; it must not

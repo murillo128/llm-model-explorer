@@ -78,7 +78,7 @@ interface Request { id: string; tensor: string; kind: string; stream: ReadableSt
 const requests: Request[] = [];
 const cancelled: string[] = [];
 let releaseCatalogue: (() => void) | undefined;
-const catalogue = { paused: false, resume() { this.paused = false; releaseCatalogue?.(); } };
+const catalogue = { paused: false, failed: false, resume() { this.paused = false; releaseCatalogue?.(); } };
 const originalFetch = window.fetch.bind(window);
 window.fetch = async (input, options) => {
   metrics.fetches++;
@@ -89,6 +89,7 @@ window.fetch = async (input, options) => {
   if (options?.method === 'DELETE') { cancelled.push(path.split('/').at(-1)!); return new Response(null, { status: 204 }); }
   if (path === '/models') {
     if (catalogue.paused) await new Promise<void>((resolve) => { releaseCatalogue = resolve; });
+    if (catalogue.failed) throw new TypeError('Fixture transport failure');
     return json({ models, diagnostics: [] });
   }
   if (path === '/sessions') return json(architectureMode && JSON.parse(String(options?.body)).model_id === sessionB.model_id ? sessionB : sessionA, 201);

@@ -2,9 +2,8 @@
 import { expect, it, vi } from 'vitest';
 import fixture from '../../../api/fixtures/architecture.json';
 import { ApiClient, architectureByteLimit } from './client';
-import { validateSchema } from './validation';
 
-const context = { modelId: fixture.context.session.model_id, inventory: validateSchema('TensorInventory', fixture.context.inventory), tokenizerAvailable: true };
+const context = { modelId: fixture.context.session.model_id };
 it('retrieves typed architecture under the configured base and enforces contextual identity', async () => {
   const fetcher = vi.fn<typeof fetch>(async () => new Response(JSON.stringify(fixture.response), { headers: { 'Content-Type': 'application/json' } }));
   const client = new ApiClient({ backendBaseUrl: 'https://backend.example/prefix' }, fetcher);

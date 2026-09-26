@@ -1,5 +1,4 @@
 import { expect, it } from 'vitest';
-import type { components } from './generated/types';
 import type { TensorDescriptor } from '../app/session-controller';
 import { validateArchitecture } from './architecture-validation';
 import { validateResponse } from './validation';
@@ -20,8 +19,7 @@ it('validates and exposes native logical LoRA factor bindings in the generic gra
     parameter.storage[0]!.role = 'adapter_factor';
   }
   validateResponse('getArchitecture', response);
-  const inventory: components['schemas']['TensorInventory'] = { tensors, coverage: 'partial', diagnostics: [] };
-  const context = { modelId: 'lab/alpha', inventory, tokenizerAvailable: true };
+  const context = { modelId: 'lab/alpha' };
   const validated = validateArchitecture(response, context);
   if (validated.status !== 'available') throw new Error('LoRA graph unexpectedly unavailable.');
   const graph = validated.graph;
@@ -30,6 +28,6 @@ it('validates and exposes native logical LoRA factor bindings in the generic gra
   expect(graph.parameters.find((parameter) => parameter.id === 'lora-b')?.inspection).toEqual({ status: 'available', tensor_id: 'lora-B' });
 
   const invalid = structuredClone(response);
-  invalid.graph.parameters.find((parameter) => parameter.id === 'lora-a')!.storage[0]!.shape = [1, 2];
-  expect(() => validateArchitecture(invalid, context)).toThrow('Native adapter factor storage identity/geometry');
+  invalid.graph.parameters.find((parameter) => parameter.id === 'lora-a')!.storage[0]!.shape = [-1, 2];
+  expect(() => validateArchitecture(invalid, context)).toThrow('Invalid ArchitectureResponse schema');
 });

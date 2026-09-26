@@ -22,6 +22,45 @@ async function camera(page: Page) {
       host: v.host.getBoundingClientRect().toJSON(), resources: f.resources(), uploads: f.metrics.uploads };
   });
 }
+async function wheelBurst(page: Page, times: number[], ctrlKey = false) {
+  return page.locator('.matrix-scroll').evaluate((host, { times, ctrlKey }) => {
+    const viewport = window.matrixFixture.viewports.at(-1)!;
+    const rect = host.querySelector('canvas')!.getBoundingClientRect();
+    const descriptor = Object.getOwnPropertyDescriptor(performance, 'now');
+    let time = times[0]!;
+    let clockSamples: number[] = [];
+    // Only the synchronous event dispatches use scheduled time. Rendering and
+    // the actual wheel/history handlers still run; restore the clock on errors.
+    Object.defineProperty(performance, 'now', { configurable: true, value: () => {
+      clockSamples.push(time);
+      return time;
+    } });
+    try {
+      return times.map((at, index) => {
+        time = at;
+        clockSamples = [];
+        const deltaY = [-60, -50, -40][index]!;
+        const before = { ...viewport.renderer.view! };
+        host.dispatchEvent(new WheelEvent('wheel', {
+          deltaY, ctrlKey, clientX: rect.left + 30, clientY: rect.top + 20, bubbles: true, cancelable: true,
+        }));
+        return { time, clockSamples, deltaY, ctrlKey, before, after: { ...viewport.renderer.view! } };
+      });
+    } finally {
+      if (descriptor) Object.defineProperty(performance, 'now', descriptor);
+      else Reflect.deleteProperty(performance, 'now');
+    }
+  }, { times, ctrlKey });
+}
+async function escapeViews(page: Page) {
+  await page.locator('.matrix-scroll').focus();
+  const views = [];
+  for (let i = 0; i < 3; i++) {
+    await page.keyboard.press('Escape');
+    views.push((await camera(page)).view);
+  }
+  return views;
+}
 for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
   for (const shape of ['short', 'tall', 'large', 'square'] as const) test(`fit, focal zoom, bounds and aligned profiles: ${shape}`, async ({ page }) => {
@@ -146,30 +185,41 @@ for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
     await page.keyboard.press('Escape');
     expect((await camera(page)).view).toEqual(replaced);
   });
-  test('wheel and trackpad pinch coalesce into separate gesture-level camera states', async ({ page }) => {
+  test('wheel and trackpad pinch coalesce into separate gesture-level camera states', async ({ page }, info) => {
     await open(page, 'square');
     const initial = (await camera(page)).view;
-    async function wheel(ctrlKey: boolean) {
-      await page.locator('.matrix-scroll').evaluate((host, ctrlKey) => {
-        const rect = host.querySelector('canvas')!.getBoundingClientRect();
-        for (const deltaY of [-60, -50, -40]) host.dispatchEvent(new WheelEvent('wheel', {
-          deltaY, ctrlKey, clientX: rect.left + 30, clientY: rect.top + 20, bubbles: true, cancelable: true,
-        }));
-      }, ctrlKey);
-    }
-    await wheel(false);
+    const origin = await page.evaluate(() => Math.ceil(performance.now()));
+    const wheel = await wheelBurst(page, [0, 40, 80].map(t => origin + t));
     const first = (await camera(page)).view;
+    const pinch = await wheelBurst(page, [300, 340, 380].map(t => origin + t), true);
+    const second = (await camera(page)).view;
+    const back = await escapeViews(page);
+    await info.attach('scheduled-wheel-history', { contentType: 'application/json', body: JSON.stringify({
+      dpr, origin, gaps: [40, 40, 220, 40, 40], initial, wheel, first, pinch, second, back,
+    }, null, 2) });
     expect(first.scaleX).toBeGreaterThan(initial.scaleX);
-    await page.waitForTimeout(220);
-    await wheel(true);
-    expect((await camera(page)).view.scaleX).toBeGreaterThan(first.scaleX);
-    await page.locator('.matrix-scroll').focus();
-    await page.keyboard.press('Escape');
-    expect((await camera(page)).view).toEqual(first);
-    await page.keyboard.press('Escape');
-    expect((await camera(page)).view).toEqual(initial);
-    await page.keyboard.press('Escape');
-    expect((await camera(page)).view).toEqual(initial);
+    expect(second.scaleX).toBeGreaterThan(first.scaleX);
+    expect(back).toEqual([first, initial, initial]);
+  });
+  for (const schedule of [
+    { name: '179 ms gaps coalesce across 358 ms', times: [0, 179, 358], split: false },
+    { name: '180 ms gaps coalesce across 360 ms', times: [0, 180, 360], split: false },
+    { name: '181 ms gap splits after the second event', times: [0, 40, 221], split: true },
+  ]) test(`wheel gesture timing: ${schedule.name}`, async ({ page }, info) => {
+    await open(page, 'square');
+    const initial = (await camera(page)).view;
+    const origin = await page.evaluate(() => Math.ceil(performance.now()));
+    const events = await wheelBurst(page, schedule.times.map(t => origin + t));
+    const intermediate = events[1]!.after;
+    const after = (await camera(page)).view;
+    const back = await escapeViews(page);
+    await info.attach('scheduled-wheel-boundary', { contentType: 'application/json', body: JSON.stringify({
+      dpr, origin, gaps: schedule.times.slice(1).map((t, i) => t - schedule.times[i]!),
+      initial, events, intermediate, after, back,
+    }, null, 2) });
+    expect(intermediate.scaleX).toBeGreaterThan(initial.scaleX);
+    expect(after.scaleX).toBeGreaterThan(intermediate.scaleX);
+    expect(back).toEqual(schedule.split ? [intermediate, initial, initial] : [initial, initial, initial]);
   });
 });
 

@@ -3,6 +3,8 @@ import { makeProjectionFixture } from '../../tests/architecture-projection-fixtu
 import { makeExplicitFixture } from '../../tests/architecture-explicit-fixture';
 import { GraphViews } from './graph';
 import { backFromComponent, enterComponent, expandComponent, projectionOptions, returnToModel, snapshotView } from './scope-navigation';
+import { makeTemplateFixture } from '../../tests/architecture-template-fixture';
+import { enterSharedStructure } from './shared-structure';
 import { projectGraph } from './projection';
 
 it('round-trips nested component views with exact camera, selection, filters and independent stack windows', () => {
@@ -71,4 +73,20 @@ it('does not corrupt previous views on an invalid isolation request or later opt
   view.repetitions['decoder-layers']!.count = 3; view.expanded.push('layer-2.attention');
   expect(view.history[0]).toEqual(before);
   returnToModel(view); expect(snapshotView(view)).toEqual(before);
+});
+
+it('explores the exact rebound child and restores the preceding shared instance with Back', () => {
+  const graph = makeTemplateFixture(), view = new GraphViews().get('model', graph);
+  enterSharedStructure(view, graph.templates![0]!, null);
+  view.shared = { ...view.shared!, instanceId: 'layer-2.attention' };
+  view.viewport = { x: -30, y: 52, zoom: 1.1 };
+  view.selected = 'layer-2.attention.K';
+  const shared = snapshotView(view);
+  enterComponent(view, graph, 'layer-2.attention.Q');
+  expect(view.shared).toBeUndefined();
+  expect(view.scope).toBe('layer-2.attention.Q');
+  const projection = projectGraph(graph, projectionOptions(view));
+  expect(projection.nodes.filter((node) => node.record).map((node) => node.record!.id)).toEqual(['layer-2.attention.Q']);
+  backFromComponent(view);
+  expect(snapshotView(view)).toEqual(shared);
 });

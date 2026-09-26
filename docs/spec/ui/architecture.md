@@ -24,6 +24,11 @@ React composes one reusable application bar, a bounded workspace, and a bottom s
 
 Normal use does not scroll the document. Each explorer owns its bounded composition inside the remaining workspace. Switching explorers does not duplicate page headings or model identity. Session lifecycle and consumer ownership continue through the existing controller and API. Preserve accepted matrix-camera and tokenizer stale-result behavior; the new graph does not redesign either explorer.
 
+Global navigation renders Architecture Explorer, Tokenizer Explorer, then Tensor
+Explorer in DOM, keyboard, and visual order. This ordering does not determine the
+active view: a fresh application still starts in Tensor Explorer, while an
+explicitly selected explorer remains active across ordinary shell updates.
+
 Keep path-free catalogue diagnostics for rejected PEFT adapter candidates visible in the workspace notices, including when no selectable model is available. Rejected adapter compositions never appear as model options and cannot start sessions.
 
 ## Progressive results
@@ -42,3 +47,53 @@ A source object identifies one immutable descriptor and delivery generation. Rep
 Matrix-only mode omits absent auxiliary panels. Full mode reserves the existing aligned 100-bin uint32 profiles with independent progressive delivery. Geometry, camera, scientific transfer, and inspection semantics remain owned by [rendering.md](rendering.md) and [tensor-explorer.md](tensor-explorer.md). Native cell/row/column callbacks allow semantic linkage without renderer internals; disposal clears selection.
 
 Architecture weight inspection is another consumer of this same composition in a closable modal. It must not fork the renderer, copy its camera into the graph, or impose graph scale on the numeric surface. Graph nodes/resource references remain independent of UI routes so future Tokenizer Explorer or specialized-view links need only UI integration, not redesigned model descriptions.
+
+## Connection and application feedback
+
+The shell footer reports last observed backend reachability independently of session
+existence: Connecting initially, Connected after a response (including HTTP or
+protocol errors), Disconnected after transport failure, and Reconnecting only while
+an actual request is pending after failure. Cancellation and session expiration do
+not imply disconnection. Existing refresh/recovery actions remain explicit; no
+heartbeat, polling, automatic numerical replay, or new backend endpoint is used.
+
+Connection transitions use only the footer. Consequential transport failures may
+produce one dismissible shell toast per request, while the affected explorer keeps
+its local failed/retry state. Failed session close has an explicit retry action;
+expiration retains a visible fresh-session recovery state independently of toasts.
+Capability diagnostics and ordinary stream progress remain local. Safe public copy
+must never interpolate arbitrary backend error text or filesystem paths.
+
+Feedback is fenced by backend, session/selection and request lifetime. Replacing a
+context clears its notifications and timers; obsolete requests cannot publish into
+the replacement. Feedback updates and dismissal preserve explorer consumer,
+renderer and camera identities. A single bounded host displays at most three
+notifications, deduplicates repeat delivery of the same request outcome, keeps
+errors until dismissed, and expires brief informational outcomes only while neither
+hovered nor focused. Notifications never steal focus.
+
+
+## Model information and diagnostic lifetime
+
+The existing Session options entry exposes on-demand **Model information**, with
+a labelled **Diagnostics** section and compact warning/error count. It is reachable
+without node selection or a rendered graph, includes already-observed architecture
+and tensor-inventory findings with capability, severity, safe source context and
+complete messages, and retains dismissed inline findings. Model-supplied provenance
+has its own explanation. Opening this section never retrieves architecture, tensor
+bytes or tokenizer results. Explicitly distinguish unobserved capabilities from
+observed capabilities with no findings.
+
+Retain only current findings and minimal dismissal identity; never copy semantic
+graphs or keep a historical notification log. Scope observations to the backend
+and exact current model/session lifetime, rejecting late callbacks. Replacing or
+clearing a session clears current observations. Dismissal identity uses model,
+capability, graph/content generation (session generation when no graph identity is
+available), diagnostic code, supplied source location, severity and message. It is
+stable across rerenders, inspector closure, explorer switches and graph expansion.
+New findings and severity escalation remain visible. Graph replacement invalidates
+that model's stale dismissal identities; backend replacement resets the owner.
+No disk persistence is needed. Architecture-specific inline notices remain local
+to Architecture Explorer; inventory/tokenizer recovery and scientific surfaces
+retain their existing behavior. Connection state and transient events continue
+through the separate footer/toast routing above.

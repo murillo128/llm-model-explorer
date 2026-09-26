@@ -44,6 +44,22 @@ Use precise names, paths, values, examples, and equations when they remove ambig
 
 The executor's normal successful delivery is a ready-for-review PR plus `review-ready`. Final independent review and verdict-derived completion belong to `codex-pr-audit`; do not make every issue define a duplicate final review checkpoint.
 
+## Executor and model selection
+
+Use `skills/execution-runner-selection/SKILL.md` when the user chooses local
+Codex or local Devin CLI. Record executor selection in a dedicated top-level
+`execution` TOML block. Keep optional Codex model/effort/profile in `codex`; local
+Devin accepts optional `model` in `devin`, not cloud mode/ACU fields or Codex effort.
+Without an executor override, preserve Codex and its native model settings.
+`docs/execution-runners.md` owns supported keys, local prerequisites and recovery.
+
+Each child and parent selects independently; there is no implicit epic inheritance.
+For a whole-epic request, intentionally set each requested child as well as the
+parent. Verify the local host, CLI authentication, worktree trust/permissions and
+model/GPU/test requirements. Devin runs locally in tmux, not through Cloud API.
+Changing selection is not activation or an active-session ownership transfer.
+Final independent audit remains Codex regardless of implementation executor.
+
 ## Epic child design
 
 A child of an epic remains a normal self-contained controlling issue. It must not rely on the parent to define its technical scope or acceptance criteria. The parent may define membership and scheduling, but each child must be executable by a fresh worker once activated.
@@ -102,7 +118,7 @@ Never require evidence that the expected environment cannot practically produce 
 
 ### 5. Add only material intermediate checkpoints
 
-Use independent executor-side checkpoints only when work should not safely continue past a distinct architecture, ownership/lifetime, data integrity, numerical, concurrency, security, backend, or broad-refactor boundary without review. Do not add a final checkpoint merely because implementation ends; `codex-pr-audit` provides the final independent review after `review-ready`.
+Use independent executor-side checkpoints only when work should not safely continue past a distinct architecture, ownership/lifetime, data integrity, numerical, concurrency, security, backend, or broad-refactor boundary without review. Do not add a final checkpoint merely because implementation finished; `codex-pr-audit` provides the final independent review after `review-ready`.
 
 ### 6. Define restart semantics
 

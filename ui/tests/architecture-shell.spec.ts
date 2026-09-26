@@ -1,4 +1,4 @@
-import { graphAction } from './architecture-controls';
+import { selectComponent, graphAction } from './architecture-controls';
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { BrowserContext, Route } from '@playwright/test';
@@ -39,8 +39,11 @@ test('built shell retrieves on demand, supports V-JEPA without tokenization and 
   await expect(graph).toHaveAttribute('data-visible-nodes', '3');
   const received = [...requests];
   const canvasElement = await page.locator('.react-flow').elementHandle();
-  await page.getByRole('button', { name: 'Find component', exact: true }).click();
-  await page.getByRole('combobox', { name: 'Search components', exact: true }).fill('linear');
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).focus();
+  await selectComponent(page, 'linear1');
+  await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
+  await page.getByRole('button', { name: 'Expand browser', exact: true }).click();
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).focus();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'View options', exact: true }).click();
   await page.keyboard.press('Escape');
@@ -58,13 +61,13 @@ test('built shell retrieves on demand, supports V-JEPA without tokenization and 
   expect(requests.some((p) => p.endsWith('/tokenize'))).toBe(false);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
 });
-test('malformed graphs stay local and partial inventories remain explicit', async ({ page, context }) => {
+test('malformed architecture responses stay local and partial inventories remain explicit', async ({ page, context }) => {
   await backend(context);
   await context.route('**/architecture', (r) => r.fulfill({ json: { ...contractResponse, graph: { ...contractResponse.graph, nodes: [] } } }));
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(contractResponse.model_id);
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('invalid graph');
+  await expect(page.getByLabel('Architecture capability').getByRole('alert')).toContainText('Invalid getArchitecture response');
   await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
   await expect(page.getByRole('button', { name: /linear.weight/ })).toBeVisible();
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(referenceFixture('vjepa2').model_id);
@@ -86,6 +89,25 @@ test('compact routed experts decode into distinct browser and canvas targets', a
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'expert1');
 });
 
+test('loading and unavailable Architecture cards keep the compact soft title row', async ({ page, context }) => {
+  await backend(context);
+  let pending: Route | undefined;
+  await context.route('https://architecture.example/sessions/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/architecture', route => { pending = route; });
+  await page.goto('/');
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(contractResponse.model_id);
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  const card = page.getByLabel('Architecture capability');
+  const heading = card.locator('.architecture-empty-heading');
+  await expect(heading).toHaveText('Architecture');
+  expect((await heading.boundingBox())!.height).toBe(40);
+  await expect.poll(() => Boolean(pending)).toBe(true);
+  await pending!.fulfill({ json: { status: 'unavailable', model_id: contractResponse.model_id,
+    reason: 'unsupported_architecture', requires_restart: false, diagnostics: [] } });
+  await expect(card.locator('.architecture-capability-state').getByText('Architecture is not supported for this model.')).toBeVisible();
+  expect((await heading.boundingBox())!.height).toBe(40);
+  expect(await heading.evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgb(251, 250, 247)');
+});
+
 test('a delayed architecture response cannot replace a newer model/session', async ({ page, context }) => {
   const requests = await backend(context);
   let old: Route | undefined;
@@ -103,7 +125,7 @@ test('a delayed architecture response cannot replace a newer model/session', asy
   expect(requests.some((request) => request.endsWith('/tokenize'))).toBe(false);
 });
 
-test('third navigation item leaves model and session controls usable at 280 pixels', async ({ page, context }) => {
+test('architecture navigation leaves model and session controls usable at 280 pixels', async ({ page, context }) => {
   await backend(context); await page.setViewportSize({ width: 280, height: 400 }); await page.goto('/');
   const model = page.getByRole('combobox', { name: 'Model', exact: true });
   const refresh = page.getByRole('button', { name: 'Refresh models', exact: true });
@@ -112,5 +134,13 @@ test('third navigation item leaves model and session controls usable at 280 pixe
   expect(a.width).toBeGreaterThanOrEqual(36); expect(a.x + a.width).toBeLessThanOrEqual(b.x);
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
   await model.selectOption(contractResponse.model_id);
-  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '3');
+  const graph = page.getByLabel('Architecture graph', { exact: true });
+  // This small graph body needs the readable collapsed-model fallback.
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  await expect(graph).toHaveAttribute('data-visible-nodes', '1');
+  await expect(graph).toHaveAttribute('data-source-node-ids', '["root"]');
+  await expect(graph).toHaveAttribute('data-node-count', '6');
+  await graphAction(page, 'Show all operations');
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  await expect(graph).toHaveAttribute('data-visible-nodes', '6');
 });
