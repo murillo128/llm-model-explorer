@@ -593,7 +593,11 @@ test('deterministic production [smollm2] port labels keep cable clearance and sh
   await page.getByRole('button', { name: 'Explore component', exact: true }).click();
   await ready();
   await expect(canvas).toHaveAttribute('data-scope-id', instance.node_id);
+  const beforeIsolatedFit = await page.locator('.react-flow__viewport').getAttribute('style');
   await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  // React Flow applies this explicit fit on its next node update. Observe the
+  // requested transform before checking that port emphasis preserves it.
+  await expect.poll(() => page.locator('.react-flow__viewport').getAttribute('style')).not.toBe(beforeIsolatedFit);
   const isolated = page.locator(`.architecture-port[data-node-id=${JSON.stringify(instance.node_id)}] .architecture-port-label[data-raised="true"]`).first();
   await expect(isolated).toBeVisible();
   const isolatedCount = await canvas.getAttribute('data-layout-count');
