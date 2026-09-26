@@ -37,6 +37,9 @@ class CiEntrypointsTest(unittest.TestCase):
             ROOT / "acceptance/check-integration.sh",
             self.root / "acceptance/check-integration.sh",
         )
+        shutil.copyfile(ROOT / "acceptance/check.sh", self.root / "acceptance/check.sh")
+        for name in ("ruff", "mypy", "pytest"):
+            self.stub(self.root / "backend/.venv/bin" / name)
         # Deliberately do not create api/.venv: main must not need API tooling.
         for name in ("backend/.venv/bin/python", "backend/.venv/bin/ruff"):
             self.stub(self.root / name)
@@ -56,12 +59,12 @@ class CiEntrypointsTest(unittest.TestCase):
         path.write_text(f"#!{sys.executable}\n{STUB}")
         path.chmod(0o755)
 
-    def run_gate(self, *args, fail=None):
+    def run_gate(self, *args, fail=None, script="check-integration.sh"):
         env = dict(self.env)
         if fail is not None:
             env["CI_FAIL_COMMAND"] = fail
         result = subprocess.run(
-            ["bash", str(self.root / "acceptance/check-integration.sh"), *args],
+            ["bash", str(self.root / "acceptance" / script), *args],
             # The gate must resolve its checkout independently of caller cwd.
             cwd=self.root / "ui",
             env=env,
@@ -99,6 +102,7 @@ class CiEntrypointsTest(unittest.TestCase):
                     "pytest",
                     "acceptance",
                     "-ra",
+                    "--durations=25",
                     "-o",
                     "junit_family=legacy",
                     f"--junitxml={self.root / 'evidence/network.xml'}",
@@ -150,3 +154,41 @@ class CiEntrypointsTest(unittest.TestCase):
         result, commands = self.run_gate("--main-ci", "--typo")
         self.assertEqual(result.returncode, 2)
         self.assertEqual(commands, [])
+
+    def test_main_propagates_timed_http_failure(self):
+        command = (
+            "python -m pytest acceptance -ra --durations=25 -o junit_family=legacy "
+            f"--junitxml={self.root / 'evidence/network.xml'}"
+        )
+        result, commands = self.run_gate("--main-ci", fail=command)
+        self.assertEqual(result.returncode, 7, result.stderr)
+        self.assertEqual(" ".join(commands[-1]), command)
+
+    def test_local_keeps_all_layers_and_timing_without_changing_projects(self):
+        result, commands = self.run_gate(script="check.sh")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(["mypy"], commands)
+        self.assertIn(
+            [
+                "pytest",
+                "--durations=25",
+                "-o",
+                "junit_family=legacy",
+                f"--junitxml={self.root / 'evidence/backend.xml'}",
+            ],
+            commands,
+        )
+        self.assertIn(["npm", "run", "test:browser", "--", "--reporter=list,json"], commands)
+        self.assertIn(["npm", "run", "test:acceptance"], commands)
+        self.assertEqual(
+            commands[-1], ["python", "-m", "acceptance.report", str(self.root / "evidence")]
+        )
+
+    def test_local_propagates_timed_backend_failure(self):
+        command = (
+            "pytest --durations=25 -o junit_family=legacy "
+            f"--junitxml={self.root / 'evidence/backend.xml'}"
+        )
+        result, commands = self.run_gate(script="check.sh", fail=command)
+        self.assertEqual(result.returncode, 7, result.stderr)
+        self.assertEqual(" ".join(commands[-1]), command)

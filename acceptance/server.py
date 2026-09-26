@@ -186,6 +186,7 @@ def main():
     torch.set_num_threads(2)
     with tempfile.TemporaryDirectory(prefix="lmex-acceptance-") as temporary:
         root = args.root or Path(temporary)
+        fixture_started = time.monotonic()
         if not (root / "models").exists():
             if args.polish:
                 from acceptance.polish_fixtures import generate as generate_polish
@@ -197,6 +198,11 @@ def main():
             from acceptance.kimi_linear_fixture import install_test_adapter
 
             install_test_adapter()
+        print(
+            "LMEX_HARNESS "
+            + json.dumps({"fixtureGenerationMs": (time.monotonic() - fixture_started) * 1000}),
+            flush=True,
+        )
         uvicorn.run(
             application(root, args.origin, args.device),
             host="127.0.0.1",

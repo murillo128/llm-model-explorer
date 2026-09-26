@@ -121,9 +121,17 @@ wire parsing and numeric oracles are independent of the service's encoder and ca
 Timing reports distinguish first received DATA (TCP), first upload and populated
 render (browser), the deliberate release barrier, and completion. These are
 observations of an instrumented test, with no millisecond performance thresholds.
-Full framebuffer readback probes are enabled for the small fixture geometry
-checks; reference smoke disables those test-only readbacks and uses the real
-inspection readout. GPU byte counts are allocated scalar texture bytes; browser/driver-internal copies
+Framebuffer readback is off unless a test explicitly declares `capturePixels: true`.
+The product suite's progressive geometry/inspection/cleanup case opts in through
+its Playwright fixture; its matrix, profile and magnifier pixel oracles all remain
+active. Architecture cases, reference smoke, DOM/geometry/lifecycle cases and
+screenshot-only cases leave capture off. `installProbe` receives the option in the
+same initialization script that installs its observers, before the bundle starts.
+Scalar/count upload capture remains a separate, independently toggled observation.
+Calling `pixel` while capture is off, before a valid draw, after a canvas reset,
+with stale dimensions/DPR, or outside the snapshot throws a diagnostic error.
+A live canvas retains one reusable readback buffer; weak keys and context teardown
+release that test-owned evidence. Screenshots and failure traces are unchanged. GPU byte counts are allocated scalar texture bytes; browser/driver-internal copies
 and total process/VRAM usage are not measured. Readback snapshots are test-only
 display evidence. They are not application buffers. Correctness and explicit owner
 cleanup are the gates.
@@ -213,3 +221,25 @@ HTTP and the built browser UI. See [architecture acceptance](architecture.md) fo
 the complete-local-reference manifest, strict no-skip gate, coverage boundaries,
 and [current evidence](architecture-evidence.md). Ordinary fixture success does
 not complete the actual Qwen/V-JEPA/SmolLM2 reference gate.
+
+## Test harness timing
+
+Backend and HTTP entrypoints print `pytest --durations=25`; JUnit and exit-code
+ownership are unchanged. Each non-skipped product/architecture browser case adds
+one `harness-timing` JSON attachment to the existing acceptance report, containing
+fixture generation, backend spawn-to-ready, browser setup, test body and teardown
+milliseconds, plus probe counters. Fixture generation for product fixtures is
+measured inside the fresh Python subprocess (and is included in spawn-to-ready);
+architecture fixtures measure the separate generation subprocess. A local
+reference has no generated fixture and reports null. These phases must not be
+added as if all were disjoint. Application first-DATA/upload/render measurements
+remain separate and retain their original meanings.
+
+`framebufferReadbacks`, `framebufferBytesRead`, `snapshotAllocations` and
+`pixelQueries` explain probe cost. Disabled cases assert zero full-framebuffer
+readbacks. Counters belong to the current document; navigation/reload installs a
+fresh probe. No timings are CI pass/fail thresholds, and no server/session/cache
+state is shared between tests. Existing Playwright JSON/HTML reports retain test
+and hook durations for comparing the common workload. See the [optimization
+measurements](test-harness-performance.md) for commands, coverage reconciliation,
+and the baseline limitations.

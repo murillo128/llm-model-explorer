@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Test-only browser observer and JSON evidence. */
-import { test, expect } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
+import { HarnessTiming } from './harness-timing';
+
+const test = base.extend<{ capturePixels: boolean }>({ capturePixels: [false, { option: true }] });
+let timing: HarnessTiming;
 import { integratedCard } from '../tests/viewer-panel';
 import type { Page, TestInfo } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
@@ -66,7 +70,8 @@ function luminance(rgb: number[]) {
   return .2126 * linear[0]! + .7152 * linear[1]! + .0722 * linear[2]!;
 }
 
-test.beforeEach(async ({ page }, testInfo) => {
+test.beforeEach(async ({ page, capturePixels }, testInfo) => {
+  timing = new HarnessTiming();
   log = '';
   const ports = acceptancePorts(testInfo.project.name);
   backend = `http://127.0.0.1:${ports.backend}`;
@@ -88,6 +93,7 @@ test.beforeEach(async ({ page }, testInfo) => {
       '--cache-dir', referenceRoot, '--port', String(ports.backend), '--cors-origin', uiOrigin,
       '--device', process.env.LMEX_REFERENCE_DEVICE ?? 'cpu'];
   }
+  timing.spawned = performance.now();
   service = spawn(`${repo}backend/.venv/bin/python`, command, {
     cwd: repo, env: { ...process.env, HF_HUB_OFFLINE: '1', TOKENIZERS_PARALLELISM: 'false' },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -98,20 +104,19 @@ test.beforeEach(async ({ page }, testInfo) => {
     if (service.exitCode !== null) throw new Error(log);
     try { return (await fetch(`${backend}/models`)).status; } catch { return 0; }
   }, { timeout: 30_000 }).toBe(200);
+  timing.ready = performance.now();
   page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') log += `\nBrowser: ${message.text()}`; });
   page.on('pageerror', (error) => { log += `\nPage: ${error.message}`; });
-  await page.addInitScript(installProbe);
-  // Layout/capture cases inspect DOM, numeric readouts and screenshots. Full
-  // framebuffer readback on every streamed draw is reserved for pixel oracles.
-  if (isReference || testInfo.title.startsWith('polish ') || testInfo.title.startsWith('expanded model coverage')) {
-    await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
-  }
+  await page.addInitScript(installProbe, { capturePixels });
   await page.goto('/');
   await expect(page.getByTestId('backend-url')).toHaveText(backend);
+  timing.bodyStarted = performance.now();
 });
 
-test.afterEach(async ({ page }, testInfo) => {
+test.afterEach(async ({ page, capturePixels }, testInfo) => {
   if (testInfo.status === 'skipped') return;
+  timing.teardownStarted = performance.now();
+  const probe = !page.isClosed() ? await page.evaluate(() => (window as any).__acceptance?.metrics() ?? null) : null;
   if (!page.isClosed() && testInfo.status !== testInfo.expectedStatus) {
     await testInfo.attach('resource-state', { body: JSON.stringify(await metrics(page)), contentType: 'application/json' });
   }
@@ -123,7 +128,17 @@ test.afterEach(async ({ page }, testInfo) => {
     try { await once(service, 'exit'); } finally { clearTimeout(timer); }
   }
   if (referenceRoot) { rmSync(referenceRoot, { recursive: true }); referenceRoot = undefined; }
+  await timing.attach(testInfo, log, probe);
+  expect(probe?.capturePixels).toBe(capturePixels);
+  if (capturePixels) {
+    expect(probe?.framebufferReadbacks).toBeGreaterThan(0);
+    expect(probe?.pixelQueries).toBeGreaterThan(0);
+  } else expect(probe?.framebufferReadbacks).toBe(0);
 });
+
+// This is the only probe-pixel consumer, including its profile/magnifier helpers.
+test.describe(() => {
+  test.use({ capturePixels: true });
 
 test('production UI renders before producer completes; native geometry, inspection and cleanup', async ({ page, context }, testInfo) => {
   await page.setViewportSize({ width: 1000, height: 500 });
@@ -255,6 +270,8 @@ test('production UI renders before producer completes; native geometry, inspecti
   await idle();
 });
 
+});
+
 test('live tokenizer uses real Unicode IDs/spans and suppresses delayed old responses', async ({ page }, testInfo) => {
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/fixture');
   await page.getByRole('button', { name: 'Tokenizer Explorer', exact: true }).click();
@@ -300,7 +317,7 @@ test('live tokenizer uses real Unicode IDs/spans and suppresses delayed old resp
   expect(await metrics(page)).toMatchObject({ uploads: settled.uploads, createdTextures: settled.createdTextures });
   const persisted = await page.evaluate(() => sessionStorage.getItem(Object.keys(sessionStorage)[0]!));
   await page.reload();
-  await expect(page.getByRole('contentinfo').getByRole('status')).toHaveAttribute('data-state', 'ready');
+  await expect(page.getByRole('contentinfo').locator('.session-status')).toHaveAttribute('data-state', 'ready');
   expect(await page.evaluate(() => sessionStorage.getItem(Object.keys(sessionStorage)[0]!))).toBe(persisted);
 });
 
@@ -1125,7 +1142,7 @@ for (const width of [390, 1178, 1440]) test(`architecture safety baseline preser
   await polishCapture(page, info, `safety-architecture-${width}`);
   // Measurements are evidence, not a golden toolbar placement requirement.
   observations.architecture = await page.evaluate(() => Object.fromEntries(
-    ['.architecture-toolbar', '.architecture-context-row', '.architecture-flow'].map((selector) => {
+    ['.architecture-workspace', '#architecture-browser', '.architecture-toolbar', '.architecture-flow'].map((selector) => {
       const { x, y, width, height } = document.querySelector(selector)!.getBoundingClientRect();
       return [selector, { x, y, width, height }];
     })));
@@ -1139,12 +1156,24 @@ for (const width of [390, 1178, 1440]) test(`architecture safety baseline preser
     // Native horizontal scrollbars add their own height at constrained widths.
     // Bound each content row independently of that platform chrome.
     expect(await page.locator('.architecture-toolbar').evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(50);
-    expect(await page.locator('.architecture-context-row').evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(45);
-    await expect(page.getByRole('button', { name: 'Show all operations', exact: true })).toHaveCount(0);
+    for (const row of await page.locator('.architecture-context-row').all()) {
+      expect(await row.evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(45);
+    }
+    const isolated = Boolean(await canvas.getAttribute('data-scope-id'));
+    const exhaustive = page.getByLabel('Graph navigation', { exact: true }).getByRole('button', {
+      name: isolated ? 'Show all operations in model' : 'Show all operations', exact: true,
+    });
+    await expect(exhaustive).toHaveCount(1);
+    await expect(exhaustive).toBeVisible();
+    await expect(exhaustive).toBeEnabled();
+    await expect(exhaustive).toHaveClass(/architecture-action/);
+    await expect(page.getByRole('dialog', { name: 'View options', exact: true })).toHaveCount(0);
   };
   await expect(page.getByRole('combobox', { name: /Expand instance of/ })).toHaveCount(0);
+  await expect(page.locator('.architecture-context-row')).toHaveCount(0);
   await boundedControls();
   await page.getByRole('button', { name: 'Explore stack Decoder layers', exact: true }).click();
+  await expect(page.locator('.architecture-context-row')).toHaveCount(1);
   await boundedControls(); await polishCapture(page, info, `controls-stack-${width}`);
   await findComponent(page, 'layer-3.attention.Q');
   await page.getByRole('button', { name: 'Fit view', exact: true }).click();
@@ -1474,13 +1503,22 @@ test('integrated two-card embeddings have real scientific parity with the same c
     await expect(page.locator('.tokenizer-workspace .viewer-panel')).toHaveCount(2);
     const promptCard = await page.locator('.prompt-panel .viewer-panel').evaluate(panel => {
       const rect = (node: Element) => node.getBoundingClientRect().toJSON();
+      const bounds = panel.getBoundingClientRect();
+      const style = getComputedStyle(panel);
+      const left = bounds.left + parseFloat(style.borderLeftWidth);
+      const right = bounds.right - parseFloat(style.borderRightWidth);
       return {
-        panel: rect(panel), title: rect(panel.querySelector('.matrix-panel-header')!), body: rect(panel.querySelector('.viewer-panel-body')!),
+        inner: { left, right, width: right - left },
+        title: rect(panel.querySelector('.matrix-panel-header')!), body: rect(panel.querySelector('.viewer-panel-body')!),
       };
     });
-    expect(promptCard.title.width).toBe(promptCard.panel.width);
+    expect(promptCard.title.left).toBe(promptCard.inner.left);
+    expect(promptCard.title.right).toBe(promptCard.inner.right);
+    expect(promptCard.title.width).toBe(promptCard.inner.width);
     expect(promptCard.body.y).toBe(promptCard.title.bottom);
-    expect(promptCard.body.width).toBe(promptCard.panel.width);
+    expect(promptCard.body.left).toBe(promptCard.inner.left);
+    expect(promptCard.body.right).toBe(promptCard.inner.right);
+    expect(promptCard.body.width).toBe(promptCard.inner.width);
     await integratedCard(page.locator('.embedding-layer:not([data-staging]) .viewer-panel'));
     await page.screenshot({ path: info.outputPath(`two-cards-populated-${width}.png`) });
   }

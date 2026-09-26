@@ -1,0 +1,498 @@
+[
+  {
+    "project": "desktop",
+    "fixture": "overview-compact",
+    "viewport": [
+      1142,
+      771
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 228,
+      "height": 196
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 228,
+      "height": 196
+    },
+    "candidateScale": 1,
+    "camera": [
+      433,
+      -8,
+      1
+    ],
+    "layouts": 1,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": [
+      "Model"
+    ]
+  },
+  {
+    "project": "desktop",
+    "fixture": "overview-synthetic",
+    "viewport": [
+      1142,
+      771
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 228,
+      "height": 330
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 228,
+      "height": 330
+    },
+    "candidateScale": 1,
+    "camera": [
+      433,
+      -8,
+      1
+    ],
+    "layouts": 1,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": [
+      "presentation:model"
+    ]
+  },
+  {
+    "project": "desktop",
+    "fixture": "overview-wide",
+    "viewport": [
+      1142,
+      771
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 5290,
+      "height": 206
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 180,
+      "height": 92
+    },
+    "candidateScale": 0.20982986767485823,
+    "camera": [
+      457,
+      -8,
+      1
+    ],
+    "layouts": 2,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": []
+  },
+  {
+    "project": "desktop",
+    "fixture": "overview-fanout",
+    "viewport": [
+      1142,
+      771
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 278,
+      "height": 2966
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 180,
+      "height": 92
+    },
+    "candidateScale": 0.24915711395819284,
+    "camera": [
+      457,
+      -8,
+      1
+    ],
+    "layouts": 2,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": []
+  },
+  {
+    "project": "desktop",
+    "fixture": "overview-training",
+    "viewport": [
+      1142,
+      771
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 278,
+      "height": 446
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 278,
+      "height": 446
+    },
+    "candidateScale": 1,
+    "camera": [
+      408,
+      -8,
+      1
+    ],
+    "layouts": 1,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": [
+      "Model"
+    ]
+  },
+  {
+    "project": "desktop",
+    "fixture": "interface-visual",
+    "viewport": [
+      1142,
+      771
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 620,
+      "height": 282
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 620,
+      "height": 282
+    },
+    "candidateScale": 1,
+    "camera": [
+      237,
+      -8,
+      1
+    ],
+    "layouts": 1,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": [
+      "presentation:model"
+    ]
+  },
+  {
+    "project": "desktop",
+    "fixture": "interface-many",
+    "viewport": [
+      1142,
+      771
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 628,
+      "height": 710
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 628,
+      "height": 710
+    },
+    "candidateScale": 1,
+    "camera": [
+      233,
+      -8,
+      1
+    ],
+    "layouts": 1,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": [
+      "model"
+    ]
+  },
+  {
+    "project": "desktop",
+    "fixture": "mixed-stacks",
+    "viewport": [
+      1142,
+      771
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 1458,
+      "height": 355
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 258,
+      "height": 164
+    },
+    "candidateScale": 0.7613168724279835,
+    "camera": [
+      418,
+      -8,
+      1
+    ],
+    "layouts": 2,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": []
+  },
+  {
+    "project": "narrow",
+    "fixture": "overview-compact",
+    "viewport": [
+      388,
+      494
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 228,
+      "height": 196
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 228,
+      "height": 196
+    },
+    "candidateScale": 1,
+    "camera": [
+      56,
+      -8,
+      1
+    ],
+    "layouts": 1,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": [
+      "Model"
+    ]
+  },
+  {
+    "project": "narrow",
+    "fixture": "overview-synthetic",
+    "viewport": [
+      388,
+      494
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 228,
+      "height": 330
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 228,
+      "height": 330
+    },
+    "candidateScale": 1,
+    "camera": [
+      56,
+      -8,
+      1
+    ],
+    "layouts": 1,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": [
+      "presentation:model"
+    ]
+  },
+  {
+    "project": "narrow",
+    "fixture": "overview-wide",
+    "viewport": [
+      388,
+      494
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 5290,
+      "height": 206
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 180,
+      "height": 92
+    },
+    "candidateScale": 0.06729678638941398,
+    "camera": [
+      80,
+      -8,
+      1
+    ],
+    "layouts": 2,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": []
+  },
+  {
+    "project": "narrow",
+    "fixture": "overview-fanout",
+    "viewport": [
+      388,
+      494
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 278,
+      "height": 2966
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 180,
+      "height": 92
+    },
+    "candidateScale": 0.1557653405259609,
+    "camera": [
+      80,
+      -8,
+      1
+    ],
+    "layouts": 2,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": []
+  },
+  {
+    "project": "narrow",
+    "fixture": "overview-training",
+    "viewport": [
+      388,
+      494
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 278,
+      "height": 446
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 278,
+      "height": 446
+    },
+    "candidateScale": 1,
+    "camera": [
+      31,
+      -8,
+      1
+    ],
+    "layouts": 1,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": [
+      "Model"
+    ]
+  },
+  {
+    "project": "narrow",
+    "fixture": "interface-visual",
+    "viewport": [
+      388,
+      494
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 620,
+      "height": 282
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 228,
+      "height": 164
+    },
+    "candidateScale": 0.5741935483870968,
+    "camera": [
+      56,
+      -8,
+      1
+    ],
+    "layouts": 2,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": []
+  },
+  {
+    "project": "narrow",
+    "fixture": "interface-many",
+    "viewport": [
+      388,
+      494
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 628,
+      "height": 710
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 180,
+      "height": 596
+    },
+    "candidateScale": 0.5668789808917197,
+    "camera": [
+      102.8,
+      -3.200000000000003,
+      0.8
+    ],
+    "layouts": 2,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": []
+  },
+  {
+    "project": "narrow",
+    "fixture": "mixed-stacks",
+    "viewport": [
+      388,
+      494
+    ],
+    "candidate": {
+      "x": 24,
+      "y": 24,
+      "width": 1458,
+      "height": 355
+    },
+    "final": {
+      "x": 24,
+      "y": 24,
+      "width": 258,
+      "height": 164
+    },
+    "candidateScale": 0.24417009602194786,
+    "camera": [
+      41,
+      -8,
+      1
+    ],
+    "layouts": 2,
+    "cameraRequests": 1,
+    "cameraCompletions": 1,
+    "expanded": []
+  }
+]

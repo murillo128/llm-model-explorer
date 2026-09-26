@@ -3,13 +3,12 @@ import elkWorkerUrl from 'elkjs/lib/elk-worker.min.js?url';
 import type { ELK as ElkEngine, ElkNode, ElkExtendedEdge, LayoutOptions } from 'elkjs/lib/elk-api';
 import type { Box, Graph, Layout, Point, PortPosition, Route } from './graph';
 import { formatShape } from './graph';
+import { cardMetrics, cardSummary } from './card-summary';
 import { endpointKey, projectGraph } from './projection';
 import type { ProjectionOptions } from './projection';
 import { layoutRepeatedInteriors } from './repeated-layout';
+import { assertProtectedRoutes } from './routing-clearance';
 
-export const nodeWidth = 150;
-export const portStartY = 64;
-export const portGap = 24;
 export const groupHeaderHeight = 64;
 export const layerGap = 40;
 export const nodeGap = 28;
@@ -39,11 +38,34 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
   const started = performance.now();
   if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
   const projection = projectGraph(graph, options);
+  const projectedNodes = new Map(projection.nodes.map((node) => [node.id, node]));
+  const descendant = (id: string, ancestor: string) => {
+    for (let node = projectedNodes.get(id); node?.parentId; node = projectedNodes.get(node.parentId)) {
+      if (node.parentId === ancestor) return true;
+    }
+    return false;
+  };
+  const raisedPorts = new Set<string>();
+  for (const edge of projection.edges) for (const [boundary, other] of [[edge.source, edge.target], [edge.target, edge.source]] as const) {
+    if (projectedNodes.get(boundary.node_id)?.expanded && descendant(other.node_id, boundary.node_id)) raisedPorts.add(endpointKey(boundary));
+  }
   const elkNodes = new Map<string, ElkNode>();
   const sourceIds = new Map<string, string>();
   const portIds = new Map<string, { nodeId: string; portId: string; side: 'left' | 'right' }>();
   const endpoints = new Map<string, string>();
+  const parameters = new Map(graph.parameters.map((p) => [p.id, p]));
+  const annotated = new Set([...graph.repetitions.flatMap((r) => r.instances.map((i) => i.node_id)),
+    ...graph.diagnostics.flatMap((d) => d.node_id ? [d.node_id] : [])]);
+  const metricsByNode = new Map<string, ReturnType<typeof cardMetrics>>();
+  const sourceCounts = new Map<string, number>();
+  for (const edge of projection.edges) {
+    const key = endpointKey(edge.source);
+    sourceCounts.set(key, (sourceCounts.get(key) ?? 0) + 1);
+  }
   for (const [index, node] of projection.nodes.entries()) {
+    const raised = new Set(node.ports.filter((port) => raisedPorts.has(endpointKey({ node_id: node.id, port_id: port.id }))).map((port) => port.id));
+    const metrics = cardMetrics(node, cardSummary(node.record, parameters), Boolean(options.dimensions), annotated.has(node.id), raised);
+    metricsByNode.set(node.id, metrics);
     const id = `node-${index}`;
     sourceIds.set(id, node.id);
     const rows = { input: 0, output: 0 };
@@ -53,17 +75,33 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
       const row = rows[port.direction]++;
       portIds.set(portId, { nodeId: node.id, portId: port.id, side });
       endpoints.set(endpointKey({ node_id: node.id, port_id: port.id }), portId);
-      return { id: portId, x: side === 'left' ? 0 : nodeWidth,
-        y: portStartY + row * portGap, width: 0, height: 0,
+      const label = metrics.portLabels[port.id]!;
+      return { id: portId, x: side === 'left' ? 0 : metrics.width,
+        y: metrics.portStart + row * metrics.portGap, width: 0, height: 0,
+        // The card owns visible text placement. ELK only needs its horizontal
+        // footprint; giving it the text height creates an empty band above
+        // children for large interfaces despite cardMetrics already spacing rows.
+        ...(node.expanded ? { labels: [{ id: `${portId}-label`, text: port.interfaceLabel ?? port.label,
+          width: label.width, height: 0 }] } : {}),
         layoutOptions: { 'elk.port.side': side === 'left' ? 'WEST' : 'EAST', 'elk.port.index': String(p) } };
     });
-    const height = Math.max(100, portStartY + Math.max(rows.input, rows.output) * portGap + 12);
+    const height = metrics.height;
+    const gutter = (direction: 'input' | 'output') => Math.max(24, 20 + metrics.portLabelWidth[direction]);
     elkNodes.set(node.id, {
-      id, width: nodeWidth, height, ports,
+      id, width: metrics.width, height, ports,
       ...(node.expanded ? { children: [] } : {}),
       layoutOptions: { ...scopeOptions,
+        // A true boundary fan-out needs a usable exclusive tail at fit scale.
+        // Keep ordinary serial scopes at their existing compact spacing.
+        'elk.layered.spacing.edgeNodeBetweenLayers': node.expanded && node.ports.some((port) =>
+          (sourceCounts.get(endpointKey({ node_id: node.id, port_id: port.id })) ?? 0) > 1) ? '32' : '24',
         'elk.portConstraints': node.expanded ? 'FIXED_SIDE' : 'FIXED_POS',
-        'elk.padding': `[top=${groupHeaderHeight + 16},left=24,bottom=24,right=24]`,
+        'elk.portLabels.placement': 'INSIDE',
+        'elk.spacing.portPort': String(metrics.portGap),
+        // Boundary rows occupy side gutters, not a duplicate band above children.
+        // Owned parameters/constants still reserve their actual summary height.
+        'elk.padding': `[top=${metrics.headerHeight + 16},left=${gutter('input')},bottom=24,right=${gutter('output')}]`,
+        'elk.spacing.portsSurrounding': `[top=${metrics.headerHeight},left=0,bottom=16,right=0]`,
       },
     });
   }
@@ -123,7 +161,8 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
   finally { signal?.removeEventListener('abort', abort); if (!nodeAdapter) engine.terminateWorker(); }
   if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
   if (contexts.length) {
-    const gap = nodeGap, contextWidth = nodeWidth + 60, contextHeight = groupHeaderHeight + 12;
+    const gap = nodeGap, contextWidth = Math.max(...contexts.map((n) => elkNodes.get(n.id)!.width!)),
+      contextHeight = Math.max(...contexts.map((n) => elkNodes.get(n.id)!.height!));
     const columns = Math.max(1, Math.floor(((laidOut.width ?? 0) - 48 + gap) / (contextWidth + gap)));
     const rows = Math.ceil(contexts.length / columns), offset = rows * (contextHeight + gap);
     for (const child of laidOut.children ?? []) child.y = (child.y ?? 0) + offset;
@@ -138,7 +177,6 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
       const elk = elkNodes.get(node.id)!;
       elk.x = 24 + index % columns * (contextWidth + gap);
       elk.y = 24 + Math.floor(index / columns) * (contextHeight + gap);
-      elk.width = contextWidth; elk.height = contextHeight;
       laidOut.children!.push(elk);
     });
     laidOut.width = Math.max(laidOut.width ?? 0, 48 + Math.min(columns, contexts.length) * (contextWidth + gap) - gap);
@@ -160,7 +198,10 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
         const identity = portIds.get(port.id);
         if (!identity) continue; // Internal routing proxy, never a source port.
         const x = (port.x ?? 0) + (port.width ?? 0) / 2, y = (port.y ?? 0) + (port.height ?? 0) / 2;
-        ports.push({ ...identity, x, y, absoluteX: absoluteX + x, absoluteY: absoluteY + y });
+        const metric = metricsByNode.get(id)!.portLabels[identity.portId]!;
+        ports.push({ ...identity, x, y, absoluteX: absoluteX + x, absoluteY: absoluteY + y,
+          label: { x: absoluteX + x + (identity.side === 'left' ? 9 : -9 - metric.width), y: absoluteY + y + metric.top,
+            width: metric.width, height: metric.height, clearance: metric.clearance, raised: metric.raised } });
       }
     }
     for (const edge of node.edges ?? []) routed.push({ edge, parent: node.id });
@@ -204,7 +245,24 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
   }
   if (routes.length !== projection.edges.length || new Set(routes.map((route) => route.id)).size !== projection.edges.length)
     throw new Error('Layout did not route every connection. Collapse groups and retry.');
-  const represented = new Set(projection.edges.flatMap((edge) => edge.originalEdgeIds));
+  const byEndpoint = new Map(ports.map((p) => [endpointKey({ node_id: p.nodeId, port_id: p.portId }), p]));
+  const byRoute = new Map(routes.map((route) => [route.id, route]));
+  const near = (a: Point, b: Point) => Math.abs(a.x - b.x) < 0.001 && Math.abs(a.y - b.y) < 0.001;
+  // ELK reports section points and compound port positions through different
+  // floating-point addition paths. Share the exact endpoint coordinates with
+  // the rendered terminal and the route after ELK's port ordering.
+  for (const edge of projection.edges) {
+    const route = byRoute.get(edge.id)!;
+    for (const endpoint of [edge.source, edge.target]) {
+      const port = byEndpoint.get(endpointKey(endpoint))!;
+      for (const section of route.sections) for (const index of [0, section.length - 1]) {
+        const point = section[index]!;
+        if (near(point, { x: port.absoluteX, y: port.absoluteY })) section[index] = { x: port.absoluteX, y: port.absoluteY };
+      }
+    }
+  }
+  assertProtectedRoutes(projection, ports, routes);
+  const represented = new Set([...projection.edges.flatMap((edge) => edge.originalEdgeIds), ...(projection.boundaryPaths ?? []).flat().map((e) => e.id)]);
   return { boxes, ports, routes, projection, edgeIds: graph.edges.filter((edge) => represented.has(edge.id)).map((edge) => edge.id),
     width: laidOut.width ?? 0, height: laidOut.height ?? 0, milliseconds: performance.now() - started };
 }

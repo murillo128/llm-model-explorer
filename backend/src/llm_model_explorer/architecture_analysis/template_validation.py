@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from collections.abc import Iterable
 from typing import Any
 
 from . import records as r
@@ -186,18 +187,28 @@ def validate_templates(graph: r.ArchitectureGraph) -> None:
             any(p.kind == "description" and p.revision for p in template.provenance),
             "Template requires reviewed description provenance.",
         )
-        baseline: str | None = None
-        scope: str | None = None
-        previous = -1
-        for instance in template.instances:
-            require(instance.node_id not in seen, "Repeated template component.")
-            seen.add(instance.node_id)
-            owner, position = index.order.get(instance.node_id, (None, -1))
-            require(
-                owner is not None and (scope is None or scope == owner) and position > previous,
-                "Template source scope/order.",
-            )
-            scope, previous = owner, position
-            signature = index.signature(instance, template.component_role)
-            require(baseline is None or signature == baseline, "Incompatible template structure.")
-            baseline = signature
+        validate_template_instances(index, template.instances, template.component_role, seen)
+
+
+def validate_template_instances(
+    index: TemplateIndex,
+    instances: Iterable[r.ArchitectureTemplateInstance],
+    component_role: str,
+    seen: set[str],
+) -> None:
+    """Check a family incrementally; omitted metadata must still be validated."""
+    baseline: str | None = None
+    scope: str | None = None
+    previous = -1
+    for instance in instances:
+        require(instance.node_id not in seen, "Repeated template component.")
+        seen.add(instance.node_id)
+        owner, position = index.order.get(instance.node_id, (None, -1))
+        require(
+            owner is not None and (scope is None or scope == owner) and position > previous,
+            "Template source scope/order.",
+        )
+        scope, previous = owner, position
+        signature = index.signature(instance, component_role)
+        require(baseline is None or signature == baseline, "Incompatible template structure.")
+        baseline = signature

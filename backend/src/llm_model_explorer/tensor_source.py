@@ -266,6 +266,19 @@ class ModelSource:
         self.check_unchanged()
         return config
 
+    def architecture_definition(self, *, max_bytes: int) -> bytes | None:
+        """Read the optional fixed-name sidecar without altering tensor admission."""
+        if type(max_bytes) is not int or not 0 < max_bytes <= MAX_METADATA_BYTES:
+            raise ValueError("invalid architecture definition byte limit")
+        self.check_unchanged()
+        if not any(name == "architecture.json" for name, _ in self._snapshot.files):
+            return None
+        with self._snapshot.open("architecture.json") as stream:
+            raw = stream.read(max_bytes + 1)
+        if len(raw) > max_bytes:
+            raise ModelError("unsupported_size", "Model architecture definition exceeds its limit.")
+        return raw
+
     @contextmanager
     def local_directory(self) -> Iterator[Path]:
         """Backend-only seam for local tokenizer loading/use; never serialize this path.

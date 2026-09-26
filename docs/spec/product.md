@@ -2,7 +2,7 @@
 
 ## Purpose
 
-LLM Model Explorer is a browser-based interactive application for understanding models through their tensors, navigable architecture, and, in later phases, individual inference computations. The initial focus is transformer language models; the explicitly selected V-JEPA 2 checkpoint is a bounded non-language architecture reference, not generic world-model support.
+LLM Model Explorer is a browser-based interactive application for understanding models through their tensors, navigable architecture, and, in later phases, individual inference computations. The initial focus is transformer language models; the selected V-JEPA 2 checkpoint is a bounded packaged non-language reference. Model-owned JSON definitions additionally support author-declared static graphs without implying automatic model-family inference or source-verified world-model support.
 
 The product has three independent system boundaries: a backend that owns local model access and mathematical computation, an API contract that defines communication, and a browser UI that owns visualization and interaction.
 
@@ -57,9 +57,20 @@ The two compact Qwen checkpoints replace the exploratory requirement to use the 
 
 A complete local checkpoint means its configuration, all weight shards of the chosen variant, and the local assets required for advertised capabilities. It does not mean downloading all alternative formats, quantizations, or the V-JEPA 2 `original` weight copy. Metadata-only model directories, GGUF, remote-ID onboarding, automatic downloads, and execution of checkpoint Python code remain excluded.
 
-For Qwen, detail only the language component. Other modalities may appear as identified context blocks with verified connections. V-JEPA 2 remains the sole non-language exception: both its visual encoder and predictor must be expandable to the agreed mathematical level. DeepSeek-V2, GLM-4.7-Flash, and Kimi Linear add bounded language-model family descriptions covering their verified attention, routing, expert, and configured layer-pattern behavior. Do not imply executed routing, token inference, or generation. An encoder-only V-JEPA graph does not meet that reference. A text tokenizer, vocabulary embedding, decoder stack, or language head is not required for every model.
+For Qwen, detail only the language component. Other modalities may appear as identified context blocks with verified connections. Among packaged, source-reviewed descriptions, V-JEPA 2 is the explicit exception: both its visual encoder and predictor must be expandable to the agreed mathematical level. DeepSeek-V2, GLM-4.7-Flash, and Kimi Linear add bounded language-model family descriptions covering their verified attention, routing, expert, and configured layer-pattern behavior. Do not imply executed routing, token inference, or generation. An encoder-only V-JEPA graph does not meet that reference. A text tokenizer, vocabulary embedding, decoder stack, or language head is not required for every model.
 
 The JEPA exception does not introduce video/image upload, playback or processing, visual inference, representation prediction, training losses, actions, planning, simulation, V-JEPA 2-AC, or generic JEPA/LeJEPA support. Do not add training or planning components absent from the selected model.
+
+## Model-owned JSON definitions
+
+A checkpoint may include a data-only `architecture.json`, which takes precedence
+over packaged descriptions. The generic reader validates author-declared structure
+and native parameter bindings without importing checkpoint Python or adding a
+model-family adapter. It labels the result as model-supplied, not source-verified.
+Absent JSON preserves packaged behavior; invalid JSON is an explicit architecture
+failure, not a silent fallback or a loss of valid tensor inspection. The
+[portable definition contract](backend/model-owned-architecture.md) owns format,
+limits, provenance and lifecycle. This adds no inference or training execution.
 
 ## Product invariants
 

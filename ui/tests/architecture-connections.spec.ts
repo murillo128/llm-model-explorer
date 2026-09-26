@@ -1,5 +1,6 @@
+import { assertAttentionInputProvenance, normalizationAlias } from './architecture-boundary-provenance';
 import { fanoutPoint } from './architecture-pointer';
-import { chooseInstance, findComponent, graphAction, graphPreference } from './architecture-controls';
+import { openShared, chooseInstance, findComponent, graphAction, graphPreference } from './architecture-controls';
 import { expect, test } from '@playwright/test';
 import type { Locator, Page, TestInfo } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
@@ -46,7 +47,10 @@ async function fullAttention(page: Page) {
   await expect(port(page, 'layer-3.attention.core', 'K')).toBeVisible();
 }
 async function stableState(page: Page, clearHover = true) {
+  // aria-busy covers the current layout and its committed camera action.
+  await ready(page);
   if (clearHover) await page.mouse.move(0, 0);
+  // Flush temporary pointer emphasis; frame count does not establish camera readiness.
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   return page.evaluate(() => ({
     layoutCount: document.querySelector('[aria-label="Architecture graph"]')?.getAttribute('data-layout-count'),
@@ -131,12 +135,16 @@ test('exact source and destination dots, fan-out branches and line middles highl
   await emphasized(page, fanout);
   await unchanged(page, before);
   await capture(page, info, 'source-dot-fanout');
-  await hoverLine(page, fanout[1]!); await emphasized(page, [fanout[1]!]);
+  // Card sizes can move shared-trunk breakpoints. Sample a genuinely exclusive
+  // branch from SVG geometry, rather than treating the owning path as exclusive.
+  const keyBranch = await fanoutPoint(page, fanout, [fanout[1]!]);
+  await page.mouse.move(keyBranch.x, keyBranch.y); await emphasized(page, [fanout[1]!]);
   await unchanged(page, before);
   await capture(page, info, 'line-hover-complete-forwarding');
   await hoverDot(port(page, 'layer-3.attention.K', 'x')); await emphasized(page, [fanout[1]!]);
   // A neighboring source branch remains individually targetable.
-  await hoverLine(page, fanout[2]!); await emphasized(page, [fanout[2]!]);
+  const valueBranch = await fanoutPoint(page, fanout, [fanout[2]!]);
+  await page.mouse.move(valueBranch.x, valueBranch.y); await emphasized(page, [fanout[2]!]);
   await page.mouse.move(0, 0); await emphasized(page, []);
   await unchanged(page, before);
 });
@@ -172,7 +180,7 @@ test('shared fan-out trunk identifies every branch through native trunk, branch 
   await hoverDot(port(page, 'layer-3.input-norm', 'out')); await emphasized(page, fanout);
   await page.mouse.move(0, 0); await emphasized(page, [pinned]);
   await unchanged(page, before);
-  await graphAction(page, 'Zoom graph in');
+  await graphAction(page, 'Zoom in');
   const zoomed = await stableState(page);
   const zoomedTrunk = await fanoutPoint(page, fanout, fanout);
   await page.mouse.move(zoomedTrunk.x, zoomedTrunk.y); await emphasized(page, fanout);
@@ -209,28 +217,41 @@ test('isolated Attention boundaries retain exact fan-out, trunk, branch, endpoin
   await page.getByRole('button', { name: 'Fit view', exact: true }).click();
   const branches = ['Q', 'K', 'V'].map((name) => page.locator(
     `.architecture-connection[data-target-node="layer-3.attention.${name}"][data-target-port="x"]`));
-  const sourceId = (await branches[0]!.getAttribute('data-source-node'))!;
-  const sourcePort = (await branches[0]!.getAttribute('data-source-port'))!;
-  expect(sourceId.startsWith('external:')).toBe(true);
-  const source = makeProjectionFixture({ count: 4 });
-  for (const [i, name] of ['Q', 'K', 'V'].entries()) expect(JSON.parse((await branches[i]!.getAttribute('data-original-edge-ids'))!)).toEqual(originalIds(source, [
-    ['layer-3.input-norm', 'out', 'layer-3.attention', 'x'], ['layer-3.attention', 'x', `layer-3.attention.${name}`, 'x'],
-  ]));
+  // The boundary is explicit; external computation remains a separate segment.
+  const upstream = connection(page, normalizationAlias.node_id, normalizationAlias.port_id, 'layer-3.attention', 'x');
+  const segments = await page.locator('.architecture-connection').evaluateAll((edges) => edges.map((edge) => ({
+    source: { node_id: edge.getAttribute('data-source-node')!, port_id: edge.getAttribute('data-source-port')! },
+    target: { node_id: edge.getAttribute('data-target-node')!, port_id: edge.getAttribute('data-target-port')! },
+    paths: [JSON.parse(edge.getAttribute('data-original-edge-ids')!) as string[]],
+  })));
+  assertAttentionInputProvenance(makeProjectionFixture({ count: 4 }), segments);
+  const all = [upstream, ...branches];
+  // At Fit scale the short K branch shares the endpoint's pointer corridor.
+  // Center the consumer before zooming so the external producer stays in view.
+  await findComponent(page, 'layer-3.attention.K'); await ready(page);
+  await graphAction(page, 'Zoom in');
+  await graphAction(page, 'Zoom in');
   const before = await stableState(page);
-  await hoverDot(port(page, sourceId, sourcePort)); await emphasized(page, branches); await unchanged(page, before);
+  await hoverDot(port(page, normalizationAlias.node_id, normalizationAlias.port_id));
+  await emphasized(page, all); await unchanged(page, before);
+  await hoverDot(port(page, 'layer-3.attention', 'x')); await emphasized(page, all);
   await capture(page, info, 'isolated-boundary-port');
   const trunk = await fanoutPoint(page, branches, branches);
-  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, branches); await unchanged(page, before);
+  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, all); await unchanged(page, before);
   await capture(page, info, 'isolated-shared-trunk');
   const branch = await fanoutPoint(page, branches, [branches[1]!]);
-  await page.mouse.move(branch.x, branch.y); await emphasized(page, [branches[1]!]);
-  await hoverDot(port(page, 'layer-3.attention.V', 'x')); await emphasized(page, [branches[2]!]);
-  await page.mouse.move(0, 0); await branches[0]!.focus(); await page.keyboard.press('Enter');
+  await page.mouse.move(branch.x, branch.y); await emphasized(page, [upstream, branches[1]!]);
+  await hoverDot(port(page, 'layer-3.attention.V', 'x')); await emphasized(page, [upstream, branches[2]!]);
+  await page.mouse.move(0, 0); await port(page, 'layer-3.attention', 'x').focus(); await emphasized(page, all);
+  await branches[0]!.focus(); await emphasized(page, [upstream, branches[0]!]);
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog', { name: 'Connection inspection', exact: true })).toBeVisible();
-  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape'); await expect(branches[0]!).toBeFocused();
   await page.getByRole('button', { name: 'Fit view', exact: true }).focus();
-  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, branches);
-  await page.mouse.move(0, 0); await emphasized(page, [branches[0]!]); await unchanged(page, before);
+  await page.mouse.move(trunk.x, trunk.y); await emphasized(page, all);
+  await page.mouse.move(0, 0); await emphasized(page, [upstream, branches[0]!]); await unchanged(page, before);
+  await page.getByRole('button', { name: 'Clear connection selection', exact: true }).click();
+  await page.mouse.move(0, 0); await emphasized(page, []); await unchanged(page, before);
 });
 
 test('same-shaped inputs and separate K/V state routes keep exact identity under mouse and keyboard emphasis', async ({ page }) => {
@@ -285,7 +306,7 @@ test('residual and MLP inputs stop at operations; pin survives temporary hover, 
   await hoverLine(page, up); await emphasized(page, [up]);
   await page.mouse.move(0, 0); await emphasized(page, [gate]);
   await unchanged(page, before);
-  await graphAction(page, 'Zoom graph in');
+  await graphAction(page, 'Zoom in');
   const zoomed = await stableState(page);
   await hoverLine(page, up); await emphasized(page, [up]);
   await capture(page, info, 'zoomed-line-hover');
@@ -310,11 +331,18 @@ test('residual and MLP inputs stop at operations; pin survives temporary hover, 
 
 test('24-instance compact navigation, first/last identity, MLP/state focus and exhaustive round trip', async ({ page }, info) => {
   await open(page, 'hybrid'); await page.setViewportSize({ width: 1178, height: 900 });
+  // Initial overview opens only the presentation boundary. This scenario
+  // exercises the compact repetition inside the source Language model.
+  await page.locator('[data-node-id="model"] .architecture-browser-disclosure').click(); await ready(page);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready(page);
   const source = makeProjectionFixture();
   await expect(page.locator('.architecture-node[data-presentation="repetition"]')).toContainText('24');
   await expect(page.locator('.architecture-node[data-presentation="repetition"]')).toContainText('18 linear');
   await expect(page.locator('.architecture-node[data-presentation="repetition"]')).toContainText('6 full');
   expect(Number(await graph(page).getAttribute('data-visible-nodes'))).toBeLessThan(20);
+  // Keep the compact model cards inside both viewports for this DOM-coordinate
+  // comparison; resizing a narrower pane may legitimately change viewport culling.
+  await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
   const beforeResize = await stableState(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   const afterResize = await stableState(page);
@@ -324,6 +352,7 @@ test('24-instance compact navigation, first/last identity, MLP/state focus and e
   await page.setViewportSize({ width: 1178, height: 900 });
   const restoredSize = await stableState(page);
   expect({ ...restoredSize, camera: beforeResize.camera }).toEqual(beforeResize);
+  await page.getByRole('button', { name: 'Expand browser', exact: true }).click();
   await page.getByRole('button', { name: /Explore stack/ }).first().click(); await ready(page);
   await expect(page.getByRole('button', { name: /Previous window/ }).first()).toBeDisabled();
   await page.getByRole('button', { name: /Next window/ }).first().click(); await ready(page);
@@ -334,10 +363,10 @@ test('24-instance compact navigation, first/last identity, MLP/state focus and e
   await expect(port(page, 'layer-0.attention', 'current_mask')).toBeAttached();
   await expect(port(page, 'layer-0.attention', 'positions')).toHaveCount(0);
   await expect(port(page, 'layer-0.attention', 'mask')).toHaveCount(0);
-  await graphPreference(page, 'Unused interfaces', true); await ready(page);
+  await graphPreference(page, 'Show unused interfaces', true); await ready(page);
   await expect(port(page, 'layer-0.attention', 'positions')).toBeAttached();
   await expect(page.locator('.architecture-connection[data-target-node="layer-0.attention"][data-target-port="positions"]')).toHaveCount(0);
-  await graphPreference(page, 'Unused interfaces', false); await ready(page);
+  await graphPreference(page, 'Show unused interfaces', false); await ready(page);
   await graphAction(page, 'State dependencies'); await ready(page);
   await expect(page.locator('.architecture-connection[data-kind="data"]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Select Prior conv', exact: true })).toBeVisible();
@@ -357,8 +386,8 @@ test('24-instance compact navigation, first/last identity, MLP/state focus and e
   await expect(page.getByRole('combobox', { name: /Expand instance of/ }).locator('option:checked')).toContainText(/instance 23/i);
   await graphPreference(page, 'Show dimensions', true); await ready(page);
   await graphAction(page, 'Show all operations'); await ready(page);
-  await expect(graph(page)).toHaveAttribute('data-visible-nodes', String(source.nodes.length));
-  expect(JSON.parse((await graph(page).getAttribute('data-source-node-ids'))!)).toEqual(source.nodes.map((node) => node.id));
+  await expect(graph(page)).toHaveAttribute('data-visible-nodes', String(source.nodes.length - 4));
+  expect(JSON.parse((await graph(page).getAttribute('data-source-node-ids'))!)).toEqual(source.nodes.filter((node) => !['token-ids', 'positions', 'mask', 'current-mask', 'tokenizer'].includes(node.id)).map((node) => node.id));
   expect(JSON.parse((await graph(page).getAttribute('data-represented-edge-ids'))!)).toEqual(source.edges.map((edge) => edge.id));
   const coordinates = info.outputPath('authored-exhaustive-coordinates.json');
   await writeFile(coordinates, JSON.stringify(await stableState(page)));
@@ -434,7 +463,7 @@ test('obsolete model layout replies cannot replace the latest graph; a failed wo
 
 test('shared structure retains geometry, exact QKV hit sets and semantic selection across nonconsecutive instances', async ({ page }, info) => {
   await open(page, 'templates');
-  await page.getByLabel('Shared structures', { exact: true }).selectOption('shared-full-attention'); await ready(page);
+  await openShared(page, 'shared-full-attention'); await ready(page);
   await expect(graph(page)).toHaveAttribute('data-template-instance-id', '');
   await expect(page.getByText('No instance selected; weights require a choice.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'View in model', exact: true })).toBeDisabled();
@@ -472,7 +501,9 @@ test('shared structure retains geometry, exact QKV hit sets and semantic selecti
   await page.getByRole('button', { name: 'Next shared instance', exact: true }).click();
   await page.getByRole('button', { name: 'View in model', exact: true }).click(); await ready(page);
   await expect(graph(page)).toHaveAttribute('data-template-id', '');
-  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention');
+  // The minimal toolbar's selected-item action reveals the exact selected source.
+  // The root card's separate View in model action remains covered by card navigation.
+  await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention.Q');
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
   await expect(graph(page)).toHaveAttribute('data-template-instance-id', 'layer-2.attention');
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention.Q');
@@ -490,7 +521,7 @@ test('shared structure retains geometry, exact QKV hit sets and semantic selecti
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'Model overview', exact: true }).click(); await ready(page);
   await findComponent(page, 'layer-2.attention.K'); await ready(page);
-  await page.getByRole('button', { name: 'Shared structure', exact: true }).click(); await ready(page);
+  await page.getByRole('button', { name: 'Explore structure', exact: true }).click(); await ready(page);
   await expect(picker).toHaveValue('layer-2.attention');
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'layer-2.attention.K');
 });
@@ -499,7 +530,7 @@ test('optional template metadata leaves ordinary overview, exhaustive projection
   const states = [];
   for (const fixture of ['templates-absent', 'templates']) {
     await open(page, fixture);
-    await expect(page.getByLabel('Shared structures', { exact: true })).toHaveCount(fixture === 'templates' ? 1 : 0);
+    await expect(page.locator('[data-family-id]')).toHaveCount(fixture === 'templates' ? 1 : 0);
     const overview = await stableState(page);
     await graphAction(page, 'Show all operations'); await ready(page);
     const exhaustive = await stableState(page);

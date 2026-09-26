@@ -1,10 +1,10 @@
-import { findComponent, graphAction, graphPreference, viewOptions } from '../tests/architecture-controls';
+import { openShared, findComponent, graphAction, graphPreference, viewOptions } from '../tests/architecture-controls';
 import { revealTensor } from '../tests/tensor-tree-helpers';
 /* eslint-disable @typescript-eslint/no-explicit-any -- Native test-only observations and evidence. */
 import { test, expect } from '@playwright/test';
 import type { Page, TestInfo } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
@@ -12,14 +12,33 @@ import { fileURLToPath } from 'node:url';
 import type { Graph } from '../src/architecture-explorer/graph';
 import { expandCompactGraph } from '../src/api/compact-architecture';
 import { projectGraph } from '../src/architecture-explorer/projection';
-import { assertTraceability } from '../tests/architecture-invariants';
+import { assertTraceability, assertInterfaceCoverage } from '../tests/architecture-invariants';
 import { installProbe } from './probe';
+import { HarnessTiming } from './harness-timing';
+
+let timing: HarnessTiming;
 import { installArchitectureProbe } from './architecture-probe';
 import { nativeCamera } from '../tests/native-camera';
 import { fanoutPoint } from '../tests/architecture-pointer';
 
+// Independently expected component set for the four reviewed producer fixtures.
+// Their passive declarations are verified by the conservation oracle, not by
+// importing the runtime classification as the expected result.
+const componentsOf = (graph: Graph) => graph.nodes.filter((node) => !['input', 'output'].includes(node.kind) &&
+  !(node.kind === 'context' && !node.ports.length && node.references.some((r) => r.kind === 'tokenizer')));
+const visibleCount = (graph: Graph) => {
+  const nodes = componentsOf(graph), roots = nodes.filter((n) => !n.parent_id);
+  return nodes.length + (roots.length === 1 && roots[0]!.kind === 'group' ? 0 : 1);
+};
+
 const repo = fileURLToPath(new URL('../../', import.meta.url));
+const diagnosticCases = JSON.parse(readFileSync(join(repo, 'api/fixtures/model-defined-diagnostics.json'), 'utf8')) as { name: string; code: string; message: string }[];
 const python = `${repo}backend/.venv/bin/python`;
+// Automatic DOM snapshots of complete MoE canvases produced a 457 MiB trace
+// and exhausted the reference deadline during explorer restoration. Retain
+// call/network traces; explicit screenshots, graph/memory records and numeric
+// oracles below still cover the complete graph at the required widths.
+test.use({ trace: { mode: 'retain-on-failure', snapshots: false, screenshots: false } });
 let service: ReturnType<typeof spawn>;
 let root: string;
 let backend: string;
@@ -106,8 +125,8 @@ async function openParameter(page: Page, graph: Graph, parameter: Graph['paramet
   const camera = await page.locator('.react-flow__viewport').getAttribute('style');
   const layoutCount = await canvas.getAttribute('data-layout-count'), scope = await canvas.getAttribute('data-scope-id');
   const beforeSelection = observed.length;
-  for (const target of ['.architecture-node-label', '.architecture-node-type']) {
-    await card.locator(target).click();
+  for (const target of ['.architecture-node-label', '.architecture-node-heading']) {
+    await card.locator(target).click(target === '.architecture-node-heading' ? { position: { x: 2, y: (await card.locator(target).boundingBox())!.height - 2 } } : {});
     await expect(card.locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
     await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
@@ -122,9 +141,19 @@ async function openParameter(page: Page, graph: Graph, parameter: Graph['paramet
     await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
     expect(observed.slice(requests)).toEqual([]);
   }
-  const trigger = card.locator('.architecture-node-label');
-  await trigger.dblclick();
-  await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
+  let trigger = card.locator(`[data-parameter-id=${JSON.stringify(parameter.id)}] .architecture-matrix-action`);
+  if (parameter.inspection.status === 'unavailable') {
+    await expect(trigger).toBeDisabled();
+    await expect(trigger).toHaveAccessibleDescription(`${parameter.inspection.reason.replaceAll('_', ' ')}: ${parameter.inspection.message}`);
+    await trigger.focus(); await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(observed.slice(beforeSelection)).toEqual([]);
+    // Unavailable weights keep descriptor inspection through the ordinary modal.
+    trigger = card.locator('.architecture-info');
+    await trigger.click();
+    await page.getByLabel('Inspect parameter', { exact: true }).selectOption(parameter.id);
+  } else await trigger.click();
+  await expect(page.getByLabel('Inspect parameter', { exact: true })).toHaveValue(parameter.id);
   return trigger;
 }
 
@@ -146,11 +175,11 @@ async function inspectActualMoeWeightAtWidth(
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
   const layoutCountBeforeFind = await canvas.getAttribute('data-layout-count');
   const trigger = await openParameter(page, graph, parameter);
   await expect(canvas).toHaveAttribute('data-layout-count', layoutCountBeforeFind!);
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
   await expect(page.getByRole('dialog')).toContainText(parameter.name);
   const node = graph.nodes.find((item) => item.parameter_ids.includes(parameter.id))!;
   await expect(page.locator(`.react-flow__node[data-id=${JSON.stringify(node.id)}]`)).toBeInViewport();
@@ -307,18 +336,26 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
       // Explicit Fit includes every context endpoint. Sample real pointer hits
       // only after culling has exposed the complete generated scope geometry.
       await page.getByRole('button', { name: 'Fit view', exact: true }).click(); await ready();
-      const connections = page.locator('.architecture-connection[data-source-node^="external:"]');
+      const connections = page.locator('.architecture-connection');
       const targets = await connections.evaluateAll((elements) => elements.map((element) => ({
         source: element.getAttribute('data-source-node')!, port: element.getAttribute('data-source-port')!,
+        target: element.getAttribute('data-target-node')!, targetPort: element.getAttribute('data-target-port')!,
         id: element.getAttribute('data-edge-id')!,
       })));
-      const fanout = targets.find((item) => targets.filter((other) => item.source === other.source && item.port === other.port).length > 1);
+      // The external producer may first enter the expanded component's exact
+      // boundary port; its internal branches still belong to that same signal.
+      const fanout = targets.filter((item) => item.source.startsWith('external:')).map((input) => ({
+        input, branches: targets.filter((other) => input.target === component.id
+          ? other.source === input.target && other.port === input.targetPort
+          : other.source === input.source && other.port === input.port),
+      })).find((item) => item.branches.length > 1);
       if (family === 'qwen3') expect(fanout, 'Dense Attention/MLP inputs retain their genuine shared fan-out').toBeTruthy();
       if (fanout) {
-        const branches = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(fanout.source)}][data-source-port=${JSON.stringify(fanout.port)}]`);
+        const source = fanout.branches[0]!;
+        const branches = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(source.source)}][data-source-port=${JSON.stringify(source.port)}]`);
         const branchList = await branches.all();
-        const expected = (await branches.evaluateAll((elements) => elements.map((element) => element.getAttribute('data-edge-id')!))).sort();
-        const port = page.locator(`.architecture-port[data-node-id=${JSON.stringify(fanout.source)}][data-port-id=${JSON.stringify(fanout.port)}]`);
+        const expected = [...new Set([fanout.input.id, ...fanout.branches.map((item) => item.id)])].sort();
+        const port = page.locator(`.architecture-port[data-node-id=${JSON.stringify(fanout.input.source)}][data-port-id=${JSON.stringify(fanout.input.port)}]`);
         await port.locator('.architecture-port-dot').hover();
         await expect.poll(() => page.locator('.architecture-connection[data-emphasized="true"]').evaluateAll((elements) => elements.map((e) => e.getAttribute('data-edge-id')!).sort())).toEqual(expected);
         if (reference && info.project.name === 'dpr1' && ['qwen3', 'vjepa2'].includes(family)) {
@@ -339,7 +376,7 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
         width, graph: graph.graph_id, scope: component.id, sourceNodes: graph.nodes.length,
         visibleNodes: Number(await canvas.getAttribute('data-visible-nodes')), visibleEdges: Number(await canvas.getAttribute('data-visible-edges')),
         layoutMs: Number(await canvas.getAttribute('data-layout-ms')), initialCamera: camera,
-        component: await root.boundingBox(), boundaryFanout: fanout ? targets.filter((item) => item.source === fanout.source).length : 0,
+        component: await root.boundingBox(), boundaryFanout: fanout?.branches.length ?? 0,
         resources: await graphObservation(page),
       }), contentType: 'application/json' });
       await page.mouse.move(0, 0);
@@ -350,6 +387,7 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
 }
 
 test.beforeEach(async ({ page }, info) => {
+  timing = new HarnessTiming();
   const family = /\[(\w+)\]/.exec(info.title)![1]!;
   const reference = info.title.startsWith('complete local reference');
   if (!reference && ['deepseek_v2', 'glm4_moe_lite'].includes(family)) {
@@ -380,21 +418,28 @@ test.beforeEach(async ({ page }, info) => {
     await info.attach('actual-reference-inventory', { body: JSON.stringify(selected.report), contentType: 'application/json' });
     args = ['-m', 'llm_model_explorer', '--model-root', selected.model_root, '--cache-dir', join(root, 'cache'), '--port', String(port), '--cors-origin', origin];
   } else {
+    const fixtureStarted = performance.now();
     if (family === 'kimi_linear') {
       execFileSync(python, ['-m', 'acceptance.kimi_linear_fixture', join(root, 'models')], { cwd: repo });
     } else {
       execFileSync(python, ['-m', 'acceptance.architecture_fixtures', join(root, 'models'), ...(family === 'templates' ? ['--templates'] : [])], { cwd: repo });
     }
+    if (info.title.includes('shows the precise model-owned load failure')) {
+      writeFileSync(join(root, 'models', family, 'architecture.json'), '{"nodes":1,"nodes":2}');
+    }
+    timing.fixtureGenerationMs = performance.now() - fixtureStarted;
     modelId = family;
     args = ['-m', 'acceptance.server', '--root', root, '--port', String(port), '--origin', origin,
       ...(family === 'kimi_linear' ? ['--kimi-architecture-fixture'] : [])];
   }
+  timing.spawned = performance.now();
   service = spawn(python, args, { cwd: repo, env: { ...process.env, HF_HUB_OFFLINE: '1', TOKENIZERS_PARALLELISM: 'false' }, stdio: ['ignore', 'pipe', 'pipe'] });
   service.stdout!.on('data', (data) => { log += data; }); service.stderr!.on('data', (data) => { log += data; });
   await expect.poll(async () => {
     if (service.exitCode !== null) throw new Error(log);
     try { return (await fetch(`${backend}/models`)).status; } catch { return 0; }
   }, { timeout: reference ? 300_000 : 30_000 }).toBe(200);
+  timing.ready = performance.now();
   if (!reference) {
     const response = await fetch(`${backend}/models`);
     const models = (await response.json()).models as { id: string }[];
@@ -408,14 +453,16 @@ test.beforeEach(async ({ page }, info) => {
     modelId = fixtureModelIds[family] ?? family;
   }
   page.on('request', (r) => { if (r.url().startsWith(backend)) observed.push(new URL(r.url()).pathname); });
-  await page.addInitScript(installProbe);
+  await page.addInitScript(installProbe, { capturePixels: false });
   await page.addInitScript(installArchitectureProbe);
-  await page.addInitScript(() => { (window as any).__acceptance.capture = false; });
   await page.goto('/');
+  timing.bodyStarted = performance.now();
 });
 
 test.afterEach(async ({ page }, info) => {
   if (info.status === 'skipped') return;
+  timing.teardownStarted = performance.now();
+  const probe = !page.isClosed() ? await page.evaluate(() => (window as any).__acceptance?.metrics() ?? null) : null;
   await info.attach('backend-log', { body: log ?? '', contentType: 'text/plain' });
   await page.close();
   if (service?.exitCode === null) {
@@ -423,6 +470,147 @@ test.afterEach(async ({ page }, info) => {
     try { await once(service, 'exit'); } finally { clearTimeout(timer); }
   }
   if (root) rmSync(root, { recursive: true });
+  await timing.attach(info, log, probe);
+  expect(probe).toMatchObject({ capturePixels: false, framebufferReadbacks: 0 });
+});
+
+test('deterministic production [smollm2] shows the precise model-owned load failure', async ({ page }) => {
+  const finding = diagnosticCases.find((item) => item.name === 'duplicate_json_key')!;
+  const response = page.waitForResponse((r) => r.url().startsWith(backend) &&
+    r.url().endsWith('/architecture') && r.request().method() === 'GET');
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(modelId);
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  const body = await (await response).json();
+  expect(body).toMatchObject({ status: 'unavailable', reason: 'analysis_failed',
+    diagnostics: [{ code: finding.code, message: finding.message }] });
+  await expect(page.getByLabel('Architecture capability', { exact: true })
+    .getByRole('status').getByText('Architecture preparation failed for this model.', { exact: true })).toBeVisible();
+  await expect(page.locator('.architecture-capability-state').getByText(finding.message)).toBeVisible();
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveCount(0);
+});
+
+test('deterministic production [smollm2] port labels keep cable clearance and share terminal emphasis', async ({ page }, info) => {
+  const graph = await selectGraph(page);
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await ready();
+  const root = page.locator('.react-flow__node').first();
+  await root.locator('.architecture-expand').click();
+  await ready();
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const label = page.locator('.architecture-port-label[data-raised="true"]').first();
+  await expect(label).toBeVisible();
+  const port = label.locator('xpath=..');
+  const highlighted = () => page.locator('.architecture-connection[data-emphasized="true"]')
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-edge-id')!).sort());
+  const inspectGeometry = async () => label.evaluate((element) => {
+    const button = element.closest('button')!;
+    const metric = JSON.parse(element.getAttribute('data-layout-bounds')!) as { x: number; y: number; width: number; height: number; clearance: number };
+    const zoom = new DOMMatrix(getComputedStyle(document.querySelector('.react-flow__viewport')!).transform).a;
+    const rect = element.getBoundingClientRect(), terminal = button.getBoundingClientRect();
+    const cx = terminal.left + terminal.width / 2, cy = terminal.top + terminal.height / 2;
+    return { actual: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      expected: { x: cx + (metric.x - Number(button.dataset.absoluteX)) * zoom,
+        y: cy + (metric.y - Number(button.dataset.absoluteY)) * zoom,
+        width: metric.width * zoom, height: metric.height * zoom },
+      gap: (cy - rect.bottom) / zoom, clearance: metric.clearance };
+  });
+  const assertGeometry = async () => {
+    const { actual, expected, gap, clearance } = await inspectGeometry();
+    for (const key of ['x', 'y', 'width', 'height'] as const) expect(actual[key]).toBeCloseTo(expected[key], 0);
+    expect(gap).toBeGreaterThanOrEqual(clearance - 0.1);
+  };
+  await assertGeometry();
+  if (info.project.name === 'dpr1') {
+    const bounds = await port.boundingBox();
+    expect(bounds).toBeTruthy();
+    const clip = { x: bounds!.x - 4, y: bounds!.y - 28, width: 100, height: 64 };
+    const overlap = info.outputPath('port-label-overlap-baseline.png');
+    await label.evaluate((element) => {
+      const span = element as HTMLElement, button = element.closest('button')!;
+      span.dataset.savedTop = span.style.top;
+      span.style.top = `${button.clientHeight / 2 - 7}px`;
+    });
+    await page.screenshot({ path: overlap, clip });
+    await info.attach('port-label-overlap-baseline', { path: overlap, contentType: 'image/png' });
+    await label.evaluate((element) => {
+      const span = element as HTMLElement;
+      span.style.top = span.dataset.savedTop!;
+      delete span.dataset.savedTop;
+    });
+    const clear = info.outputPath('port-label-clearance.png');
+    await page.screenshot({ path: clear, clip });
+    await info.attach('port-label-clearance', { path: clear, contentType: 'image/png' });
+    await assertGeometry();
+  }
+  const before = info.outputPath('port-label-before.png');
+  await page.screenshot({ path: before });
+  await info.attach('port-label-before', { path: before, contentType: 'image/png' });
+  const count = await canvas.getAttribute('data-layout-count');
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const requests = observed.length;
+  const numeric = await metrics(page);
+  await label.hover();
+  await expect.poll(highlighted).not.toEqual([]);
+  const labelEdges = await highlighted();
+  await expect(port).toHaveAttribute('data-emphasized', 'true');
+  await port.locator('.architecture-port-dot').hover();
+  await expect.poll(highlighted).toEqual(labelEdges);
+  if (labelEdges.length === 1) {
+    const line = page.locator(`.architecture-connection[data-edge-id=${JSON.stringify(labelEdges[0])}]`);
+    const point = await fanoutPoint(page, [line], [line]);
+    await page.mouse.move(point.x, point.y);
+    await expect.poll(highlighted).toEqual(labelEdges);
+  }
+  await label.click();
+  await page.mouse.move(0, 0);
+  await expect.poll(highlighted).toEqual(labelEdges);
+  const otherLabel = page.locator('.architecture-port-label[data-raised="true"]').nth(1);
+  await otherLabel.hover();
+  await expect.poll(highlighted).not.toEqual(labelEdges);
+  await page.mouse.move(0, 0);
+  await expect.poll(highlighted).toEqual(labelEdges);
+  await port.focus();
+  await expect.poll(highlighted).toEqual(labelEdges);
+  await expect(label).toHaveAttribute('data-emphasized', 'true');
+  const after = info.outputPath('port-label-emphasis.png');
+  await page.screenshot({ path: after });
+  await info.attach('port-label-emphasis', { path: after, contentType: 'image/png' });
+  expect(await canvas.getAttribute('data-layout-count')).toBe(count);
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+  expect(observed.slice(requests)).toEqual([]);
+  expect((await metrics(page)).createdTextures).toBe(numeric.createdTextures);
+  await graphPreference(page, 'Show dimensions', true);
+  await ready();
+  await assertGeometry();
+  await page.setViewportSize({ width: 1178, height: 900 });
+  await assertGeometry();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const instance = graph.repetitions[0]!.instances.at(-1)!;
+  expect(instance.index).toBeGreaterThan(0);
+  await findComponent(page, instance.node_id);
+  await ready();
+  await page.getByRole('button', { name: 'Explore component', exact: true }).click();
+  await ready();
+  await expect(canvas).toHaveAttribute('data-scope-id', instance.node_id);
+  const beforeIsolatedFit = await page.locator('.react-flow__viewport').getAttribute('style');
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  // React Flow applies this explicit fit on its next node update. Observe the
+  // requested transform before checking that port emphasis preserves it.
+  await expect.poll(() => page.locator('.react-flow__viewport').getAttribute('style')).not.toBe(beforeIsolatedFit);
+  const isolated = page.locator(`.architecture-port[data-node-id=${JSON.stringify(instance.node_id)}] .architecture-port-label[data-raised="true"]`).first();
+  await expect(isolated).toBeVisible();
+  const isolatedCount = await canvas.getAttribute('data-layout-count');
+  const isolatedCamera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const isolatedRequests = observed.length;
+  await isolated.hover();
+  await expect.poll(highlighted).not.toEqual([]);
+  const isolatedEdges = await highlighted();
+  await isolated.locator('xpath=..').focus();
+  await expect.poll(highlighted).toEqual(isolatedEdges);
+  expect(await canvas.getAttribute('data-layout-count')).toBe(isolatedCount);
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(isolatedCamera);
+  expect(observed.slice(isolatedRequests)).toEqual([]);
 });
 
 for (const reference of [false, true]) for (const family of [
@@ -480,18 +668,19 @@ for (const reference of [false, true]) for (const family of [
     await viewOptions(page);
     await expect(page.getByLabel('Show dimensions')).not.toBeChecked();
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Find component', exact: true }).click();
-    const ids = await page.getByRole('listbox', { name: 'Components', exact: true }).getByRole('option').evaluateAll((options) => options.map((o) => (o as HTMLElement).dataset.nodeId));
-    expect(ids).toEqual(graph.nodes.map((n) => n.id));
+    await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill(' ');
+    await graphAction(page, 'Show all operations');
+    const ids = await page.getByRole('tree', { name: 'Model components', exact: true }).locator('[data-node-id]').evaluateAll((options) => options.map((o) => (o as HTMLElement).dataset.nodeId));
+    expect(new Set(ids)).toEqual(new Set(componentsOf(graph).map((n) => n.id)));
     await page.keyboard.press('Escape');
     await graphAction(page, 'Show all operations');
-    await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
     await recordGraph(page, info, 'exhaustive-graph', graph);
     // Visible routes compose boundary forwarding. Every original edge remains
     // traceable even though one route may represent several source segments.
-    expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((n) => n.id));
+    expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((n) => n.id));
     expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((e) => e.id));
-    const roots = new Set(graph.nodes.filter((n) => !n.parent_id).map((n) => n.id));
+    assertInterfaceCoverage(graph, projectGraph(graph, { expanded: [], exhaustive: true }));
     const layerRepetitions = graph.repetitions.filter((repetition) =>
       repetition.instances.some((instance) => !instance.variant.startsWith('routed_')),
     );
@@ -667,11 +856,11 @@ for (const reference of [false, true]) for (const family of [
         await page.setViewportSize({ width: 1178, height: 1000 });
         await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
         await expect(canvas).toHaveAttribute('aria-busy', 'false');
-        await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+        await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
         const layoutCountBeforeFind = await canvas.getAttribute('data-layout-count');
         const trigger = await openParameter(page, graph, packed);
         await expect(canvas).toHaveAttribute('data-layout-count', layoutCountBeforeFind!);
-        await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+        await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
         await expect(page.getByRole('dialog')).toContainText(packed.name);
         const node = graph.nodes.find((item) => item.parameter_ids.includes(packed.id))!;
         await expect(page.locator(`.react-flow__node[data-id=${JSON.stringify(node.id)}]`)).toBeInViewport();
@@ -693,8 +882,8 @@ for (const reference of [false, true]) for (const family of [
         });
         await page.keyboard.press('Escape'); await released(page);
         await expect(trigger).toBeFocused();
-        await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
-        expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((n) => n.id));
+        await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
+        expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((n) => n.id));
         expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((e) => e.id));
       }
     }
@@ -710,15 +899,16 @@ for (const reference of [false, true]) for (const family of [
     await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
     await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
     await expect(canvas).toHaveAttribute('aria-busy', 'false', { timeout: 90_000 });
-    await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+    await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
     await viewOptions(page);
     if (!actualMoeReference) await expect(page.getByLabel('Show dimensions')).toBeChecked();
     await page.keyboard.press('Escape');
     if (family === 'vjepa2') expect(observed.some((p) => p.endsWith('/tokenize'))).toBe(false);
     await graphAction(page, 'Collapse all');
-    await expect(canvas).toHaveAttribute('data-visible-nodes', String(roots.size));
-    expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(
-      graph.edges.filter((edge) => roots.has(edge.source.node_id) && roots.has(edge.target.node_id)).map((edge) => edge.id));
+    await expect(canvas).toHaveAttribute('data-visible-nodes', '1');
+    for (const node of graph.nodes.filter((n) => ['input', 'output'].includes(n.kind))) {
+      await expect(page.locator(`.architecture-browser-row[data-node-id=${JSON.stringify(node.id)}]`)).toHaveCount(0);
+    }
     await page.getByRole('button', { name: 'Center selected', exact: true }).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   });
@@ -730,9 +920,10 @@ test('complete local reference [kimi_linear] issue 178 full expansion and focuse
   expect(graph.coverage).toBe('complete');
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   await graphAction(page, 'Show all operations');
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
-  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((node) => node.id));
   expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
+  assertInterfaceCoverage(graph, projectGraph(graph, { expanded: [], exhaustive: true }));
   await recordGraph(page, info, 'issue-178-kimi-full-graph', graph);
   const parameter = graph.parameters.find((p) => p.binding === 'native' && p.inspection.status === 'available' &&
     p.logical_shape?.length === 2 && p.name.includes('.layers.26.') && p.name.endsWith('.block_sparse_moe.gate.weight'))!;
@@ -748,7 +939,7 @@ test('complete local reference [kimi_linear] issue 178 full expansion and focuse
 
 test('deterministic production [kimi_linear] complete repeated experts remain reachable after Find', async ({ page }, info) => {
   test.setTimeout(300_000);
-  const graph = await selectGraph(page);
+  const graph = expandCompactGraph(await selectGraph(page));
   expect(graph.coverage).toBe('complete');
 
   const experts = graph.parameters.filter((parameter) =>
@@ -758,14 +949,13 @@ test('deterministic production [kimi_linear] complete repeated experts remain re
 
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
-  await page.getByRole('button', { name: 'Find component', exact: true }).click();
-  const ids = await page.getByRole('listbox', { name: 'Components', exact: true })
-    .getByRole('option').evaluateAll((options) => options.map((option) => (option as HTMLElement).dataset.nodeId));
-  expect(ids).toEqual(graph.nodes.map((node) => node.id));
-  await page.keyboard.press('Escape');
   await graphAction(page, 'Show all operations');
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
-  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  const ids = await page.getByRole('tree', { name: 'Model components', exact: true })
+    .locator('[data-node-id]').evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.nodeId));
+  expect(new Set(ids)).toEqual(new Set(componentsOf(graph).map((node) => node.id)));
+  assertInterfaceCoverage(graph, projectGraph(graph, { expanded: [], exhaustive: true }));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((node) => node.id));
   expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
   await recordGraph(page, info, 'kimi-linear-full-graph', graph);
 
@@ -775,8 +965,8 @@ test('deterministic production [kimi_linear] complete repeated experts remain re
   await findComponent(page, target.id);
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
   await expect(canvas).toHaveAttribute('data-layout-count', layoutCount!);
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
-  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((node) => node.id));
   expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
   const card = page.locator(`.react-flow__node[data-id=${JSON.stringify(target.id)}]`);
   await expect(card).toBeInViewport();
@@ -788,7 +978,7 @@ test('complete local reference [qwen3] exhaustive global detail remains reachabl
   const graph = await selectGraph(page);
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   await graphAction(page, 'Show all operations');
-  await expect(canvas).toHaveAttribute('data-visible-nodes', String(graph.nodes.length));
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
   const mlp = graph.nodes.find((node) => node.kind === 'group' && node.attributes.some((a) => a.name === 'semantic_role' && a.value === 'mlp'))!;
   const operation = graph.nodes.find((node) => node.parent_id === mlp.id && node.kind === 'operation')!;
   const requests = observed.length;
@@ -796,7 +986,7 @@ test('complete local reference [qwen3] exhaustive global detail remains reachabl
   await page.getByRole('button', { name: 'Center selected', exact: true }).click();
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
   await expect(page.locator(`.react-flow__node[data-id=${JSON.stringify(operation.id)}]`)).toBeInViewport();
-  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(graph.nodes.map((node) => node.id));
+  expect(JSON.parse((await canvas.getAttribute('data-source-node-ids'))!)).toEqual(componentsOf(graph).map((node) => node.id));
   expect(JSON.parse((await canvas.getAttribute('data-represented-edge-ids'))!)).toEqual(graph.edges.map((edge) => edge.id));
   expect(observed.slice(requests)).toEqual([]);
   await recordGraph(page, info, 'exhaustive-global-detail', graph);
@@ -983,7 +1173,7 @@ test('shared structure production [templates] neutral mode, distinct instance we
   const q0 = query(first!), q1 = query(second!);
   const p0 = graph.parameters.find((p) => p.id === q0.parameter_ids[0])!, p1 = graph.parameters.find((p) => p.id === q1.parameter_ids[0])!;
   expect(p0.name).toBe('model.layers.0.self_attn.q_proj.weight'); expect(p1.name).toBe('model.layers.1.self_attn.q_proj.weight');
-  await page.getByLabel('Shared structures', { exact: true }).selectOption(template.id);
+  await openShared(page, template.id);
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
   const before = observed.length;
   await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
@@ -993,10 +1183,11 @@ test('shared structure production [templates] neutral mode, distinct instance we
   await page.keyboard.press('Escape');
   await page.getByLabel('Shared structure instance', { exact: true }).selectOption(first!.node_id);
   await page.getByRole('button', { name: 'Fit view', exact: true }).click();
-  await page.locator(`.react-flow__node[data-id=${JSON.stringify(q0.id)}] .architecture-info`).click();
+  await page.locator(`.react-flow__node[data-id=${JSON.stringify(q0.id)}] .architecture-node-label`).click();
   await page.evaluate(() => { const p = (window as any).__acceptance; p.captureScalars = true; p.scalarValues.length = 0; });
   await control('arm', { kind: 'logical_tensor' });
-  await page.getByLabel('Inspect parameter', { exact: true }).selectOption(p0.id);
+  await page.getByRole('button', { name: `Inspect matrix ${p0.name}`, exact: true }).click();
+  await expect(page.getByLabel('Inspect parameter', { exact: true })).toHaveValue(p0.id);
   await expect(page.locator('[data-result=tensor]')).toHaveAttribute('data-state', 'streaming');
   await expect.poll(async () => (await control('state')).control.entered).toBe(true);
   await expect.poll(async () => (await metrics(page)).firstRender).toBeGreaterThan(0);
@@ -1015,13 +1206,14 @@ test('shared structure production [templates] neutral mode, distinct instance we
   expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
   await page.evaluate(() => { (window as any).__acceptance.scalarValues.length = 0; });
-  await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+  const matrixTrigger = page.getByRole('button', { name: `Inspect matrix ${p1.name}`, exact: true });
+  await matrixTrigger.focus(); await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Inspect parameter', { exact: true })).toHaveValue(p1.id);
   await expect(page.getByRole('dialog')).toContainText('Module: model.layers.1.self_attn.q_proj');
   await page.getByText('Concrete instance interface connections', { exact: true }).click();
   const memberIds = new Set(second!.nodes.map((n) => n.node_id));
   const external = graph.edges.filter((e) => memberIds.has(e.source.node_id) !== memberIds.has(e.target.node_id));
   for (const edge of external) await expect(page.getByRole('dialog')).toContainText(edge.id);
-  await page.getByLabel('Inspect parameter', { exact: true }).selectOption(p1.id);
   await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
   await expect(page.locator('[data-result=tensor]')).toHaveCount(0);
   expect(await page.evaluate(() => (window as any).__acceptance.scalarValues)).toEqual(Array.from({ length: 144 }, (_, i) => 200 + (i % 29 - 14) / 8));
@@ -1040,9 +1232,9 @@ test('shared structure production [templates] neutral mode, distinct instance we
     samples.push(await graphObservation(page, true));
   }
   expect(observed.slice(requests)).toEqual([]);
+  await info.attach('shared-instance-resources', { body: JSON.stringify(samples), contentType: 'application/json' });
   expect(samples.every((sample) => sample.active === 0 && sample.retainedLayouts <= 1 && sample.retainedGraphs <= 2)).toBe(true);
   expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
-  await info.attach('shared-instance-resources', { body: JSON.stringify(samples), contentType: 'application/json' });
   await recordGraph(page, info, 'shared-instance-weight-cancelled', graph);
 });

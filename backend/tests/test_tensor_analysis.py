@@ -34,6 +34,7 @@ from llm_model_explorer.tensor_analysis import (
     FRACTIONS,
     STATISTICS,
     TensorAnalysis,
+    calculate,
     checked_uint32,
     distributions,
     statistics,
@@ -155,6 +156,58 @@ def test_uint32_overflow_rejected_before_conversion() -> None:
         with pytest.raises(ModelError, match="exceeds uint32") as caught:
             checked_uint32(torch.tensor([count], dtype=torch.int64))
         assert caught.value.code == "unsupported_size"
+
+
+def test_cuda_calculation_releases_cached_vram_after_device_tensor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[object] = []
+
+    class DeviceValues:
+        def __del__(self) -> None:
+            events.append("device-values-released")
+
+    class HostValues:
+        def to(self, device: str) -> DeviceValues:
+            events.append(("transfer", device))
+            return DeviceValues()
+
+    class DeviceContext:
+        def __init__(self, device: str) -> None:
+            self.device = device
+
+        def __enter__(self) -> None:
+            events.append(("device-enter", self.device))
+
+        def __exit__(self, *_: object) -> None:
+            events.append("device-exit")
+
+    def fake_statistics(values: object, cancellation: Cancellation) -> bytes:
+        assert isinstance(values, DeviceValues)
+        cancellation.check()
+        events.append("compute")
+        return b"statistics"
+
+    monkeypatch.setattr("llm_model_explorer.tensor_analysis.statistics", fake_statistics)
+    monkeypatch.setattr(
+        torch.cuda, "synchronize", lambda device: events.append(("synchronize", device))
+    )
+    monkeypatch.setattr(torch.cuda, "device", lambda device: DeviceContext(str(device)))
+    monkeypatch.setattr(torch.cuda, "empty_cache", lambda: events.append("empty-cache"))
+
+    host: Any = HostValues()
+    header, counts = calculate(host, "tensor_statistics", (1,), "cuda:1", Cancellation())
+
+    assert header == b"statistics" and counts is None
+    assert events == [
+        ("transfer", "cuda:1"),
+        "compute",
+        ("synchronize", "cuda:1"),
+        "device-values-released",
+        ("device-enter", "cuda:1"),
+        "empty-cache",
+        "device-exit",
+    ]
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA device unavailable")

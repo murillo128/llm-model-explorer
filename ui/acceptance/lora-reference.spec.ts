@@ -203,7 +203,7 @@ test('SmolLM2 LoRA reference graph navigates and inspects actual A/B weights', a
 
     await findComponent(page, node.id);
     const card = page.locator(`.react-flow__node[data-id=${JSON.stringify(node.id)}]`);
-    await card.locator('.architecture-node-label').dblclick();
+    await card.locator('.architecture-info').click();
     await expect(page.getByLabel('Inspect parameter', { exact: true })).toBeVisible();
     const tensorPath = `/tensors/${parameter.inspection.tensor_id}/data`;
     const tensorResponse = page.waitForResponse(
@@ -278,7 +278,7 @@ test('SmolLM2 QLoRA reference graph selects NF4 base and actual adapter weights'
   const baseNode = nodes.get('model.layers.0.self_attn.q_proj')!;
   await findComponent(page, baseNode.id);
   const baseCard = page.locator(`.react-flow__node[data-id=${JSON.stringify(baseNode.id)}]`);
-  await baseCard.locator('.architecture-node-label').dblclick();
+  await baseCard.locator('.architecture-info').click();
   await expect(page.getByLabel('Inspect parameter', { exact: true })).toBeVisible();
   const basePath = `/tensors/${baseWeight.inspection.status === 'available' ? baseWeight.inspection.tensor_id : ''}/data`;
   const baseStream = page.waitForResponse((candidate) => candidate.url().includes(basePath) && candidate.status() === 200);
@@ -295,7 +295,7 @@ test('SmolLM2 QLoRA reference graph selects NF4 base and actual adapter weights'
   if (factor.inspection.status !== 'available') throw new Error('Expected an inspectable QLoRA factor');
   const factorNode = graph.nodes.find((node) => node.parameter_ids.includes(factor.id))!;
   await findComponent(page, factorNode.id);
-  await page.locator(`.react-flow__node[data-id=${JSON.stringify(factorNode.id)}] .architecture-node-label`).dblclick();
+  await page.locator(`.react-flow__node[data-id=${JSON.stringify(factorNode.id)}] .architecture-info`).click();
   await expect(page.getByLabel('Inspect parameter', { exact: true })).toBeVisible();
   const factorPath = `/tensors/${factor.inspection.tensor_id}/data`;
   const factorStream = page.waitForResponse((candidate) => candidate.url().includes(factorPath) && candidate.status() === 200);
