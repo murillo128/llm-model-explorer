@@ -5,10 +5,13 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from threading import Lock
+from time import perf_counter
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .catalogue_generation import CatalogueGeneration
 from .model_files import FileSnapshot, ModelError, confined, invalid, read_json
 from .peft_adapters import AdapterSpec, bind_adapter, factor_logical_names, validate_adapter
 from .quantized_inventory import encoding, logical_locations
@@ -156,16 +159,27 @@ class CatalogueListing:
     diagnostics: tuple[CatalogueDiagnostic, ...]
 
 
+@dataclass(frozen=True)
+class _Discovery:
+    entries: tuple[CatalogueEntry, ...]
+    diagnostics: tuple[CatalogueDiagnostic, ...]
+    nested_shards: frozenset[Path]
+
+
 class ModelCatalogue:
     def __init__(self, root: Path) -> None:
         # Settings has already resolved/validated root. Construction performs no I/O.
         self._root = root
+        self._lock = Lock()
+        self._cached: tuple[CatalogueGeneration, _Discovery] | None = None
 
     def inspect_directory(self, directory: Path) -> CatalogueEntry:
         """Admit one exact local package without scanning sibling models."""
         return self._inspect_base(directory).entry
 
-    def _inspect_base(self, directory: Path) -> _BaseCandidate:
+    def _inspect_base(
+        self, directory: Path, nested_shards: set[Path] | None = None
+    ) -> _BaseCandidate:
         confined(self._root, directory)
         # Capture config/index before parsing, so a race cannot pin stale descriptors.
         initial = FileSnapshot.capture(self._root, directory, ())
@@ -188,6 +202,7 @@ class ModelCatalogue:
             shards = tuple(name for name, _ in initial.files if name.endswith(".safetensors"))
         if not shards:
             raise invalid("No safetensors weights found.")
+        self._track_nested_shards(directory, shards, nested_shards)
         snapshot = FileSnapshot.capture(self._root, directory, shards)
         initial.check()
         locations: dict[str, PhysicalTensor] = {}
@@ -240,7 +255,7 @@ class ModelCatalogue:
             directory.name,
         )
 
-    def _inspect_adapter(self, directory: Path) -> _AdapterCandidate:
+    def _inspect_adapter(self, directory: Path, nested_shards: set[Path]) -> _AdapterCandidate:
         confined(self._root, directory)
         initial = FileSnapshot.capture(self._root, directory, ())
         config = read_json(self._root, directory / "adapter_config.json")
@@ -266,6 +281,7 @@ class ModelCatalogue:
             shards = ("adapter_model.safetensors",)
         if not shards:
             raise invalid("No adapter safetensors weights found.")
+        self._track_nested_shards(directory, shards, nested_shards)
 
         snapshot = FileSnapshot.capture(self._root, directory, shards)
         initial.check()
@@ -395,10 +411,18 @@ class ModelCatalogue:
         else:
             entries[identity] = entry
 
-    def _discover(self) -> tuple[tuple[CatalogueEntry, ...], tuple[CatalogueDiagnostic, ...]]:
+    @staticmethod
+    def _track_nested_shards(
+        directory: Path, shards: tuple[str, ...], nested_shards: set[Path] | None
+    ) -> None:
+        if nested_shards is not None:
+            nested_shards.update(directory / name for name in shards if "/" in name)
+
+    def _discover(self) -> _Discovery:
         """Fresh metadata scan; rejected LoRA compositions remain non-selectable."""
         entries: dict[str, CatalogueEntry] = {}
         diagnostics: list[CatalogueDiagnostic] = []
+        nested_shards: set[Path] = set()
         try:
             candidates = sorted(self._root.iterdir())
             bases: list[_BaseCandidate] = []
@@ -411,9 +435,9 @@ class ModelCatalogue:
                     confined(self._root, directory)
                     adapter_candidate = (directory / "adapter_config.json").exists()
                     if adapter_candidate:
-                        adapters.append(self._inspect_adapter(directory))
+                        adapters.append(self._inspect_adapter(directory, nested_shards))
                     elif (directory / "config.json").exists():
-                        bases.append(self._inspect_base(directory))
+                        bases.append(self._inspect_base(directory, nested_shards))
                 except (OSError, RuntimeError, ValueError, ModelError) as exc:
                     if (
                         adapter_candidate
@@ -481,21 +505,61 @@ class ModelCatalogue:
                     ),
                 )
             )
-            return tuple(entries[k] for k in sorted(entries)), ordered_diagnostics
+            return _Discovery(
+                tuple(entries[k] for k in sorted(entries)),
+                ordered_diagnostics,
+                frozenset(nested_shards),
+            )
         except OSError as exc:
             logger.exception("Unable to scan configured model root")
             raise ModelError("internal_error", "Unable to discover local models.", 500) from exc
 
+    def _resolve(self) -> _Discovery:
+        # Hold the lock through validation and refresh. An abandoned HTTP consumer
+        # does not cancel this worker or permit another worker to rebuild in parallel.
+        with self._lock:
+            shards = self._cached[1].nested_shards if self._cached else frozenset()
+            generation = CatalogueGeneration.capture(self._root, shards)
+            if self._cached is not None and generation == self._cached[0]:
+                logger.debug("Catalogue cache hit")
+                return self._cached[1]
+            started = perf_counter()
+            for _ in range(3):
+                try:
+                    discovery = self._discover()
+                except Exception:
+                    if CatalogueGeneration.capture(self._root, shards) == generation:
+                        raise
+                else:
+                    shards = discovery.nested_shards
+                    current = CatalogueGeneration.capture(self._root, shards)
+                    if current == generation:
+                        self._cached = (current, discovery)
+                        logger.info(
+                            "Catalogue refreshed models=%d diagnostics=%d discovery_seconds=%.3f",
+                            len(discovery.entries),
+                            len(discovery.diagnostics),
+                            perf_counter() - started,
+                        )
+                        return discovery
+                # Newly learned nested shard paths also require a stable scan with
+                # those dependencies captured before discovery, including rejected
+                # candidates. The last successful cache remains intact on failure.
+                generation = CatalogueGeneration.capture(self._root, shards)
+            raise invalid("Local model catalogue changed during discovery; retry the request.")
+
     def discover(self) -> tuple[CatalogueEntry, ...]:
-        """Fresh model scan without exposing rejected candidates as selectable entries."""
-        return self._discover()[0]
+        """Resolve the current validated catalogue, without exposing rejected entries."""
+        return self._resolve().entries
 
     def list_models(self) -> tuple[ModelSummary, ...]:
         return tuple(entry.summary for entry in self.discover())
 
     def list_catalogue(self) -> CatalogueListing:
-        entries, diagnostics = self._discover()
-        return CatalogueListing(tuple(entry.summary for entry in entries), diagnostics)
+        discovery = self._resolve()
+        return CatalogueListing(
+            tuple(entry.summary for entry in discovery.entries), discovery.diagnostics
+        )
 
     def pin(self, model_id: str) -> ModelSource:
         for entry in self.discover():
