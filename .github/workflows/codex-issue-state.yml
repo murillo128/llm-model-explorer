@@ -2,7 +2,7 @@ name: Route issue state and executor
 
 on:
   issues:
-    types: [labeled]
+    types: [labeled, closed]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -34,6 +34,7 @@ jobs:
       issue_number: ${{ steps.route.outputs.issue_number }}
       issue_title: ${{ steps.route.outputs.issue_title }}
       wait_for_existing_turn: ${{ steps.route.outputs.wait_for_existing_turn }}
+      cleanup_issue_number: ${{ steps.route.outputs.cleanup_issue_number }}
     steps:
       - name: Require the default-branch dispatcher
         env:
@@ -50,6 +51,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
           EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
           EVENT_ISSUE_TITLE: ${{ github.event.issue.title }}
           EVENT_LABEL: ${{ github.event.label.name }}
@@ -62,6 +64,7 @@ jobs:
           issue_number=""
           issue_title=""
           wait_for_existing_turn=false
+          cleanup_issue_number=""
 
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             if ! [[ "$INPUT_ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
@@ -76,6 +79,8 @@ jobs:
               schedule) operation=execute; wait_for_existing_turn=true ;;
               *) echo "Unsupported operation: $INPUT_OPERATION" >&2; exit 1 ;;
             esac
+          elif [ "$EVENT_NAME" = "issues" ] && [ "$EVENT_ACTION" = "closed" ]; then
+            cleanup_issue_number="$EVENT_ISSUE_NUMBER"
           else
             case "$EVENT_LABEL" in
               execution-ready)
@@ -121,6 +126,64 @@ jobs:
           echo "issue_number=$issue_number" >> "$GITHUB_OUTPUT"
           echo "issue_title=$issue_title" >> "$GITHUB_OUTPUT"
           echo "wait_for_existing_turn=$wait_for_existing_turn" >> "$GITHUB_OUTPUT"
+          echo "cleanup_issue_number=$cleanup_issue_number" >> "$GITHUB_OUTPUT"
+
+  cleanup-worktrees:
+    needs: route
+    if: github.repository != 'murillo128/skillforge' && needs.route.outputs.cleanup_issue_number != ''
+    runs-on: [self-hosted, codex]
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    concurrency:
+      group: worktree-cleanup-${{ github.repository }}-issue-${{ needs.route.outputs.cleanup_issue_number }}
+      cancel-in-progress: false
+    steps:
+      - name: Remove closed issue and review worktrees
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ needs.route.outputs.cleanup_issue_number }}
+        run: |
+          set -euo pipefail
+          : "${SKILLFORGE_REPO_ROOT:?SKILLFORGE_REPO_ROOT must point to the persistent local checkout}"
+
+          repo_root="$(cd "$SKILLFORGE_REPO_ROOT" && pwd -P)"
+          worktree_root="${SKILLFORGE_WORKTREE_ROOT:-${HOME}/.skillforge/worktrees}"
+          owner="${GITHUB_REPOSITORY%%/*}"
+
+          origin="$(git -C "$repo_root" remote get-url origin)"
+          case "$origin" in
+            "https://github.com/${GITHUB_REPOSITORY}"|"https://github.com/${GITHUB_REPOSITORY}.git"|"git@github.com:${GITHUB_REPOSITORY}"|"git@github.com:${GITHUB_REPOSITORY}.git"|"ssh://git@github.com/${GITHUB_REPOSITORY}"|"ssh://git@github.com/${GITHUB_REPOSITORY}.git") ;;
+            *) echo "Unexpected repository origin: $origin" >&2; exit 1 ;;
+          esac
+          git -C "$repo_root" fetch --no-tags origin "$GITHUB_SHA"
+
+          cleanup_script="$RUNNER_TEMP/cleanup_issue_worktrees.py"
+          git -C "$repo_root" show "${GITHUB_SHA}:.github/scripts/cleanup_issue_worktrees.py" > "$cleanup_script"
+
+          mapfile -t pr_numbers < <(
+            gh api --method GET --paginate "repos/${GITHUB_REPOSITORY}/pulls" \
+              -f state=all \
+              -f "head=${owner}:codex/issue-${ISSUE_NUMBER}" \
+              -f per_page=100 \
+              --jq '.[].number'
+          )
+
+          args=(
+            --repo-root "$repo_root"
+            --worktree-root "$worktree_root"
+            --repository "$GITHUB_REPOSITORY"
+            --issue-number "$ISSUE_NUMBER"
+            --wait-seconds 900
+          )
+          for pr_number in "${pr_numbers[@]}"; do
+            args+=(--pr-number "$pr_number")
+          done
+
+          python3 "$cleanup_script" "${args[@]}"
 
   select-executor:
     needs: route

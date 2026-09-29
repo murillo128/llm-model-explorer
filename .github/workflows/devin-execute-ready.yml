@@ -60,7 +60,7 @@ jobs:
           env -u GH_TOKEN -u GITHUB_TOKEN git -C "$repo_root" fetch origin
           launcher_dir="$(mktemp -d "$RUNNER_TEMP/devin-launcher.XXXXXX")"
           trap 'rm -rf "$launcher_dir"' EXIT
-          for name in executor_control.py local_issue_worktree.py devin_runner.py; do
+          for name in executor_control.py local_issue_worktree.py devin_runner.py devin_host_broker.py devin_host_client.py; do
             git -C "$repo_root" show "$GITHUB_SHA:.github/scripts/$name" > "$launcher_dir/$name"
           done
           # The launcher snapshots its supervisor outside RUNNER_TEMP before
