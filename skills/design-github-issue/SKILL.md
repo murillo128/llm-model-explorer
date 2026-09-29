@@ -116,6 +116,8 @@ Specify repository-native build/test/lint/type-check/evaluation/benchmark target
 
 Never require evidence that the expected environment cannot practically produce unless the task explicitly establishes that capability as a prerequisite.
 
+Use [test-quality](../test-quality/SKILL.md) for test planning: name behavioral contracts, independent expected-result sources, test owners and existing coverage gaps. Define pre-fix failure/post-fix success evidence for bug regressions and required consumer/integration checks. Keep the plan proportional rather than requiring duplicate tests or numeric coverage targets; design remains non-implementing.
+
 ### 5. Add only material intermediate checkpoints
 
 Use independent executor-side checkpoints only when work should not safely continue past a distinct architecture, ownership/lifetime, data integrity, numerical, concurrency, security, backend, or broad-refactor boundary without review. Do not add a final checkpoint merely because implementation finished; `codex-pr-audit` provides the final independent review after `review-ready`.

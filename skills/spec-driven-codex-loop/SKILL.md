@@ -72,6 +72,8 @@ Confirm intended behavior, permitted subsystem/files, invariants, validation/evi
 
 Follow the issue and accepted architecture, preserve behavior outside scope, add tests/evaluation coverage when required, use repository-native integration, avoid unrelated cleanup, and stop when evidence invalidates the contract.
 
+Before test edits, use [test-quality](../test-quality/SKILL.md) to plan independent assertions and inspect existing coverage. Reuse adequate tests, demonstrate bug regressions failing before the fix and passing after it, and require evidence before removing coverage. Never conform expectations to a known defect or disable a failing test merely to obtain green validation.
+
 ### 3. Handle dependencies deliberately
 
 Preserve identities/provenance/licensing of submodules, vendored code, external repositories/packages/datasets/artifacts. Update only at coherent boundaries and never present unavailable/ambiguous dependency state as a review target.
