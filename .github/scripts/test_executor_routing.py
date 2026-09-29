@@ -741,8 +741,8 @@ class LifecycleTests(LaunchFixture):
             self.launch()
         record = self.finished()
         self.assertEqual(record["phase"], "failed")
-        self.assertEqual(record["exit_code"], 0)
         self.assertEqual(record["error"], "host-command-rejection")
+        self.assertEqual(record["exit_code"], 0)
 
     def test_resume_with_no_new_tool_result_is_not_success(self):
         self.launch()
@@ -779,7 +779,19 @@ class LifecycleTests(LaunchFixture):
         self.assertEqual(record["session_id"], "local-test-session")
 
     def test_workspace_trust_failure_is_distinct_from_cli_failure(self):
-        with patch.dict(os.environ, {"FAKE_TRUST_REJECTED": "1", "FAKE_DEVIN_DELAY": "0.3"}):
+        transport_run = runner.run
+
+        def wait_for_rejection(args, **kwargs):
+            result = transport_run(args, **kwargs)
+            if args[0] == "tmux" and args[5] == "new-session":
+                # Exercise rejection before acknowledgement deterministically.
+                # Observing "running" first is a valid asynchronous launch, not
+                # evidence that the supervisor ignored the later trust failure.
+                self.finish_processes()
+            return result
+
+        with patch.dict(os.environ, {"FAKE_TRUST_REJECTED": "1"}), \
+                patch.object(runner, "run", side_effect=wait_for_rejection):
             with self.assertRaisesRegex(ControlError, "failed to start/finish"):
                 self.launch()
         record = self.finished()
