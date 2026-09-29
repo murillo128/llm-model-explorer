@@ -19,6 +19,20 @@ Start with `AGENTS.md` when present and the user request, roadmap item, or exist
 
 Do not promote exploratory notes, hypotheses, derived wiki text, or provisional chat conclusions into requirements unless an authoritative source explicitly adopts them.
 
+## Explicit activation holds
+
+An explicit user instruction not to activate work overrides all initial-state
+and publication defaults below. Preserve existing held labels when updating an
+issue. For a newly published, fully specified standalone issue or epic parent
+that must remain inactive, use `queued` and state that it awaits manual activation;
+this is an activation hold, not missing technical design. Keep its children
+`queued` too. Never add `execution-ready`, release a hold, initialize a DAG or
+launch a session merely because specification or executor selection is complete.
+Only a separate explicit authorization may activate that held parent/standalone
+issue. Do not place a manually held child under an active parent without an
+explicit non-executable workflow state: an active scheduler can activate `queued`
+children. The normal defaults below apply only when no explicit hold exists.
+
 ## Workflow states
 
 Use exactly one current workflow-state label:
@@ -32,7 +46,7 @@ Use exactly one current workflow-state label:
 - `blocked`
 - `completed`
 
-At publication, set exactly one through `codex-github-operations`. A fully designed standalone issue starts at `execution-ready`. A fully designed child that belongs to an epic starts at `queued` so only `codex-epic-scheduler` activates it. Unresolved design, evidence, or external capability uses `design-required`, `investigation-required`, or `blocked` rather than `queued`.
+At publication, set exactly one through `codex-github-operations`. A fully designed standalone issue starts at `execution-ready`. A fully designed child that belongs to an epic starts at `queued` so only `codex-epic-scheduler` may automatically activate it. Unresolved design, evidence, or external capability uses `design-required`, `investigation-required`, or `blocked` rather than `queued`.
 
 A normal issue must not be published initially as `in-progress`, `review-ready`, or `completed`.
 

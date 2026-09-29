@@ -1,0 +1,46 @@
+{
+  "source_repository": "murillo128/skillforge",
+  "source_commit": "bcf442d2562eab22a6f12cd53ac67eafadf6e400",
+  "target_base_commit": "d28a383014920c3252ea46d92909f3ed501c0e11",
+  "scope": "Port pending reusable skill, local runner, cleanup and offline CI improvements; preserve initialized application state.",
+  "skills": [
+    "codex-local-runner",
+    "design-github-issue",
+    "devin-local-runner",
+    "execution-runner-selection"
+  ],
+  "support_files": [
+    ".github/scripts/cleanup_issue_worktrees.py",
+    ".github/scripts/devin_host_broker.py",
+    ".github/scripts/devin_host_client.py",
+    ".github/scripts/devin_runner.py",
+    ".github/scripts/test_epic_scheduler.py",
+    ".github/scripts/test_executor_routing.py",
+    ".github/scripts/test_worktree_cleanup.py",
+    ".github/workflows/codex-issue-state.yml",
+    ".github/workflows/devin-execute-ready.yml",
+    ".github/workflows/executor-routing-ci.yml",
+    "docs/execution-runners.md"
+  ],
+  "adaptations": [
+    "Never force-remove issue or review worktrees; add regression cases protecting modified, staged and untracked work, and document this local safety difference.",
+    "Preserve existing project-specific execution documentation and integrate the new sandbox, broker, failure-detection and cleanup contracts.",
+    "Do not import the canonical-template-only test or its CI step into the initialized application.",
+    "Retain the canonical Skillforge cleanup exclusion in the reusable dispatcher.",
+    "Some ported files retain minor wording/comment/whitespace differences; this is a reviewed port, not a claim of byte-identical mirroring."
+  ],
+  "preserved": [
+    "AGENTS.md and README.md",
+    "skills/architecture-json-authoring/**",
+    "skills/repository-bootstrap/**",
+    "All seven already-matching operational skills and the epic wave planner",
+    ".codex/config.toml and native executor/model defaults",
+    "Codex execution and independent-audit launchers",
+    "Backend, UI, API, acceptance code and application CI"
+  ],
+  "not_performed": [
+    "Live host provisioning or credential changes",
+    "Real issue activation or model calls",
+    "Automatic synchronization machinery"
+  ]
+}

@@ -44,7 +44,9 @@ second implementation branch. Existing dirty work is preserved.
 Devin's launcher prepares and verifies the actual Git worktree, snapshots a
 supervisor, removes ephemeral Actions credentials, records CLI completion, and
 resumes only its confirmed explicit session ID. tmux keeps the turn independent
-of the Actions job; it does not grant workspace trust or bypass command approvals.
+of the Actions job. The launcher verifies repository/worktree trust before
+disabling the interactive trust prompt, then uses Devin's OS sandbox for
+unattended shell execution under a launcher-owned permission policy.
 Codex-only App Server/profile/delegation settings do not configure Devin helpers.
 
 Use `skills/devin-local-runner/SKILL.md` for Devin host prerequisites/inspection;

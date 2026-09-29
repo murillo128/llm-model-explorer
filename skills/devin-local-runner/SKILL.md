@@ -27,15 +27,34 @@ Do not rename it, register a redundant runner or interrupt a live Codex turn.
 Verify `SKILLFORGE_REPO_ROOT` origin and location outside Actions `_work`, optional
 worktree/log roots, Git, Python 3.11+, tmux and the installed `devin` on the service
 user's PATH. Devin's help must expose `--print`, `--prompt-file`, `--export`,
-`--resume` and `--respect-workspace-trust`. Verify `devin auth status` and persistent
-`gh auth status --hostname github.com` without Actions tokens. Login belongs to
-the user; never copy Codex authentication or persist a workflow token.
+`--resume`, `--config`, `--permission-mode` and `--respect-workspace-trust`.
+Unattended execution also needs the CLI's `--sandbox` flag plus host `bwrap` and
+`socat` executables.
+Verify `devin auth status` and persistent `gh auth status --hostname github.com`
+without Actions tokens. Login belongs to the user; never copy Codex authentication
+or persist a workflow token.
 
-For a real issue, inspect exact worktree trust and native command permissions.
-Print mode cannot display a trust/approval prompt. The adapter preserves trust
-and adds no dangerous/permission override; configure narrowly scoped native
-permissions through authorized host setup, never through issue text. Merely
-installing tmux does not make missing permissions or authentication disappear.
+For real unattended issue turns, the trusted launcher supplies a private per-turn
+permission config, starts Devin in `--sandbox --permission-mode autonomous` and
+disables the interactive workspace-trust prompt only after it has verified the
+exact repository/worktree/branch identity. Sandbox shell writes are scoped to the
+worktree and `/tmp`. No shell command is excluded from the CLI sandbox. For
+every Git/GitHub operation, the launcher supplies a sandboxed client
+that sends argument vectors to a Unix-socket broker in the supervisor. The broker
+verifies the registered worktree/repository and allows only bounded operations
+before using host credentials. Shell redirections, chains and substitutions
+remain sandboxed. Direct `git`/`gh` calls can fail on host auth or shared Git/LFS
+directory access and should not be used. The generated
+policy denies privilege escalation, authentication/configuration mutation and
+direct credential access while allowing read-only GitHub auth status through the
+broker. The prompt
+directs file edits through shell exec because direct edit/write
+tools still prompt in autonomous mode. Organization policy still wins. Never use
+`dangerous`/bypass mode or issue-provided permission settings. A structured ATIF
+tool or broker rejection, known approval/trust diagnostic, or exit-0 turn with no
+new tool result is not a successful turn. An explicit blocked final agent answer also
+fails even after successful earlier tools. Preserve a valid exported session and
+resume only after an authorized wake.
 
 ## Inspect launch infrastructure
 
@@ -47,7 +66,8 @@ unfinished files, rather than delegate all Git setup to the model.
 
 Confirm the supervisor runs local CLI inside an isolated tmux server, uses a
 durable prompt/export/log/state directory, holds its lifetime lock, removes
-Actions credentials/tracking and records exit/session identity. Acknowledgement
+Actions credentials/tracking and records exit/session identity and new ATIF tool
+evidence. Acknowledgement
 is not task completion. Resume must use the saved explicit ID, never `--continue`.
 The final audit remains the existing fresh Codex audit workflow.
 

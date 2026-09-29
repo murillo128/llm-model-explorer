@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - '.github/scripts/**'
+      - 'skills/codex-epic-scheduler/**'
+      - 'skills/codex-local-runner/**'
+      - 'skills/devin-local-runner/**'
+      - 'skills/execution-runner-selection/**'
       - '.github/workflows/*execute-ready.yml'
       - '.github/workflows/codex-issue-state.yml'
       - '.github/workflows/codex-review-ready.yml'
@@ -12,6 +16,10 @@ on:
   pull_request:
     paths:
       - '.github/scripts/**'
+      - 'skills/codex-epic-scheduler/**'
+      - 'skills/codex-local-runner/**'
+      - 'skills/devin-local-runner/**'
+      - 'skills/execution-runner-selection/**'
       - '.github/workflows/*execute-ready.yml'
       - '.github/workflows/codex-issue-state.yml'
       - '.github/workflows/codex-review-ready.yml'
@@ -42,3 +50,7 @@ jobs:
         run: python3 -m unittest discover -s .github/scripts -p 'test_executor_routing.py' -v
       - name: Preserve native Codex lifecycle behavior
         run: python3 -m unittest discover -s .github/scripts -p 'test_codex_profile.py' -v
+      - name: Test closed-issue worktree cleanup
+        run: python3 -m unittest discover -s .github/scripts -p 'test_worktree_cleanup.py' -v
+      - name: Validate deterministic epic waves and canonical parent discovery
+        run: python3 -m unittest discover -s .github/scripts -p 'test_epic_scheduler.py' -v
