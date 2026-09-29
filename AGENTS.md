@@ -46,12 +46,15 @@ Load skills lazily by role:
 - final PR audit controller: `skills/codex-pr-audit/SKILL.md`;
 - Git/GitHub mutations/publication: `skills/codex-github-operations/SKILL.md`;
 - independent technical review: `skills/codex-independent-review/SKILL.md`;
+- test planning, authoring and audit: `skills/test-quality/SKILL.md`;
 - event-driven epic initialization/scheduling: `skills/codex-epic-scheduler/SKILL.md`;
 - explicit manual multi-issue orchestration: `skills/codex-issue-orchestrator/SKILL.md`;
 - model-owned Architecture Explorer view authoring/review: `skills/architecture-json-authoring/SKILL.md`;
 - derived wiki curation: `skills/repository-wiki-curation/SKILL.md`.
 
 The generic launcher for an execution target is the same. After launch, read the controlling issue: when it declares `execution_mode: epic-dag`, route to `codex-epic-scheduler`; otherwise route to `spec-driven-codex-loop`. Keep this decision in agent instructions, not duplicated in the launcher workflow.
+
+Before planning, writing, changing, reviewing or removing tests, load `test-quality` alongside the current role skill. Follow its repository-testing reference for native guidance without replacing accepted configuration, scope or workflow authority.
 
 ## Workflow state
 

@@ -47,6 +47,8 @@ Check complete diff/scope compliance, implementation/integration, credible requi
 
 Prefer checks capable of falsifying the claimed outcome. Exact-head green CI, retained executor evidence, and deterministic artifacts are valid when target/environment are clear. Inspect and reuse them rather than mechanically rerunning a broad suite. Run focused or additional checks when they materially increase independence, target a plausible risk, close an evidence gap, or are explicitly required. Distinguish checks personally run from evidence inspected and never claim an unrun check passed.
 
+Use [test-quality](../test-quality/SKILL.md) read-only when assessing coverage: verify independent expected results, credible regression failure/pass evidence, and retained contracts after deletion or relocation. Challenge mocks that supply the asserted behavior and changes that weaken assertions to hide defects. Apply the existing materiality bar; this adds neither implementation authority nor another final review stage.
+
 ### 4. Determine final capability
 
 For an **intermediate checkpoint**, call it final-capable only when the controlling issue explicitly says that checkpoint may serve as final review and the exact target already contains the complete final diff, final dependencies, required evidence, and all remaining acceptance criteria.

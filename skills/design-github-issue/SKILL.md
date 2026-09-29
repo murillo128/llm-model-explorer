@@ -46,7 +46,7 @@ Use exactly one current workflow-state label:
 - `blocked`
 - `completed`
 
-At publication, set exactly one through `codex-github-operations`. A fully designed standalone issue starts at `execution-ready`. A fully designed child that belongs to an epic starts at `queued` so only `codex-epic-scheduler` may automatically activate it. Unresolved design, evidence, or external capability uses `design-required`, `investigation-required`, or `blocked` rather than `queued`.
+At publication, set exactly one through `codex-github-operations`. A fully designed standalone issue starts at `execution-ready`. A fully designed child that belongs to an epic starts at `queued` so only `codex-epic-scheduler` activates it. Unresolved design, evidence, or external capability uses `design-required`, `investigation-required`, or `blocked` rather than `queued`.
 
 A normal issue must not be published initially as `in-progress`, `review-ready`, or `completed`.
 
@@ -129,6 +129,8 @@ Define the smallest coherent outcome, permitted subsystem/files, explicit exclus
 Specify repository-native build/test/lint/type-check/evaluation/benchmark targets and the correctness, failure, data-integrity, concurrency, security, or performance cases that materially prove the outcome. Use exact commands when invocation details are part of the evidence; otherwise name the target/result without freezing replaceable syntax.
 
 Never require evidence that the expected environment cannot practically produce unless the task explicitly establishes that capability as a prerequisite.
+
+Use [test-quality](../test-quality/SKILL.md) for test planning: name behavioral contracts, independent expected-result sources, test owners and existing coverage gaps. Define pre-fix failure/post-fix success evidence for bug regressions and required consumer/integration checks. Keep the plan proportional rather than requiring duplicate tests or numeric coverage targets; design remains non-implementing.
 
 ### 5. Add only material intermediate checkpoints
 
