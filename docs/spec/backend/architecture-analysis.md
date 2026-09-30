@@ -87,6 +87,18 @@ Qwen3 must preserve its actual embedding/output relationships, decoder order, Q/
 
 The tokenizer is a context node outside the neural model when one exists. Its presence is a capability reference, not a tokenization operation performed by analysis. No general requirement for text tokenization or vocabulary logits is imposed on the graph core.
 
+## Model-owned CLM decision coverage
+
+The exported CLM reference uses a model-owned candidate-decision graph rather
+than the Qwen language-generation graph. It declares independent state/candidate
+encoder invocations with shared backbone parameter IDs, concrete expandable
+Qwen layers, last-token pooling, encoder-vector normalization, separate configured
+projection heads, projection L2 normalization, clamped learned similarity scale,
+temperature and candidate-axis softmax. Its stored vocabulary output head remains
+in the tensor inventory but is not an executed decision operation. The
+model-supplied origin notice remains authoritative about the verification limit;
+see [export correspondence and reference evidence](../../../examples/clm/README.md).
+
 ## Hybrid Qwen3.5 coverage
 
 Preserve the exact configured order of linear-attention and full-attention layers. Both required interiors must be inspectable at the mathematical level; merely identifying a `GatedDeltaNet` class does not meet coverage.
