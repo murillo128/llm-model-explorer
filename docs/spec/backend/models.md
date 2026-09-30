@@ -29,6 +29,20 @@ restricted checkpoint conversion and reference reproduction are documented in
 [`examples/clm`](../../../examples/clm/README.md); runtime admission remains
 local, lazy and read-only under the rules above.
 
+Kev-0.8B is admitted through an explicit offline, unmerged inspection export.
+Its original `FEATURE_EXTRACTION` PEFT directory is not a generic `CAUSAL_LM`
+composition. The exported package preserves the complete native Qwen3.5 base,
+tokenizer and input-embedding layout, separately namespaced LoRA A/B factors,
+restricted-converted pointer query/key weights and biases, inference calibration
+and content provenance. It has a distinct Kev inspection identity and requires
+its model-owned definition; loss of that definition cannot select a bare Qwen
+interpretation. Factor orientation, target geometry and base revision binding
+are validated before atomic publication. The original base, factors and head
+remain independently inspectable without merging or synthetic delta tensors.
+Preparation and validated reference limits belong to
+[`examples/kev`](../../../examples/kev/README.md); the runtime uses the existing
+local, confined, lazy, read-only admission and mutation/cache rules.
+
 ## Model identity
 
 Public identity derives from HF metadata when suitable, with immediate directory-name fallback. Filesystem paths remain backend-private.

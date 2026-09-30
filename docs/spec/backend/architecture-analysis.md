@@ -101,6 +101,19 @@ see [export correspondence and reference evidence](../../../examples/clm/README.
 
 ## Hybrid Qwen3.5 coverage
 
+The exported Kev reference uses a model-owned option-decision graph. It retains
+the concrete Qwen3.5 hybrid layers and each adapted linear operation's native
+base plus scaled A/B additive branch. Independent question causal rows contain
+the shared state prefix and exactly one question; KV, convolution and recurrent
+state are isolated per row, including independently copied prefix caches when
+serving reuses them. A packed block-causal attention mask does not isolate the
+hybrid recurrence. Decision-token and option-closing-token hidden states feed
+separate pointer query/key projections, scaled dot products, checkpoint inference
+temperature and per-question option softmax. It does not execute a vocabulary
+head or assert option permutation invariance. The imported graph retains the
+model-supplied trust notice; [Kev correspondence and evidence](../../../examples/kev/README.md)
+own the selected export's static validation and limits.
+
 Preserve the exact configured order of linear-attention and full-attention layers. Both required interiors must be inspectable at the mathematical level; merely identifying a `GatedDeltaNet` class does not meet coverage.
 
 For full attention, preserve the variant's query/gate split, Q/K normalization, rotary treatment, attention calculation, output gating, and projection. For linear attention, represent verified input projections, local mixing/convolution, branch/gate transformations, normalization where applicable, recurrent/DeltaNet state update, and output projection with their actual dependencies. Attribute variant-specific details to the reviewed source rather than assuming one universal formula. Show symbolic state inputs/outputs without running the recurrence.
