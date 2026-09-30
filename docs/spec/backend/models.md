@@ -19,8 +19,11 @@ its original PyTorch `.pt` directory. The package combines the complete native
 Qwen3-8B encoder, its tokenizer, independently namespaced state/action head
 tensors and learned logit scale, provenance, and a model-owned definition. Keep
 the validated Qwen text layout for input-embedding lookup and give the package
-a distinct CLM identity. Its `clm_inspection` configuration records the required
-definition and selected inputs; loss of that definition must leave architecture
+a distinct CLM identity. Known encoder repository/revision declarations must agree
+with the explicitly selected reference before that identity is assigned; preserve
+the source declarations and binding origin in provenance. Its `clm_inspection`
+configuration records the required definition and selected inputs; loss of that
+definition must leave architecture
 unavailable rather than select a packaged bare-Qwen interpretation. Preparation,
 restricted checkpoint conversion and reference reproduction are documented in
 [`examples/clm`](../../../examples/clm/README.md); runtime admission remains

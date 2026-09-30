@@ -611,6 +611,29 @@ def export_package(
     if destination.exists() or destination.is_relative_to(encoder):
         raise ValueError("Destination must be new and outside the encoder")
     config = json.loads((encoder / "config.json").read_text())
+    # Bind any declared source identity before replacing it with the CLM identity.
+    # Bare upstream configs can omit these fields; their provenance must identify
+    # the operator's verified reference selection rather than claim a metadata match.
+    identity_fields = ("_name_or_path", "name_or_path")
+    revision_fields = ("_commit_hash", "revision")
+    metadata = {
+        key: config[key]
+        for key in (*identity_fields, *revision_fields)
+        if config.get(key) is not None
+    }
+    if any(metadata[key] != ENCODER_REPOSITORY for key in identity_fields if key in metadata):
+        raise ValueError("Encoder repository metadata does not match Qwen/Qwen3-8B")
+    if any(metadata[key] != encoder_revision for key in revision_fields if key in metadata):
+        raise ValueError("Encoder revision metadata does not match the selected revision")
+    binding = {
+        "configuration": metadata,
+        "repository_source": "configuration"
+        if any(key in metadata for key in identity_fields)
+        else "operator_selection",
+        "revision_source": "configuration"
+        if any(key in metadata for key in revision_fields)
+        else "operator_selection",
+    }
     if (
         config.get("model_type") != "qwen3"
         or config.get("architectures") != ["Qwen3ForCausalLM"]
@@ -708,6 +731,7 @@ def export_package(
             "encoder": {
                 "repository": ENCODER_REPOSITORY,
                 "revision": encoder_revision,
+                "binding": binding,
                 "content_fingerprint": source.fingerprint,
                 "license": "Apache-2.0",
                 "files": [

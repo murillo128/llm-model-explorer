@@ -101,10 +101,15 @@ scale are admitted from the bounded `.pt` file, using explicit
 `torch.load(weights_only=True, map_location="cpu", mmap=True)`. No unrestricted
 pickle fallback, safe-global extension, remote code import or vLLM is used.
 The head schema rejects extra/missing tensors, dimension conflicts and unsupported
-options. Reference revision/checksum verification above establishes upstream
-identity; the exporter itself validates locally selected compatible structure
-and records the operator-supplied pins. Reduced untrained test fixtures are not
-the reference checkpoint.
+options. Before replacing the encoder identity, the exporter rejects any
+non-null `_name_or_path` / `name_or_path` declaration other than `Qwen/Qwen3-8B`,
+and any `_commit_hash` / `revision` declaration differing from the selected
+immutable revision. All declarations must agree, including secondary fields.
+Provenance preserves those declarations and records whether repository/revision
+binding came from configuration or operator selection. The pinned upstream Qwen
+config omits these fields, so revision/checksum verification above remains the
+operator's proof of upstream identity; compatible geometry alone is insufficient.
+Reduced untrained test fixtures are not the reference checkpoint.
 
 ## Validation ownership
 
@@ -116,7 +121,7 @@ limits. Added CLM cases cover the remaining composite risks:
 | --- | --- | --- |
 | Head options, wrong namespace or dtype, duplicate encoder copies | Exact original tensor bytes/dtypes, independent two-layer inventory, shared parameter consumer identities | `backend/tests/test_clm_export.py` |
 | Wrong activation/norm/residual/order/scaling | Float64 scalar equations transcribed from pinned source versus evaluation of exported head dependencies; tolerances 2e-6 for vectors/probabilities, 2e-4 for scaled scores | Same backend test |
-| Unsafe or incomplete export | Restricted-load rejection, incompatible geometry, absent/extra tensors, duplicate base storage; no selectable destination after failure | Same backend test |
+| Unsafe or incomplete export | Restricted-load rejection, incompatible geometry or repository/revision declarations, absent/extra tensors, duplicate base storage; no selectable destination after failure | Same backend test |
 | Real consumer/lifecycle, accidental checkpoint loading/network/fallback | Backend startup/cache and endpoints, exact binary bytes and embedding rows; runtime load/network traps, unavailable damaged definitions, relocation/content invalidation | Same backend test |
 | Production rendering/navigation | Select CLM, expand a projection group, inspect its real native matrix | `ui/acceptance/clm.spec.ts` |
 

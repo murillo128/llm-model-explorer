@@ -32,6 +32,64 @@ def export(encoder: Path, head: Path, destination: Path) -> dict[str, Any]:
 
 
 @pytest.mark.parametrize(
+    "metadata",
+    [
+        {"_name_or_path": "Qwen/Qwen3-8B-Base"},
+        {"_name_or_path": "Qwen/Qwen3-8B-Base", "name_or_path": "Qwen/Qwen3-8B"},
+        {"name_or_path": "Qwen/Qwen3-8B-Base"},
+        {"_commit_hash": "3" * 40},
+        {"revision": "3" * 40},
+        {"_commit_hash": "1" * 40, "revision": "3" * 40},
+    ],
+)
+def test_conflicting_encoder_binding_is_never_published(
+    tmp_path: Path, metadata: dict[str, str]
+) -> None:
+    """Identical tensors/geometry do not make a different source CLM-compatible."""
+    root = tmp_path / "models"
+    encoder, head, _ = fixture(root)
+    path = encoder / "config.json"
+    config = json.loads(path.read_text())
+    config.update(metadata)
+    path.write_text(json.dumps(config))
+    before = path.read_bytes()
+    destination = root / "clm"
+    with pytest.raises(ValueError, match="Encoder .* metadata"):
+        export(encoder, head, destination)
+    assert path.read_bytes() == before
+    assert not destination.exists()
+    assert not list(tmp_path.glob(".clm-export-*"))
+    assert not any(
+        model.id.startswith("Contrastive-LM/") for model in ModelCatalogue(root).list_models()
+    )
+
+
+def test_matching_encoder_binding_preserves_source_declarations(tmp_path: Path) -> None:
+    root = tmp_path / "models"
+    encoder, head, _ = fixture(root)
+    path = encoder / "config.json"
+    config = json.loads(path.read_text())
+    metadata = {
+        "_name_or_path": "Qwen/Qwen3-8B",
+        "name_or_path": "Qwen/Qwen3-8B",
+        "_commit_hash": "1" * 40,
+        "revision": "1" * 40,
+    }
+    config.update(metadata)
+    path.write_text(json.dumps(config))
+    before = path.read_bytes()
+    destination = root / "clm"
+    assert export(encoder, head, destination)["status"] == "valid"
+    provenance = json.loads((destination / "clm-provenance.json").read_text())
+    assert provenance["encoder"]["binding"] == {
+        "configuration": metadata,
+        "repository_source": "configuration",
+        "revision_source": "configuration",
+    }
+    assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize(
     "activation,layernorm,residual,depth,dtype",
     [
         ("gelu", True, False, 3, torch.float32),
@@ -86,6 +144,12 @@ def test_preserved_inventory_sharing_and_head_options(
     assert [len(r["instances"]) for r in graph["repetitions"]] == [2, 2]
     assert not any(n.get("operation") in {"tokenizer", "logits"} for n in graph["nodes"])
     assert not any("lm_head" in n.get("parameter_ids", []) for n in graph["nodes"])
+    provenance = json.loads((destination / "clm-provenance.json").read_text())
+    assert provenance["encoder"]["binding"] == {
+        "configuration": {"_name_or_path": "Qwen/Qwen3-8B"},
+        "repository_source": "configuration",
+        "revision_source": "operator_selection",
+    }
     pairs = [
         (
             e["source"]["node_id"],

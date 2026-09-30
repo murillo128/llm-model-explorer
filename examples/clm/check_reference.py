@@ -36,6 +36,13 @@ def check(encoder, head, model_root, output):
     package = model_root / "clm"
     provenance = json.loads((package / "clm-provenance.json").read_text())
     assert provenance["encoder"]["revision"] == ENCODER_REVISION
+    # This exact upstream config omits repository/revision identity declarations.
+    # Keep the verified operator selection distinct from a configuration binding.
+    assert provenance["encoder"]["binding"] == {
+        "configuration": {},
+        "repository_source": "operator_selection",
+        "revision_source": "operator_selection",
+    }
     assert provenance["head"]["revision"] == HEAD_REVISION
     assert provenance["source"]["revision"] == SOURCE_REVISION
     assert digest(head) == provenance["head"]["sha256"]
