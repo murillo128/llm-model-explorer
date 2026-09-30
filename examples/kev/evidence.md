@@ -10,7 +10,7 @@ required. The reference inputs and large outputs remain outside Git.
 - Kev Hub revision: `9a45d25eb2ab761841196625383fa1dff0e56c1e`.
 - Required Qwen base revision: `dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68`.
 - Inspected Kev source revision: `45923b7a3460b6d36358e2e143455902c1eb856b`.
-- Exporter SHA-256: `88fc5939b980c1f9aa6d80f47e3e35e960330ac70b645acaab9e1fff08f04da2`.
+- Exporter SHA-256: `f976da873539a7983624fc4fd55f8a4fd479e1cff8d714734d010bb97a50cef1`.
 - Qwen description: `{"analyzer_revision": "static-graph-core-3", "description": "transformers-qwen35-nvfp4", "revision": "2", "schema_revision": "6d4f6ea778590ff68d919adb59962eb97951240df7b521b3ca08c4846fd68b88", "source_revision": "transformers/2cba19507be799b7bef247ca6c1c4708bf881b5b"}`.
 - Base content fingerprint: `2207f5619dd73c19fe6c00806701d8796909a7c8cee10cdcb229355bd9fadba3`.
 - Model identity: `jaredpalmer/kev-0.8b-inspection@9a45d25eb2ab761841196625383fa1dff0e56c1e`.
@@ -72,11 +72,11 @@ model-supplied notice.
 | Hybrid layers | 24: 18 linear attention, 6 full attention |
 | Graph nodes / edges | 1915 / 2694 |
 | Sidecar / JSON response bytes | 2133369 / 5554811 |
-| Cold startup | 8.496 s |
-| Warm startup | 5.433 s, same graph ID, cached artifact reused |
+| Cold startup | 8.708 s |
+| Warm startup | 5.590 s, same graph ID, cached artifact reused |
 | Pointer dimension / temperature | 256 / 2.3510958125672174 |
 
-Graph ID: `d659bae4d108099a2e3fdc945d8ab4173d4fbc5362ea54bcd488bd6cf1ec9b9c`.
+Graph ID: `c2e793963f004b3dbcbfc971d7c928d1f2a65b686b8ba797f9ce41e0f0231377`.
 Definition SHA-256: `f1d97cb69f821a492110e734c4e78fe6c3066497b47c8d401ff245f10b1d5566`.
 
 The sidecar remains below 8 MiB and the prepared response below 32 MiB.
@@ -110,20 +110,22 @@ All returned rows matched exactly. Delimiters: `{'<|fim_prefix|>': 248060, '<|fi
 ## Production browser and deterministic regression proof
 
 `ui/acceptance/kev.spec.ts` passed with the complete real export at DPR 1 and 2
-(17.2 s and 18.6 s; 37.1 s including setup). It selected Kev, expanded layer 0's
+(17.1 s and 18.0 s; 36.4 s including setup). It selected Kev, expanded layer 0's
 adapted `linear_attn.in_proj_a`, opened its native A factor, then expanded the
 pointer head and opened `q.weight`. Both numeric responses succeeded and both
 matrix canvases rendered without alerts. The captured real screenshots were
 visually inspected. The same download-free fixture path passed at DPR 1 and 2
-(10.3 s and 11.5 s; 23.0 s including setup). Screenshots/traces stay outside Git.
+(10.6 s and 12.2 s; 24.1 s including setup). Screenshots/traces stay outside Git.
 The sandbox could not expose Xvfb to Chromium; these headed runs used the
 permitted host execution path with temporary X servers and isolated ports.
 
-- Focused backend suite: 178 passed across Kev, Qwen3.5, PEFT, LoRA,
+- Focused backend suite: 184 passed across Kev, Qwen3.5, PEFT, LoRA,
   model-owned architecture and CLM.
 - Backend Ruff lint/format and mypy: passed (104 typed source/test files).
 - `npm run check`: API binding freshness, types, lint, 1,019 unit tests,
-  production build passed.
+  production build passed on the initial implementation. The API/UI and
+  dependency trees are unchanged by the filesystem repair; that result is
+  retained. Both browser paths above were rerun against the repaired exporter.
 - Export/check-reference scripts: Ruff lint/format with backend configuration.
 - Mutation proof separately changes base bytes, factor bytes, head bytes,
   config and sidecar; relocation retains content identity and pinned mutations
@@ -137,6 +139,14 @@ permitted host execution path with temporary X servers and isolated ports.
 - An explicit RoPE-factor conflict failed its rejection test before the fix
   (`DID NOT RAISE`) and passes afterward; omitted factors still inherit the
   selected base's declared RoPE value.
+- Six filesystem regression cases failed before repair and pass afterward:
+  symlink and `..` output aliases into each input previously did not raise;
+  exports with shared and copied shards previously raised `PermissionError`
+  when the output parent was writable but its ancestor was read-only. Rejected
+  aliases now leave both input trees byte-for-byte unchanged. Successful exports
+  stage within the resolved output parent and remove their temporary directory.
+  Permission cases ran as an unprivileged POSIX user without skips; privileged
+  or non-POSIX runs cannot establish that mode-based permission proof.
 
 The existing backend/API/UI/application PR workflows exclude
 `codex/epic-issue-*` bases. This child uses the accepted scoped local validation;

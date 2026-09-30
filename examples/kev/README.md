@@ -42,10 +42,12 @@ backend/.venv/bin/python -m llm_model_explorer \
   --model-root "$MODEL_ROOT" --cache-dir "$ARTIFACT_CACHE"
 ```
 
-The output must be new and outside both inputs. Shared base shards must stay
+The output must be new and outside both resolved inputs, including when an output
+path uses symlink parents or `..`. Shared base shards must stay
 inside the configured model root. Use `--copy-shards` when preparing an independent
 portable package; copying is bounded by file, without resident full-weight loading.
-The exporter validates a staging directory and renames it only on success. It
+The exporter validates a staging directory inside the resolved output parent and
+renames it only on success, on the same filesystem. It
 never modifies either input. Do not move a shared package without its base; a
 copied package can relocate without changing its content fingerprint.
 

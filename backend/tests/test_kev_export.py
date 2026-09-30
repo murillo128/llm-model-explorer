@@ -1,6 +1,7 @@
 """Kev-specific numerical, safety, hybrid semantics and consumer/lifecycle proof."""
 
 import json
+import os
 import pickle
 import shutil
 from pathlib import Path
@@ -28,6 +29,70 @@ def export(base: Path, kev: Path, destination: Path) -> None:
         )["status"]
         == "valid"
     )
+
+
+@pytest.mark.parametrize("input_name", ["base", "kev"])
+@pytest.mark.parametrize("alias", ["symlink", "dotdot"])
+def test_output_alias_cannot_publish_inside_inputs(
+    tmp_path: Path, input_name: str, alias: str
+) -> None:
+    base, kev, _ = fixture(tmp_path / "models")
+    selected = base if input_name == "base" else kev
+    if alias == "symlink":
+        parent = tmp_path / "output-parent"
+        parent.symlink_to(selected, target_is_directory=True)
+    else:
+        detour = selected.parent / "detour"
+        detour.mkdir()
+        parent = detour / ".." / selected.name
+    before = {
+        p: p.read_bytes() if p.is_file() else None
+        for folder in (base, kev)
+        for p in folder.rglob("*")
+    }
+    with pytest.raises(ValueError, match="outside inputs"):
+        exporter().export_package(
+            base,
+            kev,
+            parent / "exported",
+            base_revision=BASE_REV,
+            kev_revision=KEV_REV,
+            copy_shards=True,
+        )
+    after = {
+        p: p.read_bytes() if p.is_file() else None
+        for folder in (base, kev)
+        for p in folder.rglob("*")
+    }
+    assert after == before
+
+
+@pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs POSIX non-root modes")
+@pytest.mark.parametrize("copy_shards", [False, True])
+def test_staging_uses_writable_output_parent_with_readonly_ancestor(
+    tmp_path: Path, copy_shards: bool
+) -> None:
+    ancestor = tmp_path / "readonly"
+    root = ancestor / "models"
+    base, kev, _ = fixture(root)
+    ancestor.chmod(0o555)
+    try:
+        assert not os.access(ancestor, os.W_OK)
+        assert os.access(root, os.W_OK)
+        result = exporter().export_package(
+            base,
+            kev,
+            root / "kev",
+            base_revision=BASE_REV,
+            kev_revision=KEV_REV,
+            copy_shards=copy_shards,
+        )
+        assert result["status"] == "valid"
+        source = ModelCatalogue(root).inspect_directory(root / "kev").pin()
+        assert source.tensors()
+        assert not list(root.glob(".kev-export-*"))
+    finally:
+        ancestor.chmod(0o755)
 
 
 def test_native_inventory_and_independent_algebra(tmp_path: Path) -> None:

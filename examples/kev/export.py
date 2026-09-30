@@ -792,7 +792,8 @@ def export_package(
         if not re.fullmatch(r"[0-9a-f]{40}", rev):
             raise ValueError("Immutable 40-hex revisions required")
     base, kev = base.resolve(strict=True), kev.resolve(strict=True)
-    destination = destination.absolute()
+    # Resolve existing symlink parents and traversal before enforcing separation.
+    destination = destination.resolve(strict=False)
     if destination.exists() or destination.is_relative_to(base) or destination.is_relative_to(kev):
         raise ValueError("Destination must be new and outside inputs")
     config = read_json(base.parent, base / "config.json")
@@ -876,7 +877,8 @@ def export_package(
         raise ValueError("Insufficient disk")
     if not copy_shards and not base.is_relative_to(destination.parent.resolve()):
         raise ValueError("Shared shards must remain within model root; use --copy-shards")
-    staging = Path(tempfile.mkdtemp(prefix=".kev-export-", dir=destination.parent.parent))
+    # Keep staging on the checked output filesystem so publication is atomic.
+    staging = Path(tempfile.mkdtemp(prefix=".kev-export-", dir=destination.parent))
     try:
         for name in shards:
             target = staging / "base" / name
