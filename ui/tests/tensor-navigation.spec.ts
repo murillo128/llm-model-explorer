@@ -4,7 +4,7 @@ import { revealTensor } from './tensor-tree-helpers';
 
 const path = ['model', 'layers', '12', 'attention', 'projection', 'nested', 'deep', 'long_module_name_for_truncation'.repeat(5), 'weight'];
 
-test('compact deep navigator and contextual metadata remain accessible in narrow panels', async ({ page }, testInfo) => {
+test('compact deep navigator and contextual metadata remain accessible in narrow panels', { tag: '@responsive' }, async ({ page }, testInfo) => {
   const inventory = [
     { ...tensors[2]!, id: 'deep', name: path.join('.'), path },
     { ...tensors[2]!, id: 'other', name: 'other.weight', path: ['other', 'weight'] },

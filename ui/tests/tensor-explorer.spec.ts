@@ -11,7 +11,7 @@ async function open(page: Page, name = 'A') {
 }
 const status = (page: Page, result: string) => page.locator(`[data-result="${result}"]`);
 
-for (const dpr of [1, 2]) test(`asymmetric progressive surfaces, independent results and immutable scalar allocation at DPR ${dpr}`, async ({ browser }, testInfo) => {
+for (const dpr of [1, 2]) test(`asymmetric progressive surfaces, independent results and immutable scalar allocation at DPR ${dpr}`, { tag: '@responsive' }, async ({ browser }, testInfo) => {
   const context = await browser.newContext({ viewport: testInfo.project.name === 'narrow' ? { width: 390, height: 844 } : { width: 1440, height: 900 }, deviceScaleFactor: dpr });
   const page = await context.newPage();
   await open(page);
@@ -86,7 +86,7 @@ for (const dpr of [1, 2]) test(`asymmetric progressive surfaces, independent res
   await context.close();
 });
 
-for (const dpr of [1, 2]) test(`reference geometry and synchronized scrolling across texture bands at DPR ${dpr}`, async ({ browser }, testInfo) => {
+for (const dpr of [1, 2]) test(`reference geometry and synchronized scrolling across texture bands at DPR ${dpr}`, { tag: '@responsive' }, async ({ browser }, testInfo) => {
   const context = await browser.newContext({ viewport: testInfo.project.name === 'narrow' ? { width: 390, height: 844 } : { width: 1440, height: 900 }, deviceScaleFactor: dpr });
   const page = await context.newPage();
   await open(page, 'unsupported');

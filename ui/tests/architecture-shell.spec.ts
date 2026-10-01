@@ -89,7 +89,7 @@ test('compact routed experts decode into distinct browser and canvas targets', a
   await expect(page.getByLabel('Graph selection', { exact: true })).toHaveAttribute('data-node-id', 'expert1');
 });
 
-test('loading and unavailable Architecture cards keep the compact soft title row', async ({ page, context }) => {
+test('loading and unavailable Architecture cards keep the compact soft title row', { tag: '@responsive' }, async ({ page, context }) => {
   await backend(context);
   let pending: Route | undefined;
   await context.route('https://architecture.example/sessions/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/architecture', route => { pending = route; });

@@ -16,7 +16,7 @@ async function geometry(page: Page) {
   });
 }
 
-test('footer observes real attempts, accessible retry and HTTP errors without connection toasts', async ({ page }) => {
+test('footer observes real attempts, accessible retry and HTTP errors without connection toasts', { tag: '@responsive' }, async ({ page }) => {
   let release!: () => void;
   let pending = new Promise<void>(resolve => { release = resolve; });
   let result: 'transport' | 'http' | 'success' = 'transport';
@@ -59,7 +59,7 @@ test('footer observes real attempts, accessible retry and HTTP errors without co
   expect(await geometry(page)).toMatchObject({ app: initial.app, workspace: initial.workspace, footer: initial.footer, session: initial.session, document: initial.viewport, body: initial.viewport });
 });
 
-test('operation toast and catalogue recovery preserve numeric consumer, geometry and camera', async ({ page }, testInfo) => {
+test('operation toast and catalogue recovery preserve numeric consumer, geometry and camera', { tag: '@responsive' }, async ({ page }, testInfo) => {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);
   await page.getByRole('combobox').selectOption('lab/alpha');
   await page.getByRole('button', { name: /^reference \[/ }).click();

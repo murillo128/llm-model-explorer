@@ -101,7 +101,7 @@ for (const dpr of [1, 2]) test.describe(`standalone matrix at DPR ${dpr}`, () =>
     await page.locator('.matrix-scroll').evaluate((host) => (host as HTMLElement).blur());
     expect(await page.evaluate(() => [window.matrixFixture.cells.at(-1), window.matrixFixture.rows.at(-1), window.matrixFixture.columns.at(-1)])).toEqual([null, null, null]);
   });
-  test('matrix-only scrolling keeps exact native indices', async ({ page }) => {
+  test('matrix-only scrolling keeps exact native indices', { tag: '@responsive' }, async ({ page }) => {
     await open(page);
     await page.evaluate(() => window.matrixFixture.render('large'));
     await expect.poll(() => page.evaluate(() => window.matrixFixture.subscriptions.length)).toBe(2);

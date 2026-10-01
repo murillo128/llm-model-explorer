@@ -87,7 +87,7 @@ test('label and body select only for source, expanded, repetition and derived ca
   await selectOnly(page, 'mlp:layer-3.gate'); await selectOnly(page, 'layer-3.gate');
 });
 
-test('real double-clicks toggle once, preserve zoom and leave leaf inspection explicit', async ({ page }, info) => {
+test('real double-clicks toggle once, preserve zoom and leave leaf inspection explicit', { tag: '@responsive' }, async ({ page }, info) => {
   const target = card(page, 'repeat:layers:0:1');
   await page.evaluate(() => {
     const observations: { type: string; target: boolean; flow: DOMRect; card: DOMRect }[] = [];
@@ -148,7 +148,7 @@ test('real double-clicks toggle once, preserve zoom and leave leaf inspection ex
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('nested expansion and exact hidden selection survive parent controls, explorer switching and Back', async ({ page }, info) => {
+test('nested expansion and exact hidden selection survive parent controls, explorer switching and Back', { tag: '@responsive' }, async ({ page }, info) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('components'); await ready(page);
   await findComponent(page, 'layer-3'); await ready(page);
   await card(page, 'layer-3').locator('.architecture-navigate').click(); await ready(page);
@@ -245,7 +245,7 @@ test('contracting after Show all operations leaves sibling detail visible and re
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('header navigation targets the pressed card and explores its nested operation; controls stay ordered and focused', async ({ page }, info) => {
+test('header navigation targets the pressed card and explores its nested operation; controls stay ordered and focused', { tag: '@responsive' }, async ({ page }, info) => {
   await findComponent(page, 'linear1'); await ready(page);
   await card(page, 'layer1').locator('.architecture-node-label').click();
   const operation = card(page, 'linear1'), nav = operation.locator('.architecture-navigate');

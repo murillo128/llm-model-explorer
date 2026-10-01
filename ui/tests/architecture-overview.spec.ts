@@ -39,7 +39,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const fixture of ['overview-compact', 'overview-synthetic', 'overview-wide', 'overview-fanout', 'overview-training', 'interface-visual', 'interface-many', 'mixed-stacks']) {
-  test(`${fixture}: one readable level or one bounded collapsed fallback, top aligned`, async ({ page }, info) => {
+  test(`${fixture}: one readable level or one bounded collapsed fallback, top aligned`, { tag: '@responsive' }, async ({ page }, info) => {
     await page.goto(`${harness}?fixture=${fixture}`); await ready(page);
     const state = await sample(page), candidate = state.layouts[0]!, final = state.layouts.at(-1)!;
     const fits = overviewScale(visibleBounds(candidate), state.actual[0]!, state.actual[1]!)! >= minimumOverviewScale;

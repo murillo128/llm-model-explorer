@@ -10,7 +10,7 @@ const ready = async (page: import('@playwright/test').Page) => {
 };
 const camera = (page: import('@playwright/test').Page) => page.locator('.react-flow__viewport').getAttribute('style');
 
-test('rotary sin and causal mask stay separately targetable after visual ordering', async ({ page }, info) => {
+test('rotary sin and causal mask stay separately targetable after visual ordering', { tag: '@responsive' }, async ({ page }, info) => {
   await page.goto(`${harness}?fixture=routing-context`); await ready(page);
   await graphAction(page, 'Show all operations'); await ready(page);
   await graphAction(page, 'Fit view'); await ready(page);
@@ -92,7 +92,7 @@ test('boundary hover/focus/pinning preserves layout and source connections; expl
   await page.getByRole('button', { name: 'Back', exact: true }).click(); await ready(page);
 });
 
-test('raised label to terminal traversal retains exact hover at fit and high zoom', async ({ page }) => {
+test('raised label to terminal traversal retains exact hover at fit and high zoom', { tag: '@responsive' }, async ({ page }) => {
   await page.goto(`${harness}?fixture=interface-hybrid`); await ready(page);
   await page.locator('[data-node-id="language"] .architecture-browser-disclosure').click(); await ready(page);
   await graphAction(page, 'Fit view'); await ready(page);
@@ -210,7 +210,7 @@ test('ordinary operation keeps long opposite labels disjoint and bound to their 
   await expect(page.locator(panel)).toHaveAttribute('data-layout-count', layout!);
 });
 
-test('many interfaces stay targetable without document overflow', async ({ page }) => {
+test('many interfaces stay targetable without document overflow', { tag: '@responsive' }, async ({ page }) => {
   await page.goto(`${harness}?fixture=interface-many`); await ready(page);
   await viewOptions(page); await page.keyboard.press('Escape');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);

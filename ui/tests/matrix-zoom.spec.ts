@@ -63,7 +63,7 @@ async function escapeViews(page: Page) {
 }
 for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
-  for (const shape of ['short', 'tall', 'large', 'square'] as const) test(`fit, focal zoom, bounds and aligned profiles: ${shape}`, async ({ page }) => {
+  for (const shape of ['short', 'tall', 'large', 'square'] as const) test(`fit, focal zoom, bounds and aligned profiles: ${shape}`, { tag: '@responsive' }, async ({ page }) => {
     await open(page, shape);
     let c = await camera(page);
     const fit = Math.max(1, Math.floor(c.width * dpr) / c.shape.columns);
@@ -108,7 +108,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
     expect(c.view.scaleX).toBeCloseTo(fit); expect(c.view.x).toBe(0); expect(c.view.y).toBe(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   });
-  test('wheel, trackpad pinch, exact click/pending values and resource lifetime', async ({ page }) => {
+  test('wheel, trackpad pinch, exact click/pending values and resource lifetime', { tag: '@responsive' }, async ({ page }) => {
     await open(page, 'square');
     await page.evaluate(() => window.matrixFixture.subscriptions.at(-1)!.values(Float32Array.from({ length: 1000 }, (_, i) => i + .25), 0));
     const before = await camera(page);
