@@ -88,9 +88,9 @@ test('browser and Model cards share compact chrome while contextual controls rem
   const contextual = (await title.boundingBox())!, canvas = (await graph.boundingBox())!;
   expect(contextual.y + contextual.height).toBeLessThan(canvas.y + canvas.height);
   await info.attach('architecture-context', { body: await page.locator('.architecture-workspace').screenshot(), contentType: 'image/png' });
-  await page.goto(`${harness}?fixture=components-large&long-browser`); await ready(page);
+  await page.goto(`${harness}?fixture=components&long-browser=layer-3.attention.Q`); await ready(page);
   await side.getByRole('searchbox', { name: 'Search components' }).fill('intentionally long public');
-  await side.locator('[data-node-id="layer-31.attention.Q"] [data-browser-name]').click();
+  await side.locator('[data-node-id="layer-3.attention.Q"] [data-browser-name]').click();
   const selected = graph.locator('.architecture-selection > span');
   await expect(selected).toHaveAttribute('title', /intentionally long public component name/);
   expect((await selected.boundingBox())!.width).toBeLessThanOrEqual(170);
@@ -148,7 +148,7 @@ test('three section headers and all navigable row kinds share one visual system'
 });
 
 test('section disclosure restores focus and pre-search presentation with empty and long rows bounded', { tag: '@responsive' }, async ({ page }) => {
-  await page.goto(`${harness}?fixture=components-large&long-browser`); await ready(page);
+  await page.goto(`${harness}?fixture=components&long-browser=layer-3.attention.Q`); await ready(page);
   const before = await state(page), collapseModel = browser(page).getByRole('button', { name: 'Collapse Model section', exact: true });
   const modelDisclosure = browser(page).locator('[data-browser-section="model"] .architecture-browser-section-disclosure');
   await row(page, 'model').locator('[data-browser-name]').focus();
@@ -159,7 +159,7 @@ test('section disclosure restores focus and pre-search presentation with empty a
   await search(page).fill('intentionally long public');
   await expect(browser(page).getByRole('button', { name: 'Collapse Model section', exact: true })).toBeVisible();
   await expect(browser(page).getByRole('button', { name: 'Collapse Shared section', exact: true })).toBeVisible();
-  const longRow = row(page, 'layer-31.attention.Q'), longName = longRow.locator('[data-browser-name]');
+  const longRow = row(page, 'layer-3.attention.Q'), longName = longRow.locator('[data-browser-name]');
   await expect(longName).toHaveAttribute('title', /intentionally long public component name/);
   expect((await longName.locator('.architecture-browser-primary').boundingBox())!.width).toBeLessThanOrEqual((await longName.boundingBox())!.width);
   await page.getByRole('button', { name: 'Clear component search' }).click();

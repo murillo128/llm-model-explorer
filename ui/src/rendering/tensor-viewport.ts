@@ -5,6 +5,7 @@ import { centeredOffset, fitWidthScale, focalScroll } from './geometry';
 import { selectionCamera } from './zoom-selection-geometry';
 import type { ZoomBounds } from './zoom-selection-geometry';
 import { CameraHistory } from './camera-history';
+import { WheelGesture } from './wheel-gesture';
 
 export interface ViewportOptions extends RendererOptions {
   readonly zoom?: boolean;
@@ -24,7 +25,7 @@ export class TensorViewport {
   private requestedScroll: [number, number] | null = null;
   private pinch: { distance: number; scale: number; x: number; y: number } | null = null;
   private readonly history = new CameraHistory();
-  private wheelGesture: { token: object; time: number } | null = null;
+  private readonly wheelGesture = new WheelGesture();
   private media: MediaQueryList | null = null;
   private frame = 0;
   private disposed = false;
@@ -131,7 +132,7 @@ export class TensorViewport {
   fitWidth() {
     if (!this.options.zoom || this.disposed) return;
     this.history.clear();
-    this.wheelGesture = null;
+    this.wheelGesture.reset();
     this.pinch = null;
     this.fitting = true;
     this.requestedScroll = [0, 0];
@@ -153,7 +154,7 @@ export class TensorViewport {
   }
 
   zoomAt(scale: number, cssX: number, cssY: number) {
-    this.wheelGesture = null;
+    this.wheelGesture.reset();
     this.zoom(scale, cssX, cssY);
   }
 
@@ -199,7 +200,7 @@ export class TensorViewport {
   /** Fit exact logical bounds using this same square-cell/native-scroll camera. */
   zoomToBounds(bounds: ZoomBounds) {
     if (!this.options.zoom || this.disposed) return;
-    this.wheelGesture = null;
+    this.wheelGesture.reset();
     this.refresh();
     const view = this.renderer.view;
     if (!view) return;
@@ -221,7 +222,7 @@ export class TensorViewport {
   /** Restore the previous committed logical camera without adding a new entry. */
   zoomBack() {
     if (!this.options.zoom || this.disposed || this.renderer.state !== 'ready') return false;
-    this.wheelGesture = null;
+    this.wheelGesture.reset();
     this.pinch = null;
     const camera = this.history.pop();
     if (!camera) return false;
@@ -242,10 +243,8 @@ export class TensorViewport {
     event.preventDefault();
     const focal = this.focal(event.clientX, event.clientY);
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? this.host.clientHeight : 1);
-    const time = performance.now();
-    if (!this.wheelGesture || time - this.wheelGesture.time > 180) this.wheelGesture = { token: {}, time };
-    this.wheelGesture.time = time;
-    this.zoom(this.scale * Math.exp(-Math.max(-500, Math.min(500, delta)) * 0.002), focal.x, focal.y, this.wheelGesture.token);
+    const gesture = this.wheelGesture.at(performance.now());
+    this.zoom(this.scale * Math.exp(-Math.max(-500, Math.min(500, delta)) * 0.002), focal.x, focal.y, gesture);
   };
 
   private gesture(event: TouchEvent) {
@@ -258,7 +257,7 @@ export class TensorViewport {
     const gesture = this.gesture(event);
     if (!gesture || gesture.distance === 0) return;
     event.preventDefault();
-    this.wheelGesture = null;
+    this.wheelGesture.reset();
     this.refresh();
     const view = this.renderer.view;
     if (view) this.pinch = { distance: gesture.distance, scale: this.scale,
@@ -335,7 +334,7 @@ export class TensorViewport {
     if (this.disposed) return;
     this.disposed = true;
     this.history.clear();
-    this.wheelGesture = null;
+    this.wheelGesture.reset();
     this.pinch = null;
     cancelAnimationFrame(this.frame);
     this.observer.disconnect();
