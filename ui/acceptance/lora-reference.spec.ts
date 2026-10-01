@@ -188,7 +188,9 @@ test('SmolLM2 LoRA reference graph navigates and inspects actual A/B weights', a
     const key = sourceKey(node);
     expect(key).toMatch(/\.lora_[AB]$/);
     const module = key.replace(/\.lora_[AB]$/, '');
-    expect(nodes.get(module)?.operation).toBe('linear');
+    expect(nodes.get(module)?.kind).toBe('group');
+    const base = nodes.get(`${module}.base`)!;
+    expect(base.operation).toBe('linear');
     const scale = nodes.get(`${module}.lora_scale`)!;
     const residual = nodes.get(`${module}.lora_add`)!;
     expect(scale.operation).toBe('scale');
@@ -198,7 +200,11 @@ test('SmolLM2 LoRA reference graph navigates and inspects actual A/B weights', a
     const factorB = nodes.get(`${module}.lora_B`)!;
     expect(hasEdge(graph, factorA.id, 'out', factorB.id, 'x')).toBe(true);
     expect(hasEdge(graph, factorB.id, 'out', scale.id, 'x')).toBe(true);
-    expect(hasEdge(graph, nodes.get(module)!.id, 'out', residual.id, 'base')).toBe(true);
+    expect(hasEdge(graph, base.id, 'out', residual.id, 'base')).toBe(true);
+    expect(hasEdge(graph, nodes.get(module)!.id, 'x', base.id, 'x')).toBe(true);
+    expect(hasEdge(graph, nodes.get(module)!.id, 'x', factorA.id, 'x')).toBe(true);
+    expect(hasEdge(graph, residual.id, 'out', nodes.get(module)!.id, 'out')).toBe(true);
+    expect(scale.formula).toBe('out = factor * x');
     expect(hasEdge(graph, scale.id, 'out', residual.id, 'adapter')).toBe(true);
 
     await findComponent(page, node.id);
@@ -275,7 +281,7 @@ test('SmolLM2 QLoRA reference graph selects NF4 base and actual adapter weights'
   expect(factors).toHaveLength(120);
 
   const nodes = new Map(graph.nodes.map((node) => [sourceKey(node), node]));
-  const baseNode = nodes.get('model.layers.0.self_attn.q_proj')!;
+  const baseNode = nodes.get('model.layers.0.self_attn.q_proj.base')!;
   await findComponent(page, baseNode.id);
   const baseCard = page.locator(`.react-flow__node[data-id=${JSON.stringify(baseNode.id)}]`);
   await baseCard.locator('.architecture-info').click();

@@ -35,6 +35,13 @@ Edges mean verified data dependencies. Constants are checked against configurati
 
 Groups describe model hierarchy and actual instances. Every repeated layer retains identity, sequence index, parameters, and any structural exceptions. The backend validates the full semantic instance graph. Repetition metadata enables compact presentation; verified routed-expert families may use the API's compact wire definition and explicit instance maps. A description of a representative layer never substitutes for bindings of all instances.
 
+Known primitive operation cards carry concise source-backed formulas or signatures,
+including linear, add, multiply, scale, matmul, softmax, reshape and transpose.
+Their input/output symbols and computational scalar names agree with the visible
+ports, referenced parameters and displayed constants. Shared construction rules
+provide this vocabulary where the reviewed primitive semantics agree; specialized
+operations retain their own source-backed descriptions.
+
 For compact routed experts, construct and validate the complete source graph within a separate bounded working budget. Compare each instance with a reviewed prototype after substituting only explicit node/edge/parameter IDs, source prefix, shape-symbol names, root label and configured expert index. Publish a family only when every reconstructed node and edge equals the source record and every parameter role resolves to its exact source-scoped name. Unknown or exceptional structure remains explicit. The decoded response still has the existing 32 MiB limit; the larger bounded working graph does not raise that limit or permit incomplete cache publication.
 
 Reviewed dense Qwen3/Llama, hybrid Qwen3.5 and V-JEPA encoder/predictor layers
@@ -151,6 +158,13 @@ For full-attention layers, describe the verified direct query projection, latent
 ## PEFT LoRA composition semantics
 
 The model-admission contract owns adapter matching, identity, integrity, physical weights and numeric availability. When a validated LoRA composition is selected, extend each targeted base linear operation with its verified low-rank branch: `A(x)`, then `B`, scale by `lora_alpha/r`, and add the result to the ordinary base linear result in evaluation mode. The graph binds `A` and `B` to the real adapter tensors exposed in that composition's inventory, preserving their shapes and provenance. Do not create a merged base weight, virtual delta tensor, executable adapter reference, or inference timeline. With no adapter selected, the existing base graph remains unchanged.
+
+Each adapted projection is one ordinary expandable group with the original `x`
+input and final `out` output. Its five children are the base linear operation,
+A, B, scale and residual add, with exact boundary forwarding. Parameters remain
+on their consuming operations. The scale card uses the visible `factor` in
+`out = factor * x`; alpha and rank remain configuration/provenance evidence.
+Untargeted projections remain linear leaves.
 
 ## Parameter binding and provenance
 
