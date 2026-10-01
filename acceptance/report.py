@@ -1,5 +1,6 @@
 """Condense native check outputs; preserve SKIP separately from PASS."""
 
+import base64
 import importlib.metadata
 import json
 import os
@@ -7,6 +8,7 @@ import platform
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
+from collections import Counter
 from pathlib import Path
 
 import torch
@@ -25,24 +27,38 @@ def summarize_junit(path):
 
 def browser_results(path):
     report = json.loads(path.read_text())
-    measurements, skips, reference_gl = [], [], []
+    # Native list output is an inventory, not a completed execution report.
+    if "duration" not in report.get("stats", {}):
+        raise ValueError(f"Missing browser execution statistics: {path}")
+    measurements, skips, reference_gl, harness = [], [], [], []
+    statuses = Counter()
+    families = {}
+    attempts = retries = unrun = 0
 
     def visit(suite):
+        nonlocal attempts, retries, unrun
         for spec in suite.get("specs", []):
+            family = families.setdefault(spec["file"], {"invocations": 0, "summed_test_ms": 0})
             for test in spec["tests"]:
+                family["invocations"] += 1
+                results = test["results"]
+                unrun += not results
                 for annotation in test.get("annotations", []):
                     if annotation["type"] == "skip":
                         skips.append(annotation.get("description", "Skipped"))
-                for result in test["results"]:
+                for result in results:
+                    attempts += 1
+                    retries += result.get("retry", 0) > 0
+                    statuses[result["status"]] += 1
+                    family["summed_test_ms"] += result["duration"]
                     for attachment in result.get("attachments", []):
-                        if attachment["name"] in ("measurements", "reference-webgl"):
-                            import base64
-
-                            target = (
-                                measurements
-                                if attachment["name"] == "measurements"
-                                else reference_gl
-                            )
+                        targets = {
+                            "measurements": measurements,
+                            "reference-webgl": reference_gl,
+                            "harness-timing": harness,
+                        }
+                        if attachment["name"] in targets:
+                            target = targets[attachment["name"]]
                             target.append(json.loads(base64.b64decode(attachment["body"])))
         for child in suite.get("suites", []):
             visit(child)
@@ -54,6 +70,33 @@ def browser_results(path):
         "measurements": measurements,
         "skip_reasons": sorted(set(skips)),
         "reference_webgl": reference_gl,
+        "timing": {
+            "wall_ms": report["stats"]["duration"],
+            "summed_test_ms": sum(f["summed_test_ms"] for f in families.values()),
+            "attempts": attempts,
+            "retries": retries,
+            "status_counts": dict(statuses),
+            "unrun": unrun,
+            "interrupted": statuses["interrupted"],
+            "global_errors": report.get("errors", []),
+            "families": families,
+            "harness_samples": len(harness),
+            # Fixture time can overlap spawn-to-ready: these sums are separate.
+            "harness_phases": {
+                phase: {
+                    "samples": len(values),
+                    "summed_ms": sum(values) if values else None,
+                }
+                for phase in (
+                    "fixtureGenerationMs",
+                    "backendSpawnToReadyMs",
+                    "browserSetupMs",
+                    "testBodyMs",
+                    "teardownMs",
+                )
+                for values in [[h[phase] for h in harness if h.get(phase) is not None]]
+            },
+        },
     }
 
 
