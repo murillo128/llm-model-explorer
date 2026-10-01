@@ -31,6 +31,14 @@ A valid partial graph is a complete serialized artifact with explicitly incomple
 
 Represent linear and patch projections, normalizations, positional encoding, attention products, softmax, activations, multiplication between branches, residual addition, selection, and meaningful reshape/split/concat/transpose operations. Preserve biases and gates where relevant. Treat recognizable normalization/activation/state-update algorithms as operations with explanatory attributes/formulas rather than expanding every arithmetic instruction, cast, or allocation.
 
+Outer model ports expose the minimal caller-supplied semantic interface, rather
+than low-level arguments of an internal `forward()` call. Before authoring a
+description, classify values as caller-supplied semantic inputs, deterministic
+preprocessing/derived metadata, or internal runtime/cache/state. Only semantic
+inputs belong on the outer model boundary. Explicit internal preprocessing or
+packing components produce derived indices, masks, positions and embeddings;
+runtime/cache/state remains inside its owning component.
+
 Edges mean verified data dependencies. Constants are checked against configuration and storage. Batch, sequence, spatial, temporal, context, and target dimensions may be symbolic; unresolved dimensions stay explicitly unknown. No displayed dimension or state tensor implies that an input was executed. Recurrent dependencies use symbolic prior/next-state ports, not an invented captured KV cache or an unrolled inference timeline.
 
 Groups describe model hierarchy and actual instances. Every repeated layer retains identity, sequence index, parameters, and any structural exceptions. The backend validates the full semantic instance graph. Repetition metadata enables compact presentation; verified routed-expert families may use the API's compact wire definition and explicit instance maps. A description of a representative layer never substitutes for bindings of all instances.
@@ -119,17 +127,34 @@ the global precedence/trust rule above. See
 
 ## Hybrid Qwen3.5 coverage
 
-The exported Kev reference uses a model-owned option-decision graph. It retains
-the concrete Qwen3.5 hybrid layers and each adapted linear operation's native
-base plus scaled A/B additive branch. Independent question causal rows contain
-the shared state prefix and exactly one question; KV, convolution and recurrent
-state are isolated per row, including independently copied prefix caches when
-serving reuses them. A packed block-causal attention mask does not isolate the
-hybrid recurrence. Decision-token and option-closing-token hidden states feed
-separate pointer query/key projections, scaled dot products, checkpoint inference
-temperature and per-question option softmax. It does not execute a vocabulary
-head or assert option permutation invariance. The imported graph retains the
-model-supplied trust notice; [Kev correspondence and evidence](../../../examples/kev/README.md)
+The exported Kev reference uses the reviewed packaged `kev-inspection`
+option-decision description, pinned to Kev source
+`45923b7a3460b6d36358e2e143455902c1eb856b`. Selection requires explicit versioned
+`kev_inspection` metadata, consistent base/Kev revisions, reviewed Qwen3.5
+configuration and complete native base/factor/pointer inventory. A repository
+name alone cannot select it. Invalid metadata, target mappings or tensor bindings
+leave architecture unavailable; they never select a plain Qwen3.5 interpretation.
+
+The outer interface is `state` and `questions`; each question contains an
+instruction and options. The internal Kev request encoder escapes delimiters, tokenizes and
+produces `ids`, `seg`, `pos`, `opt`, `decide_idx` and `opt_idx`. Its branch packer
+derives row/prefix layout, padding masks, rotary positions and row-local readouts.
+None of these derived values, API question IDs, embeddings or cache tensors are
+caller inputs. These operations are static descriptions; analysis executes no
+request encoder or model.
+
+Retain the concrete Qwen3.5 hybrid layers and each adapted linear operation's
+native base plus scaled A/B additive branch. Independent question causal rows
+contain the shared state prefix and exactly one question; KV, convolution and
+recurrent state are isolated per row, including independently copied prefix
+caches when serving reuses them. A packed block-causal attention mask does not
+isolate the hybrid recurrence. Internal decision-token and option-closing-token
+indices select hidden states for separate pointer query/key projections, scaled
+dot products, checkpoint inference temperature and per-question option softmax.
+The graph exposes option probabilities; it does not execute a vocabulary head or
+assert option permutation invariance. Fresh exports need no `architecture.json`
+and use reviewed packaged provenance. Older valid sidecars retain global
+model-owned precedence and its trust notice. [Kev correspondence and evidence](../../../examples/kev/README.md)
 own the selected export's static validation and limits.
 
 Preserve the exact configured order of linear-attention and full-attention layers. Both required interiors must be inspectable at the mathematical level; merely identifying a `GatedDeltaNet` class does not meet coverage.
