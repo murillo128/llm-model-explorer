@@ -607,7 +607,9 @@ def export_package(
         if not re.fullmatch(r"[0-9a-f]{40}", revision):
             raise ValueError("Inputs require immutable 40-hex revisions")
     encoder, head = encoder.resolve(strict=True), head.resolve(strict=True)
-    destination = destination.absolute()
+    if destination.is_symlink():
+        raise ValueError("Destination must be new and outside the encoder")
+    destination = destination.resolve()
     if destination.exists() or destination.is_relative_to(encoder):
         raise ValueError("Destination must be new and outside the encoder")
     config = json.loads((encoder / "config.json").read_text())
@@ -682,8 +684,12 @@ def export_package(
         raise ValueError(
             "Shared shards must remain inside the destination model root; use --copy-shards"
         )
-    staging = Path(tempfile.mkdtemp(prefix=".clm-export-", dir=destination.parent.parent))
+    # A private container has no config, so catalogue scans cannot select the
+    # nested package. It shares the output filesystem even at a mount boundary.
+    container = Path(tempfile.mkdtemp(prefix=".clm-export-", dir=destination.parent))
+    staging = container / "package"
     try:
+        staging.mkdir(mode=0o700)
         for name in shards:
             target = staging / name
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -776,7 +782,7 @@ def export_package(
         source.check_unchanged()
         if digest(head) != before_head:
             raise ValueError("Head changed during export")
-        validation = validate_directory(staging)
+        validation = validate_directory(staging, model_root=destination.parent)
         if validation["status"] != "valid":
             raise ValueError(f"Exported package failed static import: {validation}")
         if destination.exists():
@@ -784,8 +790,7 @@ def export_package(
         staging.rename(destination)
         return validation
     finally:
-        if staging.exists():
-            shutil.rmtree(staging)
+        shutil.rmtree(container)
 
 
 def main() -> None:

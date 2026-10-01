@@ -20,11 +20,16 @@ from .model_files import ModelError
 from .models import ModelCatalogue
 
 
-def validate_directory(directory: Path) -> dict[str, object]:
-    """Use the same metadata admission, parser and graph validator as startup."""
+def validate_directory(directory: Path, *, model_root: Path | None = None) -> dict[str, object]:
+    """Use startup admission/validation, optionally within an explicit confinement root.
+
+    Offline producers can validate nested staging packages whose shared shards
+    remain within the publication root. The CLI defaults to the package parent.
+    """
     try:
         directory = directory.resolve(strict=True)
-        entry = ModelCatalogue(directory.parent).inspect_directory(directory)
+        root = directory.parent if model_root is None else model_root.resolve(strict=True)
+        entry = ModelCatalogue(root).inspect_directory(directory)
         source = entry.pin()
         inputs = AnalysisInput.from_source(
             source, tokenizer_available=entry.summary.tokenizer_available
