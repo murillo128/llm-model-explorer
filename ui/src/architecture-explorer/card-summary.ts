@@ -20,10 +20,11 @@ export function relativeParameterName(node: GraphNode, parameter: Parameter): st
 }
 
 // Computational scalars already published by the operation descriptions. Do not
-// turn semantic_role, axes, provenance or arbitrary configuration into constants.
+// turn semantic_role, structural axes, provenance or arbitrary configuration into constants.
 const scalarAttributes: Record<string, readonly string[]> = {
   layer_norm: ['epsilon', 'eps'], rms_norm: ['epsilon', 'eps', 'axis', 'weight_offset'],
   rms_norm_zero_centered: ['epsilon', 'eps'], scale: ['factor'],
+  softmax: ['axis'],
 };
 export function cardSummary(node: GraphNode | undefined, parameters: ReadonlyMap<string, Parameter>) {
   return {

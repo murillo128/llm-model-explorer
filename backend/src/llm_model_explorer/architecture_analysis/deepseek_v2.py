@@ -13,7 +13,7 @@ from .semantic import operation_role
 from .validation import require
 
 SOURCE_REVISION = "slowfastai/DeepSeek-V2-Lite-bnb-4bit@9fc357346aeba67950a34a86f3520fc276ca2daf"
-PRODUCER = Producer("deepseek-v2-lite", "2", SOURCE_REVISION)
+PRODUCER = Producer("deepseek-v2-lite", "3", SOURCE_REVISION)
 
 REFERENCE = {
     "model_type": "deepseek_v2",
@@ -926,9 +926,22 @@ class DeepseekGraph:
             {"x": scores},
             scores.shape,
             parent=key,
-            attributes={"head_width": float(q_width), "rope_type": "yarn", "mscale_all_dim": 0.707},
+            attributes={
+                "head_width": float(q_width),
+                "rope_type": "yarn",
+                "mscale_all_dim": c["rope_scaling"]["mscale_all_dim"],
+                # Reviewed yarn_get_mscale; selection requires factor=40 and
+                # mscale_all_dim=0.707. This derives card metadata, not tensor values.
+                "factor": q_width**-0.5
+                * (
+                    1
+                    + 0.1
+                    * c["rope_scaling"]["mscale_all_dim"]
+                    * math.log(c["rope_scaling"]["factor"])
+                )
+                ** 2,
+            },
             fields=("qk_nope_head_dim", "qk_rope_head_dim", "rope_scaling"),
-            formula="softmax_scale = 192⁻¹ᐟ² × yarn_get_mscale(40, 0.707)²",
         )
         masked = self.op(
             key + ".causal_mask",

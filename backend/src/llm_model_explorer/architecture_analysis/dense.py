@@ -28,7 +28,6 @@ def shape(*dims: int | str) -> list[r.ArchitectureDimension]:
 class LinearNodes:
     base: str
     output: str
-    adapter_input: str | None = None
 
 
 _ADAPTER_FACTOR = re.compile(r"\.lora_[AB](?:\.[A-Za-z0-9_-]+)?\.weight$")
@@ -210,6 +209,8 @@ class DenseGraph:
         kind: Literal["operation", "input", "output"] = "operation",
         fields: tuple[str, ...] = (),
         extra_provenance: tuple[r.ArchitectureProvenance, ...] = (),
+        module_name: str | None = None,
+        label: str | None = None,
     ) -> str:
         self.children.setdefault(parent, []).append(self.nid(key))
         kwargs = {} if formula is None else {"formula": formula}
@@ -217,13 +218,15 @@ class DenseGraph:
             r.ArchitectureParameterReference(kind="parameter", parameter_id=p) for p in parameters
         ]
         if parameters:
-            references.insert(0, r.ArchitectureModuleReference(kind="module", name=key))
+            references.insert(
+                0, r.ArchitectureModuleReference(kind="module", name=module_name or key)
+            )
         self.b.add_node(
             r.ArchitectureLeafNode(
                 id=self.nid(key),
                 parent_id=self.nid(parent),
                 kind=kind,
-                label=operation_role(key, operation).replace("_", " "),
+                label=label or operation_role(key, operation).replace("_", " "),
                 operation=operation,
                 ports=[self.port(k, v) for k, v in inputs.items()]
                 + [self.port("out", output, True)],
@@ -237,7 +240,7 @@ class DenseGraph:
                     )
                     for k, v in (attributes or {}).items()
                 ]
-                + [role_attribute(self.b.producer, operation_role(key, operation))],
+                + [role_attribute(self.b.producer, operation_role(module_name or key, operation))],
                 provenance=self.provenance(*fields)
                 + list(extra_provenance)
                 + [source_key(self.b.producer, key)],
@@ -262,7 +265,11 @@ class DenseGraph:
             r.ArchitectureGroupNode(
                 id=self.nid(key),
                 kind="group",
-                label=role.upper() if role == "mlp" else role.title() if role else key,
+                label=role.upper()
+                if role == "mlp"
+                else role.replace("_", " ").title()
+                if role
+                else key,
                 ports=ports,
                 children=self.children.get(key, []),
                 parameter_ids=[],
@@ -397,7 +404,7 @@ class DenseGraph:
             dims,
             parameters=(self.parameter(key + ".weight", (width,)),),
             attributes={"epsilon": self.c.epsilon, "axis": -1.0, "weight_offset": 0.0},
-            formula="y = weight * x / sqrt(mean(x², axis=-1) + epsilon)",
+            formula="out = weight * x / sqrt(mean(x², axis=axis) + epsilon)",
             fields=("rms_norm_eps",),
         )
 
@@ -411,7 +418,6 @@ class DenseGraph:
         *,
         weight_parameter: str | None = None,
         extra_attributes: dict[str, str | float | bool] | None = None,
-        suppress_formula: bool = False,
     ) -> LinearNodes:
         weight = (
             weight_parameter
@@ -421,17 +427,18 @@ class DenseGraph:
         params = [weight]
         if bias:
             params.append(self.parameter(key + ".bias", (out,)))
+        target = self.lora_targets.get(key)
         base = self.node(
-            key,
-            parent,
+            key + ".base" if target else key,
+            key if target else parent,
             "linear",
             {"x": shape("B", "S", inp)},
             shape("B", "S", out),
             parameters=tuple(params),
             attributes={"bias": bias, **(extra_attributes or {})},
-            formula=None if suppress_formula else ("y = x Wᵀ + bias" if bias else "y = x Wᵀ"),
+            module_name=key,
+            label="Base linear" if target else None,
         )
-        target = self.lora_targets.get(key)
         if target is None:
             return LinearNodes(base, base)
 
@@ -461,29 +468,27 @@ class DenseGraph:
         )
         a = self.node(
             key + ".lora_A",
-            parent,
+            key,
             "linear",
             {"x": shape("B", "S", inp)},
             shape("B", "S", composition.rank),
             parameters=(a_parameter,),
             attributes={"bias": False},
-            formula="y = x Aᵀ",
             extra_provenance=adapter_provenance,
         )
         b = self.node(
             key + ".lora_B",
-            parent,
+            key,
             "linear",
             {"x": shape("B", "S", composition.rank)},
             shape("B", "S", out),
             parameters=(b_parameter,),
             attributes={"bias": False},
-            formula="y = x Bᵀ",
             extra_provenance=adapter_provenance,
         )
         scale = self.node(
             key + ".lora_scale",
-            parent,
+            key,
             "scale",
             {"x": shape("B", "S", out)},
             shape("B", "S", out),
@@ -492,24 +497,31 @@ class DenseGraph:
                 "alpha": composition.alpha,
                 "rank": float(composition.rank),
             },
-            formula="y = (alpha / r) * x",
             extra_provenance=adapter_provenance,
         )
         residual = self.node(
             key + ".lora_add",
-            parent,
+            key,
             "add",
             {"base": shape("B", "S", out), "adapter": shape("B", "S", out)},
             shape("B", "S", out),
-            formula="y = base + adapter",
             extra_provenance=adapter_provenance,
         )
         self.edge(a, b)
         self.edge(b, scale)
         self.edge(base, residual, "base")
         self.edge(scale, residual, "adapter")
+        self.edge(key, base, source_port="x")
+        self.edge(key, a, source_port="x")
+        self.edge(residual, key, "out")
+        self.group(
+            key,
+            parent,
+            [self.port("x", shape("B", "S", inp)), self.port("out", shape("B", "S", out), True)],
+            role=operation_role(key, "linear"),
+        )
         self.used_storage.update((target.a_storage_name, target.b_storage_name))
-        return LinearNodes(base, residual, a)
+        return LinearNodes(key, key)
 
     def connect_linear(
         self,
@@ -520,8 +532,6 @@ class DenseGraph:
         target_port: str = "x",
     ) -> str:
         self.edge(source, linear.base, target_port, source_port)
-        if linear.adapter_input is not None:
-            self.edge(source, linear.adapter_input, target_port, source_port)
         return linear.output
 
     def layer(self, index: int) -> str:
@@ -573,7 +583,7 @@ class DenseGraph:
                     "rotary_position",
                     {"x": head_shape, "cos": rotary, "sin": rotary},
                     head_shape,
-                    formula="x * cos + rotate_half(x) * sin",
+                    formula="out = x * cos + rotate_half(x) * sin",
                 )
                 self.edge(trans, rope)
                 self.edge(attention, rope, "cos", "cos")
@@ -701,7 +711,7 @@ class DenseGraph:
             "silu",
             {"x": intermediate},
             intermediate,
-            formula="silu(x) = x * sigmoid(x)",
+            formula="out = x * sigmoid(x)",
             fields=("hidden_act",),
         )
         self.edge(gate, act)
@@ -844,7 +854,6 @@ class DenseGraph:
                 False,
                 weight_parameter=head,
                 extra_attributes={"mode": "evaluation; full-sequence static architecture"},
-                suppress_formula=True,
             ),
         )
         logits = self.node(
@@ -902,7 +911,7 @@ def register_dense_descriptions(registry: DescriptionRegistry) -> None:
     ):
         registry.register(
             Description(
-                Producer(name, "3", SOURCE_REVISION),
+                Producer(name, "4", SOURCE_REVISION),
                 "language_model",
                 frozenset({family}),
                 frozenset({architecture}),
@@ -914,7 +923,7 @@ def register_dense_descriptions(registry: DescriptionRegistry) -> None:
         )
         registry.register(
             Description(
-                Producer(name + "-lora", "1", SOURCE_REVISION),
+                Producer(name + "-lora", "2", SOURCE_REVISION),
                 "language_model",
                 frozenset({family}),
                 frozenset({architecture}),

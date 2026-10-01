@@ -416,6 +416,12 @@ remain visible. A card then shows only its own explicitly referenced tensors,
 deduplicated by exact parameter identity across `parameter_ids` and parameter
 references. Groups do not aggregate descendant parameters.
 
+Formula/signature symbols agree with the visible ports and computational constants,
+including the actual output name. Known primitive operations supplied by built-in
+producers have concise formulas/signatures. An adapted projection uses ordinary
+group expansion to reveal its base and adapter operations; its collapsed boundary
+retains the projection's input/output semantics and no descendant tensor rows.
+
 Tensor rows place a subtle matrix button to the left of the real name, including
 rank-1 biases. A single explicit owning-module reference may establish a removable
 prefix; all remaining path segments stay verbatim. Ambiguous or absent ownership

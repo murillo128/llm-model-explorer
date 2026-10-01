@@ -31,6 +31,13 @@ A valid partial graph is a complete serialized artifact with explicitly incomple
 
 Represent linear and patch projections, normalizations, positional encoding, attention products, softmax, activations, multiplication between branches, residual addition, selection, and meaningful reshape/split/concat/transpose operations. Preserve biases and gates where relevant. Treat recognizable normalization/activation/state-update algorithms as operations with explanatory attributes/formulas rather than expanding every arithmetic instruction, cast, or allocation.
 
+Known primitive operation cards carry concise source-backed formulas or signatures,
+including linear, add, multiply, scale, matmul, softmax, reshape and transpose.
+Their input/output symbols and computational scalar names agree with the visible
+ports, referenced parameters and displayed constants. Shared construction rules
+provide this vocabulary where the reviewed primitive semantics agree; specialized
+operations retain their own source-backed descriptions.
+
 Edges mean verified data dependencies. Constants are checked against configuration and storage. Batch, sequence, spatial, temporal, context, and target dimensions may be symbolic; unresolved dimensions stay explicitly unknown. No displayed dimension or state tensor implies that an input was executed. Recurrent dependencies use symbolic prior/next-state ports, not an invented captured KV cache or an unrolled inference timeline.
 
 Groups describe model hierarchy and actual instances. Every repeated layer retains identity, sequence index, parameters, and any structural exceptions. The backend validates the full semantic instance graph. Repetition metadata enables compact presentation; verified routed-expert families may use the API's compact wire definition and explicit instance maps. A description of a representative layer never substitutes for bindings of all instances.
@@ -151,6 +158,13 @@ For full-attention layers, describe the verified direct query projection, latent
 ## PEFT LoRA composition semantics
 
 The model-admission contract owns adapter matching, identity, integrity, physical weights and numeric availability. When a validated LoRA composition is selected, extend each targeted base linear operation with its verified low-rank branch: `A(x)`, then `B`, scale by `lora_alpha/r`, and add the result to the ordinary base linear result in evaluation mode. The graph binds `A` and `B` to the real adapter tensors exposed in that composition's inventory, preserving their shapes and provenance. Do not create a merged base weight, virtual delta tensor, executable adapter reference, or inference timeline. With no adapter selected, the existing base graph remains unchanged.
+
+Each adapted projection is one ordinary expandable group with the original `x`
+input and final `out` output. Its five children are the base linear operation,
+A, B, scale and residual add, with exact boundary forwarding. Parameters remain
+on their consuming operations. The scale card uses the visible `factor` in
+`out = factor * x`; alpha and rank remain configuration/provenance evidence.
+Untargeted projections remain linear leaves.
 
 ## Parameter binding and provenance
 

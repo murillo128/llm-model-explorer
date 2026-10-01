@@ -42,6 +42,18 @@ describe('source-backed card content', () => {
     record.operation = 'linear';
     expect(cardSummary(record, parameters).constants).toEqual([]);
   });
+  it.each([
+    ['scale', 'out = factor * x', 'factor', 2],
+    ['softmax', 'out = softmax(x, axis=axis)', 'axis', -1],
+  ] as const)('exposes the %s formula scalar with the same name and value', (operation, formula, name, value) => {
+    const record = node(); record.operation = operation; record.formula = formula;
+    record.attributes = [{ name, value, provenance: [] },
+      { name: 'alpha', value: 16, provenance: [] }, { name: 'rank', value: 8, provenance: [] },
+      { name: 'semantic_role', value: operation, provenance: [] }];
+    const summary = cardSummary(record, parameters);
+    expect(summary.formula).toBe(formula);
+    expect(summary.constants.map((attribute) => [attribute.name, attribute.value])).toEqual([[name, value]]);
+  });
   it.each([true, false])('shows only the supplied formula and tensors for biased=%s linear', (biased) => {
     const record = node(); record.operation = 'linear';
     record.parameter_ids = biased ? ['weight', 'bias'] : ['weight'];

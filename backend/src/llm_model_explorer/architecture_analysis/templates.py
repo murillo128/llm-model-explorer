@@ -37,6 +37,8 @@ class Candidate:
 class ComponentTemplates:
     def __init__(self) -> None:
         self.candidates: dict[str, Candidate] = {}
+        self.owners: dict[str, Candidate] = {}
+        self.pending: dict[str, list[tuple[r.ArchitectureNode, str | None]]] = defaultdict(list)
 
     def begin(
         self, node_id: str, base: str, family: str, role: Literal["attention", "mlp"]
@@ -49,9 +51,18 @@ class ComponentTemplates:
         key: str | None,
         parameters: dict[str, r.ArchitectureParameter],
     ) -> None:
-        candidate = self.candidates.get(node.id) or self.candidates.get(node.parent_id or "")
+        candidate = (
+            self.candidates.get(node.id)
+            or self.candidates.get(node.parent_id or "")
+            or self.owners.get(node.parent_id or "")
+        )
         if candidate is None:
+            # Producers can close a nested group after its children. Follow the
+            # authored containment once that parent is observed, never tensor paths.
+            if self.candidates and node.parent_id is not None:
+                self.pending[node.parent_id].append((node, key))
             return
+        self.owners[node.id] = candidate
         if key is None or (node.id != candidate.node_id and not key.startswith(candidate.base)):
             candidate.valid = False
             return
@@ -79,6 +90,8 @@ class ComponentTemplates:
         except (ValueError, KeyError):
             # Invalid optional role metadata never invalidates an ordinary source record.
             candidate.valid = False
+        for child, child_key in self.pending.pop(node.id, []):
+            self.observe(child, child_key, parameters)
 
     def annotate(self, graph: r.ArchitectureGraph, builder: GraphBuilder) -> r.ArchitectureGraph:
         if not self.candidates:

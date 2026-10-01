@@ -10,6 +10,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from . import records as r
+from .operations import primitive_formula
 from .templates import ComponentTemplates
 from .validation import (
     MAX_BYTES,
@@ -27,7 +28,7 @@ from .validation import (
 if TYPE_CHECKING:
     from ..tensor_source import PeftLoraComposition, PhysicalTensor, TensorDescriptor
 
-ANALYZER_REVISION = "static-graph-core-3"
+ANALYZER_REVISION = "static-graph-core-4"
 Scope = Literal["language_model", "visual_encoder_predictor", "model_defined"]
 
 
@@ -212,6 +213,17 @@ class GraphBuilder:
         self.templates.begin(self.record_id("node", key), base, family, role)
 
     def add_node(self, node: r.ArchitectureNode, *, semantic_key: str | None = None) -> str:
+        if self.scope != "model_defined":
+            formula = primitive_formula(
+                node,
+                (
+                    self._parameter_by_id[pid].name
+                    for pid in node.parameter_ids
+                    if pid in self._parameter_by_id
+                ),
+            )
+            if formula is not None:
+                node = node.model_copy(update={"formula": formula})
         self._append(self._nodes, node)
         self.templates.observe(node, semantic_key, self._parameter_by_id)
         return node.id
