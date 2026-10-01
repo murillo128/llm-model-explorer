@@ -87,17 +87,35 @@ Qwen3 must preserve its actual embedding/output relationships, decoder order, Q/
 
 The tokenizer is a context node outside the neural model when one exists. Its presence is a capability reference, not a tokenization operation performed by analysis. No general requirement for text tokenization or vocabulary logits is imposed on the graph core.
 
-## Model-owned CLM decision coverage
+## Packaged CLM decision coverage
 
-The exported CLM reference uses a model-owned candidate-decision graph rather
-than the Qwen language-generation graph. It declares independent state/candidate
-encoder invocations with shared backbone parameter IDs, concrete expandable
-Qwen layers, last-token pooling, encoder-vector normalization, separate configured
+Select the native CLM inspection description only through `clm_inspection`
+metadata with `format_version: 1`, the selected immutable encoder/head revisions,
+`encoder_repository: "Qwen/Qwen3-8B"`, validated `head_configuration`, and
+`pooling: "last_token"`. Require compatible native Qwen3 geometry and the exact
+configured `clm.state_head.*`, `clm.action_head.*` and scalar `clm.logit_scale`
+inventory. Inconsistent metadata, unsupported options, missing/extra head storage
+or incompatible bindings leave architecture unavailable; CLM metadata, namespaced
+storage or its explicit inspection identity must never select bare Qwen support.
+
+The packaged description uses the existing `language_model` graph scope and
+reviewed CLM source revision `bb42c6c5bf914fd449bed2f6ca65be80602cb1f7`.
+Reuse the reviewed dense Qwen3 description for independent state/candidate encoder
+invocations with shared backbone parameter IDs and concrete expandable layers.
+Preserve last-token pooling, encoder-vector normalization, separate configured
 projection heads, projection L2 normalization, clamped learned similarity scale,
-temperature and candidate-axis softmax. Its stored vocabulary output head remains
-in the tensor inventory but is not an executed decision operation. The
-model-supplied origin notice remains authoritative about the verification limit;
-see [export correspondence and reference evidence](../../../examples/clm/README.md).
+temperature and candidate-axis softmax. Derive head topology, activation,
+LayerNorm and residual options from the checked configuration; bind every head
+weight/bias and scale to its actual consuming operation. Keep formulas, visible
+port/parameter names and computational attributes consistent. The stored
+vocabulary output head remains in the tensor inventory but outside executed
+decision operations.
+
+Fresh offline exports do not emit `architecture.json`. Packaged provenance
+replaces the model-supplied trust classification; it records reviewed static
+semantics and does not claim a performed forward pass. Existing sidecars retain
+the global precedence/trust rule above. See
+[export correspondence and reference evidence](../../../examples/clm/README.md).
 
 ## Hybrid Qwen3.5 coverage
 

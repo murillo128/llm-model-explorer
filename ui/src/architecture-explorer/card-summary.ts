@@ -23,7 +23,9 @@ export function relativeParameterName(node: GraphNode, parameter: Parameter): st
 // turn semantic_role, axes, provenance or arbitrary configuration into constants.
 const scalarAttributes: Record<string, readonly string[]> = {
   layer_norm: ['epsilon', 'eps'], rms_norm: ['epsilon', 'eps', 'axis', 'weight_offset'],
-  rms_norm_zero_centered: ['epsilon', 'eps'], scale: ['factor'],
+  rms_norm_zero_centered: ['epsilon', 'eps'], scale: ['factor', 'temperature_default'],
+  encoder_normalize: ['epsilon', 'axis'], l2_normalize: ['epsilon', 'axis'],
+  exp_clamp: ['maximum'], softmax: ['axis'], gelu: ['approximate'],
 };
 export function cardSummary(node: GraphNode | undefined, parameters: ReadonlyMap<string, Parameter>) {
   return {

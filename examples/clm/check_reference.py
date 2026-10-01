@@ -31,7 +31,7 @@ def numeric(response):
     return bytes(values)
 
 
-def check(encoder, head, model_root, output):
+def check(encoder, head, model_root, output, *, native_only=False):
     output.mkdir(parents=True, exist_ok=False)
     package = model_root / "clm"
     provenance = json.loads((package / "clm-provenance.json").read_text())
@@ -46,10 +46,12 @@ def check(encoder, head, model_root, output):
     assert provenance["head"]["revision"] == HEAD_REVISION
     assert provenance["source"]["revision"] == SOURCE_REVISION
     assert digest(head) == provenance["head"]["sha256"]
-    original = torch.load(head, map_location="cpu", weights_only=True, mmap=True)
-    original_tokenizer = AutoTokenizer.from_pretrained(
-        encoder, local_files_only=True, trust_remote_code=False
-    )
+    assert not (package / "architecture.json").exists()
+    if not native_only:
+        original = torch.load(head, map_location="cpu", weights_only=True, mmap=True)
+        original_tokenizer = AutoTokenizer.from_pretrained(
+            encoder, local_files_only=True, trust_remote_code=False
+        )
     index = json.loads((encoder / "model.safetensors.index.json").read_text())["weight_map"]
     identity = "Contrastive-LM/CLM-v0.1-8B@" + HEAD_REVISION
     report = {
@@ -72,8 +74,8 @@ def check(encoder, head, model_root, output):
         body = client.get(f"/sessions/{sid}/architecture").json()
         assert body["status"] == "available" and body["graph"]["coverage"] == "complete"
         graph = body["graph"]
-        assert graph["scope"] == "model_defined"
-        assert any(n["label"] == "Model-supplied definition" for n in graph["nodes"])
+        assert graph["scope"] == "language_model"
+        assert not any(n["label"] == "Model-supplied definition" for n in graph["nodes"])
         assert graph["diagnostics"] == []
         report["graph"] = {
             "id": graph["graph_id"],
@@ -81,11 +83,41 @@ def check(encoder, head, model_root, output):
             "edges": len(graph["edges"]),
             "parameters": len(graph["parameters"]),
             "repetitions": [len(r["instances"]) for r in graph["repetitions"]],
-            "sidecar_bytes": (package / "architecture.json").stat().st_size,
+            "scope": graph["scope"],
             "response_bytes": len(json.dumps(body).encode()),
         }
         inventory = client.get(f"/sessions/{sid}/tensors").json()["tensors"]
         report["inventory_count"] = len(inventory)
+        if native_only:
+            for name in (
+                "clm.state_head.out.weight",
+                "clm.action_head.out.weight",
+                "clm.logit_scale",
+                "model.norm.weight",
+                "model.layers.0.self_attn.q_proj.weight",
+            ):
+                parameter = next(p for p in graph["parameters"] if p["name"] == name)
+                assert parameter["binding"] == "native"
+                assert parameter["storage"][0]["name"] == name
+                assert parameter["inspection"]["status"] == (
+                    "unavailable" if name == "clm.logit_scale" else "available"
+                )
+            encoder_parameter = next(
+                p for p in graph["parameters"] if p["name"] == "model.norm.weight"
+            )
+            assert sum(encoder_parameter["id"] in n["parameter_ids"] for n in graph["nodes"]) == 2
+            assert "lm_head.weight" in {t["name"] for t in inventory}
+            assert "lm_head.weight" not in {p["name"] for p in graph["parameters"]}
+            assert [len(r["instances"]) for r in graph["repetitions"]] == [36, 36]
+            assert any(
+                p["source"] == "clm-inspection" and SOURCE_REVISION in p.get("rule", "")
+                for node in graph["nodes"]
+                for p in node["provenance"]
+            )
+            report["native_bindings_verified"] = True
+            (output / "reference.json").write_text(json.dumps(report, indent=2) + "\n")
+            print(json.dumps(report, sort_keys=True))
+            return
         for name in (
             "clm.state_head.out.weight",
             "clm.action_head.out.weight",
@@ -151,5 +183,10 @@ if __name__ == "__main__":
     parser.add_argument("--head", type=Path, required=True)
     parser.add_argument("--model-root", type=Path, required=True)
     parser.add_argument("--evidence", type=Path, required=True)
+    parser.add_argument(
+        "--native-only",
+        action="store_true",
+        help="Check preparation and bindings without numeric streams or a second startup.",
+    )
     args = parser.parse_args()
-    check(args.encoder, args.head, args.model_root, args.evidence)
+    check(args.encoder, args.head, args.model_root, args.evidence, native_only=args.native_only)

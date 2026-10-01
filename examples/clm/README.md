@@ -15,8 +15,10 @@ capability. Each encoder invocation has its own token/position/mask interfaces
 and sequence length; last-token pooling uses right-padded lengths. Parameters
 are shared, while hidden states and attention dependencies are independent.
 The stored vocabulary output head is inspectable but absent from executed
-decision operations. The graph retains the model-supplied, unverified-forward
-notice.
+decision operations. The graph has packaged/reviewed provenance tied to the
+pinned CLM source.
+Architecture Explorer suppresses the `Model-supplied` notice for this native
+path; static source correspondence does not claim a performed forward pass.
 
 ## Immutable reference inputs
 
@@ -75,7 +77,7 @@ PYTHONPATH=backend/src backend/.venv/bin/python -m llm_model_explorer.validate_a
 PYTHONPATH=backend/src:. HF_HUB_OFFLINE=1 OMP_NUM_THREADS=2 \
   backend/.venv/bin/python examples/clm/check_reference.py \
   --encoder "$clm_work/models/qwen" --head "$clm_work/head/CLM_v0.1-8B.pt" \
-  --model-root "$clm_work/models" --evidence "$clm_work/acceptance"
+  --model-root "$clm_work/models" --evidence "$clm_work/acceptance" --native-only
 ```
 
 Default export uses confined shard symlinks to the unchanged local encoder.
@@ -98,8 +100,13 @@ namespace mapping. Encoder names are unchanged; heads are mapped to
 combined index accounts for every selected tensor once. Native dtypes/values are
 preserved, and encoder weights are never materialized as a numerical model.
 Config preserves the Qwen text/input-table layout while adding a distinct CLM
-identity and a required-sidecar marker. Missing/mismatched head bindings or loss
-of the sidecar cannot produce a bare-Qwen fallback under that identity.
+identity and a `clm_inspection` record with `format_version: 1`, immutable
+encoder/head revisions, encoder repository, validated `head_configuration` and
+`pooling: "last_token"`. The native packaged description owns graph generation;
+new packages do not emit or require `architecture.json`. Malformed metadata,
+missing/mismatched head or scale bindings, or removal of the marker cannot
+produce a bare-Qwen fallback under the CLM identity. Older packages with valid
+sidecars keep the global sidecar precedence and model-supplied classification.
 
 Only primitive configuration, native tensor dictionaries and a finite scalar
 scale are admitted from the bounded `.pt` file, using explicit
@@ -119,17 +126,21 @@ Reduced untrained test fixtures are not the reference checkpoint.
 ## Validation ownership
 
 The existing dense-Qwen suite owns attention/MLP/RoPE/layer correspondence; the
-model-owned importer suite owns generic schema, hierarchy, binding and resource
-limits. Added CLM cases cover the remaining composite risks:
+model-owned importer suite owns sidecar precedence, generic schema, hierarchy,
+binding and resource limits. The same canonical CLI now validates native packaged
+descriptions when no sidecar exists. Added CLM cases cover the remaining
+composite risks:
 
 | Contract and plausible defect | Independent assertion | Owner |
 | --- | --- | --- |
 | Head options, wrong namespace or dtype, duplicate encoder copies | Exact original tensor bytes/dtypes, independent two-layer inventory, shared parameter consumer identities | `backend/tests/test_clm_export.py` |
-| Wrong activation/norm/residual/order/scaling | Float64 scalar equations transcribed from pinned source versus evaluation of exported head dependencies; tolerances 2e-6 for vectors/probabilities, 2e-4 for scaled scores | Same backend test |
+| Wrong activation/norm/residual/order/scaling | Float64 scalar equations transcribed from pinned source versus evaluation of native head dependencies; tolerances 2e-6 for vectors/probabilities, 2e-4 for scaled scores | Same backend test |
 | Unsafe or incomplete export | Restricted-load rejection, incompatible geometry or repository/revision declarations, absent/extra tensors, duplicate base storage; no selectable destination after failure | Same backend test |
 | Input aliases, unauthorized staging or premature publication | Complete input tree/bytes unchanged; real non-root directory permissions in shared/copy modes; real catalogue/validator observation, validated device/inode retained after publication, failure cleanup | Same backend test |
 | Nested validation escapes confinement | Default parent rejects shared shards outside it; explicit root admits confined sharing and rejects external package/shard targets | `backend/tests/test_model_defined_service.py` |
-| Real consumer/lifecycle, accidental checkpoint loading/network/fallback | Backend startup/cache and endpoints, exact binary bytes and embedding rows; runtime load/network traps, unavailable damaged definitions, relocation/content invalidation | Same backend test |
+| Real consumer/lifecycle, accidental checkpoint loading/network/fallback | Backend startup/cache and endpoints, exact binary bytes and embedding rows; runtime load/network traps, unavailable damaged inspection metadata/bindings, relocation/content invalidation | Same backend test |
+| Native selection/provenance and semantic interfaces | Sidecar-free export, reviewed source pin, explicit pooling/normalization/head/temperature/softmax edges and ports; unavailable mismatched metadata/inventory | Same backend test |
+| Packaged trust and computational constants | No model-supplied notice; source-backed epsilon, scale cap and candidate axis rendered on the operation | Focused Architecture Explorer/card-summary unit tests |
 | Production rendering/navigation | Select CLM, expand a projection group, inspect its real native matrix | `ui/acceptance/clm.spec.ts` |
 
 Run focused checks from the repository root:
@@ -140,6 +151,12 @@ PYTHONPATH=backend/src HF_HUB_OFFLINE=1 backend/.venv/bin/python -m pytest backe
 backend/.venv/bin/ruff check --config backend/pyproject.toml examples/clm
 (cd backend && .venv/bin/mypy src tests ../examples/clm/export.py)
 ```
+
+`check_reference.py --native-only` performs one production TCP preparation,
+checks representative native bindings/shared parameter consumers and the retained
+vocabulary-head inventory, and stops without numerical streams or a second
+startup. Omit the flag only when validating a changed tensor/tokenizer boundary;
+the original full stream/tokenizer/warm-cache campaign remains separately owned.
 
 The browser test uses the reduced deterministic package by default and the
 operator-selected complete package when `LMEX_CLM_REFERENCE_MODEL_ROOT` is set.
