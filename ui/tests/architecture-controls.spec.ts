@@ -127,7 +127,7 @@ test('keyboard search selects before explicit Center reveals collapsed repeated 
   expect(await snapshot(page)).toEqual(before);
 });
 
-test('browser and canvas disclosure preserve the same multi-instance window and neighboring cards', async ({ page }) => {
+test('browser and canvas disclosure preserve the same multi-instance window and neighboring cards', { tag: '@responsive' }, async ({ page }) => {
   const results = [];
   for (const surface of ['canvas', 'browser'] as const) {
     await page.goto(`${harness}?fixture=components`); await ready(page);
@@ -223,7 +223,7 @@ test('breadcrumbs, first/last and mixed variants preserve two independent stack 
   await expect(page.getByRole('button', { name: 'Explore stack Encoder layers', exact: true })).toBeVisible();
 });
 
-for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack canvas MLP ${activation} navigation keeps focus and instance controls consistent`, async ({ page }) => {
+for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack canvas MLP ${activation} navigation keeps focus and instance controls consistent`, { tag: '@responsive' }, async ({ page }) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('mixed-stacks'); await ready(page);
   await findComponent(page, 'encoder.layer-3.gate'); await ready(page);
   await findComponent(page, 'predictor.layer-1.attention.Q'); await ready(page);
@@ -312,7 +312,7 @@ test('edge pin, inspection and clear leave focus navigation and layout unchanged
   await expect(page.getByRole('button', { name: 'Clear connection selection', exact: true })).toHaveCount(0);
 });
 
-test('all operations and camera fit remain distinct; popovers stay in the panel at constrained widths', async ({ page }) => {
+test('all operations and camera fit remain distinct; popovers stay in the panel at constrained widths', { tag: '@responsive' }, async ({ page }) => {
   // Use the safety suite's connected computation fixture for exhaustive topology
   // assertions; the minimal schema fixture contains open group input interfaces.
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('connections'); await ready(page);
@@ -349,7 +349,7 @@ test('partial graphs without repetition retain coverage and component navigation
 });
 
 
-test('camera dock is unique, fixed while panning and zooming, and has keyboard tooltips', async ({ page }, info) => {
+test('camera dock is unique, fixed while panning and zooming, and has keyboard tooltips', { tag: '@responsive' }, async ({ page }, info) => {
   const dock = page.getByRole('group', { name: 'Graph camera', exact: true });
   const bounds = await dock.boundingBox(), before = await snapshot(page);
   for (const label of ['Zoom in', 'Zoom out', 'Fit view']) {

@@ -30,7 +30,7 @@ async function waitForCameraToMatchNativeScroll(page: Page) {
   })).toBe(true);
 }
 
-for (const dpr of [1, 2]) test.describe(`overlay scrolling DPR ${dpr}`, () => {
+for (const dpr of [1, 2]) test.describe(`overlay scrolling DPR ${dpr}`, { tag: '@responsive' }, () => {
   test.use({ deviceScaleFactor: dpr });
   test('all overflow modes retain fixed tracks, exact offsets and unchanged chrome geometry', async ({ page }) => {
     await open(page);

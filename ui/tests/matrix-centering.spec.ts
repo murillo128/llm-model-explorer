@@ -24,7 +24,8 @@ for (const dpr of [1, 1.25, 2]) test.describe(`centered scientific content DPR $
     await expect(page.locator('.matrix-surfaces canvas')).toHaveCount(3);
     await page.evaluate(() => window.matrixFixture.viewports.at(-1)!.zoomAt(1, 0, 0));
     const before = await geometry(page);
-    for (const size of [page.viewportSize()!, { width: 780, height: 640 }]) {
+    // This case owns the complete size matrix; collect it only on desktop.
+    for (const size of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 780, height: 640 }]) {
       await page.setViewportSize(size);
       await expect.poll(async () => {
         const g = await geometry(page);
@@ -71,7 +72,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`centered scientific content DPR $
     expect(await page.evaluate(() => window.matrixFixture.viewports.at(-1)!.renderer.view!.x)).toBe(0);
   });
 
-  test('focal cell stays at its screen point when centered data begins overflowing', async ({ page }) => {
+  test('focal cell stays at its screen point when centered data begins overflowing', { tag: '@responsive' }, async ({ page }) => {
     await page.goto(url);
     await expect(page.locator('.matrix-scroll')).toBeVisible();
     await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: min(600px, 70vh); }' });

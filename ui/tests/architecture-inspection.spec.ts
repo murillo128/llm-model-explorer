@@ -110,7 +110,7 @@ test('generic graph navigation and inspection expose both LoRA factor tensors', 
   await released(page);
 });
 
-test('concrete repeated weight preserves exact progressive values, independent profiles/statistics and native camera', async ({ page }, info) => {
+test('concrete repeated weight preserves exact progressive values, independent profiles/statistics and native camera', { tag: '@responsive' }, async ({ page }, info) => {
   await open(page);
   await graphAction(page, 'Show all operations');
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('data-visible-nodes', '6');

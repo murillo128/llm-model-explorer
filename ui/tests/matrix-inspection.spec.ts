@@ -128,7 +128,7 @@ for (const dpr of [1, 2]) test.describe(`inspection DPR ${dpr}`, () => {
     expect(await page.evaluate(() => [window.explorerFixture.metrics.live.size, window.explorerFixture.metrics.liveDisplays.size])).toEqual([0, 0]);
   });
 
-  test('card stays inside the scientific pane and clear of distribution data', async ({ page }) => {
+  test('card stays inside the scientific pane and clear of distribution data', { tag: '@responsive' }, async ({ page }) => {
     await open(page);
     for (const [row, column] of [[0, 0], [0, 18], [16, 0], [16, 18]]) {
       await hover(page, row!, column!);

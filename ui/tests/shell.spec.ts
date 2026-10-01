@@ -22,7 +22,7 @@ async function mockConfig(page: Page, body = '{"backend_base_url":"https://backe
   return requests;
 }
 
-// Both browser viewports verify runtime deployment values against the same production assets.
+// The canonical browser verifies both runtime deployment values against one build.
 test('one production build accepts two deployed backend URLs', async ({ page }, testInfo) => {
   const deployedConfig = JSON.parse(await readFile(configPath, 'utf8')) as { backend_base_url?: unknown };
   expect(deployedConfig.backend_base_url).toEqual(expect.any(String));
@@ -49,7 +49,7 @@ test('one production build accepts two deployed backend URLs', async ({ page }, 
   await testInfo.attach('neutral shell', { path: testInfo.outputPath('neutral-shell.png'), contentType: 'image/png' });
 });
 
-test('explorer navigation order, keyboard traversal and selection survive shell updates', async ({ page }, testInfo) => {
+test('explorer navigation order, keyboard traversal and selection survive shell updates', { tag: '@responsive' }, async ({ page }, testInfo) => {
   const requests = await mockConfig(page);
   await page.goto('/');
   const navigation = page.getByRole('navigation', { name: 'Explorers' });
@@ -104,7 +104,7 @@ for (const config of [
   { name: 'invalid URL', status: 200, body: '{"backend_base_url":"file:///private/models"}', message: 'Set backend_base_url' },
   { name: 'malformed JSON', status: 200, body: '<html>fallback</html>', message: 'not valid JSON' },
 ]) {
-  test(`actionable configuration error: ${config.name}`, async ({ page }) => {
+  test(`actionable configuration error: ${config.name}`, { tag: '@responsive' }, async ({ page }) => {
     await mockConfig(page, config.body, config.status);
     await page.goto('/');
     await expect(page.getByRole('alert')).toContainText(config.message);

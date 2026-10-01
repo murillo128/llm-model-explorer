@@ -142,7 +142,7 @@ test('warning dismissal before provenance retains disclosure and independent foc
   await expect(canvas).toBeFocused();
   await expect(band).toHaveCount(0);
 });
-test('many long findings stay bounded with complete accessible details and clear on model replacement', async ({ page, context }) => {
+test('many long findings stay bounded with complete accessible details and clear on model replacement', { tag: '@responsive' }, async ({ page, context }) => {
   const api = await backend(context, authored(true)); await open(page); await graph(page);
   const band = page.getByRole('region', { name: 'Architecture notices' });
   await band.getByText('View details', { exact: true }).click();

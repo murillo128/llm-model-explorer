@@ -130,7 +130,7 @@ test('the existing derived MLP exposes explicit isolation without changing its s
   await expect(page.locator('[data-id="mlp:layer-3.gate"]')).toBeVisible();
 });
 
-test('unrelated model growth leaves a small isolated component readable and its bounds unchanged', async ({ page }) => {
+test('unrelated model growth leaves a small isolated component readable and its bounds unchanged', { tag: '@responsive' }, async ({ page }) => {
   await isolate(page, 'layer-3.mlp');
   // Center the operation without shrinking the isolated component to fit a
   // narrow viewport; viewport culling may otherwise omit this particular label.

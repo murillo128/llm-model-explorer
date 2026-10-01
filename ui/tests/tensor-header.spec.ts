@@ -24,7 +24,7 @@ async function compactHeader(page: Page) {
   return bounds;
 }
 
-for (const constant of [false, true]) test(`header and matrix geometry stay fixed through streaming, success, cancellation, and auxiliary failure (${constant ? 'constant' : 'varied'} data)`, async ({ page }) => {
+for (const constant of [false, true]) test(`header and matrix geometry stay fixed through streaming, success, cancellation, and auxiliary failure (${constant ? 'constant' : 'varied'} data)`, { tag: '@responsive' }, async ({ page }) => {
   await open(page);
   await expect(page.locator('[data-result="tensor"]')).toHaveAttribute('data-state', 'loading');
   const initial = await compactHeader(page);
@@ -86,7 +86,7 @@ for (const constant of [false, true]) test(`header and matrix geometry stay fixe
   expect(await page.evaluate(() => window.explorerFixture.renderers.at(-3)!.populatedPrefix)).toBe(6);
 });
 
-test('metadata previews, pins, anchors below the icon, and leaves scientific width intact', async ({ page }) => {
+test('metadata previews, pins, anchors below the icon, and leaves scientific width intact', { tag: '@responsive' }, async ({ page }) => {
   await open(page, 'reference');
   const trigger = page.getByRole('button', { name: 'Tensor information', exact: true });
   const dialog = page.getByRole('dialog', { name: 'Tensor information' });
@@ -168,7 +168,7 @@ test('Escape dismisses pinned tensor information before restoring matrix zoom hi
   await expect.poll(camera).toEqual(initial);
 });
 
-test('touch pins metadata and supports close and outside tap without hover', async ({ browser }, testInfo) => {
+test('touch pins metadata and supports close and outside tap without hover', { tag: '@responsive' }, async ({ browser }, testInfo) => {
   const context = await browser.newContext({ hasTouch: true, viewport: testInfo.project.use.viewport ?? { width: 390, height: 844 } });
   const page = await context.newPage();
   await open(page);
@@ -186,7 +186,7 @@ test('touch pins metadata and supports close and outside tap without hover', asy
 });
 
 
-test('pinned metadata follows its icon when operation status changes available identity width', async ({ page }) => {
+test('pinned metadata follows its icon when operation status changes available identity width', { tag: '@responsive' }, async ({ page }) => {
   await open(page, 'A', true);
   const trigger = page.getByRole('button', { name: 'Tensor information', exact: true });
   const dialog = page.getByRole('dialog', { name: 'Tensor information' });
@@ -292,7 +292,7 @@ for (const input of ['keyboard', 'touch'] as const) test(`long path and constant
   await context.close();
 });
 
-test('tensor and unavailable auxiliary errors remain in the compact row with honest on-demand metadata', async ({ page }) => {
+test('tensor and unavailable auxiliary errors remain in the compact row with honest on-demand metadata', { tag: '@responsive' }, async ({ page }) => {
   await open(page);
   const initial = await compactHeader(page);
   await page.evaluate(() => {
@@ -310,7 +310,7 @@ test('tensor and unavailable auxiliary errors remain in the compact row with hon
   expect(await geometry(page)).toEqual(initial);
 });
 
-for (const name of ['empty', 'unsupported']) test(`${name} tensors retain an integrated card without operations or clipped information`, async ({ page }) => {
+for (const name of ['empty', 'unsupported']) test(`${name} tensors retain an integrated card without operations or clipped information`, { tag: '@responsive' }, async ({ page }) => {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);
   await page.getByRole('combobox').selectOption('lab/alpha');
   await page.getByRole('button', { name: new RegExp(`^${name} \\[` ) }).click();

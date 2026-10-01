@@ -16,7 +16,7 @@ async function state(page: Page) {
     scope: document.querySelector('[data-scope-id]')?.getAttribute('data-scope-id') }));
 }
 
-test('browser and Model cards share compact chrome while contextual controls remain available', async ({ page }, info) => {
+test('browser and Model cards share compact chrome while contextual controls remain available', { tag: '@responsive' }, async ({ page }, info) => {
   await page.goto(`${harness}?fixture=components`); await ready(page);
   const side = browser(page), graph = panel(page), divider = page.getByRole('separator', { name: 'Resize architecture browser' });
   const styles = await page.evaluate(() => [document.querySelector('#architecture-browser')!, document.querySelector('.architecture-explorer')!].map(node => {
@@ -147,7 +147,7 @@ test('three section headers and all navigable row kinds share one visual system'
   expect(await state(page)).toEqual(boundaryBefore); expect(requests).toEqual([]);
 });
 
-test('section disclosure restores focus and pre-search presentation with empty and long rows bounded', async ({ page }) => {
+test('section disclosure restores focus and pre-search presentation with empty and long rows bounded', { tag: '@responsive' }, async ({ page }) => {
   await page.goto(`${harness}?fixture=components-large&long-browser`); await ready(page);
   const before = await state(page), collapseModel = browser(page).getByRole('button', { name: 'Collapse Model section', exact: true });
   const modelDisclosure = browser(page).locator('[data-browser-section="model"] .architecture-browser-section-disclosure');
@@ -288,7 +288,7 @@ test('family disclosure has no graph effect, uses declared counts/order and sele
   await expect(browser(page)).toContainText('No verified shared structures'); await expect(page.getByLabel('Graph selection', { exact: true })).toHaveCount(0);
 });
 
-test('pane collapse/restore and bounded resize preserve mounted canvas, filter and scroll; storage failure is safe', async ({ page }) => {
+test('pane collapse/restore and bounded resize preserve mounted canvas, filter and scroll; storage failure is safe', { tag: '@responsive' }, async ({ page }) => {
   await page.addInitScript(() => { Storage.prototype.setItem = () => { throw new Error('disabled'); }; });
   await page.goto(`${harness}?fixture=components-large`); await ready(page);
   const canvas = await page.locator('.react-flow').elementHandle(), before = await state(page);

@@ -47,7 +47,7 @@ async function readableTooltip(page: Page) {
   })).toEqual({ bounded: true, overlapsTitle: true, uncovered: true, textFits: true });
 }
 
-test('inventory card has a compact soft header, ghost collapse control and paint-only divider reveal', async ({ page }, info) => {
+test('inventory card has a compact soft header, ghost collapse control and paint-only divider reveal', { tag: '@responsive' }, async ({ page }, info) => {
   await openInventory(page);
   const card = page.getByRole('complementary', { name: 'Tensor inventory' });
   const collapse = card.getByRole('button', { name: 'Collapse inventory' });
@@ -135,7 +135,7 @@ test('quiet branches persist explicit keyboard and pointer choices across explor
   await noDocumentOverflow(page);
 });
 
-test('drawer and icon-only rail resize the workspace, retain selection, transfer focus and survive reload', async ({ page }) => {
+test('drawer and icon-only rail resize the workspace, retain selection, transfer focus and survive reload', { tag: '@responsive' }, async ({ page }) => {
   await openInventory(page);
   const leaf = page.getByRole('button', { includeHidden: true, name: /^model.layers.0.mlp.down_proj.weight/ });
   await (await revealTensor(leaf)).click();

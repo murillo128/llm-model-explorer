@@ -23,7 +23,9 @@ export default defineConfig({
   },
   projects: [
     { name: 'desktop', testIgnore: '**/tensor-explorer-scrollbars.spec.ts', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
-    { name: 'narrow', testIgnore: '**/tensor-explorer-scrollbars.spec.ts', use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } } },
+    // Desktop owns every ordinary case, including new untagged tests. Add this
+    // second viewport only when it exercises a distinct responsive risk.
+    { name: 'narrow', grep: /@responsive/, testIgnore: '**/tensor-explorer-scrollbars.spec.ts', use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } } },
     { name: 'native-scrollbars', testMatch: '**/tensor-explorer-scrollbars.spec.ts', use: { ...devices['Desktop Chrome'], headless: false, viewport: { width: 390, height: 844 } } },
   ],
   webServer: [{

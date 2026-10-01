@@ -27,7 +27,7 @@ async function resizeWhilePending(page: Page) {
 test.beforeEach(async ({ page }) => { await cameraProbe(page); });
 
 for (const fixture of ['templates-absent', 'templates']) {
-  test(`${fixture}: current viewport and committed camera gate cold/remounted readiness`, async ({ page }, info) => {
+  test(`${fixture}: current viewport and committed camera gate cold/remounted readiness`, { tag: '@responsive' }, async ({ page }, info) => {
     await page.goto(`${harness}?fixture=${fixture}`); await ready(page);
     // These tests retain the project's actual 390px viewport in narrow runs.
     expect((await page.locator('.architecture-flow').boundingBox())!.width).toBeLessThanOrEqual(info.project.use.viewport!.width);
@@ -49,7 +49,7 @@ for (const fixture of ['templates-absent', 'templates']) {
   });
 }
 
-test('cold fit waits for current geometry, then selection, menus, hover and resize do not refit', async ({ page }, info) => {
+test('cold fit waits for current geometry, then selection, menus, hover and resize do not refit', { tag: '@responsive' }, async ({ page }, info) => {
   await page.goto(harness); await ready(page); await pending(page);
   await page.getByLabel('Fixture', { exact: true }).selectOption('templates');
   await resizeWhilePending(page);
@@ -89,7 +89,7 @@ test('cold fit waits for current geometry, then selection, menus, hover and resi
   expect(await page.evaluate((start) => window.cameraProbe.events.slice(start).filter((e) => e.event.endsWith('requested')), count)).toEqual([]);
 });
 
-test('pending scope camera cannot replace Back, a newer model, or a user camera', async ({ page }) => {
+test('pending scope camera cannot replace Back, a newer model, or a user camera', { tag: '@responsive' }, async ({ page }) => {
   await page.goto(`${harness}?fixture=templates`); await ready(page);
   await findComponent(page, 'layer-2.attention'); await ready(page);
   const previous = await sample(page);
@@ -116,7 +116,7 @@ test('pending scope camera cannot replace Back, a newer model, or a user camera'
 });
 
 for (const target of ['selected', 'connection'] as const) {
-  test(`explicit Center ${target} supersedes pending shared-scope initialization`, async ({ page }, info) => {
+  test(`explicit Center ${target} supersedes pending shared-scope initialization`, { tag: '@responsive' }, async ({ page }, info) => {
     await page.goto(`${harness}?fixture=templates`); await ready(page);
     await findComponent(page, 'layer-2.attention.Q'); await ready(page);
     // Keep the connection within the retained viewport when shared-scope
@@ -154,7 +154,7 @@ for (const target of ['selected', 'connection'] as const) {
   });
 }
 
-for (const derived of [false, true]) test(`explicit Center ${derived ? 'derived component' : 'selected'} replaces the pending ordinary-scope fit`, async ({ page }, info) => {
+for (const derived of [false, true]) test(`explicit Center ${derived ? 'derived component' : 'selected'} replaces the pending ordinary-scope fit`, { tag: '@responsive' }, async ({ page }, info) => {
   await page.goto(`${harness}?fixture=${derived ? 'connections' : 'templates'}`); await ready(page);
   await findComponent(page, derived ? 'layer-3.gate' : 'layer-2.attention.Q'); await ready(page);
   if (derived) {
@@ -177,7 +177,7 @@ for (const derived of [false, true]) test(`explicit Center ${derived ? 'derived 
   expect((await sample(page)).camera).toEqual(previous.camera);
 });
 
-test('late camera completion cannot commit after Back or model replacement', async ({ page }) => {
+test('late camera completion cannot commit after Back or model replacement', { tag: '@responsive' }, async ({ page }) => {
   await page.goto(`${harness}?fixture=templates`); await ready(page);
   await findComponent(page, 'layer-2.attention'); await ready(page);
   const previous = await sample(page);
