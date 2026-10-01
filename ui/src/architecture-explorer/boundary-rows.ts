@@ -28,8 +28,8 @@ export function regularizeBoundaryRows(projection: Projection, boxes: Box[], por
   let widthGrowth = 0;
   // Inserting space in a gutter is a monotone translation: horizontal segments
   // stretch, vertical segments and ELK's interior topology remain unchanged.
-  const growGutter = (at: number, amount: number) => {
-    const shift = (x: number) => x >= at ? x + amount : x;
+  const growGutter = (at: number, amount: number, outsideLeft: boolean) => {
+    const shift = (x: number) => outsideLeft ? x <= at ? x - amount : x : x >= at ? x + amount : x;
     for (const box of boxes) {
       const right = shift(box.absoluteX + box.width);
       box.absoluteX = shift(box.absoluteX); box.width = right - box.absoluteX;
@@ -160,7 +160,14 @@ export function regularizeBoundaryRows(projection: Projection, boxes: Box[], por
       const channels = Math.max(...ranks.values()) + 1;
       const needed = laneGap * (channels + 1);
       const growth = Math.max(0, clearance + needed - endDistance);
-      if (growth) growGutter(portX + direction * (endDistance - 2 * epsilon), growth);
+      if (growth) {
+        const at = portX + direction * (endDistance - 2 * epsilon);
+        let root = node;
+        while (root.parentId) root = nodes.get(root.parentId)!;
+        // Exterior approach space grows toward its producer. The visible root
+        // keeps its ELK origin, so reopening it does not move the camera anchor.
+        growGutter(at, growth, !sourceEnd && at < byBox.get(root.id)!.absoluteX);
+      }
       const available = endDistance + growth - clearance;
       for (const { port, sections } of terminals) {
         const oldY = original.get(port)!;
