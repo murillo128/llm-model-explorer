@@ -877,9 +877,12 @@ def export_package(
         raise ValueError("Insufficient disk")
     if not copy_shards and not base.is_relative_to(destination.parent.resolve()):
         raise ValueError("Shared shards must remain within model root; use --copy-shards")
-    # Keep staging on the checked output filesystem so publication is atomic.
-    staging = Path(tempfile.mkdtemp(prefix=".kev-export-", dir=destination.parent))
+    # The container has no model config, so immediate catalogue scans cannot
+    # select its nested package. Keep it on the checked output filesystem.
+    container = Path(tempfile.mkdtemp(prefix=".kev-export-", dir=destination.parent))
+    staging = container / "package"
     try:
+        staging.mkdir(mode=0o700)
         for name in shards:
             target = staging / "base" / name
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -994,7 +997,7 @@ def export_package(
         checkpoint_snapshot.check()
         if digest(head_path) != before_head:
             raise ValueError("Head changed during conversion")
-        result = validate_directory(staging)
+        result = validate_directory(staging, model_root=destination.parent)
         if result["status"] != "valid":
             raise ValueError("Export failed static validation: " + str(result))
         if destination.exists():
@@ -1002,8 +1005,7 @@ def export_package(
         staging.rename(destination)
         return result
     finally:
-        if staging.exists():
-            shutil.rmtree(staging)
+        shutil.rmtree(container)
 
 
 if __name__ == "__main__":

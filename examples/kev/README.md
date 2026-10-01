@@ -46,9 +46,12 @@ The output must be new and outside both resolved inputs, including when an outpu
 path uses symlink parents or `..`. Shared base shards must stay
 inside the configured model root. Use `--copy-shards` when preparing an independent
 portable package; copying is bounded by file, without resident full-weight loading.
-The exporter validates a staging directory inside the resolved output parent and
-renames it only on success, on the same filesystem. It
-never modifies either input. Do not move a shared package without its base; a
+The exporter builds the package beneath a temporary container inside the resolved
+output parent. The container has no model configuration, so catalogue scans cannot
+select the nested package. Validation uses the output model root to confine shared
+shards; only a valid package is atomically renamed to the final directory on the
+same filesystem. The temporary container is removed on success or failure. The
+exporter never modifies either input. Do not move a shared package without its base; a
 copied package can relocate without changing its content fingerprint.
 
 `head.pt` conversion explicitly uses `torch.load(weights_only=True,
