@@ -78,10 +78,12 @@ B, query/key weights and biases independently.
 exact local input hashes, selected revisions, head calibration, namespace mapping
 and each checked target's orientation/scaling. `config.json` preserves the Qwen
 text/tokenizer/input-table layout and uses the distinct identity
-`jaredpalmer/kev-0.8b-inspection@<Kev revision>`. Its `kev_inspection` declaration
-requires the sidecar; a missing sidecar cannot become a bare Qwen graph. The
-package's ordinary content fingerprint covers all base shards, exported factors
-and head, config, provenance and `architecture.json`. Modified sources invalidate
+`jaredpalmer/kev-0.8b-inspection@<Kev revision>`. Its versioned `kev_inspection`
+declaration records the base/Kev revisions, checked head metadata and minimal
+adapter rank, alpha and target mapping. The backend owns the reviewed packaged
+graph; fresh exports emit no `architecture.json`. Invalid metadata or bindings
+cannot become a bare Qwen graph. The ordinary content fingerprint covers all base
+shards, exported factors and head, config and provenance. Modified sources invalidate
 pinned sessions and caches through the existing lifecycle.
 
 The bare base configuration has no revision declaration on this reference.
@@ -102,8 +104,8 @@ its ordinary base projection, `A`, `B`, multiplication by `alpha/r`, and residua
 addition. Factors use `[rank,input]` and `[output,rank]`; the base uses
 `[output,input]`. Untargeted normalization, gating, convolution, recurrence,
 attention and MLP paths retain the existing reviewed Qwen3.5 topology. The graph
-reuses that description's source pin without adding native Qwen3.5 packaged
-runtime admission.
+reuses that description's source pin. Native Kev recognition remains separate from
+standalone Qwen3.5 NVFP4 admission; this does not add standalone native-base support.
 
 Each question runs in an independent causal row containing the same state prefix
 and its own instruction/options. Prior and next KV, convolution and recurrent
@@ -126,37 +128,44 @@ operation. All original base tensors, including unused visual/MTP tensors, remai
 in the inventory; visual/MTP components are contextual rather than executed text
 operations.
 
-Typed-request serialization and tokenization remain auxiliary tooling outside
-the architecture. Kev reuses these existing delimiter tokens in order:
+The model boundary exposes only `state` and `questions` (instruction plus
+options). An explicit internal request encoder describes delimiter escaping,
+tokenization and packing into `ids`, `seg`, `pos`, `opt`, `decide_idx` and `opt_idx`.
+The branch packer derives isolated causal rows, prefix layout, padding masks,
+rotary coordinates and row-local readouts. Indices, masks, positions, embeddings,
+API question IDs and caches are internal values. These are static graph records;
+the backend does not execute a Kev request encoder or provide a Kev request API. Kev reuses these existing delimiter tokens in order:
 `<|fim_prefix|>` (state), `<|fim_middle|>` (question), `<|box_start|>` (option start),
 `<|box_end|>` (option end), `<|fim_suffix|>` (decision). No embedding rows are added
 or rewritten. Kev's encoder escapes user-entered delimiter syntax before
 serialization. The existing Tokenizer Explorer still inspects its user's actual
 text; it is not a Kev request editor.
 
-The importer retains `model_defined` and the visible model-supplied notice.
-Static import and exporter correspondence tests do not certify backbone inference,
+The native graph uses `language_model` scope and reviewed `kev-inspection`
+provenance tied to the pinned Kev source revision, without a Model-supplied notice.
+Older valid sidecars retain global model-owned precedence and its trust notice.
+Static preparation and exporter correspondence tests do not certify backbone inference,
 training quality, a Jev reproduction, or universal PEFT compatibility.
 
 ## Reproduce validation
 
+For this native-provenance migration, use focused backend validation and one
+fresh reference export/preparation check. Existing numerical, tokenizer, cache,
+publication and browser evidence remains in [evidence.md](evidence.md).
+
 ```sh
 (cd backend && uv run --locked pytest tests/test_kev_export.py \
-  tests/test_qwen35_architecture.py tests/test_peft_adapters.py \
-  tests/test_lora_architecture.py tests/test_model_defined_architecture.py \
-  tests/test_clm_export.py -q)
+  tests/test_qwen35_architecture.py tests/test_clm_export.py -q)
+# After the fresh export and native validator above:
 OMP_NUM_THREADS=2 backend/.venv/bin/python -m examples.kev.check_reference \
   --base "$MODEL_ROOT/base" --kev "$KEV_CHECKPOINT" \
-  --model-root "$MODEL_ROOT" --evidence "$NEW_EVIDENCE_DIRECTORY"
-(cd ui && npm run check)
-(cd ui && UI_TEST_PORT=25100 xvfb-run -a npm run test:acceptance -- kev.spec.ts)
-(cd ui && LMEX_KEV_REFERENCE_MODEL_ROOT="$MODEL_ROOT" \
-  UI_TEST_PORT=25100 xvfb-run -a npm run test:acceptance -- kev.spec.ts)
+  --model-root "$MODEL_ROOT" --evidence "$NEW_EVIDENCE_DIRECTORY" --native-only
 ```
 
-The fixture browser test generates native local assets and runs the real backend
-and production bundle at DPR 1 and 2. The reference invocation selects the actual
-exported checkpoint and opens a hybrid LoRA factor and a pointer weight through
-ordinary architecture navigation and numeric streams. Large outputs, screenshots
-and runtime caches remain outside Git. Aggregate integration gates retain their
-existing CI ownership; fixture success alone is not actual-reference acceptance.
+`--native-only` checks production backend preparation, complete packaged scope,
+semantic inputs and representative native base/factor/pointer bindings. It avoids
+repeating complete numeric streams, tokenizer comparisons, warm-cache checks or
+browser/DPR campaigns. Omitting it retains the broader correspondence checker
+for changes to those boundaries. The existing Kev browser acceptance uses native
+scope; packaged-provenance banner suppression already has UI unit coverage.
+Aggregate integration gates retain their existing CI ownership.

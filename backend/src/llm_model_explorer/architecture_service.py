@@ -10,9 +10,11 @@ from dataclasses import dataclass
 from time import perf_counter
 
 from .architecture_analysis import AnalysisInput, DescriptionRegistry, register_dense_descriptions
+from .architecture_analysis.clm import register_clm
 from .architecture_analysis.core import AnalysisResult, Scope
 from .architecture_analysis.deepseek_v2 import register_deepseek_v2
 from .architecture_analysis.glm4_moe_lite import register_glm4_moe_lite
+from .architecture_analysis.kev import register_kev
 from .architecture_analysis.kimi_linear import register_kimi_linear
 from .architecture_analysis.model_defined import (
     ModelDefinedValidator,
@@ -53,19 +55,26 @@ class PreparationStopped(Exception):
     """Internal safe-boundary cancellation; never a terminal model outcome."""
 
 
+def packaged_registry() -> DescriptionRegistry:
+    registry = DescriptionRegistry()
+    register_dense_descriptions(registry)
+    register_clm(registry)
+    register_deepseek_v2(registry)
+    register_glm4_moe_lite(registry)
+    register_kimi_linear(registry)
+    register_kev(registry)
+    register_qwen35(registry)
+    register_vjepa2(registry)
+    return registry
+
+
 class ArchitectureService:
     def __init__(
         self, store: ArtifactStore, work: BlockingWork, *, stop: threading.Event | None = None
     ) -> None:
         self.store = store
         self.work = work
-        self.registry = DescriptionRegistry()
-        register_dense_descriptions(self.registry)
-        register_deepseek_v2(self.registry)
-        register_glm4_moe_lite(self.registry)
-        register_kimi_linear(self.registry)
-        register_qwen35(self.registry)
-        register_vjepa2(self.registry)
+        self.registry = packaged_registry()
         self._prepared: dict[tuple[str, str], Prepared] = {}
         self._stop = stop if stop is not None else threading.Event()
 

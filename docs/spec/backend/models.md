@@ -17,14 +17,17 @@ Complete means all files of the chosen checkpoint variant, not every alternative
 CLM-v0.1-8B is admitted through an explicit offline inspection export, not from
 its original PyTorch `.pt` directory. The package combines the complete native
 Qwen3-8B encoder, its tokenizer, independently namespaced state/action head
-tensors and learned logit scale, provenance, and a model-owned definition. Keep
+tensors and learned logit scale, provenance, and explicit native-inspection metadata. Keep
 the validated Qwen text layout for input-embedding lookup and give the package
 a distinct CLM identity. Known encoder repository/revision declarations must agree
 with the explicitly selected reference before that identity is assigned; preserve
 the source declarations and binding origin in provenance. Its `clm_inspection`
-configuration records the required definition and selected inputs; loss of that
-definition must leave architecture
-unavailable rather than select a packaged bare-Qwen interpretation. Preparation,
+configuration records `format_version: 1`, selected encoder/head inputs, checked
+head configuration and last-token pooling. The packaged analyzer owns the CLM
+architecture; new exports need no sidecar. Malformed inspection metadata or
+head/scale bindings leave architecture unavailable rather than selecting a
+bare-Qwen interpretation. Existing valid `architecture.json` sidecars retain
+their global precedence and model-supplied trust classification. Preparation,
 restricted checkpoint conversion and reference reproduction are documented in
 [`examples/clm`](../../../examples/clm/README.md); runtime admission remains
 local, lazy and read-only under the rules above.
@@ -34,9 +37,12 @@ Its original `FEATURE_EXTRACTION` PEFT directory is not a generic `CAUSAL_LM`
 composition. The exported package preserves the complete native Qwen3.5 base,
 tokenizer and input-embedding layout, separately namespaced LoRA A/B factors,
 restricted-converted pointer query/key weights and biases, inference calibration
-and content provenance. It has a distinct Kev inspection identity and requires
-its model-owned definition; loss of that definition cannot select a bare Qwen
-interpretation. Factor orientation, target geometry and base revision binding
+and content provenance. It has a distinct Kev inspection identity. Its versioned
+`kev_inspection` declaration contains selected base/Kev revisions, checked pointer
+metadata and the minimal LoRA rank/alpha/target mapping needed for native selection.
+Fresh exports emit no sidecar. Malformed or missing inspection metadata/bindings
+cannot select a bare Qwen interpretation; older valid sidecars retain global
+model-owned precedence. Factor orientation, target geometry and base revision binding
 are validated before atomic publication. The original base, factors and head
 remain independently inspectable without merging or synthetic delta tensors.
 Preparation and validated reference limits belong to

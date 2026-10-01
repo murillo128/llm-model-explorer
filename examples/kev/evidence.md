@@ -5,6 +5,84 @@ Python 3.12 backend, CPU PyTorch 2.14.0, Node 24.14.0 and Playwright Chromium
 1243 using Xvfb/SwiftShader. No backbone construction, inference or GPU was
 required. The reference inputs and large outputs remain outside Git.
 
+## Native packaged migration (#267)
+
+The observations below under **Previous model-owned reference validation** are
+retained evidence from #259/#260. The current recipe exports a native package
+without `architecture.json` and without a Model-supplied trust notice.
+
+One fresh export, canonical validator and production TCP preparation check passed
+on 2026-10-01 using the same locked Python 3.12 / CPU PyTorch environment. The
+previously verified base shard/tokenizer assets were reused read-only; the pinned
+base config/index were restored and checked against the recorded hashes. The
+original pinned Kev adapter/head assets were reused. No weights or full graphs
+were committed, and no browser/DPR or bulk numeric campaign was repeated.
+
+| Native observation | Result |
+| --- | --- |
+| Export / canonical validator | valid, complete, no diagnostics |
+| Transport scope / producer | `language_model` / `kev-inspection`, revision `1-qwen35-2` |
+| Public inputs | `State`, `Questions` only |
+| Internal preparation | request encoding, isolated row packing, derived masks/positions/readouts |
+| Graph parameters / inventory | 864: 488 base + 372 unmerged factors + 4 pointer tensors |
+| Adapted projections / hybrid layers | 186 / 24 (18 linear, 6 full attention) |
+| Graph nodes / edges / response bytes | 1911 / 2708 / 4937191 |
+| Cold production startup | 16.439 s (environment observation, not a benchmark) |
+| Pointer width / temperature | 256 / 2.3510958125672174 |
+
+Graph ID: `498b201198f1e52c51b666411ed8554c5103b907bd33596b733508221890f450`.
+Kev source remains `45923b7a3460b6d36358e2e143455902c1eb856b` and the Qwen source
+remains `transformers/2cba19507be799b7bef247ca6c1c4708bf881b5b`.
+The description revision includes the reused Qwen description revision so a
+Qwen semantic change invalidates native Kev graph caches.
+
+The focused real-reference checker resolved exact native inventory IDs for
+layer 0 `linear_attn.in_proj_a.weight` (BF16 `[16,1024]`), its A/B factors
+(F32 `[16,1024]` and `[16,16]`), `kev.head.q.weight` (F32 `[256,1024]`) and
+`kev.head.k.bias` (F32 `[256]`). It checked source provenance, public inputs,
+complete packaged scope and preserved inventory through the actual backend.
+The compact report and runtime cache remain outside Git. This establishes native
+static preparation, not an executed request encoder or backbone forward pass.
+
+Focused proof owners and expected-result sources:
+
+- `backend/tests/test_kev_export.py` owns fresh export/native selection, reviewed
+  source provenance, representative additive A/B/pointer bindings, hybrid order,
+  isolated state/row semantics and the semantic input boundary. Expectations come
+  from the accepted backend specification and the pinned Kev `encode`, `rows_of`,
+  `forward_rows_batch` and `PointerHead` source (the inspected `model.py` matches
+  the SHA-256 below). The internal encoder outputs all six derived fields; its
+  readouts feed hidden-state selection through exact component ports.
+- The same file's native-selection negative family rejects missing/malformed
+  markers, revision/base conflicts, unsupported targets, rank/scaling errors,
+  malformed/missing factors and pointer tensors, and mismatched backbone geometry
+  or layer order. Missing-tensor fixtures keep their shard indexes consistent so
+  the native analyzer is the responsible rejection boundary.
+- Existing exporter safety/algebra, numeric/tokenizer and cache tests remain.
+  The warm-cache guard now targets the native graph builder. Fresh-export sidecar
+  mutation/failure cases are replaced by native metadata/binding cases; generic
+  model-owned sidecar precedence and rejection keep their existing test owners.
+- `test_clm_export.py` and `test_qwen35_architecture.py` protect the reused native
+  definition publication and Qwen description boundaries. No new cross-product or
+  renderer/transport/numerical test family was introduced.
+- Existing `ArchitectureExplorer.test.tsx` packaged-provenance coverage passed
+  (one selected test). Native backend scope plus this consumer test proves banner
+  suppression. The existing Kev browser test's expected scope is updated; the
+  previous browser campaign below was not repeated.
+
+Regression evidence: on pre-change implementation `23be1d0`, the fresh-export
+case failed because `architecture.json` existed; the semantic-boundary case
+failed because positions, masks and decision/option indices were public inputs.
+Both pass after migration. The focused Kev suite passed all 69 cases; the sibling
+Qwen3.5 and CLM suites passed 83 cases. Ruff lint/format and mypy passed. The
+repository's epic-child CI exclusions are unchanged; aggregate CI remains owned
+by the final integration PR.
+
+Reproduction uses the export/validator recipe and `check_reference --native-only`
+in [README.md](README.md).
+
+## Previous model-owned reference validation
+
 ## Immutable inputs and producer
 
 - Kev Hub revision: `9a45d25eb2ab761841196625383fa1dff0e56c1e`.

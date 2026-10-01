@@ -67,7 +67,8 @@ test('CLM package expands a configured head and opens its native projection weig
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
   const body = await (await architecture).json() as { status: string; graph: Graph };
   expect(body.status).toBe('available');
-  expect(body.graph.scope).toBe('model_defined');
+  expect(body.graph.scope).toBe('language_model');
+  await expect(page.getByText('Model-supplied', { exact: true })).toHaveCount(0);
   expect(body.graph.coverage).toBe('complete');
   const group = body.graph.nodes.find((n) => n.label === 'Action head')!;
   await findComponent(page, group.id);

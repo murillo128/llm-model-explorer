@@ -17,7 +17,9 @@ from safetensors.torch import load_file, save_file
 from test_tensor_data import frames
 
 from llm_model_explorer.app import create_app
-from llm_model_explorer.architecture_analysis.model_defined import ModelDefinedValidator
+from llm_model_explorer.architecture_analysis import AnalysisInput
+from llm_model_explorer.architecture_analysis import kev as kev_description
+from llm_model_explorer.architecture_service import packaged_registry
 from llm_model_explorer.model_files import ModelError
 from llm_model_explorer.models import ModelCatalogue
 from llm_model_explorer.settings import Settings
@@ -30,6 +32,42 @@ def export(base: Path, kev: Path, destination: Path) -> None:
         )["status"]
         == "valid"
     )
+
+
+def test_fresh_export_uses_native_semantic_boundary(tmp_path: Path) -> None:
+    root = tmp_path / "models"
+    base, kev, _ = fixture(root)
+    destination = root / "kev"
+    export(base, kev, destination)
+    assert not (destination / "architecture.json").exists()
+    entry = ModelCatalogue(root).inspect_directory(destination)
+    result = packaged_registry().analyze(
+        AnalysisInput.from_source(entry.pin(), tokenizer_available=True)
+    )
+    assert result.graph is not None, result.diagnostics
+    graph = result.graph
+    assert graph.scope == "language_model" and graph.coverage == "complete"
+    assert not any(p.source == "model-defined-json" for n in graph.nodes for p in n.provenance)
+    assert any(
+        p.source == "kev-inspection"
+        and p.rule == "Reviewed implementation revision: 45923b7a3460b6d36358e2e143455902c1eb856b"
+        for n in graph.nodes
+        for p in n.provenance
+    )
+
+
+def test_model_boundary_hides_derived_inputs(tmp_path: Path) -> None:
+    root = tmp_path / "models"
+    base, kev, _ = fixture(root)
+    export(base, kev, root / "kev")
+    with TestClient(create_app(Settings(model_root=root, cache_dir=tmp_path / "cache"))) as client:
+        sid = client.post(
+            "/sessions", json={"model_id": "jaredpalmer/kev-0.8b-inspection@" + KEV_REV}
+        ).json()["id"]
+        graph = client.get(f"/sessions/{sid}/architecture").json()["graph"]
+    inputs = [n for n in graph["nodes"] if n["kind"] == "input"]
+    assert {n["label"] for n in inputs} == {"State", "Questions"}
+    assert all("parent_id" not in n for n in inputs)
 
 
 @pytest.mark.parametrize("input_name", ["base", "kev"])
@@ -129,10 +167,10 @@ def test_only_validated_publication_can_be_discovered_or_pinned(
 
         def observe_validation(directory: Path, **kwargs: Any) -> dict[str, object]:
             if outcome == "invalid_binding":
-                path = directory / "architecture.json"
-                graph = json.loads(path.read_text())
-                graph["parameters"][-1]["name"] = "kev.missing.weight"
-                path.write_text(json.dumps(graph))
+                path = directory / "config.json"
+                config = json.loads(path.read_text())
+                config["kev_inspection"]["head"]["head_dim"] += 1
+                path.write_text(json.dumps(config))
             # Capture visibility before delegating to the actual validator;
             # it also runs on the failing pre-fix regression.
             before_validation = {e.summary.id for e in catalogue.discover()}
@@ -246,10 +284,57 @@ def test_graph_exact_factors_head_and_isolated_rows(tmp_path: Path) -> None:
     root = tmp_path / "models"
     base, kev, _ = fixture(root)
     export(base, kev, root / "kev")
-    g = json.loads((root / "kev" / "architecture.json").read_text())
-    nodes = {n["id"]: n for n in g["nodes"]}
+    entry = ModelCatalogue(root).inspect_directory(root / "kev")
+    result = packaged_registry().analyze(
+        AnalysisInput.from_source(entry.pin(), tokenizer_available=True)
+    )
+    assert result.graph is not None
+    g = result.graph.document()
+    keys = {
+        n["id"]: next(
+            p["source"]
+            for p in n["provenance"]
+            if p.get("rule") == "Semantic source key in the reviewed packaged description"
+        )
+        for n in g["nodes"]
+    }
+    parameters = {p["id"]: p["name"] for p in g["parameters"]}
+    nodes = {
+        keys[n["id"]]: {
+            **n,
+            "id": keys[n["id"]],
+            "parameter_ids": [parameters[p] for p in n["parameter_ids"]],
+        }
+        for n in g["nodes"]
+    }
+    request = nodes["request"]
+    assert {p["id"] for p in request["ports"] if p["direction"] == "input"} == {
+        "state",
+        "questions",
+    }
+    assert nodes["request.encode"]["operation"] == "kev_request_encoding"
+    assert {p["id"] for p in nodes["request.encode"]["ports"] if p["direction"] == "output"} == {
+        "ids",
+        "seg",
+        "pos",
+        "opt",
+        "decide_idx",
+        "opt_idx",
+    }
+    assert all(n.get("parent_id") for n in g["nodes"] if n["kind"] == "state")
+    readout_edges = {
+        (
+            keys[e["source"]["node_id"]],
+            e["source"]["port_id"],
+            keys[e["target"]["node_id"]],
+            e["target"]["port_id"],
+        )
+        for e in g["edges"]
+    }
+    assert ("request", "decide_idx", "select.decide", "index") in readout_edges
+    assert ("request", "opt_idx", "select.options", "index") in readout_edges
     assert nodes["row.tokens"]["operation"] == "independent_causal_rows"
-    assert "concat(state, question[row])" in nodes["row.tokens"]["formula"]
+    assert "shared state prefix and exactly one question" in nodes["row.tokens"]["description"]
     assert "packed block-causal mask is not used" in nodes["backbone"]["description"]
     assert "no option permutation invariance" in nodes["row.tokens"]["description"]
     assert [i["variant"] for i in g["repetitions"][0]["instances"]] == [
@@ -258,7 +343,9 @@ def test_graph_exact_factors_head_and_isolated_rows(tmp_path: Path) -> None:
     ]
     assert nodes["pointer.q"]["parameter_ids"] == ["kev.head.q.weight", "kev.head.q.bias"]
     assert nodes["pointer.k"]["parameter_ids"] == ["kev.head.k.weight", "kev.head.k.bias"]
-    assert nodes["pointer.temperature"]["attributes"] == [{"name": "temperature", "value": 2}]
+    assert [(a["name"], a["value"]) for a in nodes["pointer.temperature"]["attributes"]] == [
+        ("temperature", 2)
+    ]
     assert nodes["probabilities"]["ports"][0]["shape"] == [
         {"kind": "symbol", "name": "B"},
         {"kind": "symbol", "name": "O"},
@@ -285,7 +372,7 @@ def test_graph_exact_factors_head_and_isolated_rows(tmp_path: Path) -> None:
     assert states and all(
         e["kind"] == "state"
         for e in g["edges"]
-        if e["source"]["node_id"] in states or e["target"]["node_id"] in states
+        if keys[e["source"]["node_id"]] in states or keys[e["target"]["node_id"]] in states
     )
 
 
@@ -425,7 +512,7 @@ def test_real_runtime_numeric_tokenizer_and_warm_cache(
         assert len(models) == 2
         sid = client.post("/sessions", json={"model_id": identity}).json()["id"]
         graph = client.get(f"/sessions/{sid}/architecture").json()["graph"]
-        assert graph["scope"] == "model_defined" and graph["coverage"] == "complete"
+        assert graph["scope"] == "language_model" and graph["coverage"] == "complete"
         original_factors = load_file(str(kev / "adapter_model.safetensors"))
         for name, expected in (
             ("kev.head.q.weight", payload["head"]["q.weight"]),
@@ -455,7 +542,7 @@ def test_real_runtime_numeric_tokenizer_and_warm_cache(
             == original_rows.numpy().tobytes()
         )
     monkeypatch.setattr(
-        ModelDefinedValidator, "validate", Mock(side_effect=AssertionError("Warm rebuild"))
+        kev_description, "architecture", Mock(side_effect=AssertionError("Warm rebuild"))
     )
     with TestClient(create_app(settings)) as client:
         sid = client.post("/sessions", json={"model_id": identity}).json()["id"]
@@ -473,7 +560,6 @@ def test_real_runtime_numeric_tokenizer_and_warm_cache(
         ("kev.safetensors", "kev.head.q.weight"),
         ("kev.safetensors", "kev.lora.base_model.model.layers.0.mlp.up_proj.lora_A.weight"),
         ("config.json", None),
-        ("architecture.json", None),
     ],
 )
 def test_content_identity_and_pinned_mutation(
@@ -508,23 +594,94 @@ def test_content_identity_and_pinned_mutation(
     )
 
 
-@pytest.mark.parametrize("damage", ["missing_sidecar", "wrong_binding", "duplicate_identity"])
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "marker_missing",
+        "bad_version",
+        "base_repository",
+        "base_revision",
+        "kev_revision",
+        "head_revision",
+        "head_temperature",
+        "head_options",
+        "adapter_rank",
+        "adapter_alpha",
+        "unknown_target",
+        "missing_factor",
+        "wrong_factor_shape",
+        "missing_head",
+        "wrong_head_shape",
+        "missing_base",
+        "geometry",
+        "hybrid_order",
+    ],
+)
 def test_corrupt_package_never_falls_back_to_qwen(tmp_path: Path, damage: str) -> None:
     root = tmp_path / "models"
     base, kev, _ = fixture(root)
-    export(base, kev, root / "kev")
-    path = root / "kev" / "architecture.json"
-    if damage == "missing_sidecar":
-        path.unlink()
+    package = root / "kev"
+    export(base, kev, package)
+    path = package / "config.json"
+    config = json.loads(path.read_text())
+    marker = config["kev_inspection"]
+    if damage == "marker_missing":
+        del config["kev_inspection"]
+    elif damage == "bad_version":
+        marker["format_version"] = True
+    elif damage == "base_repository":
+        marker["base_repository"] = "Qwen/different-base"
+    elif damage == "base_revision":
+        marker["base_revision"] = "3" * 40
+    elif damage == "kev_revision":
+        marker["kev_revision"] = "3" * 40
+    elif damage == "head_revision":
+        marker["head"]["base_revision"] = "3" * 40
+    elif damage == "head_temperature":
+        marker["head"]["temperature"] = 0
+    elif damage == "head_options":
+        marker["head"]["option_isolation"] = True
+    elif damage == "adapter_rank":
+        marker["adapter"]["r"] = 3
+    elif damage == "adapter_alpha":
+        marker["adapter"]["lora_alpha"] = False
+    elif damage == "unknown_target":
+        marker["adapter"]["target_modules"].append("unknown_proj")
+    elif damage == "geometry":
+        config["text_config"]["hidden_size"] = 5
+    elif damage == "hybrid_order":
+        config["text_config"]["layer_types"].reverse()
+    elif damage == "missing_base":
+        target = package / "base/model.safetensors"
+        values = load_file(str(target))
+        del values[PREFIX + ".norm.weight"]
+        # Replace the output symlink, preserving the fixture's source.
+        target.unlink()
+        save_file(values, str(target))
     else:
-        g = json.loads(path.read_text())
-        if damage == "wrong_binding":
-            g["parameters"][-1]["name"] = "kev.missing.weight"
+        target = package / "kev.safetensors"
+        values = load_file(str(target))
+        name = (
+            "kev.head.q.weight"
+            if "head" in damage
+            else "kev.lora.base_model.model.layers.0.mlp.up_proj.lora_A.weight"
+        )
+        if damage.startswith("missing"):
+            del values[name]
         else:
-            g["edges"].append(dict(g["edges"][0]))
-        path.write_text(json.dumps(g))
-    with TestClient(create_app(Settings(model_root=root, cache_dir=tmp_path / "cache"))) as client:
-        sid = client.post(
-            "/sessions", json={"model_id": "jaredpalmer/kev-0.8b-inspection@" + KEV_REV}
-        ).json()["id"]
-        assert client.get(f"/sessions/{sid}/architecture").json()["status"] == "unavailable"
+            values[name] = torch.zeros(3, 4)
+        save_file(values, str(target))
+    if damage in ("missing_factor", "missing_head", "missing_base"):
+        # Keep the storage index consistent so rejection belongs to native
+        # description selection, rather than the unchanged catalogue guard.
+        index_path = package / "model.safetensors.index.json"
+        index = json.loads(index_path.read_text())
+        missing = PREFIX + ".norm.weight" if damage == "missing_base" else name
+        del index["weight_map"][missing]
+        index_path.write_text(json.dumps(index))
+    path.write_text(json.dumps(config))
+    entry = ModelCatalogue(root).inspect_directory(package)
+    result = packaged_registry().analyze(
+        AnalysisInput.from_source(entry.pin(), tokenizer_available=True)
+    )
+    assert result.status == "unavailable" and result.graph is None

@@ -22,7 +22,7 @@ from examples.kev.export import (
 )
 
 
-def check(base, kev, model_root, output):
+def check(base, kev, model_root, output, *, native_only=False):
     output.mkdir(parents=True, exist_ok=False)
     package = model_root / "kev"
     provenance = json.loads((package / "kev-provenance.json").read_text())
@@ -30,14 +30,17 @@ def check(base, kev, model_root, output):
     assert provenance["kev"]["revision"] == KEV_REVISION
     assert provenance["source"]["revision"] == SOURCE_REVISION
     assert provenance["producer_sha256"] == digest(Path(__file__).with_name("export.py"))
-    assert digest(package / "architecture.json") == provenance["definition_sha256"]
+    assert not (package / "architecture.json").exists()
     for name, folder in (("base", base), ("kev", kev)):
         for f in provenance[name]["files"]:
             assert digest(folder / f["name"]) == f["sha256"]
     head = torch.load(kev / "head.pt", weights_only=True, map_location="cpu", mmap=True)
     assert head["base_revision"] == BASE_REVISION
     assert provenance["kev"]["head_metadata"]["temperature"] == head["temperature"]
-    tokenizer = AutoTokenizer.from_pretrained(base, local_files_only=True, trust_remote_code=False)
+    if not native_only:
+        tokenizer = AutoTokenizer.from_pretrained(
+            base, local_files_only=True, trust_remote_code=False
+        )
     index = json.loads((base / "model.safetensors.index.json").read_text())["weight_map"]
     identity = EXPORT_IDENTITY + "@" + KEV_REVISION
     report = {
@@ -62,16 +65,17 @@ def check(base, kev, model_root, output):
         body = client.get(f"/sessions/{sid}/architecture").json()
         assert body["status"] == "available"
         g = body["graph"]
-        assert g["scope"] == "model_defined" and g["coverage"] == "complete"
+        assert g["scope"] == "language_model" and g["coverage"] == "complete"
         assert g["diagnostics"] == []
-        assert any(n["label"] == "Model-supplied definition" for n in g["nodes"])
+        assert not any(n["label"] == "Model-supplied definition" for n in g["nodes"])
+        assert {n["label"] for n in g["nodes"] if n["kind"] == "input"} == {"State", "Questions"}
         report["graph"] = {
             "id": g["graph_id"],
             "nodes": len(g["nodes"]),
             "edges": len(g["edges"]),
             "parameters": len(g["parameters"]),
             "repetitions": [len(r["instances"]) for r in g["repetitions"]],
-            "sidecar_bytes": (package / "architecture.json").stat().st_size,
+            "scope": g["scope"],
             "response_bytes": len(json.dumps(body).encode()),
         }
         inventory = client.get(f"/sessions/{sid}/tensors").json()["tensors"]
@@ -79,6 +83,33 @@ def check(base, kev, model_root, output):
             "kev.lora." + n for n in safe_keys(kev / "adapter_model.safetensors")
         } | {"kev.head." + n for n in head["head"]}
         report["inventory_count"] = len(inventory)
+        if native_only:
+            bindings = []
+            for name in (
+                PREFIX + ".layers.0.linear_attn.in_proj_a.weight",
+                "kev.lora.base_model.model.layers.0.linear_attn.in_proj_a.lora_A.weight",
+                "kev.lora.base_model.model.layers.0.linear_attn.in_proj_a.lora_B.weight",
+                "kev.head.q.weight",
+                "kev.head.k.bias",
+            ):
+                parameter = next(p for p in g["parameters"] if p["name"] == name)
+                assert parameter["binding"] == "native"
+                assert parameter["inspection"]["status"] == "available"
+                tensor = next(t for t in inventory if t["name"] == name)
+                assert parameter["inspection"]["tensor_id"] == tensor["id"]
+                bindings.append(
+                    {"name": name, "shape": tensor["shape"], "dtype": tensor["storage_dtype"]}
+                )
+            assert any(
+                p["source"] == "kev-inspection" and SOURCE_REVISION in p.get("rule", "")
+                for n in g["nodes"]
+                for p in n["provenance"]
+            )
+            report["native_bindings"] = bindings
+            report["native_only"] = True
+            (output / "reference.json").write_text(json.dumps(report, indent=2) + "\n")
+            print(json.dumps(report, sort_keys=True))
+            return
         names = [
             PREFIX + ".norm.weight",
             PREFIX + ".layers.0.linear_attn.in_proj_a.weight",
@@ -168,5 +199,10 @@ if __name__ == "__main__":
     parser.add_argument("--kev", type=Path, required=True)
     parser.add_argument("--model-root", type=Path, required=True)
     parser.add_argument("--evidence", type=Path, required=True)
+    parser.add_argument(
+        "--native-only",
+        action="store_true",
+        help="Check native preparation/bindings without repeating numeric acceptance.",
+    )
     args = parser.parse_args()
-    check(args.base, args.kev, args.model_root, args.evidence)
+    check(args.base, args.kev, args.model_root, args.evidence, native_only=args.native_only)

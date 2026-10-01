@@ -70,6 +70,15 @@ it('marks model-owned graphs without claiming source verification', async () => 
   expect(screen.getByText(`Graph for ${session.model_id}`)).toBeInTheDocument();
 });
 
+it('suppresses the model-supplied notice for packaged graphs', async () => {
+  const { props, retrieve } = setup();
+  retrieve.mockResolvedValue(response);
+  render(<ArchitectureExplorer {...props} />);
+  await screen.findByText(`Graph for ${session.model_id}`);
+  expect(screen.queryByRole('note', { hidden: true })).not.toBeInTheDocument();
+  expect(screen.queryByText(/Model-supplied/)).not.toBeInTheDocument();
+});
+
 it.each(diagnosticCases)('shows the exact $name load finding beside the capability status', async (item) => {
   const { props, retrieve } = setup();
   retrieve.mockResolvedValue({
