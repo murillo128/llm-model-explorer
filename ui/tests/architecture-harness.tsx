@@ -49,6 +49,8 @@ function fixture(name: string) {
     return { model_id: name, status: 'available' as const, diagnostics: [], graph };
   }
   if (name === 'browser-vjepa') return { model_id: name, status: 'available' as const, diagnostics: [], graph: makeVjepaBrowserFixture() };
+  // Six instances leave a last target outside the four-instance desktop window.
+  if (name === 'components-window') return { model_id: name, status: 'available' as const, diagnostics: [], graph: makeExplicitFixture({ count: 6 }) };
   if (name === 'components-large') return { model_id: name, status: 'available' as const, diagnostics: [], graph: makeExplicitFixture({ count: 48 }) };
   if (name === 'components') return { model_id: name, status: 'available' as const, diagnostics: [], graph: makeExplicitFixture() };
   if (name === 'mixed-stacks') return { model_id: 'mixed-stacks', status: 'available' as const, diagnostics: [],
@@ -73,7 +75,7 @@ function configuredFixture(name: string) {
       [{ kind: 'expression', text: 'window.alert(1)', symbols: [] }];
   }
   const longBrowserNode = params.has('long-browser')
-    ? response.graph.nodes.find((node) => node.id.endsWith('layer-31.attention.Q')) : undefined;
+    ? response.graph.nodes.find((node) => node.id === (params.get('long-browser') || 'layer-31.attention.Q')) : undefined;
   if (longBrowserNode) longBrowserNode.label = 'Q projection with an intentionally long public component name that must remain fully available';
   return response;
 }
@@ -88,7 +90,7 @@ function Harness() {
   const [response, setResponse] = useState(() => configuredFixture(name));
   return <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
     <div><select aria-label="Fixture" value={name} onChange={(e) => { setName(e.target.value); setResponse(configuredFixture(e.target.value)); }}>
-      {['overview-compact', 'overview-synthetic', 'overview-wide', 'overview-fanout', 'overview-training', 'interface-dense', 'interface-hybrid', 'interface-hybrid-many', 'interface-visual', 'interface-many', 'routing-context', 'contract', 'summaries', 'empty-group', 'templates', 'templates-absent', 'browser-vjepa', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'components', 'components-large', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
+      {['overview-compact', 'overview-synthetic', 'overview-wide', 'overview-fanout', 'overview-training', 'interface-dense', 'interface-hybrid', 'interface-hybrid-many', 'interface-visual', 'interface-many', 'routing-context', 'contract', 'summaries', 'empty-group', 'templates', 'templates-absent', 'browser-vjepa', 'partial', 'mixed-stacks', 'hybrid', 'connections', 'components', 'components-window', 'components-large', 'visual-stacks', 'qwen3', 'qwen35', 'vjepa2', 'smollm2'].map((n) => <option key={n}>{n}</option>)}
     </select><button onClick={() => setShown(!shown)}>Toggle explorer</button><output style={{ display: 'block', height: 20, overflow: 'hidden' }}>{inspection}</output></div>
     <div contentEditable suppressContentEditableWarning aria-label="Untransformed prompt">Prompt remains outside graph camera</div>
     {shown && <ArchitectureCanvas key={name} graph={response.graph} modelId={response.model_id} sessionId="fixture-session"

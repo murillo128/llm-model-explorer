@@ -159,7 +159,7 @@ test('browser and canvas disclosure preserve the same multi-instance window and 
 });
 
 for (const window of ['compact', 'multi-instance'] as const) test(`browser disclosure reveals only the hidden exact instance and preserves the ${window} window`, async ({ page }) => {
-  await page.goto(`${harness}?fixture=components-large`); await ready(page);
+  await page.goto(`${harness}?fixture=components-window`); await ready(page);
   if (window === 'compact') {
     // Establish the stack overview explicitly; initial Model policy is covered separately.
     await page.locator('[data-node-id="model"] .architecture-browser-disclosure').click(); await ready(page);
@@ -168,15 +168,15 @@ for (const window of ['compact', 'multi-instance'] as const) test(`browser discl
   const before = await snapshot(page), options = before.requests.at(-1)!.options;
   const instanceIds = (layout: Layout) => layout.projection.nodes.filter((node) => /^layer-\d+$/.test(node.id)).map((node) => node.id);
   const visible = instanceIds(before.layouts.at(-1)!);
-  expect(visible).not.toContain('layer-10');
-  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('layer-10');
+  expect(visible).not.toContain('layer-5');
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('layer-5');
   const disclosure = page.getByRole('group', { name: 'Model search results', exact: true })
-    .locator('[data-node-id="layer-10"] .architecture-browser-disclosure');
+    .locator('[data-node-id="layer-5"] .architecture-browser-disclosure');
   await disclosure.click();
   const opened = await snapshot(page);
   expect(opened.requests.at(-1)!.options.repetitions).toEqual(options.repetitions);
-  expect(instanceIds(opened.layouts.at(-1)!)).toEqual([...visible, 'layer-10']);
-  expect(opened.layouts.at(-1)!.projection.nodes.find((node) => node.id === 'layer-10')?.expanded).toBe(true);
+  expect(instanceIds(opened.layouts.at(-1)!)).toEqual([...visible, 'layer-5']);
+  expect(opened.layouts.at(-1)!.projection.nodes.find((node) => node.id === 'layer-5')?.expanded).toBe(true);
   assertTransportProjection(opened.requests.at(-1)!.graph, opened.layouts.at(-1)!);
   // Bring the acted-on geometry into view before contracting it. Anchoring an
   // off-screen browser target need not make it visible without an explicit fit.
