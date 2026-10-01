@@ -90,7 +90,7 @@ def test_native_clm_selection_without_sidecar(
     assert nodes["scale"]["references"] == [{"kind": "module", "name": "clm"}]
     for head_name in ("state_head", "action_head"):
         projection = nodes[f"clm.{head_name}.inp"]
-        assert projection["formula"] == "out = x weightᵀ + bias"
+        assert projection["formula"] == "out = x @ weightᵀ + bias"
         assert [(p["label"], p["direction"]) for p in projection["ports"]] == [
             ("x", "input"),
             ("out", "output"),

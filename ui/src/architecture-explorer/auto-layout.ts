@@ -8,6 +8,7 @@ import { endpointKey, projectGraph } from './projection';
 import type { ProjectionOptions } from './projection';
 import { layoutRepeatedInteriors } from './repeated-layout';
 import { assertProtectedRoutes } from './routing-clearance';
+import { BoundaryRowSpace, regularizeBoundaryRows } from './boundary-rows';
 
 export const groupHeaderHeight = 64;
 export const layerGap = 40;
@@ -35,6 +36,22 @@ const scopeOptions: LayoutOptions = {
  * A caller runs this in a terminable worker to bound otherwise synchronous
  * native-transpiled layout work. */
 export async function layoutGraph(graph: Graph, options: ProjectionOptions, signal?: AbortSignal): Promise<Layout> {
+  const started = performance.now(), bottomSpace = new Map<string, number>();
+  // Re-run ELK only when regular rows need more vertical room. Each pass keeps
+  // FIXED_SIDE and derives order from topology; failure stays worker-bounded.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const layout = await layoutWithRowSpace(graph, options, bottomSpace, signal);
+      return { ...layout, milliseconds: performance.now() - started };
+    } catch (error) {
+      if (!(error instanceof BoundaryRowSpace) || attempt === 2) throw error;
+      for (const [nodeId, height] of error.additionalHeights) bottomSpace.set(nodeId, (bottomSpace.get(nodeId) ?? 0) + height);
+    }
+  }
+  throw new Error('Boundary rows could not be laid out. Collapse groups and retry.');
+}
+
+async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bottomSpace: ReadonlyMap<string, number>, signal?: AbortSignal): Promise<Layout> {
   const started = performance.now();
   if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
   const projection = projectGraph(graph, options);
@@ -100,7 +117,7 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
         'elk.spacing.portPort': String(metrics.portGap),
         // Boundary rows occupy side gutters, not a duplicate band above children.
         // Owned parameters/constants still reserve their actual summary height.
-        'elk.padding': `[top=${metrics.headerHeight + 16},left=${gutter('input')},bottom=24,right=${gutter('output')}]`,
+        'elk.padding': `[top=${metrics.headerHeight + 16},left=${gutter('input')},bottom=${24 + (bottomSpace.get(node.id) ?? 0)},right=${gutter('output')}]`,
         'elk.spacing.portsSurrounding': `[top=${metrics.headerHeight},left=0,bottom=16,right=0]`,
       },
     });
@@ -261,8 +278,9 @@ export async function layoutGraph(graph: Graph, options: ProjectionOptions, sign
       }
     }
   }
+  const widthGrowth = regularizeBoundaryRows(projection, boxes, ports, routes, metricsByNode);
   assertProtectedRoutes(projection, ports, routes);
   const represented = new Set([...projection.edges.flatMap((edge) => edge.originalEdgeIds), ...(projection.boundaryPaths ?? []).flat().map((e) => e.id)]);
   return { boxes, ports, routes, projection, edgeIds: graph.edges.filter((edge) => represented.has(edge.id)).map((edge) => edge.id),
-    width: laidOut.width ?? 0, height: laidOut.height ?? 0, milliseconds: performance.now() - started };
+    width: (laidOut.width ?? 0) + widthGrowth, height: laidOut.height ?? 0, milliseconds: performance.now() - started };
 }

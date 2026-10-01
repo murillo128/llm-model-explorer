@@ -20,7 +20,7 @@ function segments(route: Route) {
   return route.sections.flatMap((section) => section.slice(1).map((point, index) => [section[index]!, point] as const));
 }
 
-function endpointCorridor(port: PortPosition, source: boolean): Rectangle {
+export function endpointCorridor(port: PortPosition, source: boolean): Rectangle {
   const x = port.absoluteX;
   const label = port.label;
   // The text lives inside an ordinary card and above an expanded boundary's

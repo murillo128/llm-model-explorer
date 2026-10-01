@@ -20,18 +20,24 @@ export function relativeParameterName(node: GraphNode, parameter: Parameter): st
 }
 
 // Computational scalars already published by the operation descriptions. Do not
-// turn semantic_role, axes, provenance or arbitrary configuration into constants.
+// turn semantic_role, structural axes, provenance or arbitrary configuration into constants.
 const scalarAttributes: Record<string, readonly string[]> = {
   layer_norm: ['epsilon', 'eps'], rms_norm: ['epsilon', 'eps', 'axis', 'weight_offset'],
-  rms_norm_zero_centered: ['epsilon', 'eps'], scale: ['factor', 'temperature_default'],
+  rms_norm_zero_centered: ['epsilon', 'eps'], scale: ['factor', 'alpha', 'rank', 'head_dim', 'temperature_default'],
+  temperature: ['temperature'],
   encoder_normalize: ['epsilon', 'axis'], l2_normalize: ['epsilon', 'axis'],
   exp_clamp: ['maximum'], softmax: ['axis'], gelu: ['approximate'],
 };
 export function cardSummary(node: GraphNode | undefined, parameters: ReadonlyMap<string, Parameter>) {
+  // A published factor is the compact computational vocabulary. Alpha/rank may
+  // remain provenance on that card; explicit source expressions without a factor
+  // retain their declared scalars (including the native Kev projection/pointer).
+  const scalarNames = node?.operation === 'scale' && node.attributes.some((a) => a.name === 'factor')
+    ? ['factor'] : scalarAttributes[node?.operation ?? ''] ?? [];
   return {
     formula: node?.formula,
     parameters: node ? ownParameters(node, parameters) : [],
-    constants: node?.attributes.filter((a) => scalarAttributes[node.operation ?? '']?.includes(a.name) &&
+    constants: node?.attributes.filter((a) => scalarNames.includes(a.name) &&
       !Array.isArray(a.value)) ?? [],
   };
 }

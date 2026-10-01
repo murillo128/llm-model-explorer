@@ -32,10 +32,11 @@ API_ORACLE_SPEC.loader.exec_module(API_ORACLE)
 validate_api_architecture = API_ORACLE.validate_architecture
 
 
-def make_smollm2_lora(root: Path) -> tuple[ModelSource, ModelSource]:
+def make_smollm2_lora(root: Path, *, biases: bool = False) -> tuple[ModelSource, ModelSource]:
     base = root / "smollm2"
     base.mkdir()
     config = small_config(False)
+    config.update(attention_bias=biases, mlp_bias=biases)
     config["_name_or_path"] = BASE_ID
     (base / "config.json").write_text(json.dumps(config))
     write_weights(
@@ -47,7 +48,7 @@ def make_smollm2_lora(root: Path) -> tuple[ModelSource, ModelSource]:
                 dims,
                 [float(index % 7) / 8 for index in range(math.prod(dims))],
             )
-            for name, dtype, dims in small_storage(False)
+            for name, dtype, dims in small_storage(False, biases=biases)
         ],
     )
 
@@ -198,10 +199,16 @@ def semantic_edges(graph: r.ArchitectureGraph) -> set[tuple[str, str, str, str]]
     }
 
 
-def test_smollm2_lora_branches_bind_real_factors_and_preserve_base(tmp_path: Path) -> None:
-    bare_source, composite_source = make_smollm2_lora(tmp_path)
+@pytest.mark.parametrize("biases", [False, True])
+def test_smollm2_lora_branches_bind_real_factors_and_preserve_base(
+    tmp_path: Path, biases: bool
+) -> None:
+    bare_source, composite_source = make_smollm2_lora(tmp_path, biases=biases)
     bare_inputs, bare = analyze(bare_source)
     composite_inputs, graph = analyze(composite_source)
+    assert (
+        analyze(composite_source)[1] == graph
+    )  # Group/interior IDs and template roles are deterministic.
     nodes = semantic_nodes(graph)
     edges = semantic_edges(graph)
     targets = [
@@ -213,18 +220,46 @@ def test_smollm2_lora_branches_bind_real_factors_and_preserve_base(tmp_path: Pat
     numeric_by_name = {tensor.name: tensor for tensor in composite_inputs.bindings.numeric.values()}
 
     for target in targets:
+        base = target + ".base"
         a, b, scale, add = (target + ".lora_" + suffix for suffix in ("A", "B", "scale", "add"))
-        assert {a, b, scale, add} <= nodes.keys()
-        assert nodes[target].operation == "linear"  # The base W(x) operation remains visible.
+        group = nodes[target]
+        assert isinstance(group, r.ArchitectureGroupNode)
+        assert group.children == [nodes[key].id for key in (base, a, b, scale, add)]
+        assert group.parameter_ids == []
+        assert [(p.id, p.label, p.direction) for p in group.ports] == [
+            ("x", "x", "input"),
+            ("out", "out", "output"),
+        ]
+        assert all(nodes[key].parent_id == group.id for key in (base, a, b, scale, add))
+        assert nodes[base].operation == "linear"
+        assert nodes[base].parameter_ids == [parameters[target + ".weight"].id] + (
+            [parameters[target + ".bias"].id] if biases else []
+        )
+        assert nodes[base].references[0] == r.ArchitectureModuleReference(
+            kind="module", name=target
+        )
         assert nodes[a].operation == nodes[b].operation == "linear"
         assert nodes[scale].operation == "scale"
         assert nodes[add].operation == "add"
         assert (target.rsplit(".", 1)[0], "x", target, "x") in edges
-        assert (target.rsplit(".", 1)[0], "x", a, "x") in edges
+        assert (target, "x", base, "x") in edges
+        assert (target, "x", a, "x") in edges
         assert (a, "out", b, "x") in edges
         assert (b, "out", scale, "x") in edges
-        assert (target, "out", add, "base") in edges
+        assert (base, "out", add, "base") in edges
         assert (scale, "out", add, "adapter") in edges
+        assert (add, "out", target, "out") in edges
+        assert (target, "out", target.replace("_proj", "_heads"), "x") in edges
+        interior = {target, base, a, b, scale, add}
+        assert {edge for edge in edges if edge[0] in interior and edge[2] in interior} == {
+            (target, "x", base, "x"),
+            (target, "x", a, "x"),
+            (a, "out", b, "x"),
+            (b, "out", scale, "x"),
+            (base, "out", add, "base"),
+            (scale, "out", add, "adapter"),
+            (add, "out", target, "out"),
+        }
         assert {attribute.name: attribute.value for attribute in nodes[scale].attributes}[
             "factor"
         ] == 2.0
@@ -243,9 +278,19 @@ def test_smollm2_lora_branches_bind_real_factors_and_preserve_base(tmp_path: Pat
             assert numeric.shape == expected_shape
             assert parameter.name in numeric_by_name
             assert parameter.storage[0].role == "adapter_factor"
+            assert (
+                parameter.storage[0].name
+                == f"base_model.model.{target}.lora_{factor}.default.weight"
+            )
+            assert nodes[a if factor == "A" else b].parameter_ids == [parameter.id]
 
     # An untargeted projection and its complete parameter binding are unchanged.
     bare_nodes = semantic_nodes(bare)
+    for target in targets:
+        assert bare_nodes[target].kind == "operation"
+        assert bare_nodes[target].operation == "linear"
+        assert bare_nodes[target].parent_id == bare_nodes[target.rsplit(".", 1)[0]].id
+        assert not any(key.startswith(target + ".") for key in bare_nodes)
     for key in (
         "model.layers.0.self_attn.k_proj",
         "model.layers.0.self_attn.o_proj",
@@ -265,6 +310,18 @@ def test_smollm2_lora_branches_bind_real_factors_and_preserve_base(tmp_path: Pat
     attention_templates = [t for t in graph.templates or () if t.component_role == "attention"]
     assert attention_templates
     assert any(len(template.instances) == 2 for template in attention_templates)
+    for template in attention_templates:
+        for instance in template.instances:
+            mapped = {mapping.node_id for mapping in instance.nodes}
+            attention = next(node for node in graph.nodes if node.id == instance.node_id)
+            layer_targets = [
+                target for target in targets if nodes[target].parent_id == attention.id
+            ]
+            assert all(
+                nodes[target + suffix].id in mapped
+                for target in layer_targets
+                for suffix in ("", ".base", ".lora_A", ".lora_B", ".lora_scale", ".lora_add")
+            )
     assert not any(t.name.startswith("__peft__") for t in bare_inputs.bindings.numeric.values())
 
     inventory = {
@@ -285,6 +342,15 @@ def test_smollm2_lora_branches_bind_real_factors_and_preserve_base(tmp_path: Pat
             "tokenizer_available": False,
         },
     )
+
+
+def test_lora_scale_formula_uses_visible_ports_and_factor(tmp_path: Path) -> None:
+    _, source = make_smollm2_lora(tmp_path)
+    _, graph = analyze(source)
+    scale = semantic_nodes(graph)["model.layers.0.self_attn.q_proj.lora_scale"]
+    assert scale.formula == "out = factor * x"
+    assert {p.label for p in scale.ports} == {"x", "out"}
+    assert {a.name: a.value for a in scale.attributes}["factor"] == 2
 
 
 def test_quantized_and_native_base_use_the_same_lora_graph(tmp_path: Path) -> None:

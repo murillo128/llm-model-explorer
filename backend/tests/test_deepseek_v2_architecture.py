@@ -425,6 +425,12 @@ def test_complete_native_graph_has_mla_moe_and_every_concrete_instance(
     }
     assert query_projection.operation == "linear"
     assert query_projection_attributes["q_lora_rank"] == "null; direct query projection"
+    scaling = node(data, graph, attention + ".score_scale")
+    assert scaling.formula == "out = factor * x"
+    scaling_attributes = {attribute.name: attribute.value for attribute in scaling.attributes}
+    # Independently evaluated at high decimal precision from the pinned source:
+    # (1 + 0.1 * 0.707 * ln(40))² / sqrt(192).
+    assert scaling_attributes["factor"] == pytest.approx(0.1147213867929261, rel=1e-14)
     assert not any("q_a_proj" in name or "q_b_proj" in name for name in expected)
     topk = node(data, graph, "model.layers.1.mlp.topk")
     topk_attributes = {attribute.name: attribute.value for attribute in topk.attributes}

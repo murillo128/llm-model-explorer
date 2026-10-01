@@ -235,22 +235,18 @@ def test_smollm2_lora_and_qlora_references_over_catalogue_sessions_and_architect
             bare_nodes, bare_edges = graph_topology(bare)
             composed_nodes, composed_edges = graph_topology(graph)
             assert set(bare_nodes) <= set(composed_nodes)
-            assert all(composed_nodes[key] == bare_nodes[key] for key in bare_nodes)
             targeted_nodes = {
                 f"model.layers.{layer}.self_attn.{projection}"
                 for layer in range(30)
                 for projection in ("q_proj", "v_proj")
             }
-            expected_base_edges = {
-                (
-                    f"{source}.lora_add" if source in targeted_nodes and port == "out" else source,
-                    port,
-                    target,
-                    target_port,
-                )
-                for source, port, target, target_port in bare_edges
-            }
-            assert expected_base_edges <= composed_edges
+            assert all(
+                composed_nodes[key] == bare_nodes[key]
+                for key in bare_nodes
+                if key not in targeted_nodes
+            )
+            assert all(composed_nodes[key + ".base"] == bare_nodes[key] for key in targeted_nodes)
+            assert bare_edges <= composed_edges
 
             bare_parameters = {parameter["name"]: parameter for parameter in bare["parameters"]}
             parameters = {parameter["name"]: parameter for parameter in graph["parameters"]}
@@ -303,7 +299,9 @@ def test_smollm2_lora_and_qlora_references_over_catalogue_sessions_and_architect
             base_tensor_names = []
             for (layer, projection), pair in factors.items():
                 target = f"model.layers.{layer}.self_attn.{projection}"
-                base_node = nodes[target]
+                group = nodes[target]
+                assert group["kind"] == "group"
+                base_node = nodes[target + ".base"]
                 assert base_node["operation"] == "linear"
                 base_weight = next(
                     parameters_by_id[parameter_id]
