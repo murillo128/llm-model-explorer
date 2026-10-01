@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ModelDiagnosticInformation } from './ModelDiagnostics';
 import { Button } from '../components/Button';
+import { modelLabels } from './model-labels';
 import type { ModelSummary, SessionController, ShellState } from './session-controller';
 
 function formatModelSize(bytes: number): string {
@@ -14,6 +15,7 @@ export function AppBar({ state, controller, model, backend }: {
 }) {
   const [expanded, setExpanded] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  const labels = modelLabels(state.models);
   return <header className="app-bar">
     <span className="product-name" title="LLM Model Explorer">LLM Model Explorer</span>
     <nav className="explorer-nav" aria-label="Explorers">
@@ -28,8 +30,8 @@ export function AppBar({ state, controller, model, backend }: {
       <select value={state.session?.model_id ?? ''} disabled={state.catalogue !== 'complete' || !state.models.length}
         onChange={(event) => controller.chooseModel(event.target.value)}>
         <option value="" disabled>Select a model</option>
-        {state.session && !model && <option value={state.session.model_id}>{state.session.model_id}</option>}
-        {state.models.map((entry) => <option key={entry.id} value={entry.id}>{entry.display_name} · {entry.id}</option>)}
+        {state.session && !model && <option value={state.session.model_id}>Current model (not in catalogue)</option>}
+        {state.models.map((entry) => <option key={entry.id} value={entry.id}>{labels.get(entry.id)}</option>)}
       </select>
     </label>
     <button type="button" className="chrome-button" aria-label="Refresh models" title="Refresh models"
@@ -54,7 +56,9 @@ export function AppBar({ state, controller, model, backend }: {
         <dl className="model-metadata metadata">
           <dt>Backend</dt><dd data-testid="backend-url">{backend}</dd>
           <dt>Session</dt><dd>{state.session?.id ?? 'Inactive'}</dd>
+          {state.session && <><dt>Model ID</dt><dd>{state.session.model_id}</dd></>}
           {model && <>
+            <dt>Model name</dt><dd>{model.display_name}</dd>
             <dt>Architecture / type</dt><dd>{[...model.architectures, model.model_type].filter(Boolean).join(' · ') || 'Not supplied'}</dd>
             <dt>Tokenizer</dt><dd>{model.tokenizer_available ? 'Available' : 'Unavailable'}</dd>
           </>}

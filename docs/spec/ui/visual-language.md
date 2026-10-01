@@ -100,6 +100,14 @@ is the primary visible model identity; do not repeat the model as a subtitle or
 in the status bar. A workspace may retain an accessible explorer name without
 another visible title.
 
+Selector labels use short checkpoint names consistently, retaining quantization
+variants and LoRA adapter names. Known storage encoding labels are humanized;
+unknown labels are preserved. Omit redundant technical identifiers and revision
+hashes. Retain repository qualification when short labels collide, and disclose
+the exact identifier in a label only when qualification cannot distinguish entries.
+Backend identifiers remain the option values and appear in Model information,
+alongside the original backend display name.
+
 Refresh models is an icon control with an accessible name and tooltip. Close
 session belongs in the session-options overflow panel. This panel also exposes
 backend connection context, session identity, and raw model metadata on demand.

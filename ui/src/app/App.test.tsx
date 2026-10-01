@@ -6,6 +6,7 @@ import { deferred, json, models, sessionA, sessionB, tensors } from '../test/she
 import { App } from './App';
 import type { ExplorerContextValue } from './explorer-context';
 import { sessionStorageKey } from './session-controller';
+import type { ModelSummary } from './session-controller';
 
 const config = { backendBaseUrl: 'https://backend.example' };
 afterEach(() => sessionStorage.clear());
@@ -27,6 +28,69 @@ async function chooseAlpha() {
   await userEvent.selectOptions(screen.getByRole('combobox'), models[0]!.id);
   await screen.findByRole('button', { name: /left.weight/ });
 }
+
+it('uses uniform model labels while preserving SmolLM2 variants and exact session identifiers', async () => {
+  const catalogue: ModelSummary[] = [
+    { id: 'SmolLM2-135M', display_name: 'SmolLM2-135M', architectures: [], tokenizer_available: true },
+    { id: 'HuggingFaceTB/SmolLM2-135M@bnb-nf4-dq', display_name: 'HuggingFaceTB/SmolLM2-135M (bnb-nf4-dq)', architectures: [], tokenizer_available: true },
+    { id: 'SmolLM2-135M+peft-lora:smoltalk', display_name: 'SmolLM2-135M + LoRA smollm2-135m-smoltalk-lora', architectures: [], tokenizer_available: true },
+    { id: 'HuggingFaceTB/SmolLM2-135M@bnb-nf4-dq+peft-lora:smoltalk', display_name: 'HuggingFaceTB/SmolLM2-135M (bnb-nf4-dq) + LoRA smollm2-135m-smoltalk-lora', architectures: [], tokenizer_available: true },
+    { id: 'Contrastive-LM/CLM-v0.1-8B@e939398d4556fcd9400c76fa8c5a513202f42b0a', display_name: 'Contrastive-LM/CLM-v0.1-8B', architectures: [], tokenizer_available: true },
+    { id: 'jaredpalmer/kev-0.8b-inspection@9a45d25eb2ab761841196625383fa1dff0e56c1e', display_name: 'jaredpalmer/kev-0.8b-inspection', architectures: [], tokenizer_available: true },
+    { id: 'qwen@gptq-int4', display_name: 'Qwen3-0.6B-GPTQ-Int4 (gptq-int4)', architectures: [], tokenizer_available: true },
+    { id: 'qwen35@nvfp4', display_name: 'Qwen3.5-0.8B-NVFP4 (nvfp4)', architectures: [], tokenizer_available: true },
+  ];
+  const fetcher = mockBackend();
+  let selected = catalogue[0]!.id;
+  fetcher.mockImplementation(async (input, options) => {
+    if (String(input).endsWith('/models')) return json({ models: catalogue, diagnostics: [] });
+    if (String(input).endsWith('/tensors')) return json({ tensors, coverage: 'complete', diagnostics: [] });
+    if (options?.method === 'DELETE') return new Response(null, { status: 204 });
+    if (options?.method === 'POST') selected = JSON.parse(options.body as string).model_id;
+    return json({ ...sessionA, model_id: selected }, options?.method === 'POST' ? 201 : 200);
+  });
+  render(<App config={config} />);
+  const picker = screen.getByRole('combobox', { name: 'Model' });
+  await waitFor(() => expect(picker).toBeEnabled());
+  const options = within(picker).getAllByRole('option').slice(1);
+  expect(options.map((option) => option.textContent)).toEqual([
+    'SmolLM2-135M', 'SmolLM2-135M (NF4 4-bit, double quantization)',
+    'SmolLM2-135M + LoRA smollm2-135m-smoltalk-lora',
+    'SmolLM2-135M (NF4 4-bit, double quantization) + LoRA smollm2-135m-smoltalk-lora',
+    'CLM-v0.1-8B', 'kev-0.8b-inspection',
+    'Qwen3-0.6B-GPTQ-Int4 (GPTQ 4-bit)', 'Qwen3.5-0.8B-NVFP4 (NVFP4 4-bit)',
+  ]);
+  expect(options.map((option) => option.getAttribute('value'))).toEqual(catalogue.map((entry) => entry.id));
+  await userEvent.selectOptions(picker, catalogue[3]!.id);
+  await screen.findByText('Session active.');
+  expect(fetcher).toHaveBeenCalledWith('https://backend.example/sessions', expect.objectContaining({
+    body: JSON.stringify({ model_id: catalogue[3]!.id }),
+  }));
+  await userEvent.click(screen.getByRole('button', { name: 'Session options' }));
+  expect(screen.getByText(catalogue[3]!.id, { selector: 'dd' })).toBeVisible();
+  expect(screen.getByText(catalogue[3]!.display_name, { selector: 'dd' })).toBeVisible();
+});
+
+it('keeps model choices distinct when shortened names or revision display names collide', async () => {
+  const catalogue: ModelSummary[] = [
+    { id: 'alice/shared', display_name: 'alice/shared', architectures: [], tokenizer_available: true },
+    { id: 'bob/shared', display_name: 'bob/shared', architectures: [], tokenizer_available: true },
+    { id: 'lab/revised@first', display_name: 'lab/revised', architectures: [], tokenizer_available: true },
+    { id: 'lab/revised@second', display_name: 'lab/revised', architectures: [], tokenizer_available: true },
+    { id: 'lab/custom@unknown', display_name: 'Custom (constructor)', architectures: [], tokenizer_available: true },
+  ];
+  mockBackend().mockResolvedValueOnce(json({ models: catalogue, diagnostics: [] }));
+  render(<App config={config} />);
+  const picker = screen.getByRole('combobox', { name: 'Model' });
+  await waitFor(() => expect(picker).toBeEnabled());
+  const options = within(picker).getAllByRole('option').slice(1);
+  expect(options.map((option) => option.textContent)).toEqual([
+    'alice/shared', 'bob/shared', 'lab/revised (lab/revised@first)',
+    'lab/revised (lab/revised@second)', 'Custom (constructor)',
+  ]);
+  expect(new Set(options.map((option) => option.textContent)).size).toBe(catalogue.length);
+  expect(options.map((option) => option.getAttribute('value'))).toEqual(catalogue.map((entry) => entry.id));
+});
 
 it('renders public model metadata and logical hierarchy, describes unsupported ranks without mounting a viewer', async () => {
   mockBackend();
