@@ -252,3 +252,111 @@ Follow-up #277 must update this same report with exact final revision, selected
 invocation counts, newly added cheap proof, complete applicable gate results and
 equivalent environment/setup/body/teardown comparisons. Do not sum overlapping
 child savings or derive a percentage from either cancelled acceptance run.
+
+## Fixture preparation decision — issue #275
+
+**Measured no-op:** retain the current fixture preparation. Issue #275 explicitly
+permits this outcome when repeated deterministic input generation is negligible.
+Its activation pin is `7101337e48ab97f44961045c0cb24060768c6144`; the fixture
+generators, HTTP fixtures, product/architecture/package hooks and timing helper
+are unchanged from the #272 baseline. No template, shared runtime, new fixture
+API, test deletion or project-selection change is introduced. #276 should consume
+the existing setup unchanged. Before/after setup cost and invocation counts are
+therefore unchanged; claimed savings are **zero**.
+
+The focused measurement used the same lock hashes above, Python 3.12.14,
+PyTorch 2.14.0+cpu and Transformers 4.57.6. Each profile ran in a new Python
+subprocess, with two generations into distinct owned temporary roots and an
+ordinary `shutil.copytree` into a third, independent destination for each sample.
+Imports, generation/export and copying had separate `perf_counter` timers.
+The import phase explicitly loaded the lazily imported `dense_fixtures` and
+`quantized_oracles` helpers, and exporter dependencies, before timing generation.
+HTTP used its actual eight Torch threads; the browser default/polish used their
+existing two-thread setting; CLM/Kev used their existing `OMP_NUM_THREADS=2`.
+All runs were offline. There were no active repository Actions runs at the start;
+host load was 2.22/1.98/2.44, so this is a small local diagnostic, not a controlled
+suite benchmark. First/second samples are both retained, including LoRA noise.
+
+| Exact input profile / current owner | Imports (ms) | Generation/export, first / second (ms) | Plain copy range (ms) | Model-root bytes |
+| --- | ---: | ---: | ---: | ---: |
+| `fixtures.generate(extended=False)` / HTTP `Service` | 1,394.6 | 13.6 / 12.7 | 2.35–2.38 | 4,736,718 |
+| `fixtures.generate(extended=True)` / product browser | 1,393.7 | 40.1 / 29.9 | 4.57–4.66 | 11,156,928 |
+| `architecture_fixtures.generate` / four separate tiny families | 2,291.1 | 47.8 / 46.4 | 0.90–0.94 | 287,617 |
+| `architecture_fixtures.generate_templates` / instance-weight variant | 2,303.2 | 1.6 / 1.4 | 0.25–0.30 | 7,167 |
+| `polish_fixtures.generate` / product polish variant | 2,213.8 | 49.0 / 48.6 | 1.80–1.86 | 316,358 |
+| `clm_fixtures.fixture` + current exporter / CLM browser | 1,458.2 | 440.9 / 385.3 | 0.87–0.90 | 19,250 |
+| `kev_fixtures.fixture` + current exporter / Kev browser | 1,459.5 | 221.6 / 265.6 | 0.85–0.86 | 26,151 |
+| `make_smollm2_lora` / LoRA hierarchy browser | 2,280.9 | 73.2 / 7.3 | 0.36–0.40 | 15,128 |
+
+An initial import-inclusive diagnostic put the first architecture/template calls
+at 2,418.0/2,284.6 ms, versus 47.9/1.3 ms for their second calls. Polish was
+888.6 versus 49.2 ms. Those are lazy dependency imports, not repeated tensor-byte
+generation. The architecture browser's separate generator subprocess still pays
+those imports on each invocation: this is a real residual setup cost, not zero.
+Amortizing that subprocess could avoid its imports, but would not remove the
+fresh backend process's imports or startup. No startup saving is attributed to
+the byte-generation experiment. CLM/Kev timings include real export validation;
+each has only one browser case per DPR (and one in the epic/PR gate), so there is
+little repeated generation to amortize within a worker. LoRA is similarly sparse.
+Kimi's topology fixture and actual local references are not selected: the former
+is not a repeated byte-generation hotspot, and the latter are not generated inputs.
+
+For comparison, #272's two unchanged product cases spent 97.8 ms generating
+inputs inside 15,799.0 ms spawn-to-ready and 112,903.0 ms browser body time.
+Even removing all their byte generation would affect less than 0.08% of that
+measured work; copies and one-time template generation would consume part of it.
+A hypothetical template costs `G + N*C`, not just `N*C`, for generation `G`,
+copy cost `C` and `N` cases, before adding template process/import/cleanup costs.
+No template was built or adopted here, so this is a cost model, not a measured
+before/after speedup. No full acceptance run or repaired baseline is claimed.
+
+Reproduce the generation/copy diagnostic from the pinned checkout with the
+existing backend environment and offline settings. Import the exact functions
+in the table (plus their lazy helper dependencies) before the timed loop; use
+the current CLM/Kev browser export recipes with their unchanged revision strings.
+The core loop, repeated twice per profile in a fresh subprocess, is:
+
+```python
+with tempfile.TemporaryDirectory(prefix="issue-275-measure-") as temporary:
+    root = Path(temporary)
+    for sample in range(2):
+        models = root / str(sample) / "models"
+        models.mkdir(parents=True)
+        started = time.perf_counter()
+        prepare(models)  # One exact profile from the table; inputs unchanged.
+        generation_ms = (time.perf_counter() - started) * 1000
+        started = time.perf_counter()
+        shutil.copytree(models, root / f"copy-{sample}" / "models")
+        copy_ms = (time.perf_counter() - started) * 1000
+        print(generation_ms, copy_ms)
+```
+
+The full measurement script, initial and separated logs, and raw JSON remain in
+`/tmp/issue-275-evidence/`; generated inputs were removed by their owned temporary
+directory contexts. The experiment never populated runtime caches or started
+backends. There is no adopted template/copy lifecycle requiring new isolation or
+partial-template tests. Existing TCP/browser checks retain their independent
+seed-derived numeric, progressive-publication, cancellation and cleanup oracles.
+
+Scoped validation on the activation tree: two real TCP cases passed in 12.69 s
+(`test_progressive_shared_late_and_slow_consumers` and
+`test_cancel_and_disconnect_release_owned_work[all]`). They assert independent
+seed-derived bytes, distinct session/operation IDs, no publication before release,
+no partial publication after cancellation, and zero readers/operations/tasks.
+The JUnit run emitted one existing `record_property`/default-xunit2 compatibility
+warning; the tests passed. The unchanged production pixel/geometry/progressive
+case at `product.spec.ts:143` passed at DPR 1, one headed worker, ports 29602/29603:
+40.0 s test duration, 41.25 s native wall, no retries or skips. Its timing attachment
+records generation 36.0 ms **inside** spawn-to-ready 7,895.8 ms, browser setup
+150.3 ms, body 31,703.2 ms and teardown 132.0 ms. Pixel capture remained enabled
+for this existing pixel consumer; it finished with zero readers/textures/GPU bytes.
+This is corroboration of the unchanged setup, not a new before/after benchmark.
+
+Acceptance Ruff lint/format, UI typecheck/lint/build and `git diff --check` passed.
+The UI was built from this checkout with Node 24.14.0/npm 11.9.0 and locked
+Playwright 1.63.0; the existing bundle-size warning remains. Logs and HTTP JUnit
+are retained with the measurement evidence; native browser JSON is copied there.
+No tests were added, removed, weakened or selected differently in the repository.
+The PR targets `codex/epic-issue-278`, whose accepted CI branch filters defer the
+application/component gates to the aggregate epic PR. This focused success does
+not resolve the cancelled complete acceptance baseline or validate absent models.
