@@ -72,6 +72,19 @@ it('keeps constants and names with dimensions off, exposes logical shapes and ex
   expect(screen.getByLabelText('epsilon = 0.00003')).toBeInTheDocument();
 });
 
+it.each([
+  ['encoder_normalize', 'epsilon', 1e-12], ['l2_normalize', 'epsilon', 1e-12],
+  ['exp_clamp', 'maximum', 100], ['softmax', 'axis', -1],
+  ['scale', 'temperature_default', 1], ['gelu', 'approximate', 'none'],
+] as const)('renders the supplied %s constant beside its operation', (operation, name, value) => {
+  const record = node(); record.operation = operation; record.parameter_ids = []; record.references = [];
+  record.attributes = [{ name, value, provenance: [] }, { name: 'semantic_role', value: 'metadata', provenance: [] }];
+  const summary = cardSummary(record, new Map());
+  render(<CardParameters node={record} summary={summary} dimensions={false} top={100} matrix={vi.fn()} inspect={vi.fn()} />);
+  expect(screen.getByLabelText(`${name} = ${value}`)).toBeInTheDocument();
+  expect(summary.constants.map((a) => a.name)).toEqual([name]);
+});
+
 it.each(['unsupported_rank', 'unsupported_representation', 'requires_view', 'unresolved_binding'] as const)(
   'explains non-actionable %s without a matrix request', (reason) => {
     const record = node(), p = parameter('weight');

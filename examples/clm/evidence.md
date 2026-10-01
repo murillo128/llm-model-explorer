@@ -1,5 +1,74 @@
 # CLM acceptance evidence
 
+## Native packaged support, 2026-10-01
+
+The current recipe exports `clm-inspection-export-2` packages without
+`architecture.json`. The packaged `clm-inspection` description (revision `1`)
+owns the migrated graph and records CLM source
+`bb42c6c5bf914fd449bed2f6ca65be80602cb1f7` plus the reused reviewed Qwen source.
+The marker is `clm_inspection.format_version: 1`; invalid marker/head
+configuration or bindings cannot select bare Qwen support.
+
+One fresh full-reference export reused the accepted native encoder shards and
+original head payload. Original encoder configuration/index bytes were recovered
+from the accepted installed package and checked against the recorded upstream
+SHA-256 hashes; copied tokenizer assets/shards and exported input provenance
+retain the prior pinned inputs. No model download or existing model modification
+was needed. Installed canonical CLI validation returned `valid`, `complete`,
+`language_model`, with no diagnostics. A focused production TCP startup and
+architecture/inventory retrieval verified representative state/action output
+weights, learned scalar scale, final encoder norm and first Q projection, shared
+encoder parameter consumers, and the stored vocabulary head outside the graph.
+No numeric stream, tokenizer campaign, second startup or reference browser
+campaign was repeated for this migration.
+
+| Current native property | Observed result |
+| --- | --- |
+| Model identity | `Contrastive-LM/CLM-v0.1-8B@e939398d4556fcd9400c76fa8c5a513202f42b0a` |
+| Inventory / graph parameter identities | 416 / 415 |
+| Architecture | `language_model`, `complete`, packaged source provenance |
+| Graph | 2,637 nodes, 4,008 edges; two independent 36-layer encoder invocations |
+| Graph identity | `6afdee06d37d50dde51d8c37698c6eb205da613b6f5e29e4e44eb90c7a2a5f3e` |
+| Observed JSON response size | 7,390,155 bytes (default Python JSON formatting) |
+| Cold startup, Qwen and CLM together | 53.646 seconds; local observation, not a performance guarantee |
+
+The materialized pinned native response also passed the independent API schema
+and graph-relationship validator and the generated UI consumer schema. Focused
+local validation passed: 136 backend cases (CLM export/native selection,
+model-owned precedence/lifecycle/installed CLI, dense Qwen ownership); 137 UI cases
+(Architecture Explorer trust notice, rendered card constants, layout, projection
+and graph invariants); touched Python Ruff/format and strict mypy; UI typecheck and
+touched-file ESLint. The final CLI presentation adjustment separately passed all
+38 model-owned service cases. The backend tests retained the native tensor,
+tokenizer/embedding, numerical head, confinement and atomic-publication oracles.
+New cases cover metadata/head inventory failures, static preparation without
+numerical tensor access, semantic head/pooling/normalization/temperature/softmax
+interfaces, exact shared identities and sidecar absence.
+
+Pre-fix evidence used baseline `8653837c06473f6273481f1f3deb8fdff52ad4a8`:
+sidecar-free native startup returned `unsupported_architecture`; removing both
+the old sidecar and CLM marker instead returned an available partial
+`language_model` graph from bare Qwen. The corresponding native startup and
+missing-marker rejection pass with this implementation. Regression assertions
+exercise real startup/selection rather than expected results calculated by the
+producer.
+
+The updated graph-authoring skill at `98a279fd44a01fadde33dbb8bfa8c6ac2986fb84`
+was read during this migration. CLM heads retain explicit linear/activation/norm/
+residual dependencies; formulas use visible `x`, `out`, `weight` and `bias` names
+with exact owning-module references. Existing rendered-card tests now cover CLM
+normalization epsilon, learned-scale maximum, candidate softmax axis, request
+temperature default and exact GELU mode. The packaged path suppresses the
+model-supplied notice; the optional legacy sidecar path retains it.
+
+Component/application workflows explicitly defer epic-child PRs; the final
+aggregate integration PR still requires its full applicable CI. These focused
+checks do not replace that gate or claim encoder inference, generation or quality
+benchmarking. Generated packages, weights, cache artifacts and logs remain
+outside Git.
+
+## Prior model-owned acceptance
+
 Initially observed on 2026-09-30; reference and focused checks refreshed on
 2026-10-01 after the filesystem/publication correction, using the immutable inputs in
 [the reproduction recipe](README.md#immutable-reference-inputs). This report
@@ -7,7 +76,7 @@ establishes static inspection of the complete native CLM-v0.1-8B export; fixture
 results and actual-reference results are separate below. Weights, generated
 graphs, caches, browser captures and full logs remain outside Git.
 
-## Actual pinned reference
+### Prior actual pinned reference
 
 Both Hub repositories' selected files passed `hf cache verify`. Missing-file
 warnings concerned unselected repository assets, not any required checkpoint,
@@ -65,7 +134,7 @@ seconds): select the complete CLM model, expand Action head, open the native
 reported the same graph identity and [512, 1536] logical shape. The rendered
 matrix screenshot was also inspected.
 
-## Deterministic fixtures and repository gates
+### Prior deterministic fixtures and repository gates
 
 The 36 CLM backend cases passed, including independent float64 scalar numerical
 oracles across head options/native dtypes, exact storage preservation and weight
@@ -146,7 +215,8 @@ local observations, not performance guarantees.
 
 Supported: the complete pinned native reference through explicit offline export,
 exact base/head tensor inspection, pinned tokenizer/input-embedding lookup and
-expandable model-owned decision structure. The original `.pt` directory alone
+expandable packaged decision structure. Older model-owned packages retain
+their sidecar trust classification. The original `.pt` directory alone
 is not an admitted model. Other encoder families, quantized variants, arbitrary
 checkpoint objects and unsupported head configurations are rejected. Runtime
 performs no downloads or checkpoint conversion.
@@ -154,4 +224,5 @@ performs no downloads or checkpoint conversion.
 No encoder forward pass, inference endpoint, generation, candidate-quality
 benchmark or upstream quality reproduction was run or added. Successful import,
 numerical head examples and browser rendering do not establish a verified full
-forward computation; the graph's model-supplied notice preserves that limit.
+forward computation. Packaged provenance records static source review; legacy
+sidecars retain their model-supplied notice.

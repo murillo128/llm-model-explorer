@@ -6,6 +6,7 @@ from math import isfinite
 from typing import TYPE_CHECKING, Literal, NoReturn
 
 from . import records as r
+from .clm_config import reserved as clm_reserved
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
 from .dense_config import SOURCE_REVISION, DenseConfig, checked
 from .semantic import operation_role, role_attribute, source_key
@@ -907,7 +908,9 @@ def register_dense_descriptions(registry: DescriptionRegistry) -> None:
                 frozenset({family}),
                 frozenset({architecture}),
                 lambda inputs: (
-                    inputs.lora_composition is None and checked(inputs.configuration) is not None
+                    not clm_reserved(inputs)
+                    and inputs.lora_composition is None
+                    and checked(inputs.configuration) is not None
                 ),
                 build,
             )
@@ -919,7 +922,8 @@ def register_dense_descriptions(registry: DescriptionRegistry) -> None:
                 frozenset({family}),
                 frozenset({architecture}),
                 lambda inputs: (
-                    inputs.lora_composition is not None
+                    not clm_reserved(inputs)
+                    and inputs.lora_composition is not None
                     and checked(inputs.configuration) is not None
                 ),
                 build,
