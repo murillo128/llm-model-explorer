@@ -1,6 +1,6 @@
 import type { Box, PortPosition, Route } from './graph';
 import { endpointKey, type Projection } from './projection';
-import { routeClearanceFailures } from './routing-clearance';
+import { endpointCorridor, routeClearanceFailures } from './routing-clearance';
 
 const epsilon = 0.001;
 const laneGap = 16;
@@ -69,7 +69,7 @@ export function regularizeBoundaryRows(projection: Projection, boxes: Box[], por
         peer.nodeId === first.nodeId && peer.side === first.side && Math.abs(peer.absoluteY - first.absoluteY - index * peerGap) < epsilon);
       if (bundle) for (const edge of projection.edges) if (ordered.some((port) => endpointKey({ node_id: port.nodeId, port_id: port.portId }) ===
         endpointKey(side === 'left' ? edge.source : edge.target)) && inside((side === 'left' ? edge.target : edge.source).node_id, node.id)) straight.add(edge.id);
-      const gap = bundle ? peerGap : Math.max(rowGap, (ordered.at(-1)!.y - ordered[0]!.y) / (ordered.length - 1));
+      const gap = bundle ? peerGap : rowGap;
       const box = byBox.get(node.id)!, firstLabel = ordered[0]!.label;
       let start = Math.max(bundle ? first.absoluteY : ordered[0]!.absoluteY,
         box.absoluteY + metric.headerHeight - (firstLabel.y - ordered[0]!.absoluteY) + firstLabel.clearance);
@@ -79,10 +79,14 @@ export function regularizeBoundaryRows(projection: Projection, boxes: Box[], por
       const incident = new Set(projection.edges.filter((edge) => keys.has(endpointKey(edge.source)) || keys.has(endpointKey(edge.target))).map((edge) => edge.id));
       const forbidden: [number, number][] = [];
       for (const [index, port] of ordered.entries()) {
-        const label = port.label, top = label.y - port.absoluteY - label.clearance, bottom = top + label.height + 2 * label.clearance;
-        for (const route of routes) if (!incident.has(route.id)) for (const section of route.sections) for (let i = 1; i < section.length; i++) {
+        const label = port.label, key = endpointKey({ node_id: node.id, port_id: port.portId });
+        const rectangles = [{ x: label.x - label.clearance, y: label.y - label.clearance,
+          width: label.width + 2 * label.clearance, height: label.height + 2 * label.clearance }];
+        for (const source of [true, false]) if (projection.edges.some((edge) => endpointKey(source ? edge.source : edge.target) === key)) rectangles.push(endpointCorridor(port, source));
+        for (const rect of rectangles) for (const route of routes) if (!incident.has(route.id)) for (const section of route.sections) for (let i = 1; i < section.length; i++) {
           const a = section[i - 1]!, b = section[i]!;
-          if (Math.max(a.x, b.x) <= label.x - label.clearance + epsilon || Math.min(a.x, b.x) >= label.x + label.width + label.clearance - epsilon) continue;
+          if (Math.max(a.x, b.x) <= rect.x + epsilon || Math.min(a.x, b.x) >= rect.x + rect.width - epsilon) continue;
+          const top = rect.y - port.absoluteY, bottom = top + rect.height;
           forbidden.push([Math.min(a.y, b.y) - bottom - index * gap, Math.max(a.y, b.y) - top - index * gap]);
         }
       }
@@ -140,7 +144,9 @@ export function regularizeBoundaryRows(projection: Projection, boxes: Box[], por
       const bottom = Math.max(...terminals.flatMap(({ port }) => [port.absoluteY, original.get(port)!]));
       const bodyDistance = Math.min(Infinity, ...boxes.filter((box) => box.id !== node.id &&
         box.absoluteY < bottom + epsilon && box.absoluteY + (nodes.get(box.id)!.expanded ? metrics.get(box.id)!.headerHeight : box.height) > top - epsilon)
-        .map((box) => direction > 0 ? box.absoluteX - portX : portX - box.absoluteX - box.width).filter((distance) => distance > epsilon));
+        .map((box) => direction > 0 ? box.absoluteX - portX : portX - box.absoluteX - box.width).filter((distance) => distance > epsilon),
+        ...routes.flatMap((route) => route.labels ?? []).filter((label) => label.y < bottom + epsilon && label.y + label.height > top - epsilon)
+          .map((label) => direction > 0 ? label.x - portX : portX - label.x - label.width).filter((distance) => distance > epsilon));
       const endDistance = Math.min(bodyDistance, ...terminals.flatMap(({ port, sections }) => sections.map(({ points }) => Math.abs(points[1]!.x - port.absoluteX))));
       const ranks = new Map<PortPosition, number>();
       // Moving a row down puts its turn before lower original rows; moving up
