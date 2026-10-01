@@ -99,8 +99,11 @@ UI_TEST_PORT=29540 PLAYWRIGHT_WORKERS=1 npm run test:browser -- \
   architecture-connections.spec.ts architecture-interfaces.spec.ts architecture-card-actions.spec.ts
 ```
 
-Focused unit validation: 117 passed, plus CardSummary validation. Typecheck, lint
-and production build pass. Final browser validation is recorded in the PR.
+Focused unit validation: 117 passed plus 22 CardSummary cases. Typecheck, lint
+and production build pass. All 218 selected desktop/narrow browser cases passed
+in 600.439 s, with zero skips, retries or flakes. Validated source/test hashes
+match the published implementation; the completed evidence update changes only
+this report.
 The full ordinary browser suite and real checkpoint acceptance were not rerun;
 unchanged size-sensitive coverage is not claimed as freshly executed wholesale.
 Raw native reports, listings, hook accounting and fault outputs stay outside Git
