@@ -1,4 +1,4 @@
-"""Offline canonical validation of a model-owned architecture package."""
+"""Offline canonical validation of packaged or model-owned architecture."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from .architecture_analysis.model_defined import (
 )
 from .architecture_analysis.model_defined_schema import MAX_DEFINITION_BYTES
 from .architecture_analysis.validation import GraphError, model_finding
-from .architecture_service import ArchitectureService
+from .architecture_service import ArchitectureService, packaged_registry
 from .model_files import ModelError
 from .models import ModelCatalogue
 
@@ -42,12 +42,11 @@ def validate_directory(directory: Path, *, model_root: Path | None = None) -> di
             raise model_finding(
                 "unsupported_size", "resource", "", "Definition exceeds the 8 MiB limit."
             ) from exc
-        if raw is None:
-            raise model_finding(
-                "source_missing", "json", "", "Model package has no architecture.json."
-            )
-        result = ModelDefinedValidator.from_bytes(raw).validate(
-            inputs, byte_limit=ArchitectureService.response_budget(entry.summary.id)
+        budget = ArchitectureService.response_budget(entry.summary.id)
+        result = (
+            ModelDefinedValidator.from_bytes(raw).validate(inputs, byte_limit=budget)
+            if raw is not None
+            else packaged_registry().analyze(inputs, byte_limit=budget)
         )
         if result.graph is None:
             return {
@@ -60,6 +59,7 @@ def validate_directory(directory: Path, *, model_root: Path | None = None) -> di
             "validation": "model-directory",
             "model_id": entry.summary.id,
             "coverage": result.graph.coverage,
+            "scope": result.graph.scope,
             "graph_id": result.graph.graph_id,
             "diagnostics": [d.document() for d in result.graph.diagnostics],
         }
@@ -89,7 +89,7 @@ def validate_directory(directory: Path, *, model_root: Path | None = None) -> di
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Validate a model-owned architecture against its local checkpoint inventory."
+        description="Validate an architecture against its local checkpoint inventory."
     )
     parser.add_argument("model_directory", type=Path)
     parser.add_argument("--json", action="store_true", help="Emit deterministic CI-friendly JSON.")
@@ -98,9 +98,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     if arguments.json:
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))
     elif result["status"] == "valid":
-        print(f"Valid model-owned architecture ({result['coverage']}).")
+        origin = "model-owned" if result["scope"] == "model_defined" else "packaged"
+        print(f"Valid {origin} architecture ({result['coverage']}).")
     else:
-        print("Invalid model-owned architecture:")
+        print("Invalid architecture:")
         for diagnostic in cast(list[dict[str, str]], result["diagnostics"]):
             print(f"  {diagnostic['code']}: {diagnostic['message']}")
     return 0 if result["status"] == "valid" else 1

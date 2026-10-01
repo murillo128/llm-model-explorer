@@ -5,6 +5,7 @@ import math
 import os
 import pickle
 import shutil
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 from unittest.mock import Mock
@@ -14,14 +15,162 @@ import requests
 import torch
 from clm_fixtures import exporter, fixture
 from fastapi.testclient import TestClient
-from safetensors.torch import load_file
+from safetensors.torch import load_file, save_file
 from test_tensor_data import frames
 
 from llm_model_explorer.app import create_app
-from llm_model_explorer.architecture_analysis.model_defined import ModelDefinedValidator
+from llm_model_explorer.architecture_analysis import AnalysisInput, DescriptionRegistry
+from llm_model_explorer.architecture_service import packaged_registry
 from llm_model_explorer.model_files import ModelError
 from llm_model_explorer.models import ModelCatalogue
 from llm_model_explorer.settings import Settings
+from llm_model_explorer.tensor_source import ModelSource
+
+
+def test_native_clm_selection_without_sidecar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "models"
+    encoder, head, _ = fixture(root)
+    destination = root / "clm"
+    export(encoder, head, destination)
+    # Selection must depend on explicit inspection metadata and inventory, not a sidecar.
+    assert not (destination / "architecture.json").exists()
+    payload_access = Mock(side_effect=AssertionError("Analysis read numerical tensor values"))
+    monkeypatch.setattr(ModelSource, "iter_tensor", payload_access)
+    with TestClient(create_app(Settings(model_root=root, cache_dir=tmp_path / "cache"))) as client:
+        identity = "Contrastive-LM/CLM-v0.1-8B@" + "2" * 40
+        sid = client.post("/sessions", json={"model_id": identity}).json()["id"]
+        response = client.get(f"/sessions/{sid}/architecture").json()
+    assert response["status"] == "available", response
+    graph = response["graph"]
+    assert graph["scope"] == "language_model" and graph["coverage"] == "complete"
+    assert graph["diagnostics"] == []
+    payload_access.assert_not_called()
+    assert any(
+        p["source"] == "clm-inspection"
+        and "bb42c6c5bf914fd449bed2f6ca65be80602cb1f7" in p.get("rule", "")
+        for node in graph["nodes"]
+        for p in node["provenance"]
+    )
+    semantic = native_graph(destination)
+    nodes = {n["id"]: n for n in semantic["nodes"]}
+    edges = {
+        (
+            e["source"]["node_id"],
+            e["source"]["port_id"],
+            e["target"]["node_id"],
+            e["target"]["port_id"],
+        )
+        for e in semantic["edges"]
+    }
+    for call, batch, seq, head_name in (
+        ("state_encoder", "B", "S_state", "state_head"),
+        ("candidate_encoder", "C", "S_candidate", "action_head"),
+    ):
+        pool = nodes[call + ".pool"]
+        assert pool["operation"] == "last_token_pool"
+        assert pool["formula"] == "out = x[row, lengths[row] − 1]"
+        assert next(p["shape"] for p in pool["ports"] if p["id"] == "x") == [
+            {"kind": "symbol", "name": batch},
+            {"kind": "symbol", "name": seq},
+            {"kind": "constant", "value": 4},
+        ]
+        assert nodes[call + ".normalize"]["operation"] == "encoder_normalize"
+        assert nodes[call + ".projection_normalize"]["operation"] == "l2_normalize"
+        for source, target in (
+            (call, call + ".pool"),
+            (call + ".pool", call + ".normalize"),
+            (call + ".normalize", "clm." + head_name),
+            ("clm." + head_name, call + ".projection_normalize"),
+        ):
+            assert (source, "out", target, "x") in edges
+    assert nodes["scale"]["operation"] == "exp_clamp"
+    assert nodes["scale"]["parameter_ids"] == ["clm.logit_scale"]
+    assert nodes["scale"]["references"] == [{"kind": "module", "name": "clm"}]
+    for head_name in ("state_head", "action_head"):
+        projection = nodes[f"clm.{head_name}.inp"]
+        assert projection["formula"] == "out = x @ weightᵀ + bias"
+        assert [(p["label"], p["direction"]) for p in projection["ports"]] == [
+            ("x", "input"),
+            ("out", "output"),
+        ]
+        assert projection["references"] == [{"kind": "module", "name": f"clm.{head_name}.inp"}]
+        assert nodes[f"clm.{head_name}"].get("parameter_ids", []) == []
+    assert nodes["probabilities"]["operation"] == "softmax"
+    assert {a["name"]: a["value"] for a in nodes["probabilities"]["attributes"]} == {
+        "axis": -1,
+        "axis_meaning": "candidates for each state",
+    }
+    assert {
+        ("cosine", "out", "scores", "cosine"),
+        ("scale", "out", "scores", "scale"),
+        ("temperature", "out", "scores", "temperature"),
+        ("scores", "out", "probabilities", "x"),
+    } <= edges
+
+
+@pytest.mark.parametrize(
+    ("path", "value"),
+    [
+        (("format_version",), True),
+        (("encoder_repository",), "Qwen/Qwen3-8B-Base"),
+        (("encoder_revision",), "main"),
+        (("head_revision",), "3" * 40),
+        (("pooling",), "mean"),
+        (("head_configuration", "hidden_size"), 5),
+        (("head_configuration", "depth"), 17),
+        (("head_configuration", "width"), True),
+        (("head_configuration", "layernorm"), "true"),
+        (("head_configuration", "activation"), "swiglu"),
+        (("head_configuration", "unknown_option"), True),
+    ],
+)
+def test_native_clm_rejects_inconsistent_metadata(
+    tmp_path: Path, path: tuple[str, ...], value: object
+) -> None:
+    root = tmp_path / "models"
+    encoder, head, _ = fixture(root)
+    destination = root / "clm"
+    export(encoder, head, destination)
+    entry = ModelCatalogue(root).inspect_directory(destination)
+    inputs = AnalysisInput.from_source(entry.pin(), tokenizer_available=True)
+    config = dict(inputs.configuration)
+    target = cast(dict[str, Any], config["clm_inspection"])
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = value
+    result = packaged_registry().analyze(replace(inputs, configuration=config))
+    assert result.graph is None
+
+
+@pytest.mark.parametrize(
+    "damage", ["scale_shape", "head_dtype", "extra_head", "numeric_geometry", "missing_encoder"]
+)
+def test_native_clm_rejects_inconsistent_inventory(tmp_path: Path, damage: str) -> None:
+    root = tmp_path / "models"
+    encoder, head, _ = fixture(root)
+    destination = root / "clm"
+    export(encoder, head, destination)
+    entry = ModelCatalogue(root).inspect_directory(destination)
+    inputs = AnalysisInput.from_source(entry.pin(), tokenizer_available=True)
+    physical, numeric = dict(inputs.bindings.physical), dict(inputs.bindings.numeric)
+    name = "clm.action_head.out.weight"
+    if damage == "scale_shape":
+        physical["clm.logit_scale"] = physical["clm.logit_scale"].model_copy(update={"shape": [1]})
+    elif damage == "head_dtype":
+        physical[name] = physical[name].model_copy(update={"dtype": "I32"})
+    elif damage == "extra_head":
+        physical["clm.action_head.orphan"] = physical[name].model_copy(
+            update={"name": "clm.action_head.orphan"}
+        )
+    elif damage == "numeric_geometry":
+        tensor = next(t for t in numeric.values() if t.name == name)
+        numeric[tensor.id] = replace(tensor, shape=(3, 3))
+    else:
+        del physical["model.layers.0.self_attn.q_norm.weight"]
+    bindings = replace(inputs.bindings, physical=physical, numeric=numeric)
+    assert packaged_registry().analyze(replace(inputs, bindings=bindings)).graph is None
 
 
 def export(encoder: Path, head: Path, destination: Path) -> dict[str, Any]:
@@ -30,6 +179,35 @@ def export(encoder: Path, head: Path, destination: Path) -> dict[str, Any]:
             encoder, head, destination, encoder_revision="1" * 40, head_revision="2" * 40
         )
     )
+
+
+def native_graph(directory: Path) -> dict[str, Any]:
+    entry = ModelCatalogue(directory.parent).inspect_directory(directory)
+    inputs = AnalysisInput.from_source(entry.pin(), tokenizer_available=True)
+    result = packaged_registry().analyze(inputs)
+    assert result.graph is not None and result.graph.coverage == "complete", result.diagnostics
+    graph = result.graph.document()
+    # Read public semantic provenance to normalize opaque IDs for the existing equations.
+    node_keys = {
+        n["id"]: next(
+            p["source"]
+            for p in n["provenance"]
+            if p.get("rule") == "Semantic source key in the reviewed packaged description"
+        )
+        for n in graph["nodes"]
+    }
+    parameter_names = {p["id"]: p["name"] for p in graph["parameters"]}
+    for node in graph["nodes"]:
+        node["id"] = node_keys[node["id"]]
+        node["parameter_ids"] = [parameter_names[p] for p in node["parameter_ids"]]
+        if "parent_id" in node:
+            node["parent_id"] = node_keys[node["parent_id"]]
+        if "children" in node:
+            node["children"] = [node_keys[c] for c in node["children"]]
+    for edge in graph["edges"]:
+        for end in ("source", "target"):
+            edge[end]["node_id"] = node_keys[edge[end]["node_id"]]
+    return graph
 
 
 def input_tree(root: Path) -> dict[str, tuple[int, bytes | str | None]]:
@@ -132,10 +310,10 @@ def test_only_validated_atomic_publication_is_selectable(
 
     def observe_validation(directory: Path, **kwargs: Any) -> dict[str, object]:
         if outcome == "invalid_binding":
-            path = directory / "architecture.json"
-            graph = json.loads(path.read_text())
-            graph["parameters"][-1]["name"] = "clm.missing.weight"
-            path.write_text(json.dumps(graph))
+            path = directory / "config.json"
+            config = json.loads(path.read_text())
+            config["clm_inspection"]["head_configuration"]["width"] += 1
+            path.write_text(json.dumps(config))
         assert not destination.exists()
         assert [e.summary.id for e in catalogue.discover()] == original_ids
         with pytest.raises(ModelError, match="Unknown model"):
@@ -286,7 +464,8 @@ def test_preserved_inventory_sharing_and_head_options(
     assert torch.equal(heads["clm.logit_scale"], original["logit_scale"])
     index = json.loads((destination / "model.safetensors.index.json").read_text())["weight_map"]
     assert set(index) == set(base) | set(heads)
-    graph = json.loads((destination / "architecture.json").read_text())
+    assert not (destination / "architecture.json").exists()
+    graph = native_graph(destination)
     names = {p["name"] for p in graph["parameters"]}
     assert names == (set(base) - {"lm_head.weight"}) | set(heads)
     for name in set(base) - {"lm_head.weight"}:
@@ -483,8 +662,8 @@ def test_import_consumer_cache_and_safe_runtime(
     with TestClient(create_app(settings)) as client:
         sid = client.post("/sessions", json={"model_id": identity}).json()["id"]
         graph = client.get(f"/sessions/{sid}/architecture").json()["graph"]
-        assert graph["scope"] == "model_defined" and graph["coverage"] == "complete"
-        assert any(n["label"] == "Model-supplied definition" for n in graph["nodes"])
+        assert graph["scope"] == "language_model" and graph["coverage"] == "complete"
+        assert not any(n["label"] == "Model-supplied definition" for n in graph["nodes"])
         tensor = next(p for p in graph["parameters"] if p["name"] == "clm.action_head.out.weight")
         response = client.get(f"/sessions/{sid}/tensors/{tensor['inspection']['tensor_id']}/data")
         assert response.status_code == 200
@@ -508,7 +687,7 @@ def test_import_consumer_cache_and_safe_runtime(
             == rows.numpy().tobytes()
         )
     monkeypatch.setattr(
-        ModelDefinedValidator, "validate", Mock(side_effect=AssertionError("Warm graph rebuilt"))
+        DescriptionRegistry, "analyze", Mock(side_effect=AssertionError("Warm graph rebuilt"))
     )
     with TestClient(create_app(settings)) as client:
         sid = client.post("/sessions", json={"model_id": identity}).json()["id"]
@@ -519,9 +698,7 @@ def test_import_consumer_cache_and_safe_runtime(
     forbidden.assert_not_called()
 
 
-@pytest.mark.parametrize(
-    "asset", ["clm-heads.safetensors", "encoder.safetensors", "config.json", "architecture.json"]
-)
+@pytest.mark.parametrize("asset", ["clm-heads.safetensors", "encoder.safetensors", "config.json"])
 def test_content_changes_and_relocation(tmp_path: Path, asset: str) -> None:
     root = tmp_path / "models"
     encoder, head, _ = fixture(root)
@@ -549,22 +726,28 @@ def test_content_changes_and_relocation(tmp_path: Path, asset: str) -> None:
     )
 
 
-@pytest.mark.parametrize("damage", ["missing_sidecar", "missing_binding", "duplicate_edge"])
+@pytest.mark.parametrize("damage", ["missing_marker", "missing_binding", "wrong_head_geometry"])
 def test_full_clm_never_falls_back_to_bare_qwen(tmp_path: Path, damage: str) -> None:
     root = tmp_path / "models"
     encoder, head, _ = fixture(root)
     destination = root / "clm"
     export(encoder, head, destination)
-    sidecar = destination / "architecture.json"
-    if damage == "missing_sidecar":
-        sidecar.unlink()
+    path = destination / "config.json"
+    config = json.loads(path.read_text())
+    if damage == "missing_marker":
+        del config["clm_inspection"]
+    elif damage == "wrong_head_geometry":
+        config["clm_inspection"]["head_configuration"]["width"] += 1
     else:
-        graph = json.loads(sidecar.read_text())
-        if damage == "missing_binding":
-            graph["parameters"][-1]["name"] = "clm.missing.weight"
-        else:
-            graph["edges"].append(dict(graph["edges"][0]))
-        sidecar.write_text(json.dumps(graph))
+        weights = load_file(str(destination / "clm-heads.safetensors"))
+        del weights["clm.action_head.out.weight"]
+
+        save_file(weights, str(destination / "clm-heads.safetensors"))
+        index_path = destination / "model.safetensors.index.json"
+        index = json.loads(index_path.read_text())
+        del index["weight_map"]["clm.action_head.out.weight"]
+        index_path.write_text(json.dumps(index))
+    path.write_text(json.dumps(config))
     with TestClient(create_app(Settings(model_root=root, cache_dir=tmp_path / "cache"))) as client:
         identity = "Contrastive-LM/CLM-v0.1-8B@" + "2" * 40
         sid = client.post("/sessions", json={"model_id": identity}).json()["id"]
