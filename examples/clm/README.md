@@ -82,9 +82,14 @@ Default export uses confined shard symlinks to the unchanged local encoder.
 Run the backend with their common model root. Keep both directories together;
 for independent relocation use `--copy-shards` when exporting, or dereference
 the symlinks when copying. Content identity excludes absolute/resolved paths.
-No input file is written. Staging is outside the model root and the destination
-is published only after canonical import validation. Existing destinations are
-refused. Failed conversion/import removes only its own staging directory.
+No input file is written. The output's resolved location must be outside the
+encoder, including symlink-parent and traversal aliases. Staging uses a private
+container under the writable output parent; its nested package is invisible to
+catalogue discovery. Canonical import validates against that common confinement
+root before atomic rename publishes the complete directory on the same
+filesystem. An output parent beneath a read-only ancestor is supported. Existing
+destinations are refused. Failed conversion/import removes only its own staging
+container.
 
 `clm-provenance.json` records the input pins, per-file SHA-256 and size, complete
 tensor names/shapes/dtypes, source and exporter revision, head configuration and
@@ -122,13 +127,15 @@ limits. Added CLM cases cover the remaining composite risks:
 | Head options, wrong namespace or dtype, duplicate encoder copies | Exact original tensor bytes/dtypes, independent two-layer inventory, shared parameter consumer identities | `backend/tests/test_clm_export.py` |
 | Wrong activation/norm/residual/order/scaling | Float64 scalar equations transcribed from pinned source versus evaluation of exported head dependencies; tolerances 2e-6 for vectors/probabilities, 2e-4 for scaled scores | Same backend test |
 | Unsafe or incomplete export | Restricted-load rejection, incompatible geometry or repository/revision declarations, absent/extra tensors, duplicate base storage; no selectable destination after failure | Same backend test |
+| Input aliases, unauthorized staging or premature publication | Complete input tree/bytes unchanged; real non-root directory permissions in shared/copy modes; real catalogue/validator observation, validated device/inode retained after publication, failure cleanup | Same backend test |
+| Nested validation escapes confinement | Default parent rejects shared shards outside it; explicit root admits confined sharing and rejects external package/shard targets | `backend/tests/test_model_defined_service.py` |
 | Real consumer/lifecycle, accidental checkpoint loading/network/fallback | Backend startup/cache and endpoints, exact binary bytes and embedding rows; runtime load/network traps, unavailable damaged definitions, relocation/content invalidation | Same backend test |
 | Production rendering/navigation | Select CLM, expand a projection group, inspect its real native matrix | `ui/acceptance/clm.spec.ts` |
 
 Run focused checks from the repository root:
 
 ```sh
-PYTHONPATH=backend/src HF_HUB_OFFLINE=1 backend/.venv/bin/pytest backend/tests/test_clm_export.py -q
+PYTHONPATH=backend/src HF_HUB_OFFLINE=1 backend/.venv/bin/python -m pytest backend/tests/test_clm_export.py backend/tests/test_model_defined_service.py -q
 (cd backend && .venv/bin/ruff check tests/clm_fixtures.py tests/test_clm_export.py)
 backend/.venv/bin/ruff check --config backend/pyproject.toml examples/clm
 (cd backend && .venv/bin/mypy src tests ../examples/clm/export.py)

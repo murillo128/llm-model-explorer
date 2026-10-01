@@ -2,6 +2,7 @@
 
 import json
 import math
+import os
 import pickle
 import shutil
 from pathlib import Path
@@ -29,6 +30,159 @@ def export(encoder: Path, head: Path, destination: Path) -> dict[str, Any]:
             encoder, head, destination, encoder_revision="1" * 40, head_revision="2" * 40
         )
     )
+
+
+def input_tree(root: Path) -> dict[str, tuple[int, bytes | str | None]]:
+    """Capture directories, symlinks, permissions and all original file bytes."""
+    return {
+        p.relative_to(root).as_posix(): (
+            p.lstat().st_mode,
+            p.readlink().as_posix() if p.is_symlink() else p.read_bytes() if p.is_file() else None,
+        )
+        for p in [root, *root.rglob("*")]
+    }
+
+
+@pytest.mark.parametrize("alias", ["symlink", "traversal"])
+@pytest.mark.parametrize("copy_shards", [False, True])
+def test_resolved_output_inside_encoder_is_rejected(
+    tmp_path: Path, alias: str, copy_shards: bool
+) -> None:
+    root = tmp_path / "models"
+    encoder, head, _ = fixture(root)
+    (encoder / "notes").mkdir()
+    (encoder / "notes" / "original.txt").write_bytes(b"unchanged nested input")
+    (encoder / "notes" / "weight-link").symlink_to("../encoder.safetensors")
+    if alias == "symlink":
+        parent = tmp_path / "encoder-alias"
+        parent.symlink_to(encoder, target_is_directory=True)
+        destination = parent / "published"
+    else:
+        parent = tmp_path / "other"
+        parent.mkdir()
+        destination = parent / ".." / "models" / "qwen" / "published"
+    before, head_bytes = input_tree(encoder), head.read_bytes()
+    with pytest.raises(ValueError, match="Destination must be new and outside the encoder"):
+        exporter().export_package(
+            encoder,
+            head,
+            destination,
+            encoder_revision="1" * 40,
+            head_revision="2" * 40,
+            copy_shards=copy_shards,
+        )
+    assert input_tree(encoder) == before
+    assert head.read_bytes() == head_bytes
+    assert not destination.exists()
+    assert not list(tmp_path.rglob(".clm-export-*"))
+    assert not any(
+        entry.summary.id.startswith("Contrastive-LM/") for entry in ModelCatalogue(root).discover()
+    )
+
+
+@pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="Requires non-root POSIX modes")
+@pytest.mark.parametrize("copy_shards", [False, True])
+def test_writable_output_under_read_only_ancestor(tmp_path: Path, copy_shards: bool) -> None:
+    ancestor = tmp_path / "readonly"
+    root = ancestor / "models"
+    encoder, head, _ = fixture(root)
+    before, head_bytes = input_tree(encoder), head.read_bytes()
+    ancestor.chmod(0o555)
+    try:
+        # These are actual OS permissions, not mocked access checks.
+        with pytest.raises(PermissionError):
+            (ancestor / "forbidden").mkdir()
+        destination = root / "clm"
+        result = exporter().export_package(
+            encoder,
+            head,
+            destination,
+            encoder_revision="1" * 40,
+            head_revision="2" * 40,
+            copy_shards=copy_shards,
+        )
+        assert result["status"] == "valid"
+        assert (destination / "encoder.safetensors").is_symlink() is not copy_shards
+        assert (destination / "encoder.safetensors").read_bytes() == (
+            encoder / "encoder.safetensors"
+        ).read_bytes()
+        assert input_tree(encoder) == before
+        assert head.read_bytes() == head_bytes
+        assert not list(root.glob(".clm-export-*"))
+        source = ModelCatalogue(root).pin("Contrastive-LM/CLM-v0.1-8B@" + "2" * 40)
+        source.check_unchanged()
+    finally:
+        ancestor.chmod(0o755)
+
+
+@pytest.mark.parametrize("outcome", ["valid", "invalid_binding", "interrupted"])
+def test_only_validated_atomic_publication_is_selectable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, outcome: str
+) -> None:
+    root = tmp_path / "models"
+    encoder, head, _ = fixture(root)
+    before, head_bytes = input_tree(encoder), head.read_bytes()
+    destination = root / "clm"
+    identity = "Contrastive-LM/CLM-v0.1-8B@" + "2" * 40
+    catalogue = ModelCatalogue(root)
+    original_ids = [e.summary.id for e in catalogue.discover()]
+    module = exporter()
+    real_validate = module.validate_directory
+    validated_directory: list[tuple[int, int]] = []
+
+    def observe_validation(directory: Path, **kwargs: Any) -> dict[str, object]:
+        if outcome == "invalid_binding":
+            path = directory / "architecture.json"
+            graph = json.loads(path.read_text())
+            graph["parameters"][-1]["name"] = "clm.missing.weight"
+            path.write_text(json.dumps(graph))
+        assert not destination.exists()
+        assert [e.summary.id for e in catalogue.discover()] == original_ids
+        with pytest.raises(ModelError, match="Unknown model"):
+            catalogue.pin(identity)
+        stat = directory.stat()
+        assert stat.st_dev == destination.parent.stat().st_dev
+        result: dict[str, object] = real_validate(directory, **kwargs)
+        assert result["status"] == ("invalid" if outcome == "invalid_binding" else "valid")
+        assert not destination.exists()
+        assert [e.summary.id for e in catalogue.discover()] == original_ids
+        if outcome == "interrupted":
+            raise RuntimeError("Interrupted after real validation")
+        validated_directory.append((stat.st_dev, stat.st_ino))
+        return result
+
+    monkeypatch.setattr(module, "validate_directory", observe_validation)
+
+    def run() -> dict[str, Any]:
+        return dict(
+            module.export_package(
+                encoder, head, destination, encoder_revision="1" * 40, head_revision="2" * 40
+            )
+        )
+
+    if outcome == "valid":
+        assert run()["status"] == "valid"
+        stat = destination.stat()
+        # The validated directory itself was renamed; publication did not copy
+        # assets into a selectable destination incrementally.
+        assert validated_directory == [(stat.st_dev, stat.st_ino)]
+        assert {e.summary.id for e in catalogue.discover()} == {*original_ids, identity}
+        source = catalogue.pin(identity)
+        assert len(source.physical_tensors()) == 42
+        source.check_unchanged()
+    else:
+        with pytest.raises(
+            (ValueError, RuntimeError),
+            match="failed static import|Interrupted after real validation",
+        ):
+            run()
+        assert not destination.exists()
+        assert [e.summary.id for e in catalogue.discover()] == original_ids
+        with pytest.raises(ModelError, match="Unknown model"):
+            catalogue.pin(identity)
+    assert input_tree(encoder) == before
+    assert head.read_bytes() == head_bytes
+    assert not list(tmp_path.rglob(".clm-export-*"))
 
 
 @pytest.mark.parametrize(
