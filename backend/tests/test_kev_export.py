@@ -5,6 +5,7 @@ import os
 import pickle
 import shutil
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -93,6 +94,100 @@ def test_staging_uses_writable_output_parent_with_readonly_ancestor(
         assert not list(root.glob(".kev-export-*"))
     finally:
         ancestor.chmod(0o755)
+
+
+@pytest.mark.parametrize("copy_shards", [False, True])
+@pytest.mark.parametrize("outcome", ["valid", "invalid_binding"])
+def test_only_validated_publication_can_be_discovered_or_pinned(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, copy_shards: bool, outcome: str
+) -> None:
+    root = tmp_path / "models"
+    base, kev, _ = fixture(root)
+    before = {
+        p: p.read_bytes() if p.is_file() else None
+        for folder in (base, kev)
+        for p in folder.rglob("*")
+    }
+    destination = root / "kev"
+    identity = "jaredpalmer/kev-0.8b-inspection@" + KEV_REV
+    catalogue = ModelCatalogue(root)
+    original_ids = {e.summary.id for e in catalogue.discover()}
+    module = exporter()
+    real_validate = module.validate_directory
+    validated_directory: list[tuple[int, int]] = []
+    with TestClient(create_app(Settings(model_root=root, cache_dir=tmp_path / "cache"))) as client:
+
+        def assert_unpublished() -> None:
+            assert not destination.exists()
+            assert {e.summary.id for e in catalogue.discover()} == original_ids
+            with pytest.raises(ModelError, match="Unknown model"):
+                catalogue.pin(identity)
+            assert {m["id"] for m in client.get("/models").json()["models"]} == original_ids
+            response = client.post("/sessions", json={"model_id": identity})
+            assert response.status_code == 404
+            assert response.json()["code"] == "model_not_found"
+
+        def observe_validation(directory: Path, **kwargs: Any) -> dict[str, object]:
+            if outcome == "invalid_binding":
+                path = directory / "architecture.json"
+                graph = json.loads(path.read_text())
+                graph["parameters"][-1]["name"] = "kev.missing.weight"
+                path.write_text(json.dumps(graph))
+            # Capture visibility before delegating to the actual validator;
+            # it also runs on the failing pre-fix regression.
+            before_validation = {e.summary.id for e in catalogue.discover()}
+            stat = directory.stat()
+            assert stat.st_dev == destination.parent.stat().st_dev
+            result: dict[str, object] = real_validate(directory, **kwargs)
+            assert result["status"] == ("invalid" if outcome == "invalid_binding" else "valid")
+            assert before_validation == original_ids
+            assert_unpublished()
+            validated_directory.append((stat.st_dev, stat.st_ino))
+            return result
+
+        monkeypatch.setattr(module, "validate_directory", observe_validation)
+
+        def run() -> dict[str, Any]:
+            return dict(
+                module.export_package(
+                    base,
+                    kev,
+                    destination,
+                    base_revision=BASE_REV,
+                    kev_revision=KEV_REV,
+                    copy_shards=copy_shards,
+                )
+            )
+
+        if outcome == "valid":
+            assert run()["status"] == "valid"
+            stat = destination.stat()
+            assert validated_directory == [(stat.st_dev, stat.st_ino)]
+            assert {e.summary.id for e in catalogue.discover()} == original_ids | {identity}
+            source = catalogue.pin(identity)
+            assert len(source.physical_tensors()) == 39
+            source.check_unchanged()
+            response = client.post("/sessions", json={"model_id": identity})
+            assert response.status_code == 201
+            sid = response.json()["id"]
+            inventory = client.get(f"/sessions/{sid}/tensors").json()["tensors"]
+            assert len(inventory) == 39
+            tensor = next(t for t in inventory if t["name"] == "kev.head.q.weight")
+            response = client.get(f"/sessions/{sid}/tensors/{tensor['id']}/data")
+            assert response.status_code == 200
+            assert frames(response.content)[-1][0] == 4
+            source.check_unchanged()
+        else:
+            with pytest.raises(ValueError, match="failed static validation"):
+                run()
+            assert_unpublished()
+    after = {
+        p: p.read_bytes() if p.is_file() else None
+        for folder in (base, kev)
+        for p in folder.rglob("*")
+    }
+    assert after == before
+    assert not list(root.glob(".kev-export-*"))
 
 
 def test_native_inventory_and_independent_algebra(tmp_path: Path) -> None:
