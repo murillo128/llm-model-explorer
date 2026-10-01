@@ -15,6 +15,9 @@ import requests
 import torch
 from clm_fixtures import exporter, fixture
 from fastapi.testclient import TestClient
+from safetensors.torch import load_file, save_file
+from test_tensor_data import frames
+
 from llm_model_explorer.app import create_app
 from llm_model_explorer.architecture_analysis import AnalysisInput, DescriptionRegistry
 from llm_model_explorer.architecture_service import packaged_registry
@@ -22,8 +25,6 @@ from llm_model_explorer.model_files import ModelError
 from llm_model_explorer.models import ModelCatalogue
 from llm_model_explorer.settings import Settings
 from llm_model_explorer.tensor_source import ModelSource
-from safetensors.torch import load_file, save_file
-from test_tensor_data import frames
 
 
 def test_native_clm_selection_without_sidecar(
