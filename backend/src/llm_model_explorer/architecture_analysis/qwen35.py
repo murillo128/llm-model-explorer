@@ -271,7 +271,13 @@ class Graph:
         self.children: dict[str, list[str]] = {}
         self.parameters: dict[str, str] = {}
         numeric_by_name = {tensor.name: tensor for tensor in b.inputs.bindings.numeric.values()}
-        packed = nvfp4_storage_names(b.inputs.bindings.physical, dict(b.inputs.configuration))
+        # Offline model-owned exporters reuse the reviewed math with native
+        # tensors. Packaged selection remains bounded to the NVFP4 reference.
+        packed = (
+            nvfp4_storage_names(b.inputs.bindings.physical, dict(b.inputs.configuration))
+            if encoding(dict(b.inputs.configuration)) == "nvfp4"
+            else set()
+        )
         for name, dims in parameter_shapes(c).items():
             provenance = PRODUCER.provenance() + [
                 r.ArchitectureProvenance(

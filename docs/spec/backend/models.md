@@ -14,6 +14,35 @@ Shard references must be relative canonical POSIX paths without traversal, drive
 
 Complete means all files of the chosen checkpoint variant, not every alternative format or quantization published in its repository. Metadata-only directories are not substitutes. For the selected V-JEPA 2 Transformers variant, do not also require the alternative `original` weights. Preserve local processor configuration as metadata without running it. Missing text-tokenizer assets do not invalidate a non-text model or its architecture; advertise only capabilities justified by available assets.
 
+CLM-v0.1-8B is admitted through an explicit offline inspection export, not from
+its original PyTorch `.pt` directory. The package combines the complete native
+Qwen3-8B encoder, its tokenizer, independently namespaced state/action head
+tensors and learned logit scale, provenance, and a model-owned definition. Keep
+the validated Qwen text layout for input-embedding lookup and give the package
+a distinct CLM identity. Known encoder repository/revision declarations must agree
+with the explicitly selected reference before that identity is assigned; preserve
+the source declarations and binding origin in provenance. Its `clm_inspection`
+configuration records the required definition and selected inputs; loss of that
+definition must leave architecture
+unavailable rather than select a packaged bare-Qwen interpretation. Preparation,
+restricted checkpoint conversion and reference reproduction are documented in
+[`examples/clm`](../../../examples/clm/README.md); runtime admission remains
+local, lazy and read-only under the rules above.
+
+Kev-0.8B is admitted through an explicit offline, unmerged inspection export.
+Its original `FEATURE_EXTRACTION` PEFT directory is not a generic `CAUSAL_LM`
+composition. The exported package preserves the complete native Qwen3.5 base,
+tokenizer and input-embedding layout, separately namespaced LoRA A/B factors,
+restricted-converted pointer query/key weights and biases, inference calibration
+and content provenance. It has a distinct Kev inspection identity and requires
+its model-owned definition; loss of that definition cannot select a bare Qwen
+interpretation. Factor orientation, target geometry and base revision binding
+are validated before atomic publication. The original base, factors and head
+remain independently inspectable without merging or synthetic delta tensors.
+Preparation and validated reference limits belong to
+[`examples/kev`](../../../examples/kev/README.md); the runtime uses the existing
+local, confined, lazy, read-only admission and mutation/cache rules.
+
 ## Model identity
 
 Public identity derives from HF metadata when suitable, with immediate directory-name fallback. Filesystem paths remain backend-private.

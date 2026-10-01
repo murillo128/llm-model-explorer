@@ -125,6 +125,27 @@ def test_installed_validator_accepts_relative_model_directory(tmp_path: Path) ->
     assert str(tmp_path) not in result.stdout
 
 
+def test_explicit_validator_root_confines_nested_package_and_shards(tmp_path: Path) -> None:
+    root = tmp_path / "models"
+    root.mkdir()
+    original = local_model(root)
+    container = root / "staging"
+    container.mkdir()
+    nested = local_model(container)
+    weight = nested / "model.safetensors"
+    weight.unlink()
+    weight.symlink_to(original / "model.safetensors")
+    assert validate_directory(nested)["status"] == "invalid"
+    assert validate_directory(nested, model_root=root) == validate_directory(original)
+    outside_root = tmp_path / "outside"
+    outside_root.mkdir()
+    outside = local_model(outside_root)
+    assert validate_directory(outside, model_root=root)["status"] == "invalid"
+    weight.unlink()
+    weight.symlink_to(outside / "model.safetensors")
+    assert validate_directory(nested, model_root=root)["status"] == "invalid"
+
+
 @pytest.mark.parametrize("raw", ["{", '{"schema_version":2}', '{"a":1,"a":2}'])
 def test_invalid_sidecar_never_falls_back_or_breaks_tensors(
     settings: Settings, monkeypatch: pytest.MonkeyPatch, raw: str
