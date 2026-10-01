@@ -117,6 +117,17 @@ function geometry(layout: Layout) {
       expect(current.absoluteX).toBeCloseTo(parent.absoluteX + current.x, 5);
       expect(current.absoluteY).toBeCloseTo(parent.absoluteY + current.y, 5);
     }
+    if (nodes.get(current.id)!.expanded) for (const side of ['left', 'right'] as const) {
+      const ordered = layout.ports.filter((port) => port.nodeId === current.id && port.side === side).sort((a, b) => a.y - b.y);
+      for (const port of ordered) {
+        expect(port.label.y + port.label.height + port.label.clearance, `${current.id}.${port.portId} label must stay inside its container`)
+          .toBeLessThanOrEqual(current.absoluteY + current.height + tolerance);
+      }
+      for (let i = 2; i < ordered.length; i++) {
+        expect(Math.abs(ordered[i]!.y - ordered[i - 1]!.y - (ordered[1]!.y - ordered[0]!.y)), `${current.id}.${side} rows must have equal pitch`)
+          .toBeLessThan(tolerance);
+      }
+    }
   }
   for (const edge of layout.projection.edges) {
     const route = routes.get(edge.id)!, source = ports.get(endpointKey(edge.source))!, target = ports.get(endpointKey(edge.target))!;
@@ -239,7 +250,63 @@ function nestedBoundaryOrderingFixture(): Graph {
   graph.graph_id = 'nested-boundary-ordering-fixture'; return graph;
 }
 
+function parallelBoundaryFixture(nested: boolean): Graph {
+  const common = { parameter_ids: [], references: [], attributes: [], provenance: [] };
+  const port = (id: string, direction: 'input' | 'output') => ({ id, label: 'Same signal name', direction, shape: [] });
+  const signals = ['c', 'a', 'b']; // Declaration order deliberately opposes operation rows.
+  const ports = signals.flatMap((id) => [port(id, 'input'), port(`${id}-out`, 'output')]);
+  const declarations = signals.flatMap((id) => [
+    { ...common, id: `input-${id}`, parent_id: 'model', kind: 'input' as const, label: 'Same signal name', ports: [port('out', 'output')] },
+    { ...common, id: `output-${id}`, parent_id: 'model', kind: 'output' as const, label: 'Same signal name', ports: [port('in', 'input')] },
+  ]);
+  const forwarding = signals.flatMap((id) => [
+    { id: `enter-${id}`, source: { node_id: `input-${id}`, port_id: 'out' }, target: { node_id: nested ? 'layer' : 'operation', port_id: id }, kind: 'data' as const, provenance: [] },
+    { id: `leave-${id}`, source: { node_id: nested ? 'layer' : 'operation', port_id: `${id}-out` }, target: { node_id: `output-${id}`, port_id: 'in' }, kind: 'data' as const, provenance: [] },
+    ...(nested ? [
+      { id: `use-${id}`, source: { node_id: 'layer', port_id: id }, target: { node_id: 'operation', port_id: id }, kind: 'data' as const, provenance: [] },
+      { id: `produce-${id}`, source: { node_id: 'operation', port_id: `${id}-out` }, target: { node_id: 'layer', port_id: `${id}-out` }, kind: 'data' as const, provenance: [] },
+    ] : []),
+  ]);
+  return { graph_id: 'parallel-boundary-pitch', scope: 'language_model', coverage: 'complete', symbols: [], parameters: [], repetitions: [], diagnostics: [],
+    nodes: [
+      ...declarations,
+      { ...common, id: 'model', kind: 'group', label: 'Model', children: [...declarations.map((node) => node.id), nested ? 'layer' : 'operation'], ports: [] },
+      ...(nested ? [{ ...common, id: 'layer', parent_id: 'model', kind: 'group' as const, label: 'Layer', children: ['operation'], ports }] : []),
+      { ...common, id: 'operation', parent_id: nested ? 'layer' : 'model', kind: 'operation', operation: 'identity', label: 'Operation',
+        ports: ['a', 'b', 'c'].flatMap((id) => [port(id, 'input'), port(`${id}-out`, 'output')]) },
+    ], edges: forwarding };
+}
+
 describe('generated horizontal graph geometry', () => {
+  it.each([false, true].flatMap((nested) => [false, true].map((dimensions) => ({ nested, dimensions }))))(
+    'regularizes three parallel lanes in routed order (nested=$nested, dimensions=$dimensions)', async ({ nested, dimensions }) => {
+    const graph = parallelBoundaryFixture(nested), expectedGraph = structuredClone(graph),
+      options = { expanded: nested ? ['model', 'layer'] : ['model'], showUnused: true, dimensions };
+    const layout = await layoutGraph(graph, options);
+    for (const nodeId of options.expanded) for (const side of ['left', 'right'] as const) {
+      const ordered = layout.ports.filter((port) => port.nodeId === nodeId && port.side === side).sort((a, b) => a.y - b.y);
+      expect(ordered).toHaveLength(3);
+      const gaps = ordered.slice(1).map((port, index) => port.y - ordered[index]!.y);
+      expect(Math.abs(gaps[0]! - gaps[1]!), `${nodeId}.${side} must have equal adjacent row deltas; got ${gaps}`).toBeLessThan(tolerance);
+
+      assertBoundaryOrder(layout, nodeId, side, ordered.map((port) => port.portId));
+      assertNoBoundaryCrossings(layout, nodeId, side, ordered.map((port) => port.portId));
+    }
+    const positions = new Map(layout.ports.map((port) => [endpointKey({ node_id: port.nodeId, port_id: port.portId }), port]));
+    for (const edge of layout.projection.edges) {
+      const source = positions.get(endpointKey(edge.source))!, target = positions.get(endpointKey(edge.target))!;
+      expect(Math.abs(source.absoluteY - target.absoluteY), `${edge.id} forwarding rows must align`).toBeLessThan(tolerance);
+      const route = layout.routes.find((candidate) => candidate.id === edge.id)!;
+      expect(route.sections.flat().every((point) => Math.abs(point.y - source.absoluteY) < tolerance), `${edge.id} must stay horizontal`).toBe(true);
+      expect(edge.paths).toHaveLength(1);
+      for (const original of edge.paths[0]!) expect(original).toEqual(expectedGraph.edges.find((candidate) => candidate.id === original.id));
+    }
+    geometry(layout); distinguishSignals(layout);
+    if (dimensions) dimensionLabels(layout);
+    expect(graph).toEqual(expectedGraph);
+    expect(new Set(layout.edgeIds)).toEqual(new Set(expectedGraph.edges.map((edge) => edge.id)));
+    expect(stableLayout(await layoutGraph(graph, options))).toEqual(stableLayout(layout));
+  });
   it('preserves routed order at an expanded model boundary without remapping interface identities', async () => {
     const graph = invertedDeclarationFixture();
     const layout = await layoutGraph(graph, { expanded: ['model'], showUnused: true });
@@ -400,8 +467,8 @@ describe('generated horizontal graph geometry', () => {
     }
   }, 30_000);
 
-  it('preserves serial placement recursively for all 24 instances in explicit exhaustive mode', async () => {
-    const graph = makeProjectionFixture(), layout = await layoutGraph(graph, { expanded: [], exhaustive: true });
+  it.each([false, true])('preserves serial placement recursively for all 24 instances in explicit exhaustive mode (dimensions=%s)', async (dimensions) => {
+    const graph = makeProjectionFixture(), layout = await layoutGraph(graph, { expanded: [], exhaustive: true, dimensions });
     horizontal(layout, ['embedding', ...Array.from({ length: 24 }, (_, i) => `layer-${i}`), 'final-norm']);
     for (let i = 0; i < 24; i++) {
       const id = `layer-${i}`;
