@@ -31,16 +31,16 @@ A valid partial graph is a complete serialized artifact with explicitly incomple
 
 Represent linear and patch projections, normalizations, positional encoding, attention products, softmax, activations, multiplication between branches, residual addition, selection, and meaningful reshape/split/concat/transpose operations. Preserve biases and gates where relevant. Treat recognizable normalization/activation/state-update algorithms as operations with explanatory attributes/formulas rather than expanding every arithmetic instruction, cast, or allocation.
 
+Edges mean verified data dependencies. Constants are checked against configuration and storage. Batch, sequence, spatial, temporal, context, and target dimensions may be symbolic; unresolved dimensions stay explicitly unknown. No displayed dimension or state tensor implies that an input was executed. Recurrent dependencies use symbolic prior/next-state ports, not an invented captured KV cache or an unrolled inference timeline.
+
+Groups describe model hierarchy and actual instances. Every repeated layer retains identity, sequence index, parameters, and any structural exceptions. The backend validates the full semantic instance graph. Repetition metadata enables compact presentation; verified routed-expert families may use the API's compact wire definition and explicit instance maps. A description of a representative layer never substitutes for bindings of all instances.
+
 Known primitive operation cards carry concise source-backed formulas or signatures,
 including linear, add, multiply, scale, matmul, softmax, reshape and transpose.
 Their input/output symbols and computational scalar names agree with the visible
 ports, referenced parameters and displayed constants. Shared construction rules
 provide this vocabulary where the reviewed primitive semantics agree; specialized
 operations retain their own source-backed descriptions.
-
-Edges mean verified data dependencies. Constants are checked against configuration and storage. Batch, sequence, spatial, temporal, context, and target dimensions may be symbolic; unresolved dimensions stay explicitly unknown. No displayed dimension or state tensor implies that an input was executed. Recurrent dependencies use symbolic prior/next-state ports, not an invented captured KV cache or an unrolled inference timeline.
-
-Groups describe model hierarchy and actual instances. Every repeated layer retains identity, sequence index, parameters, and any structural exceptions. The backend validates the full semantic instance graph. Repetition metadata enables compact presentation; verified routed-expert families may use the API's compact wire definition and explicit instance maps. A description of a representative layer never substitutes for bindings of all instances.
 
 For compact routed experts, construct and validate the complete source graph within a separate bounded working budget. Compare each instance with a reviewed prototype after substituting only explicit node/edge/parameter IDs, source prefix, shape-symbol names, root label and configured expert index. Publish a family only when every reconstructed node and edge equals the source record and every parameter role resolves to its exact source-scoped name. Unknown or exceptional structure remains explicit. The decoded response still has the existing 32 MiB limit; the larger bounded working graph does not raise that limit or permit incomplete cache publication.
 

@@ -54,6 +54,18 @@ describe('source-backed card content', () => {
     expect(summary.formula).toBe(formula);
     expect(summary.constants.map((attribute) => [attribute.name, attribute.value])).toEqual([[name, value]]);
   });
+  it.each([
+    ['scale', 'out = x * alpha / rank', [['alpha', 16], ['rank', 8]]],
+    ['scale', 'out = x / sqrt(head_dim)', [['head_dim', 256]]],
+    ['temperature', 'out = x / temperature', [['temperature', 2]]],
+  ] as const)('shows the published Kev %s scalars referenced by %s', (operation, formula, scalars) => {
+    const record = node(); record.operation = operation; record.formula = formula;
+    record.attributes = [...scalars.map(([name, value]) => ({ name, value, provenance: [] })),
+      { name: 'semantic_role', value: operation, provenance: [] }];
+    const summary = cardSummary(record, parameters);
+    expect(summary.formula).toBe(formula);
+    expect(summary.constants.map(({ name, value }) => [name, value])).toEqual(scalars);
+  });
   it.each([true, false])('shows only the supplied formula and tensors for biased=%s linear', (biased) => {
     const record = node(); record.operation = 'linear';
     record.parameter_ids = biased ? ['weight', 'bias'] : ['weight'];
