@@ -107,8 +107,8 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
       const labelTop = position.label.y - position.absoluteY + hit / 2;
       const bridgeLeft = Math.min(hit / 2, labelLeft);
       const bridgeRight = Math.max(hit / 2, labelLeft + position.label.width);
-      // The transparent region overlaps the label and extends one unit into
-      // the terminal hit box without reaching the next port row.
+      // Reach the terminal center across the full label width so a diagonal
+      // pointer move stays on this port, including the raised-label gap.
       return <div key={port.id}>
         <button className="architecture-port nodrag nopan" data-node-id={node.id} data-port-id={port.id}
           data-absolute-x={position.absoluteX} data-absolute-y={position.absoluteY}
@@ -122,7 +122,7 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
           <span className="architecture-port-dot" />
           <span className="architecture-port-hit-bridge" aria-hidden="true"
             style={{ left: bridgeLeft, top: labelTop, width: bridgeRight - bridgeLeft,
-              height: Math.max(labelTop + position.label.height, 1) - labelTop }} />
+              height: Math.max(labelTop + position.label.height, hit / 2) - labelTop }} />
           <span className="architecture-port-label" data-emphasized={active} data-raised={position.label.raised}
             data-layout-bounds={JSON.stringify(position.label)}
             title={`${port.direction}: ${port.interfaceLabel ?? port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
