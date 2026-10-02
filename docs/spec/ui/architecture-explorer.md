@@ -429,6 +429,11 @@ to zero when needed; never round through a padded label, card/header, terminal
 corridor or shared branch point. Visible line, hover halo and pointer-hit path
 use the same display geometry. Reuse the display index for native pointer hits;
 crossings, touches and nearby parallel routes never imply shared-source identity.
+Prepare display geometry inside the existing cancellable layout worker and its
+request deadline, using local junction lookup and bounded batches that allow
+cancellation. Publish canonical layout and prepared display paths together;
+React rendering and shared-instance rebinding reuse those paths without repeating
+display preparation.
 
 Each projected directed connection has one arrow at its actual destination,
 resolved from the terminal and final nonzero tangent rather than section order

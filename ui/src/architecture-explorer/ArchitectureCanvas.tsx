@@ -31,7 +31,6 @@ import type { NavigationItem, ControlSelection } from './ArchitectureControls';
 import { Connection, ConnectionInspection } from './Connection';
 import { ConnectionContext } from './connection-context';
 import { connectionHitResolver } from './connection-hit';
-import { routeDisplays } from './route-display';
 import { componentScope } from './scope';
 import { cardDoubleClick, cardExpandable, cardNavigation, cardSelection } from './card-actions';
 import { backFromComponent, enterComponent, expandComponent, projectionOptions, returnToModel, snapshotView } from './scope-navigation';
@@ -192,7 +191,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     return grouped;
   }, [result.layout]);
   const routesById = useMemo(() => new Map(result.layout?.routes.map((route) => [route.id, route])), [result.layout]);
-  const displays = useMemo(() => result.layout ? routeDisplays(result.layout) : new Map(), [result.layout]);
+  const displays = result.displays;
   const variants = useMemo(() => new Map(graph.repetitions.flatMap((r) => r.instances.map((i) => [i.node_id, `Instance ${i.index} · ${i.variant.replaceAll('_', ' ')}`] as const))), [graph]);
   const mlps = useMemo(() => [
     ...graph.nodes.flatMap((node) => node.kind === 'group' && node.parent_id && semanticRole(node) === 'mlp'
@@ -550,7 +549,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     id: edge.id, source: edge.source.node_id, target: edge.target.node_id, sourceHandle: `source:${edge.source.port_id}`,
     targetHandle: `target:${edge.target.port_id}`, type: 'connection', focusable: false, selectable: false,
     zIndex: emphasis.has(edge.id) ? 100 : 2,
-    data: { connection: edge, route: routesById.get(edge.id)!, display: displays.get(edge.id)!, projection: result.layout!.projection, dimensions: cardDimensions },
+    data: { connection: edge, route: routesById.get(edge.id)!, display: displays!.get(edge.id)!, projection: result.layout!.projection, dimensions: cardDimensions },
   })), [cardDimensions, emphasis, result.layout, routesById, displays]);
   const activeInspectionEdge = result.layout?.projection.edges.find((e) => e.id === inspection?.edgeId);
   const activeInspectionNode = inspection?.nodeId ? projected.get(inspection.nodeId) : undefined;

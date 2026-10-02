@@ -2,6 +2,8 @@ import { expect, it } from 'vitest';
 import { referenceFixture } from '../../tests/architecture-fixtures';
 import { layoutGraph } from './auto-layout';
 import { endpointKey, projectGraph } from './projection';
+import { routeDisplays } from './route-display';
+import { layoutTimeoutMs } from './layout';
 
 it('lays out every concrete expert and route in a large repeated-MoE graph', async () => {
   const graph = referenceFixture('glm4').graph;
@@ -53,6 +55,27 @@ it('lays out every concrete expert and route in a large repeated-MoE graph', asy
     }
   }
   expect(misses).toEqual([]);
+  // Display preparation is part of the same bounded, cancellable worker
+  // request as ELK. Layout-only coverage missed a global junction scan here.
+  let heartbeat = false;
+  const pulse = setTimeout(() => { heartbeat = true; }, 0);
+  const started = performance.now();
+  const displays = await routeDisplays(layout);
+  const displayMs = performance.now() - started;
+  clearTimeout(pulse);
+  expect(displayMs).toBeLessThan(layoutTimeoutMs);
+  expect(heartbeat).toBe(true);
+  expect(new Set(displays.keys())).toEqual(new Set(projection.edges.map((edge) => edge.id)));
+  for (const edge of projection.edges) {
+    const display = displays.get(edge.id)!, target = ports.get(endpointKey(edge.target))!;
+    expect(display.target).toEqual({ x: target.absoluteX, y: target.absoluteY });
+    expect(display.tangent).toEqual({ x: 1, y: 0 });
+    expect(display.sections.every((section) => !/NaN|Infinity/.test(section.path))).toBe(true);
+  }
+  const abort = new AbortController();
+  const cancelled = routeDisplays(layout, abort.signal);
+  abort.abort();
+  await expect(cancelled).rejects.toMatchObject({ name: 'AbortError' });
 }, 60_000);
 
 it('retains dimension labels and source endpoints across a split expert interior', async () => {

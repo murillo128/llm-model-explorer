@@ -4,6 +4,7 @@ import type { Graph, GraphView, Layout } from './graph';
 import type { ProjectionOptions } from './projection';
 import { requestLayout } from './layout';
 import { minimumOverviewScale, overviewScale, visibleBounds } from './overview';
+import type { RouteDisplay } from './route-display';
 
 /** A zero-sized mounting viewport is not evidence that the overview is too big. */
 function currentViewport(container: RefObject<HTMLDivElement | null>, signal: AbortSignal) {
@@ -23,7 +24,7 @@ function currentViewport(container: RefObject<HTMLDivElement | null>, signal: Ab
 }
 
 export interface LayoutResult {
-  layout?: Layout; error?: string; options?: ProjectionOptions; invocation?: number; input?: Graph;
+  layout?: Layout; displays?: Map<string, RouteDisplay>; error?: string; options?: ProjectionOptions; invocation?: number; input?: Graph;
 }
 
 /** Keep the worker effect's cleanup outside Canvas's previous-layout closure. */
@@ -41,7 +42,7 @@ export function useLayoutRequest(input: { graph: Graph; error?: never } | { erro
       return () => controller.abort();
     }
     void (async () => {
-      const layout = await requestLayout(input.graph, options, controller.signal);
+      const { layout, displays } = await requestLayout(input.graph, options, controller.signal);
       if (view.initialOverview && !view.viewport) {
         const size = await currentViewport(container, controller.signal);
         if (controller.signal.aborted) return;
@@ -54,7 +55,7 @@ export function useLayoutRequest(input: { graph: Graph; error?: never } | { erro
         view.update({ initialOverview: false });
       }
       if (!controller.signal.aborted) {
-        setResult({ layout, options, invocation: count.current, input: input.graph });
+        setResult({ layout, displays, options, invocation: count.current, input: input.graph });
         if (view.edge && !layout.projection.edges.some((e) => e.id === view.edge)) {
           view.update({ edge: null }); clearInspection();
         }

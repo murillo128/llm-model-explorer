@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { arrowTransform, canonicalPoints, canonicalSections, roundedSection, targetTangent } from './route-display';
+import { arrowTransform, canonicalPoints, canonicalSections, roundedSection, routeDisplays, targetTangent } from './route-display';
 import { connectionHitResolver } from './connection-hit';
 import type { ProjectedEdge } from './projection';
+import type { Layout } from './graph';
 
 const points = [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 60, y: 60 }, { x: 120, y: 60 }];
 describe('connection display geometry', () => {
@@ -53,5 +54,28 @@ describe('connection display geometry', () => {
     expect(hit('one', { x: 58, y: 2 })).toEqual(['one']);
     expect(hit('one', { x: 20, y: 0 })).toEqual(['one', 'two']);
     expect(hit('two', { x: 32, y: 84 })).toEqual(['two']);
+  });
+  it('protects a sibling branch inside a segment across a spatial bucket boundary', async () => {
+    const edges = ['one', 'two'].map((id) => ({ id, source: { node_id: 'source', port_id: 'out' },
+      target: { node_id: id, port_id: 'in' }, kind: 'data', paths: [], originalEdgeIds: [id] }) as ProjectedEdge);
+    const layout: Layout = {
+      boxes: [], projection: { nodes: [], edges, hiddenEdgeIds: [], filteredEdgeIds: [], unusedInputs: [] },
+      edgeIds: ['one', 'two'], width: 120, height: 120, milliseconds: 0,
+      ports: ([['source', 'out', -28, 0], ['one', 'in', 92, 60], ['two', 'in', 92, -60]] as const).map(([nodeId, portId, x, y]) => ({
+        nodeId, portId, x, y, absoluteX: x, absoluteY: y, side: 'left',
+        label: { x, y: 500, width: 20, height: 16, clearance: 2, raised: false },
+      })),
+      routes: [
+        { id: 'one', sections: [[{ x: -28, y: 0 }, { x: 32, y: 0 }, { x: 32, y: 60 }, { x: 92, y: 60 }]], junctions: [] },
+        { id: 'two', sections: [[{ x: -28, y: 0 }, { x: 28, y: 0 }, { x: 28, y: -60 }, { x: 92, y: -60 }]],
+          junctions: [{ x: 28, y: 0 }, { x: 28, y: 0 }] },
+      ],
+    };
+    const displays = await routeDisplays(layout);
+    expect(displays.get('one')!.sections[0]!.path).toBe('M-28,0 L28,0 Q32,0 32,4 L32,52 Q32,60 40,60 L92,60');
+    expect(displays.get('two')!.sections[0]!.path).toContain('L28,0 L28,-52 Q');
+    const hit = connectionHitResolver(edges, layout.routes, displays);
+    expect(hit('one', { x: 20, y: 0 })).toEqual(['one', 'two']);
+    expect(hit('one', { x: 31, y: 1 })).toEqual(['one']);
   });
 });

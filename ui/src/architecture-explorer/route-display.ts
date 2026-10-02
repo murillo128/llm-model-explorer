@@ -113,7 +113,36 @@ export function roundedSection(input: Point[], junctions: Point[], obstacles: Re
   return { path, samples };
 }
 
-export function routeDisplays(layout: Layout): Map<string, RouteDisplay> {
+/** Only branch points within a fillet's maximum reach can constrain it. Index
+ * both axes and deduplicate shared junctions repeated in sibling route records.
+ * Query every original vertex, including collinear vertices kept at branches. */
+function junctionLookup(routes: Route[]) {
+  const width = preferredRadius * 2, reach = preferredRadius + 0.001;
+  const buckets = new Map<string, Point[]>(), seen = new Set<string>();
+  for (const route of routes) for (const point of route.junctions) {
+    const identity = `${point.x},${point.y}`;
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    const key = `${Math.floor(point.x / width)},${Math.floor(point.y / width)}`;
+    const bucket = buckets.get(key) ?? [];
+    bucket.push(point); buckets.set(key, bucket);
+  }
+  return (section: Point[]) => {
+    const nearby = new Set<Point>();
+    for (const point of section) {
+      for (let x = Math.floor((point.x - reach) / width); x <= Math.floor((point.x + reach) / width); x++)
+        for (let y = Math.floor((point.y - reach) / width); y <= Math.floor((point.y + reach) / width); y++)
+          for (const junction of buckets.get(`${x},${y}`) ?? [])
+            if (Math.abs(junction.x - point.x) <= reach && Math.abs(junction.y - point.y) <= reach) nearby.add(junction);
+    }
+    return [...nearby];
+  };
+}
+
+/** Run in the layout worker, yielding between bounded route batches so its
+ * cancellation handler can terminate promptly before publishing any geometry. */
+export async function routeDisplays(layout: Layout, signal?: AbortSignal): Promise<Map<string, RouteDisplay>> {
+  signal?.throwIfAborted();
   const ports = new Map(layout.ports.map((p) => [endpointKey({ node_id: p.nodeId, port_id: p.portId }), p]));
   const nodes = new Map(layout.projection.nodes.map((n) => [n.id, n]));
   const obstacles: Rectangle[] = layout.ports.map((p) => ({ x: p.label.x - p.label.clearance, y: p.label.y - p.label.clearance,
@@ -131,9 +160,10 @@ export function routeDisplays(layout: Layout): Map<string, RouteDisplay> {
   for (const obstacle of obstacles) for (let i = Math.floor(obstacle.x / bucketWidth); i <= Math.floor((obstacle.x + obstacle.width) / bucketWidth); i++) {
     const bucket = buckets.get(i) ?? []; bucket.push(obstacle); buckets.set(i, bucket);
   }
-  const junctions = layout.routes.flatMap((r) => r.junctions);
+  const junctions = junctionLookup(layout.routes);
   const edges = new Map(layout.projection.edges.map((e) => [e.id, e]));
-  return new Map(layout.routes.map((route) => {
+  const displays = new Map<string, RouteDisplay>();
+  for (const route of layout.routes) {
     const edge = edges.get(route.id)!, from = ports.get(endpointKey(edge.source))!, to = ports.get(endpointKey(edge.target))!;
     const source = { x: from.absoluteX, y: from.absoluteY }, target = { x: to.absoluteX, y: to.absoluteY };
     const candidates = new Set<Rectangle>();
@@ -141,7 +171,13 @@ export function routeDisplays(layout: Layout): Map<string, RouteDisplay> {
       for (let i = Math.floor((p.x - preferredRadius - haloPadding) / bucketWidth); i <= Math.floor((p.x + preferredRadius + haloPadding) / bucketWidth); i++)
         for (const obstacle of buckets.get(i) ?? []) candidates.add(obstacle);
     }
-    return [route.id, { target, tangent: targetTangent(route, target),
-      sections: route.sections.map((s) => roundedSection(s, junctions, [...candidates], source, target)) }];
-  }));
+    const protectedRectangles = [...candidates];
+    displays.set(route.id, { target, tangent: targetTangent(route, target),
+      sections: route.sections.map((s) => roundedSection(s, junctions(s), protectedRectangles, source, target)) });
+    if (displays.size % 256 === 0) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      signal?.throwIfAborted();
+    }
+  }
+  return displays;
 }
