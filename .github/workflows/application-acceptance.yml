@@ -55,16 +55,6 @@ jobs:
           ln -s "$env_dir" backend/.venv
       - if: steps.plan.outputs.integration == 'true'
         run: uv sync --locked --project backend --python 3.12
-      - name: Reuse persistent API environment
-        if: steps.plan.outputs.integration == 'true' && github.ref != 'refs/heads/main'
-        shell: bash
-        run: |
-          env_dir="${{ runner.tool_cache }}/llm-model-explorer/application/api-python-3.12-${{ hashFiles('api/requirements.txt') }}"
-          if [ ! -x "$env_dir/bin/python" ]; then
-            uv venv "$env_dir" --python 3.12
-          fi
-          uv pip install --python "$env_dir/bin/python" -r api/requirements.txt
-          echo "LMEX_CONTRACT_PYTHON=$env_dir/bin/python" >> "$GITHUB_ENV"
       - name: Restore locked node_modules
         if: steps.plan.outputs.integration == 'true'
         id: node-modules
@@ -83,12 +73,11 @@ jobs:
         if: steps.plan.outputs.integration == 'true'
         shell: bash
         run: |
-          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-            # Component/API checks belong to their dedicated workflows.
-            bash acceptance/check-integration.sh --main-ci --plan validation-plan.json
-          else
-            bash acceptance/check-integration.sh --plan validation-plan.json
-          fi
+          # Independent API/generated checks belong to their exact-target workflows.
+          bash acceptance/check-integration.sh --routine --main-ci --plan validation-plan.json
+      - name: Run affected extended product proof
+        if: steps.plan.outputs.integration == 'true'
+        run: python3 .github/scripts/validation_selector.py --plan validation-plan.json --run integration --main --extended
       - uses: actions/upload-artifact@v4
         if: always()
         with:

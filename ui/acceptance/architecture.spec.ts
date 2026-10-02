@@ -651,7 +651,7 @@ test('production graph navigation preserves declared structure and retained UI s
 for (const reference of [false, true]) for (const family of [
   'smollm2', 'qwen3', 'qwen35', 'vjepa2', 'deepseek_v2', 'glm4_moe_lite', 'kimi_linear',
 ]) {
-  test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and logical weight modal`, { tag: reference ? '@density' : [] }, async ({ page }, info) => {
+  test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and logical weight modal`, { tag: reference ? '@extended' : [] }, async ({ page }, info) => {
     test.setTimeout(reference && family === 'kimi_linear' ? 900_000 : reference ? 600_000 : 90_000);
     const graph = expandCompactGraph(await selectGraph(page));
     expect(graph.coverage).toBe('complete');
@@ -920,7 +920,7 @@ for (const reference of [false, true]) for (const family of [
   });
 }
 
-test('complete local reference [kimi_linear] issue 178 full expansion and focused router weight', { tag: '@density' }, async ({ page }, info) => {
+test('complete local reference [kimi_linear] issue 178 full expansion and focused router weight', { tag: '@extended' }, async ({ page }, info) => {
   test.setTimeout(600_000);
   const graph = expandCompactGraph(await selectGraph(page));
   expect(graph.coverage).toBe('complete');
@@ -980,7 +980,7 @@ test('deterministic production [kimi_linear] complete repeated experts remain re
   await expect(page.getByRole('dialog')).toContainText(parameter.name);
 });
 
-test('complete local reference [qwen3] exhaustive global detail remains reachable at readable scale', { tag: '@density' }, async ({ page }, info) => {
+test('complete local reference [qwen3] exhaustive global detail remains reachable at readable scale', { tag: '@extended' }, async ({ page }, info) => {
   const graph = await selectGraph(page);
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   await graphAction(page, 'Show all operations');
@@ -1032,7 +1032,7 @@ test('deterministic production [smollm2] repeated nested return releases obsolet
   await page.evaluate(() => { (window as any).__returnCanvas = new WeakRef(document.querySelector('.react-flow')!); });
   const requests = observed.length;
   const samples = [];
-  for (let cycle = 0; cycle < 8; cycle++) {
+  for (let cycle = 0; cycle < 3; cycle++) {
     await page.getByRole('button', { name: 'Explore component', exact: true }).click(); await ready();
     await expect(canvas).toHaveAttribute('data-scope-id', layer);
     await findComponent(page, attention.id); await ready();
@@ -1108,7 +1108,7 @@ test('deterministic production [smollm2] isolated session replacement rejects a 
   } finally { release(); }
 });
 
-test.describe('Extended mounted lifetime without persistent element handles', () => {
+test.describe('Extended mounted lifetime without persistent element handles', { tag: '@extended' }, () => {
   test('deterministic production [smollm2] extended nested returns stay bounded and explorer teardown releases layouts', async ({ page }, info) => {
     const graph = await selectGraph(page);
     const canvas = page.getByLabel('Architecture graph', { exact: true });
@@ -1233,7 +1233,7 @@ test('shared structure production [templates] neutral mode, distinct instance we
   await page.keyboard.press('Escape'); await released(page);
   const requests = observed.length;
   const samples = [];
-  for (let cycle = 0; cycle < 8; cycle++) {
+  for (let cycle = 0; cycle < 3; cycle++) {
     await page.getByLabel('Shared structure instance', { exact: true }).selectOption(cycle % 2 ? first!.node_id : second!.node_id);
     samples.push(await graphObservation(page, true));
   }

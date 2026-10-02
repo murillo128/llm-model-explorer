@@ -32,9 +32,9 @@ async function hoverFraction(page: Page, x: number, y: number) {
   return placement(page);
 }
 
-for (const dpr of [1, 1.25, 2]) test.describe(`adaptive magnifier DPR ${dpr}`, () => {
+for (const dpr of [1.25, 2]) test.describe(`adaptive magnifier DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
-  test('camera hysteresis preserves keyboard selection, numeric readout and scalar resources', async ({ page }) => {
+  if (dpr === 1.25) test('camera hysteresis preserves keyboard selection, numeric readout and scalar resources', async ({ page }) => {
     await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
     await expect(page.locator('.matrix-scroll')).toBeVisible();
     await page.evaluate(() => {
@@ -62,7 +62,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`adaptive magnifier DPR ${dpr}`, (
     })).toEqual(before);
   });
 
-  test('pointer placement follows the center and stays legal at every edge after scroll and zoom', { tag: '@responsive' }, async ({ page }) => {
+  test('pointer placement follows the center and stays legal at every edge after scroll and zoom', { tag: dpr === 1.25 ? '@responsive' : [] }, async ({ page }) => {
     await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
     await page.addStyleTag({ content: '#workspace { --fixture-viewer-width: 1050px; --fixture-viewer-height: 650px; }' });
     await page.evaluate(() => {

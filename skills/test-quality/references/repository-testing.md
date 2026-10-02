@@ -9,8 +9,11 @@ checks. Keep tests with the component that owns the behavior.
 
 The Python backend uses pytest. From `backend/`, a focused invocation is
 `uv run --locked pytest tests/<test_file>.py -q --durations=25`; replace the path
-with an existing selected file. Its full CI also owns Ruff, mypy and installed-wheel
-smoke coverage. The wheel test outside the source tree protects distribution and
+with an existing selected file. The primary Python 3.12 CI owns selected routine tests plus
+affected extended proof, Ruff, mypy and isolated installed-wheel coverage.
+Ordinary main Python 3.14 uses a real eighteen-case installed-wheel/CLI/runtime
+smoke; runtime/dependency/packaging changes and manual mode select fuller proof.
+This is reduced default cross-version confidence, not a supported-version change. The wheel test outside the source tree protects distribution and
 must not be removed as a duplicate import test.
 
 Use small deterministic tensors, temporary model directories/cache roots and
@@ -64,15 +67,34 @@ selection runs before conditional steps with complete exact Git diffs. See
 [the ownership map and invocation contract](../../../acceptance/validation-routing.md).
 Normative specs, API/generated inputs, examples and unknown/shared configuration
 reach their consumers. Pure operational Markdown uses documentation/infrastructure
-owners. Invalid diff context falls back to full product coverage; invalid plans or
+owners. Invalid diff context falls back to the full mandatory routine portfolio and
+potentially affected extended owners; invalid plans or
 empty required groups fail. Fast checks remain full for each selected owner.
 
 Preserve accepted epic-child local validation and the final aggregate CI boundary.
-PR/main Python and browser matrices retain their accepted different scopes;
-manual workflow runs and final epic PRs select the complete optimized gates.
-`acceptance/check.sh` is always complete; `check-integration.sh --main-ci` without
-a plan runs full integration without duplicated component/API checks. Focused
-commands consume an explicit complete path list, never an inferred commit title.
+Native configuration separates routine, affected extended and explicit full
+portfolios; ordinary untagged tests remain routine. `acceptance/check.sh` is always
+complete. `check-integration.sh --routine --main-ci` is the combined routine gate;
+without `--routine` or a plan it keeps full integration. CI's `--main-ci` delegates
+API/generated drift to their independent applicable exact-target workflows on
+PRs and main; missing selected gates cannot be treated as success. Aggregate epic
+PRs select all mandatory routine and affected extended proof; manual dispatch is
+full. Focused commands consume an explicit complete path list, never a commit title.
+
+Both Playwright defaults are trace-free, with zero retries, native JSON/failure
+screenshots/logs and compact diagnostics. Diagnose one named failure with native
+`--trace on`; do not replay a suite automatically. Full/manual execution retains
+all non-retired `@extended` cases and configured reference/CUDA checks. Backend
+`pytest -m extended` retains genuine 2**24+1 quantiles and Linux allocator proof;
+analysis/materialization/dependency or unknown impact must select them. Long
+architecture lifetime retains sixteen cycles in its targeted extended owner.
+
+Issue #277 explicitly authorizes risk-based low-value retirement. Record exact
+removed permutations, retained independent owners or plausible lost defect
+detection and measured/unmeasured cost in the existing ownership/cost reports.
+Keep known failures, invalid-input/privacy/data-corruption guards, genuine
+threshold sizes and numerical tolerances. Do not infer equivalent coverage from
+case counts, mocks or equality between two subject outputs.
 
 Use isolated caches, ports and artifact paths for concurrent checks. Do not edit a
 checkout while tests run or reuse another revision's UI build as acceptance proof.

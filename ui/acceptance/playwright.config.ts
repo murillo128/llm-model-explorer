@@ -1,5 +1,13 @@
 import { defineConfig } from '@playwright/test';
 
+const requestedPortfolio = process.env.LMEX_TEST_PORTFOLIO ?? 'routine';
+// Explicit reference inputs (including invalid ones) and required mode must not
+// disappear behind routine filtering. Full/reference commands validate them.
+const referencesRequested = Boolean(process.env.LMEX_REFERENCE_MODEL_DIR ||
+  process.env.LMEX_ARCHITECTURE_REFERENCES || process.env.LMEX_LORA_REFERENCE_MODEL_ROOT ||
+  process.env.LMEX_REQUIRE_ARCHITECTURE_REFERENCES === '1');
+const portfolio = requestedPortfolio === 'routine' && referencesRequested ? 'full' : requestedPortfolio;
+
 const componentPort = Number(process.env.UI_TEST_PORT ?? 4173);
 const isolatedPorts = Boolean(process.env.UI_TEST_PORT);
 const dpr1 = {
@@ -24,12 +32,15 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
+  ...(portfolio === 'extended' ? { grep: /@extended/ } : {}),
+  ...(portfolio === 'routine' ? { grepInvert: /@extended/ } : {}),
   outputDir: '../test-results/acceptance',
   reporter: [['list'], ['json', { outputFile: '../test-results/acceptance.json' }]],
   use: {
     headless: false,
     viewport: { width: 1440, height: 1000 },
-    trace: 'retain-on-failure', screenshot: 'only-on-failure',
+    // --trace on is an explicit focused diagnostic; passing routine runs are trace-free.
+    trace: 'off', screenshot: 'only-on-failure',
     launchOptions: { args: [`--use-angle=${process.env.LMEX_WEBGL_BACKEND ?? 'swiftshader'}`, '--enable-unsafe-swiftshader'] },
   },
   projects: [

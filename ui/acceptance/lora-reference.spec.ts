@@ -68,6 +68,7 @@ function sourceKey(node: Graph['nodes'][number]) {
   return node.provenance.find((record) => record.rule === sourceRule)?.source ?? node.label;
 }
 
+test.describe('local adapted reference', { tag: '@extended' }, () => {
 test.beforeEach(async ({ page }, info) => {
   const sourceRoot = process.env.LMEX_LORA_REFERENCE_MODEL_ROOT;
   test.skip(!sourceRoot, 'LMEX_LORA_REFERENCE_MODEL_ROOT not supplied; local SmolLM2 LoRA pair not tested');
@@ -277,4 +278,6 @@ test('SmolLM2 QLoRA reference graph selects NF4 base and actual adapter weights'
     }),
     contentType: 'application/json',
   });
+});
+
 });

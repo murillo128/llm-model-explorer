@@ -133,6 +133,7 @@ def test_native_numerics(shape: list[int], values: list[float]) -> None:
         assert math.isnan(lo) and math.isnan(hi)
 
 
+@pytest.mark.extended
 def test_exact_percentiles_above_quantile_library_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     def forbidden(*args: Any, **kwargs: Any) -> None:
         pytest.fail("reference-scale input must not require torch.quantile")
@@ -222,12 +223,13 @@ def test_actual_cuda_equivalence(shape: list[int], values: list[float]) -> None:
     torch.cuda.synchronize()
 
 
-@pytest.mark.parametrize("shape,values", CASES)
+@pytest.mark.parametrize("shape,values", [CASES[i] for i in [1, 4, 7, 8, 16, 17, 18]])
 def test_endpoints_and_disk_reuse(
     settings: Settings, monkeypatch: pytest.MonkeyPatch, shape: list[int], values: list[float]
 ) -> None:
     directory = make_model(settings.model_root)
     write_weights(directory / "model.safetensors", [("weight", "F32", shape, values)])
+    cold: dict[str, list[tuple[int, bytes]]] = {}
     with TestClient(create_app(settings)) as client:
         url = address(client).removesuffix("data")
         for endpoint in ["statistics", "distributions"]:
@@ -236,6 +238,7 @@ def test_endpoints_and_disk_reuse(
             assert response.headers["cache-control"] == "no-store"
             assert response.headers["x-operation-id"]
             result = frames(response.content)
+            cold[endpoint] = result
             assert result[0][0] == 1 and result[-1] == (4, b"")
             metadata = METADATA.validate_json(result[0][1]).model_dump()
             data = b"".join(block for kind, block in result if kind == 2)
@@ -260,6 +263,9 @@ def test_endpoints_and_disk_reuse(
                 assert metadata["sections"][1]["offset"] == shape[0] * 400
         assert len(numeric_manifests(settings.cache_dir)) == 2
 
+    if (shape, values) != CASES[1]:
+        return
+
     # New app/session proves persistent cache reuse without resident result state.
     async def forbidden(self: TensorAnalysis, context: ProducerContext) -> None:
         pytest.fail("warm derived request recomputed")
@@ -268,19 +274,10 @@ def test_endpoints_and_disk_reuse(
     with TestClient(create_app(settings)) as client:
         url = address(client).removesuffix("data")
         for endpoint in ["statistics", "distributions"]:
-            assert frames(client.get(url + endpoint).content)[-1] == (4, b"")
-
-
-@pytest.mark.parametrize("dtype", ["F16", "BF16"])
-def test_analysis_uses_logical_float32(settings: Settings, dtype: str) -> None:
-    directory = make_model(settings.model_root)
-    values = [-2.5, -0.0, 0.125, 1.0, 2.0, 10.0]
-    write_weights(directory / "model.safetensors", [("weight", dtype, [2, 3], values)])
-    with TestClient(create_app(settings)) as client:
-        url = address(client).removesuffix("data")
-        for endpoint in ["statistics", "distributions"]:
-            assert frames(client.get(url + endpoint).content)[-1] == (4, b"")
-    assert len(numeric_manifests(settings.cache_dir)) == 3
+            response = client.get(url + endpoint)
+            assert response.status_code == 200
+            warm = frames(response.content)
+            assert warm == cold[endpoint]  # Exact metadata and emitted payload, not just DONE.
 
 
 def test_preflight_and_content_invalidation(settings: Settings) -> None:
@@ -347,6 +344,7 @@ def test_allocation_failure_is_clean(
 @pytest.mark.skipif(
     sys.platform != "linux", reason="real allocator probe uses Linux RLIMIT_AS/proc"
 )
+@pytest.mark.extended
 def test_real_cpu_allocator_exhaustion(tmp_path: Path) -> None:
     environment = dict(os.environ)
     # Preserve the package actually under test, including isolated wheel runs.

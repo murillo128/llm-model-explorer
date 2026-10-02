@@ -22,13 +22,13 @@ class SelectionTest(unittest.TestCase):
                 "ui/src/architecture-explorer/Graph.tsx",
                 {"ui", "browser", "integration"},
                 ["architecture"],
-                ["full"],
+                ["architecture"],
             ),
             (
                 "ui/src/tokenizer/editor.ts",
                 {"ui", "browser", "integration"},
                 ["tokenizer"],
-                ["product"],
+                ["bindings", "scientific", "tokenizer-layout", "transport"],
             ),
             (
                 "ui/src/rendering/renderer.ts",
@@ -122,7 +122,10 @@ class SelectionTest(unittest.TestCase):
     def test_union_and_new_native_cases(self):
         plan = selector.select(["ui/src/tokenizer/a.ts", "ui/src/architecture-explorer/a.ts"])
         self.assertEqual(plan["browser"], ["architecture", "tokenizer"])
-        self.assertEqual(plan["integration"], ["full", "product"])
+        self.assertEqual(
+            plan["integration"],
+            ["architecture", "bindings", "scientific", "tokenizer-layout", "transport"],
+        )
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root / "ui/tests").mkdir(parents=True)
@@ -136,6 +139,38 @@ class SelectionTest(unittest.TestCase):
                 selector.targets(selector.select([], full=True), "browser", root=root),
                 ["architecture-new.spec.ts", "new.spec.ts", "tokenizer-new.spec.ts"],
             )
+
+    def test_changed_native_files_and_backend_test_are_isolated(self):
+        plan = selector.select(["ui/tests/matrix-zoom.spec.ts"])
+        self.assertEqual(plan["integration"], [])
+        self.assertEqual(selector.targets(plan, "browser"), ["matrix-zoom.spec.ts"])
+        backend = selector.select(["backend/tests/test_tensor_analysis.py"])
+        self.assertEqual(backend["owners"], ["backend"])
+        self.assertEqual(selector.backend_targets(backend), ["tests/test_tensor_analysis.py"])
+        self.assertIn("backend", backend["extended"])
+        scientific = selector.select(["ui/acceptance/scientific.spec.ts"])
+        self.assertEqual(selector.targets(scientific, "integration"), ["scientific.spec.ts"])
+        self.assertEqual(
+            selector.network_targets(scientific),
+            [
+                "acceptance/test_distribution_scales.py",
+                "acceptance/test_embeddings.py",
+                "acceptance/test_network.py",
+            ],
+        )
+
+    def test_helper_unknown_deletion_and_portfolio_truth(self):
+        harness = selector.select(["ui/acceptance/product-harness.ts"])
+        self.assertEqual(len(selector.targets(harness, "integration")), 5)
+        deleted = selector.select(["ui/tests/matrix-deleted.spec.ts"])
+        self.assertEqual(deleted["browser"], ["full"])
+        for path in ["future/unknown.py", "ui/tests/future/new.spec.ts"]:
+            plan = selector.select([path])
+            self.assertEqual(plan["portfolio"], "routine")
+            self.assertEqual(set(plan["extended"]), {"backend", "integration"})
+        self.assertEqual(selector.select([], full=True)["portfolio"], "full")
+        with self.assertRaises(ValueError):
+            selector.validate(selector.select([]) | {"portfolio": "quiet"})
 
     def test_matrix_retains_all_consumers_and_native_scroll(self):
         plan = selector.select(["ui/src/rendering/a.ts"])

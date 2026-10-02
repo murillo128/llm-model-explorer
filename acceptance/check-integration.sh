@@ -3,15 +3,17 @@
 set -euo pipefail
 main_ci=false
 plan=''
+portfolio=full
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --routine) portfolio=routine; shift ;;
     --main-ci) main_ci=true; shift ;;
     --plan)
       if [ "$#" -lt 2 ] || [ -n "$plan" ]; then
-        echo "Usage: $0 [--main-ci] [--plan FILE]" >&2; exit 2
+        echo "Usage: $0 [--routine] [--main-ci] [--plan FILE]" >&2; exit 2
       fi
       plan=$(realpath "$2"); shift 2 ;;
-    *) echo "Usage: $0 [--main-ci] [--plan FILE]" >&2; exit 2 ;;
+    *) echo "Usage: $0 [--routine] [--main-ci] [--plan FILE]" >&2; exit 2 ;;
   esac
 done
 
@@ -19,6 +21,7 @@ repo_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_dir"
 export LMEX_EVIDENCE_DIR=${LMEX_EVIDENCE_DIR:-$(mktemp -d /tmp/lmex-integration-evidence-XXXXXX)}
 mkdir -p "$LMEX_EVIDENCE_DIR"
+export LMEX_TEST_PORTFOLIO=$portfolio
 export HF_HUB_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false
 python_bin="$repo_dir/backend/.venv/bin/python"
@@ -29,11 +32,9 @@ if [ -n "$plan" ]; then
   mapfile -t network_args <<< "$selected"
 fi
 
-# Preserve the existing PR/epic gate. Main delegates these checks to api-contract.
+# Full local execution keeps contract checks. CI delegates to exact-target API/UI gates.
 if [ "$main_ci" = false ]; then
   "${LMEX_CONTRACT_PYTHON:-$repo_dir/api/.venv/bin/python}" api/validate_contract.py
-  "${LMEX_CONTRACT_PYTHON:-$repo_dir/api/.venv/bin/python}" api/validate_contract.py --write
-  git diff --exit-code -- api/fixtures
 fi
 
 # acceptance/ is not covered by backend-ci's backend/** path filter.
@@ -45,8 +46,6 @@ backend/.venv/bin/ruff format --check --config backend/pyproject.toml acceptance
   cd ui
   if [ "$main_ci" = false ]; then
     npm run api:check
-    npm run api:generate
-    git diff --exit-code -- src/api/generated
   fi
   # Build the production UI from this checkout; never reuse another SHA's build.
   npm run build

@@ -248,3 +248,32 @@ The existing application/UI/backend/API workflows explicitly defer epic-child
 PRs targeting `codex/epic-issue-*`; the routing workflow has no changed applicable
 paths. Local scoped evidence supplies this child gate; the final aggregate epic
 PR still owes all applicable CI. No workflow or command orchestration was changed.
+
+## Revised portfolio — issue #277, 2026-10-02
+
+The expanded issue contract supersedes the earlier fixed-pair preservation policy.
+The former `product.spec.ts` is split into transport, scientific, native, bindings
+and tokenizer-layout specs. `product-harness.ts` supplies an automatic **per-test**
+fixture: each test owns its process, cache, timing and closures, including across
+files. No service pooling/reset framework is introduced.
+
+| Changed exact family | Disposition and remaining owner / explicit coverage loss |
+| --- | --- |
+| Progressive supertest, both densities | Compact real producer barrier, green source pixel, exact independent cell, mounted GPU upload limit and teardown/GC in `scientific.spec.ts`, once. Exhaustive luminosity/neighborhood/profile recoloring stays in `renderer.spec.ts`, matrix pixel and magnifier owners. Lost: full TCP navigation/pixel cross-combination in one long narrative. |
+| Two-card parity, both densities and 1178/1440 captures | One real three-request proof; both cards independently checked against the formula/count oracle, linked row and no reupload. Retire screenshot/empty-prompt/divider/gesture repeats; component tokenizer/layout owns those branches. Lost: complete two-card presentation on every width/DPR. |
+| `production matrix navigation…`, both densities; `polish magnifier follows edges…`, both densities | Low-value integrated combination retirement. Centering, zoom-selection, pixel alignment, adaptive placement/hysteresis/source replacement and renderer lifetimes remain native component owners. Production keeps real wheel/touch plus exact cell/ownership. Lost: simultaneous TCP/resize/source/DPR edge narrative. |
+| Three `architecture safety baseline…` widths | Low-value shell/presentation combination retirement. Generic production architecture navigation and component shell/controls remain. Lost: fake graph plus real numeric service shell comparison at all three widths. |
+| Four `polish inventory captures…` width×DPR invocations | Retire presentation repetitions; retain real streaming inventory preferences/mounted canvas once and native pane bridges. Lost: all 1178/1440 composed captures. |
+| Prompt pixel/history/IME, inventory preferences, camera, stale-generation, DPR-ordering | One density each. Preserve real screenshots/response barriers/IME debounce, held actual responses and explicit 1→2→1 notification ordering. Component/native owners retain physical rounding. |
+| Native pane 1000×700 / 390×640 | 390 routine at both densities; desktop retained extended once. All four overflow branches and independent aligned origins remain. Extra desktop DPR replay retired. |
+| Real tokenizer auto-size/manual split | 1178 retained extended, including unchanged forty-line prompt and native keyboard/touch/resize. 1440 presentation repetition retired. |
+| Qwen3/Qwen3.5 generic input binding and GPTQ/NVFP4 browser wrapper | Qwen3.5 plus unsupported-model recovery retained once. Qwen3 and packed-family repeats retire; actual decoder/source rows stay in TCP `test_polish.py` and backend owners. Lost: each family name exercised through the same browser dispatch narrative. |
+| Actual Base/architecture/LoRA references | Targeted extended, one density. Existing supplied-invalid/required-mode checks remain; absent capabilities are explicit skips, with no claimed runtime saving. |
+| Architecture eight-cycle nested return and eight template remaps | Three adversarial routine cycles, exact returned identity/camera/source records and warmed retention. Lost: longer repeated growth window in these routine cases; independent sixteen-cycle extended lifetime retains full size/teardown. |
+| Backend analysis endpoints, nineteen inputs | Seven cold serialization representatives; one independent exact cold/warm metadata/payload comparison forbids recomputation. Nineteen native numeric oracles remain. Retire twelve endpoint repetitions and two DONE-only F16/BF16 wrappers; exact converted byte owners remain in tensor-data tests. Lost: cross-dtype analysis artifact-count check and omitted numeric×HTTP combinations. |
+
+Retirements are authorized risk trades, not claims of identical coverage. Transport
+cancellation, surviving shared consumers, pre-/midstream failures, incomplete cache,
+stale-generation fencing, exact dispatch and native/scientific resource ownership
+retain real TCP/backend/browser owners. The cost report records native sets and
+validation. Full/manual includes every non-retired extended/reference case.

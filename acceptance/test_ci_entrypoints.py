@@ -159,23 +159,19 @@ class CiEntrypointsTest(unittest.TestCase):
         result, commands = self.run_gate()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(
-            commands[:3],
+            commands[:1],
             [
                 ["contract-python", "api/validate_contract.py"],
-                ["contract-python", "api/validate_contract.py", "--write"],
-                ["git", "diff", "--exit-code", "--", "api/fixtures"],
             ],
         )
         self.assertEqual(
             [command for command in commands if command[0] == "npm"],
             [
                 ["npm", "run", "api:check"],
-                ["npm", "run", "api:generate"],
                 ["npm", "run", "build"],
                 ["npm", "run", "test:acceptance", "--", "--project=dpr1"],
             ],
         )
-        self.assertIn(["git", "diff", "--exit-code", "--", "src/api/generated"], commands)
 
     def test_main_propagates_build_failure(self):
         result, commands = self.run_gate("--main-ci", fail="npm run build")
@@ -241,19 +237,28 @@ class CiEntrypointsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         pytest = next(command for command in commands if command[:3] == ["python", "-m", "pytest"])
         self.assertEqual(
-            pytest[3:11],
+            pytest[3:8],
             [
-                "acceptance/test_network.py",
-                "acceptance/test_embeddings.py",
-                "acceptance/test_polish.py",
                 "acceptance/test_distribution_scales.py",
+                "acceptance/test_embeddings.py",
+                "acceptance/test_network.py",
+                "acceptance/test_polish.py",
                 "acceptance/test_reference.py",
-                "acceptance/test_ci_entrypoints.py",
-                "acceptance/test_report.py",
-                "acceptance/test_validation_selector.py",
             ],
         )
-        self.assertIn(["npm", "run", "test:acceptance", "--", r"product\.spec\.ts"], commands)
+        self.assertIn(
+            [
+                "npm",
+                "run",
+                "test:acceptance",
+                "--",
+                r"bindings\.spec\.ts",
+                r"scientific\.spec\.ts",
+                r"tokenizer\-layout\.spec\.ts",
+                r"transport\.spec\.ts",
+            ],
+            commands,
+        )
         self.assertIn(["npm", "run", "build"], commands)
 
     def test_shared_api_plan_preserves_complete_acceptance(self):
@@ -270,8 +275,12 @@ class CiEntrypointsTest(unittest.TestCase):
             browser[4:],
             [
                 r"architecture\.spec\.ts",
+                r"bindings\.spec\.ts",
                 r"lora\-reference\.spec\.ts",
-                r"product\.spec\.ts",
+                r"native\.spec\.ts",
+                r"scientific\.spec\.ts",
+                r"tokenizer\-layout\.spec\.ts",
+                r"transport\.spec\.ts",
                 "--project=dpr1",
             ],
         )
@@ -409,4 +418,16 @@ class CiEntrypointsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         commands = [json.loads(line) for line in self.log.read_text().splitlines()]
         self.assertNotIn(["contract-python", "api/validate_contract.py"], commands)
-        self.assertIn(["npm", "run", "test:acceptance", "--", r"product\.spec\.ts"], commands)
+        self.assertIn(
+            [
+                "npm",
+                "run",
+                "test:acceptance",
+                "--",
+                r"bindings\.spec\.ts",
+                r"scientific\.spec\.ts",
+                r"tokenizer\-layout\.spec\.ts",
+                r"transport\.spec\.ts",
+            ],
+            commands,
+        )

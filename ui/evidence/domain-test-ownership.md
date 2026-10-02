@@ -114,3 +114,25 @@ The full ordinary browser suite and real checkpoint acceptance were not rerun;
 unchanged size-sensitive coverage is not claimed as freshly executed wholesale.
 Raw native reports, listings, hook accounting and fault outputs stay outside Git
 under `/tmp/issue-274-evidence/`.
+
+## Representative native matrices — issue #277
+
+The 2026-10-02 risk-based contract permits retiring combination coverage. Arithmetic
+owners (`geometry`, camera navigation/history, wheel gesture and zoom-selection
+geometry unit tests) remain; browser representatives still use actual rendering.
+
+| Exact family | New representatives / accepted omitted combination risk |
+| --- | --- |
+| Matrix zoom fit/shape×DPR×responsive | Four shapes: short/tall DPR 1, large DPR 1.25, square DPR 2; short also narrow. Retire the other interchangeable crossings. Wheel/pinch/value/lifetime once at fractional DPR, four resize changes instead of twelve; history once at DPR 1. Lost: longer churn and every shape at every density/width. |
+| Matrix rectangle/range selection | Forward/reverse fractional DPR (reverse also narrow), both profile axes at fractional DPR; single-pixel thin guides at fractional/DPR 2; resize cancellation once. Lost: all selection-direction/axis/DPR/viewport crossings. |
+| Centering | All four shapes at DPR 1, short fractional, square DPR 2; each keeps all three internally set sizes. One fractional focal transition, desktop+narrow. Lost: other shape×DPR crossings. |
+| Profile pixels | Exact real pixel/origin oracle at DPR 1 and 2; only DPR 2 repeats narrow. Internal fractional-scale/scroll pixel sweep retained: it protects device snapping, not metadata variants. |
+| Adaptive magnifier | Fractional hysteresis once; edge placement fractional desktop+narrow and DPR 2 desktop. All seven boundary values remain. Standalone layout/DPR/source and compact/wrapped value owners remain. Lost: default-DPR repetitions of the full edge/hysteresis narrative. |
+| Native pane overflow | DPR 1 desktop/intermediate and DPR 2 narrow; retain all four overflow states, independent profile/origin and scrollbar delivery assertions. Lost: remaining viewport×DPR crossings. |
+| Tokenizer embeddings | Progressive exact rows/readout/pixels DPR 1+2, narrow at DPR 2; independent cameras/offscreen reveal DPR 1+2, narrow at DPR 1. All real protocol/staging/failure owners remain. Lost: two additional width×density combinations. |
+
+Remaining renderer/distribution, tokenizer concurrency/staging and graph scale/culling
+cases are retained after inspection: they cover distinct GPU sampling, generation,
+source/instance/port or layout thresholds. Cheap independent backend/UI/API/exporter
+and real Git/lease/command controls are retained. File length, mocking or existence
+assertions alone did not authorize deleting a security or contract guard.

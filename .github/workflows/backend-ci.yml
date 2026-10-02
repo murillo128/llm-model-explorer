@@ -47,30 +47,31 @@ jobs:
         run: echo "UV_PROJECT_ENVIRONMENT=${{ runner.tool_cache }}/llm-model-explorer/backend/python-${{ matrix.python }}-${{ hashFiles('backend/uv.lock') }}" >> "$GITHUB_ENV"
       - if: steps.plan.outputs.backend == 'true'
         run: uv sync --locked --python '${{ matrix.python }}'
-      - if: steps.plan.outputs.backend == 'true'
+      - if: steps.plan.outputs.backend == 'true' && matrix.python == '3.12'
         run: uv run --locked ruff check .
-      - if: steps.plan.outputs.backend == 'true'
+      - if: steps.plan.outputs.backend == 'true' && matrix.python == '3.12'
         run: uv run --locked ruff format --check .
-      - if: steps.plan.outputs.backend == 'true'
+      - if: steps.plan.outputs.backend == 'true' && matrix.python == '3.12'
         run: uv run --locked mypy
-      - if: steps.plan.outputs.backend == 'true'
-        run: uv run --locked pytest --durations=25
+      - name: Run selected primary backend portfolio
+        if: steps.plan.outputs.backend == 'true' && matrix.python == '3.12'
+        run: |
+          selected=$(python3 ../.github/scripts/validation_selector.py --plan ../validation-plan.json --backend-targets)
+          mapfile -t tests <<< "$selected"
+          if [ "${{ steps.plan.outputs.portfolio }}" = full ]; then
+            uv run --locked pytest "${tests[@]}" --durations=25
+          else
+            uv run --locked pytest "${tests[@]}" -m 'not extended' --durations=25
+            # Only tensor-analysis owns threshold/allocator checks today.
+            if [ "${{ steps.plan.outputs.backend_extended }}" = true ]; then
+              uv run --locked pytest tests/test_tensor_analysis.py -m extended --durations=10
+            fi
+          fi
       - name: Build and smoke-test the installed wheel outside the source tree
         if: steps.plan.outputs.backend == 'true'
         run: |
-          uv build
-          backend_python="${UV_PROJECT_ENVIRONMENT}/bin/python"
-          uv pip install --python "$backend_python" --reinstall --no-deps dist/*.whl
-          cd "$RUNNER_TEMP"
-          "$backend_python" - <<'PY'
-          import importlib.util
-          import torch
-
-          for module in (
-              "llm_model_explorer",
-              "llm_model_explorer.app",
-              "llm_model_explorer.cli",
-          ):
-              assert importlib.util.find_spec(module) is not None, module
-          assert torch.version.cuda is None
-          PY
+          wheel_args=()
+          if [ "${{ matrix.python }}" = 3.14 ] && [ "${{ steps.plan.outputs.compatibility_full }}" = true ]; then
+            wheel_args=(--full)
+          fi
+          bash ../acceptance/check-wheel.sh "${UV_PROJECT_ENVIRONMENT}/bin/python" "${wheel_args[@]}"

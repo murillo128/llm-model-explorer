@@ -4,12 +4,12 @@ This report records observed results for #272–#277. The accepted product contr
 remain in `docs/spec/`. Full local reference and CUDA success are separate from
 CPU fixture success. No test-count or percentage quota was used.
 
-Current result: the five user-authorized UI duplication groups are consolidated
-at `21c83bd13b0732c0df8233b48efac894b77e6711`, with passing focused replacement
-proof. The newly authorized complete gate still exits 124 at 1500.005 s: HTTP
-finishes, but two final DPR-2 browser cases lack completed evidence. Issue #277
-returns to `investigation-required`; PR #288 remains draft. No complete retry or
-final-CI waiver follows this result.
+Current execution is the revised 2026-10-02 risk-based contract for #277. The
+historical three complete attempts below remain failed evidence of their revisions.
+The new routine/extended/full portfolio is implemented; focused real numeric and
+production checks pass. Complete candidate validation is pending, so PR #288
+remains draft. Current commands and coverage trades are in the revised portfolio
+section below; earlier tables retain their historical meaning.
 
 ## Revisions, environment and measurement scope
 
@@ -372,3 +372,41 @@ is exhausted; no unchanged retry, case skip, larger timeout or new repair campai
 is inferred from this failure. Production backend/API/UI source, accepted specs,
 locks and the reusable `test-quality/SKILL.md` remain byte-identical. Report-only
 publication edits are reconciled against this exercised source and selection.
+
+## Revised risk-based portfolio — implementation plan for #277
+
+The 2026-10-02 replacement issue contract authorizes deliberate low-value coverage
+retirement and routine/targeted-extended/full portfolios. It supersedes the preceding
+fixed-selection and exhausted-attempt restrictions. The three historical failures
+remain evidence of their revisions. Before removal, the following bounded decisions
+record the proposed retained core and plausible lost detection; final collection,
+validation and timing follow implementation. Additional savings are unmeasured
+unless a comparable execution is explicitly recorded.
+
+| Worklist / exact candidate family | Planned disposition, retained proof or accepted risk | Cost evidence / focused target |
+| --- | --- | --- |
+| 1. Both Playwright configurations, `retain-on-failure` | Routine traces off; explicit native `--trace on` diagnostic mode. Keep JSON, failure screenshots/logs and compact diagnostics. HTML optional. | Compare unchanged 1000×700 production pane with/without trace; no assertion change. |
+| 2. `matrix-zoom.spec.ts` shape×DPR×responsive, selection/pixel/centering/magnifier matrices | Retire interchangeable combinations; explicit representatives retain all four shapes, a fractional DPR, DPR 2 and narrow layout. Cheap camera/geometry/history owners retain arithmetic. Keep native wheel/pinch/exact selection and one resource churn bridge. | Existing native lists; focused affected component files. Lost detection: a combination-specific layout defect outside the chosen representatives. |
+| 3. `product.spec.ts` progressive, camera, magnifier and scientific parity | Short real producer-barrier/source-value/cleanup core, one camera bridge, compact exact three-request two-card proof. Retire repeated luminance/neighborhood/gesture/screenshot sweeps owned by renderer/component tests. Split by responsibility for selection. | Historical complete case durations; focused production core and retained renderer/native owners. |
+| 4. Product prompt/inventory/viewport/density and reference permutations | Logical cases one density. Keep one native DPR bridge and event-order transition. Retire repeated inventory captures/presentation narratives; references and genuinely large traversals targeted extended at one density. | Native before/after pairs; no savings assigned to absent-reference skips. Lost detection: full presentation on every width/model/DPR combination. |
+| 5. `test_tensor_analysis.py::test_endpoints_and_disk_reuse`, 19 inputs | Keep independent 19-input numerics; endpoint representatives cover asymmetric/constant/mixed/nonfinite/empty layouts. Persistent cold/warm exact metadata+bytes once. Retire weak DONE-only dtype wrappers: exact F16/BF16 bytes remain in `test_tensor_data.py::test_exact_shapes_and_native_source_unchanged`. | Focused analysis/data tests. Lost detection: artifact-count-only cross-dtype analysis check, not exact conversion proof. |
+| 6. Selector broad test/directory routes | Finite actual-file responsibility groups, direct changed-test routes and explicit helper consumers. Shared/unknown/new inputs remain conservative; ordinary untagged tests remain routine. Preserve exact Git diff and empty/failure guards. | Native collection, existing selector/entrypoint behavioral controls. |
+| 7. Fresh services per independent case | First remove duplicate journeys. Keep fresh services for cold/cache/barrier/cancel/error/model mutation. Reject service pooling if it requires a new state-reset/isolation framework; read-only candidates must show benefit and safety before adoption. | Historical eight-case startup 63.149 s; no fixture-copy campaign. |
+| 8. Architecture 8/16-cycle lifetime/GC, full-size sweeps; real backend percentile/allocator thresholds | Keep a compact routine return/remap/cleanup/scale bridge; long soak/full traversal and real 2**24+1/allocator threshold retained as targeted extended, with original sizes. | Affected extended checks required on this exact refactor target; deferred work is not eliminated work. |
+| 9. Backend Python 3.12/3.14 workflow | Primary optimized suite on 3.12; version-independent checks once. 3.14 installed-wheel/CLI plus representative real runtime ordinarily; full compatibility for relevant runtime/dependency/packaging changes and manual mode. Isolated wheel installs. | Native Python collections and wheel/runtime proof; reduced default 3.14 confidence explicit. |
+| 10. API/UI generated checks repeated by integration | Dedicated exact-target API/UI workflows own drift and validation. Preserve full local path; CI routine integration avoids duplicate validation/regeneration only with that ownership explicit. | Inspect `--write` behavior, API validator/drift, entrypoint error propagation. No cross-workflow build cache for a ~0.4 s build. |
+| 11. Headed acceptance for logical transport cases | Evaluate headless for non-native state/transport specs; preserve headed native/focus/window cases and SwiftShader. No extra workers merely for elapsed speed. | Focused real transport and native rendering mode checks; no assumed pixel equivalence. |
+| 12. Observer/polling/snapshot work | Keep prior fast path and batching; remove repeated full-state reads/pixel sweeps with retired narratives. Further observer complexity only after measured evidence. Keep independent scalar/count/resource/error and real pixel observers. | Focused probe/retained scientific core; no instrumentation-only campaign. |
+| 13. Remaining backend/UI/API/examples/infrastructure tests | Audit costly repetition and weak wrappers; keep cheap independent numerical/security/protocol/exporter and real lease/Git/command controls. Remove only support with no consumers. No mass mutation or unit-test count quota. | Existing owner suites, import/consumer searches; specific additional retirements recorded before edit. |
+| 14. Component preview+dev and acceptance density servers | Resolve consumers; start only selected density servers where native selection can express this simply. Preserve separate dev and production build evidence. Reject caching/pooling machinery for negligible static startup. | Native config/CLI collection, selected-server startup and cleanup; additional savings unmeasured. |
+| 15. Workflow planning/event duplication | Preserve existing check identities and same-repository/least-privilege gates. Narrow conditional product work from exact paths; no status fabrication, branch-rule change, controller or unrelated runner edits. | Actual workflow shell/selected-failure controls; current event/base/merge identity. |
+| 16. Thread/host contention | Heavy measurements serialized. Evaluate bounded test-only native threads if needed; preserve production defaults and report host work separately. No additional parallel headed workers or another issue's cleanup. | Scoped identical scenario if adopted; otherwise no-change decision with unmeasured opportunity. |
+
+Routine mandatory retains independent float32/statistics/distribution/protocol
+values, a real producer-before-first-pixels bridge, exact source/parameter dispatch,
+shared-consumer survival/cancellation, pre-/midstream errors, stale responses,
+resource teardown, meaningful native/fractional/DPR and graph scale/culling proof.
+Full/manual retains all non-retired extended/reference/CUDA checks. The new routine
+combined gate has a 1200 s envelope (900 s engineering target); the workflow remains
+25 minutes with explicit setup/report headroom. Two changed-target complete routine
+attempts at most are authorized; focused checks precede them.

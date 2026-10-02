@@ -1,93 +1,100 @@
 # Validation ownership and change routing
 
-`.github/scripts/validation_selector.py` is the single conservative map used by
-the four product workflows and the selected integration entrypoint. It reads
-complete normalized paths, returns finite owners and reasons, and resolves native
-Playwright files. Test titles and commit messages never determine selection.
+`.github/scripts/validation_selector.py` is the single standard-library map used
+by the four product workflows. Plans include complete paths, selected native
+files, routine/full portfolio, potentially affected extended owners, Python
+compatibility scope, reasons and exact tested revisions.
 
-Full discovery includes nested spec files. Acceptance uses the native
-`**/*.spec.ts` matcher, with new untagged cases owned by DPR 1. Selected CLI file
-filters escape literal paths because Playwright interprets them as regular
-expressions; special filename characters cannot silently omit a selected file.
+| Changed surface | Selected proof |
+| --- | --- |
+| Existing backend `tests/test_*.py` | That pytest file; analysis selects its genuine extended thresholds. Helpers, unknown/deleted/nested tests remain broad. |
+| Existing matrix/tensor/renderer/distribution/magnifier/tokenizer/architecture browser spec | That native file plus complete UI fast checks. Unknown/deleted/nested specs remain broad. |
+| UI unit test | Complete UI fast checks; ordinary tests remain included. |
+| Split production spec | Its actual responsibility and corresponding real HTTP files. |
+| `product-harness.ts` | All five tensor/tokenizer production spec consumers. |
+| HTTP test file | That pytest file plus a real transport bridge; architecture/native packages use the architecture bridge. |
+| Architecture UI production | Architecture component files, `architecture.spec.ts`, TCP architecture/native packages. |
+| Tokenizer UI production | Tokenizer component files; transport, scientific, bindings and tokenizer-layout production files and their HTTP owners. |
+| Rendering/matrix production | Matrix/native, tokenizer and architecture component owners plus complete integration. |
+| Backend production/examples | Backend checks and real integration; examples additionally select graph components. |
+| API/generator/normative/shared/unknown/configuration | All applicable routine owners and potentially affected extended owners. |
+| Operational Markdown/known runner infrastructure | Explicit product non-applicability; existing documentation/infrastructure checks. |
 
-| Surface | Fast owners | Expensive owners |
-| --- | --- | --- |
-| `ui/src/architecture-explorer/` | Full UI check | Every `architecture*.spec.ts`; complete TCP/product acceptance including native weight modal, CLM, Kev and LoRA |
-| `ui/src/rendering/`, `ui/src/matrix-explorer/` | Full UI check | Matrix/tensor/renderer/distribution/magnifier, tokenizer/embedding and architecture component files; complete integration |
-| `ui/src/tokenizer/` | Full UI check | Every `tokenizer*.spec.ts`; real network/embeddings/polish/distribution/reference HTTP owners and complete `product.spec.ts` |
-| Shared UI app/components/explorers/styles/runtime config | Full backend/API/UI checks | Complete component browser and integration |
-| `backend/` | Existing full backend check, including wheel smoke | Complete integration; no fragile backend filename narrowing |
-| `api/`, `docs/spec/api/`, generated binding/generator inputs | Full API/backend/UI checks | Complete component browser and integration |
-| `examples/` | Full backend/native exporter checks and UI check | Architecture component files and complete real integration |
-| Tests, fixtures, helpers, workflow/config/locks, all normative specifications | Full API/backend/UI checks | Complete product gates |
-| Operational Markdown and known runner infrastructure | Existing documentation/executor infrastructure checks | Explicit product non-applicability |
-| Unknown input or invalid/unavailable diff | Full API/backend/UI checks | Complete product gates |
+`@extended` classifies genuine long/reference cases. Ordinary untagged tests run
+by default. DPR 1 owns ordinary production cases; `@density` adds only meaningful
+DPR-2 bridges. Desktop owns ordinary component cases; `@responsive` adds a narrow
+bridge, and native scrollbars remain headed. Actual fractional DPR cases remain
+native. Long architecture lifetime retains sixteen cycles; routine return/remap
+uses three, with warmed object retention and exact identity assertions.
 
-Selections are unions. Broad groups dominate by resolving to a deduplicated file
-set. New ordinary component cases run in desktop; narrow remains `@responsive`,
-and native scrollbars keep their dedicated headed project. Product DPR 1 owns all
-ordinary cases, DPR 2 keeps `@density`. PRs retain their existing desktop/native
-and DPR-1 policy; main/full local runs retain all configured projects. Renderer
-files keep their independently configured fractional DPR cases. No assertions,
-timeouts, worker budgets, retries or optional capability rules change.
-
-The coarse backend, example, shared and architecture integration selections are
-intentional: shared startup and native weight streams cross those boundaries.
-Routing does not claim that a filename-level map can isolate individual semantics.
-CLM/Kev exports and adapted-projection composition now run in
-`acceptance/test_native_packages.py`, discovered by the complete HTTP owner;
-generic graph browser files own their shared presentation. Full integration
-discovers all remaining product specs and retains actual-reference bindings.
-
-## Revision and failure contract
-
-All four workflows run cheap selection before conditional test steps, without
-path filters that could prevent inspection. Epic-child base exclusions and the
-same-repository guard before self-hosted jobs remain. Checkouts use full Git
-history with no persisted credentials. PR selection diffs the current fetched
-base's merge-base against the exact PR head and records the tested head/merge.
-Push selection diffs actual `before` through `after`, including every pushed
-commit, deletions and both sides of renames. No file-list API truncation applies.
-
-Missing commits, non-forward pushes, unrelated history, malformed paths/events or
-mismatched merge context select the full product gate with a visible reason.
-Invalid explicit plan files and empty required groups fail before checks. Native
-pytest/Playwright still fail empty execution. No `--pass-with-no-tests` is used.
-
-Each historical logical check remains one job. Selected mandatory commands run
-under failure-propagating shell/Python execution; a failed/cancelled job cannot
-be aggregated into success. There is no conditional-job aggregator. An unselected
-owner is explicitly non-applicable in the normal job summary, which includes the
-plan, reasons and exact revision context. This does not claim tests executed.
-
-## Commands and full mode
-
-From the repository root after the documented dependency setup:
+Routine traces are off, retries zero, with JSON, failure screenshots, logs and
+compact resource/timing attachments. Request a diagnostic for one named failure:
 
 ```sh
-# Complete local proof and aggregate evidence, independent of routing:
-bash acceptance/check.sh
-# Complete integration only (main policy keeps all configured DPR projects):
-bash acceptance/check-integration.sh --main-ci
-# Focused routes from a complete operator-supplied path list:
-printf '%s\n' '["ui/src/tokenizer/TokenizerExplorer.tsx"]' > /tmp/changed-paths.json
-python3 .github/scripts/validation_selector.py --paths /tmp/changed-paths.json --output /tmp/validation-plan.json
-(cd ui && npm run check)
-python3 .github/scripts/validation_selector.py --plan /tmp/validation-plan.json --run browser --main
-bash acceptance/check-integration.sh --main-ci --plan /tmp/validation-plan.json
-# Cheap orchestration tests, including actual workflow shell invocations:
-api/.venv/bin/python -m unittest discover -s acceptance -p test_validation_selector.py
-api/.venv/bin/python -m unittest discover -s acceptance -p test_ci_entrypoints.py
+cd ui
+npm run test:acceptance -- scientific.spec.ts --project=dpr1 --grep 'source pixels' --trace on
 ```
 
-Omit `--main`/`--main-ci` to reproduce PR project policy. The path JSON is an
-explicit complete input, not a way to validate a partial list as a whole PR.
-`--github` consumes the Actions event and exact Git objects; `--full` produces a
-complete plan. Every workflow has `workflow_dispatch`, which always selects full
-coverage. A final PR whose head is `codex/epic-issue-*` also forces full coverage,
-including when only operational files changed. Main integration continues to
-delegate API/component checks to their independent workflows.
+Transport-only production cases use headless Chromium. Native focus, geometry,
+pointer, IME and physical pixel owners remain headed with one SwiftShader worker.
+There is no shared live service/cache state between independent tests. Separate
+production/static and dev-harness servers are retained: both have actual consumers
+and their small startup does not justify discovery or reuse machinery.
 
-Reference SmolLM2 Base, complete architecture references, LoRA pairs, CLM/Kev
-native reference availability and CUDA remain governed by the existing acceptance
-documentation. Missing optional capabilities are reported as skips, never passes.
+## Commands and portfolios
+
+```sh
+# Complete local proof: all non-retired cases, extended and configured references/CUDA.
+bash acceptance/check.sh
+# Complete integration, with all density projects; local contract checks included
+# unless --main-ci delegates to the independent exact-target CI owners.
+bash acceptance/check-integration.sh --main-ci
+# Complete mandatory routine HTTP/build/discovery/browser/setup/teardown gate:
+bash acceptance/check-integration.sh --routine --main-ci
+# Use a complete changed-path array, or --github with native exact Git objects:
+python3 .github/scripts/validation_selector.py --paths /tmp/changed-paths.json --output /tmp/validation-plan.json
+bash acceptance/check-integration.sh --routine --main-ci --plan /tmp/validation-plan.json
+python3 .github/scripts/validation_selector.py --plan /tmp/validation-plan.json --run browser --main
+python3 .github/scripts/validation_selector.py --plan /tmp/validation-plan.json --run integration --main --extended
+# Native backend selected files / threshold proof:
+python3 .github/scripts/validation_selector.py --plan /tmp/validation-plan.json --backend-targets
+(cd backend && uv run --locked pytest -m 'not extended')
+(cd backend && uv run --locked pytest tests/test_tensor_analysis.py -m extended)
+```
+
+`--full` and manual workflow dispatch select all non-retired proof. An aggregate
+epic PR selects the full mandatory **routine** portfolio plus affected extended
+owners. A routine success is not reference/CUDA certification. Missing optional
+capabilities remain skips; invalid supplied references and required-reference mode
+still fail in their selected full/extended owners. No saving is assigned to skips.
+
+Python 3.12 owns complete selected routine checks and version-independent
+lint/format/mypy. Ordinary main Python 3.14 owns eighteen real installed-wheel,
+CLI/server/session/dtype-shape runtime cases. Dependency/runtime/packaging inputs,
+conservative fallback and manual mode select the fuller 3.14 wheel suite. This
+reduces default cross-version confidence; it does not change supported versions.
+Wheel installs have private temporary destinations, with locked dependency paths
+read-only and explicit imported-package location/CPU-package assertions.
+
+## Exact revisions, failure and CI truth
+
+Plans use full Git history, the current PR base's merge-base and exact PR head or
+push before/after, including all commits, deleted paths and both rename paths.
+Tested merge identity must match the current base/head pair. Missing/truncated,
+non-forward or unknown input selects broad routine and potentially affected
+extended proof with a visible reason. Malformed explicit plans and empty required
+groups fail. Native commands propagate failures; no empty-success flag is used.
+
+Existing check identities, epic-child CI deferral, same-repository self-hosted
+restrictions, least privilege and superseded-PR cancellation remain. The independent
+API workflow owns schema/protocol plus exact fixture drift; the UI workflow owns
+generated binding drift. Integration CI delegates these repeated checks on PRs
+and main to those applicable exact-target gates. A missing/failed/cancelled selected
+gate remains required and is never a product pass. `--main-ci` is this delegation,
+not permission to waive final CI. Full local execution keeps both checks.
+
+The application workflow retains its 25-minute limit. The combined routine gate
+must complete within 1200 seconds, including selection and all setup/teardown;
+900 seconds is an engineering target. Extended work is separately reported and
+must pass when affected. No split command resets the routine budget. Builds are
+fresh per checkout; no verdict, live cache or cross-workflow build reuse is added.

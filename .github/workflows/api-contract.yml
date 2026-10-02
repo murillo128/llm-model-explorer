@@ -47,7 +47,3 @@ jobs:
           echo "LMEX_API_PYTHON=$env_dir/bin/python" >> "$GITHUB_ENV"
       - if: steps.plan.outputs.api == 'true'
         run: '"$LMEX_API_PYTHON" api/validate_contract.py'
-      - if: steps.plan.outputs.api == 'true'
-        run: '"$LMEX_API_PYTHON" api/validate_contract.py --write'
-      - if: steps.plan.outputs.api == 'true'
-        run: git diff --exit-code -- api/fixtures

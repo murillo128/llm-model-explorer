@@ -36,6 +36,7 @@ explicit = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = ["extended: genuine size/platform proof selected for affected changes and full/manual runs"]
 
 [tool.ruff]
 target-version = "py312"
