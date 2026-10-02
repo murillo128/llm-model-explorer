@@ -568,36 +568,7 @@ all cache assertions. The real four-process competition passes (1 selected /
 final proof, with finalized JUnit. The two real extended tests pass on both
 Python versions.
 
-## Audit-return completed evidence
-
-### Cross-boundary and phase continuation plan
-
-The next contract starts at `83843e38e666151aeaa9837b839cfaf1ba1108a3`.
-An ad-hoc read-only inventory inspected 372 repository source/fixture files,
-ordinary and function-local Python imports, embedded preparation commands,
-dynamic CLM/Kev exporters, TypeScript imports and native JSON/HTML/oracle inputs.
-The static graph is an overapproximation: manually inspected CLI branches keep
-the ordinary tensor/tokenizer harness separate from architecture/polish fixtures.
-No test module was executed for discovery. Inventory artifacts stay outside Git.
-
-Before changing routing, retain the known leaf controls (session operations,
-matrix zoom and HTTP report) and record the direct LoRA, Kimi and multi-hop
-dense/quantized/model/stream/helper closure in the routing guide. Positively
-reviewed current leaves may narrow; unclassified existing files cannot infer
-isolation from a filename. Shared fixtures conservatively select their relevant
-native family and threshold owners, without adding full Python compatibility for
-every test-only edit.
-
-Focused regressions cover the issue's direct/transitive/embedded inputs,
-deterministic unions, new-existing/nested/deleted paths, shared HTTP plus reference
-browser consumers, architecture UI plus LoRA, effective reference/full promotion,
-extended-only routine non-applicability, distinct phase evidence, prerequisites and
-failure propagation. Expected targets come from inspected consumer imports and
-commands, not the selector's own map. Prove omissions on the starting selector,
-then use native discovery/prerequisite/report/trace controls and deduplicated real
-architecture/native-package/polish TCP plus architecture browser routine/extended
-proof. Keep prior timings attached to their tested targets; the remaining complete
-routine attempt is reserved for a material need after scoped reconciliation.
+## First audit-return completed evidence
 
 The bounded routing repairs are validated at
 `1610d796297771b5a44ff628852bd11bf443d40a`, against unchanged integration
@@ -643,3 +614,95 @@ Native reports, both negative-control logs, the missing-Node failure, final plan
 source reconciliation and cleanup evidence remain outside Git under
 `/tmp/issue-277-evidence/audit-return/`. The prior failures and all unavailable
 reference/CUDA qualifications remain visible.
+
+## Cross-boundary and phase continuation — completed evidence
+
+The continuation starts at `83843e38e666151aeaa9837b839cfaf1ba1108a3`.
+An ad-hoc read-only inventory inspected 372 repository source/fixture files,
+ordinary and function-local Python imports, embedded preparation commands,
+dynamic CLM/Kev exporters, TypeScript imports and native JSON/HTML/oracle inputs.
+The static graph is an overapproximation: manually inspected CLI branches keep
+the ordinary tensor/tokenizer harness separate from architecture/polish fixtures.
+No test module was executed for discovery. Inventory artifacts stay outside Git.
+
+The final map classifies the 26 cross-boundary backend inputs and six integration
+support families before shared/leaf rules. It retains positively reviewed leaves
+(session operations, matrix zoom and HTTP report): 23 backend, 42 component,
+58 UI-unit and ten HTTP files. Unclassified existing, nested, deleted or renamed
+inputs remain conservative; a filename cannot establish isolation. Shared fixtures
+select their actual native family and applicable threshold owners, without adding
+full Python compatibility for every test-only edit.
+
+Focused regressions cover the issue's direct/transitive/embedded inputs,
+deterministic unions, new-existing/nested/deleted paths, shared HTTP plus reference
+browser consumers, architecture UI plus LoRA, effective reference/full promotion,
+extended-only routine non-applicability, distinct phase evidence, prerequisites and
+failure propagation. Expected targets come from inspected consumer imports and
+commands. The initial five new regression methods fail on the starting selector
+with 21 assertion failures for omitted consumers/incorrect LoRA routine execution;
+these are selector regressions, not native product proof. The extended table covers
+every currently classified backend input and all six integration support families.
+Command stubs establish orchestration and failure propagation only. Native proof
+and retained-evidence reconciliation are recorded below.
+
+The complete 26-input regression table also fails on `83843e3` with 26 intended
+omitted-consumer failures and no setup errors. Final selector/entrypoint controls
+at `fc58928d` report **48 logical passes**, with finalized native JUnit; Ruff/check,
+format (44 files), shell syntax, TypeScript and ESLint pass. The native production
+snapshot is `6e2bc6bfce8e78e3ce32770b98dec67183ac4c6a`; `fc58928d` changes only
+the cheap routing regression table relative to that snapshot.
+
+| Fresh native proof | Result | Native wall / command envelope |
+| --- | --- | --- |
+| Architecture, native-package, polish and LoRA TCP files, selected once as a union | 13 passes, eight absent-reference/explicit-local-gate skips; 21 logical cases. Real CLM/Kev exporters, adapted projection A/B bytes and the configured Kimi graph run through the production CLI/TCP. | 91.811 s JUnit / 92.532 s |
+| Architecture routine, both configured density projects | 13 passes, five existing unsupported-fixture skips; 18 pairs. Geometry, binding, progressive cancellation, stale response and resource/lifetime assertions are unchanged. | 155.255 s / 155.731 s |
+| Available production extended, existing DPR-1 owner | Three passes, twelve absent-reference skips; 15 pairs. Sixteen-cycle mounted lifetime, compact native shell and tokenizer divider proof execute. | 68.045 s / 68.610 s |
+| Native collection and effective phases | Before/after full identities are equal: 53 pairs. Routine 38 and extended 15 are disjoint and their union equals full. Required-reference promotion collects those same 53. LoRA routine is intentionally empty; its two extended cases remain selected. | Collection/control only, not product performance |
+| Temporary two-case native phase control | Routine, extended, full and diagnostic finalize separate JSON/output directories. Deliberate extended failure exits 1; the earlier routine JSON digest remains unchanged after failure/full/diagnostic. Explicit trace exists only in diagnostic artifacts. | Small report/trace contract fixture; no model/WebGL claim |
+
+The production routine JSON remains byte-identical after the extended execution;
+neither production phase creates a default trace. A named architecture input-failure
+control at the old head retains a trace; the same new default does not, and native
+`--trace on` produces one in the diagnostic directory. Both old/new controls retain
+the original missing-manifest error and an unchanged secondary timing-teardown
+error. They establish trace policy, not full local-model acceptance. Native LoRA
+extended without inputs produces two truthful skips; a supplied nonexistent root
+promotes to full and produces two original missing-input failures with zero skips.
+The application upload selects the owned root containing HTTP JUnit and all phase
+directories; command controls preserve nonzero build/HTTP/browser/later-phase exits.
+
+Two native controls exposed adjacent phase defects during implementation:
+project-level density grep replaced the global extended grep (19 collected pairs,
+including four ordinary replays), and workers reloaded configuration without the
+CLI trace argument (a diagnostic trace landed in routine artifacts). Intersecting
+the density/extended filters and propagating the resolved evidence phase repair
+those defects; their original reports remain outside Git. A first trace control
+used an anchored title filter and collected no tests; that setup failure is retained
+and is not counted as trace regression proof. The corrected native title control
+above reaches the actual input failure. No retry, assertion, tolerance or timeout
+was changed.
+
+Complete-diff reconciliation to `83843e3` selects identical effective native files:
+all backend tests, 42 component files, seven production files and complete HTTP.
+Backend source/tests/configuration/dependencies and wheel isolation, API/generator,
+UI source/units/component tests/configuration/locked dependencies and accepted
+specifications are unchanged. Their recorded passing primary/wheel (1,930 passes,
+20 CUDA skips), component (451 passes), UI-unit (1,043 passes) and API proof remain
+applicable. Acceptance phase configuration and architecture trace differ and have
+the fresh proof above; the ten additional logical HTTP routing/control methods
+are validated separately instead of repeating unchanged HTTP consumers.
+
+The historical **561.084 s** complete routine sample remains tied to its original
+revision. This continuation supplies scoped proof, not a new whole-pipeline timing
+sample; one of the two authorized complete routine attempts remains unused. No
+new retirement or measured savings percentage is claimed. Shared UI support and
+unknown inputs deliberately over-select relevant/full owners as a cost tradeoff.
+Unavailable complete references and CUDA remain uncertified, and final aggregate
+product CI remains mandatory. The four product workflows retain accepted epic-child
+CI deferral; applicable exact-head executor-routing CI is checked at publication.
+
+Finalized native JSON/JUnit, before/after collection identities, negative controls,
+original phase failures, timing/log/screenshot/trace evidence, source reconciliation
+and owned-process cleanup are retained under
+`/tmp/issue-277-evidence/closure-phases/`. All owned snapshot service/browser processes
+have exited. No model weights, caches, bulky reports or traces are committed.

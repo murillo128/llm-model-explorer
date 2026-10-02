@@ -277,3 +277,13 @@ cancellation, surviving shared consumers, pre-/midstream failures, incomplete ca
 stale-generation fencing, exact dispatch and native/scientific resource ownership
 retain real TCP/backend/browser owners. The cost report records native sets and
 validation. Full/manual includes every non-retired extended/reference case.
+
+The cross-boundary repair retains these owners in the selector: native LoRA/CLM/Kev
+fixture preparation selects real native-package TCP; dense/quantized/model/stream
+helper closure selects architecture/native-package/polish TCP plus architecture
+browser; shared network/reference support retains the architecture reference
+browser consumer. Architecture UI changes also select retained LoRA browser/TCP
+proof. See the [inspected closure and phase map](validation-routing.md).
+Extended-only LoRA routine non-applicability is a phase classification, not a
+capability skip or deletion. Reference promotion executes effective full once;
+distinct native reports preserve routine, extended, full and diagnostic evidence.

@@ -71,6 +71,13 @@ owners. Invalid diff context falls back to the full mandatory routine portfolio 
 potentially affected extended owners; invalid plans or
 empty required groups fail. Fast checks remain full for each selected owner.
 
+Narrow test routes use explicit reviewed leaves, not filename/existence alone.
+Shared helper imports can cross from backend tests into real TCP/browser fixture
+preparation, including function-local/embedded imports and reference oracles.
+Keep the finite consumer map current and union all owners. Known Python-only
+native-package inputs stay browser-free; shared network support also serves the
+architecture browser oracle. New unclassified existing test paths remain broad.
+
 Preserve accepted epic-child local validation and the final aggregate CI boundary.
 Native configuration separates routine, affected extended and explicit full
 portfolios; ordinary untagged tests remain routine. `acceptance/check.sh` is always
@@ -88,6 +95,14 @@ all non-retired `@extended` cases and configured reference/CUDA checks. Backend
 `pytest -m extended` retains genuine 2**24+1 quantiles and Linux allocator proof;
 analysis/materialization/dependency or unknown impact must select them. Long
 architecture lifetime retains sixteen cycles in its targeted extended owner.
+
+The plan resolves reference-enabled effective full before setup/phase selection;
+do not run its extended cases a second time. The declared extended-only LoRA file
+has no routine browser command, while its TCP and extended owners remain required.
+Native reports/output use separate routine/extended/full/diagnostic directories
+under the owned evidence root (or `ui/test-results/acceptance/` locally). A later
+failure must preserve earlier finalized reports. Explicit diagnostic trace runs
+use the diagnostic destination. Unexpected empty native discovery still fails.
 
 Issue #277 explicitly authorizes risk-based low-value retirement. Record exact
 removed permutations, retained independent owners or plausible lost defect
