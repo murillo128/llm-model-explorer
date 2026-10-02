@@ -10,6 +10,11 @@ CPU fixture success. No test-count or percentage quota was used.
 - Final child activation/integration base: `25a8d7c3be08e4e74383a988cef74feafeef8414`.
 - Isolated selected/full browser and integration snapshot:
   `6aca73f8bd11034b6e1b4b6ddfaf7cbacb461f35`.
+- Authorized harness repair: `11b555125d35f2f17482583b3e229c7947c1bd12`
+  stops redundant post-first-render observation with pixel capture disabled.
+  `985cff82e697316221ee55f8bcccf2d641d433ec` batches settled-frame observations
+  and is the exact fresh complete integration target. Report-only edits after
+  that target do not change exercised code or selection.
 - Routing guard: `33ba0d5d1f0e8d5e2141ae6ba9cc5fc8ffbacd84`, narrowing
   infrastructure exceptions to exact known paths. Independent negative controls
   fail on the preceding selector and pass after the correction. The native files selected by both
@@ -31,6 +36,9 @@ One restricted-environment attempt failed WebGL resource allocation (15 passes,
 43 failures); an unchanged host probe and the complete host tokenizer route pass.
 Those failed environment results are retained and excluded from timing comparisons.
 No assertions, deadlines, tolerances or retry settings were changed.
+The repair's before/after/batched samples and repaired complete gate all set
+`PYTHONDONTWRITEBYTECODE=1`; the earlier `6aca73` full-gate driver did not.
+This environment difference is disclosed, not assigned a measured timing cause.
 
 - Final discovery/CLI-filter safeguards: `33eb17a75c557c8ef6a38103ade3493600437d64`.
   Native registration proves every existing case/project pair unchanged, adds a
@@ -101,44 +109,93 @@ main integration continues to avoid duplicated component/API checks.
 
 ## Measured outcome and validation
 
-The 2026-10-02 continuation authorizes a bounded harness repair. Extend the
-existing real-WebGL probe false/true cases with independent native-draw and
-observer-only framebuffer-query counters. Pre-upload and non-matrix draws must
-not record first render; the first eligible draw records it once. Later draws
-must still reach native GL. With capture off they must avoid redundant observer
-queries/readbacks; with capture on they must refresh exact pixels and counters.
-Existing upload/count/resource/reader/error and resize/DPR/replacement/loss
-assertions remain. Demonstrate the unnecessary-query assertion red against the
-old probe, then green after the fast path. Compare retained camera/native-pane
-cases on quiet isolated snapshots before the single authorized repaired full gate.
-The first sample shows little elapsed benefit from the fast path. The bounded
-follow-through batches native scroll, origin, rectangle and document observations
-from the successful settled-frame poll, camera profile/inspection rectangles,
-and simultaneous texture/reader cleanup. Raw native scroll/DPR remains the
-independent origin oracle; wheel/pinch/drag/scroll actions, intermediate preview
-states, resize/frame barriers and all original geometric/resource expectations
-remain. No observation is reused across an action or viewport change.
+The 2026-10-02 authorized continuation repairs test-harness overhead. The existing
+real-WebGL probe cases now use independent native-draw and observer-only
+framebuffer-query counters. Pre-upload and non-matrix draws do not record first
+render; the first eligible draw records it once and later native draws continue.
+The new capture-disabled assertion fails against the old probe for the intended
+reason (queries increase from 3 to 4), while the other two cases pass. All three
+pass after the fast path. Capture-enabled subsequent pixels still match independent
+native `readPixels`, change with the transfer function, and refresh counters without
+new snapshot allocation. Scalar/count/resource/reader/error observations and the
+existing resize/DPR/replacement/context-loss assertions remain active.
+
+The fast path alone shows little elapsed benefit. The bounded follow-through
+batches native scroll, origin, rectangle and document observations from the
+successful settled-frame poll, camera profile/inspection rectangles, and simultaneous
+texture/reader cleanup. Raw native scroll/DPR remains the independent origin oracle;
+wheel/pinch/drag/scroll actions, intermediate preview states, resize/frame barriers
+and all geometric/resource expectations remain. No observation is reused across an
+action or viewport change. Node-side step marks locate phases without browser calls.
+
+Three serialized isolated samples retain the same eight native-pane, camera and
+adaptive-inspection invocations, both DPRs, fresh backend/cache/session setup and
+all assertions. Before uses `3f9acfe` with the new regression and timing marks;
+fast-path uses `11b5551`; batching uses `985cff8`.
+
+| Retained eight-case sample | Result | Native wall / command envelope |
+| --- | --- | --- |
+| Before repair | 8 passed, zero skips/retries | 461.946 / 462.502 s |
+| Fast path | 8 passed, zero skips/retries | 458.770 / 459.280 s |
+| Fast path and settled-frame batching | 8 passed, zero skips/retries | 365.394 / 365.943 s |
+
+| Eight-case phase sums (seconds) | Before | Fast path | Batched |
+| --- | ---: | ---: | ---: |
+| Native attempt durations | 459.983 | 457.051 | 363.435 |
+| Backend spawn to ready | 70.139 | 70.155 | 63.149 |
+| Browser setup | 1.447 | 1.397 | 1.344 |
+| Test body | 386.251 | 383.285 | 296.997 |
+| Teardown | 1.469 | 1.497 | 1.355 |
+| Fixture generation (overlaps setup; not added twice) | 0.319 | 0.324 | 0.322 |
+
+The focused command is `xvfb-run -a npm run test:acceptance -- product.spec.ts
+--grep 'production native pane geometry|integrated camera gestures|polish magnifier
+follows edges' --reporter=list,json` from each isolated snapshot's `ui/` directory.
+Probe proof uses `xvfb-run -a npm run test:browser -- acceptance-probe.spec.ts
+--reporter=list,json,html`. These subsets are profiling/regression evidence,
+not substitutions for the complete gate.
+
+The batched sample is 96.552 s lower than before in native wall time. This is a
+focused observed comparison, not a whole-pipeline saving or proof that all of the
+difference comes from batching. Per-case setup/body/teardown and step timings are
+retained; backend startup varies too. Separate fresh builds take 0.43–0.46 s.
+Affected typecheck/lint and diff checks pass. Native discovery preserves all
+93 product and 521 component case/project pairs, tags, expected statuses and
+timeouts. Full API/shared routing still selects every retained product pair.
 
 **Acceptance is unmet. Issue #277 returns to `investigation-required`; the PR
-remains draft.** One complete selected integration attempt exhausted the unchanged
-25-minute budget. No second full application attempt, extra timing-baseline run,
-timeout increase or coverage reduction is used to obtain a green outcome.
+remains draft.** The original complete attempt and the single explicitly authorized
+repaired-code complete attempt both exhausted the unchanged 25-minute budget.
+The repaired attempt follows passing focused proof and measured benefit; it is
+not an unchanged rerun. No further complete attempt or extra timing-baseline run
+is started after its failure. No timeout increase or coverage reduction is used.
 
 | Personally executed check | Observed result | Wall time / qualification |
 | --- | --- | --- |
 | Isolated tokenizer route, all native projects | 58 passed, zero skips/failures/retries | Native 82.532 s; selector/Xvfb envelope 83.075 s |
 | Shared/API complete component route | 521 passed, zero skips/failures/retries | Native 742.602 s; envelope 743.526 s, fresh build 0.400 s |
-| Complete HTTP gate in selected integration | 58 passed / 10 capability skips | 167.58 s, 68 cases on the measured snapshot; final nested-discovery method makes current collection 69 |
-| Complete integration command with all DPR selections | **Exit 124 at 1500.001 s** | Partial browser log: 56 passed / 30 skips; 7 lack completed evidence |
+| Original complete HTTP gate (`6aca73`) | 58 passed / 10 capability skips | 167.58 s; 68 cases before the added nested-discovery method |
+| Original complete integration command (`6aca73`) | **Exit 124 at 1500.001 s** | Partial browser log: 56 passed / 30 skips; 7 lack completed evidence |
+| Repaired complete HTTP gate (`985cff8`) | 59 passed / 10 capability skips | 178.67 s; finalized native JUnit, 69 cases |
+| Repaired complete integration command (`985cff8`) | **Exit 124 at 1500.003 s** | Partial browser log: 56 passed / 30 skips; 7 lack completed evidence |
 
-The deadline interrupts `product.spec.ts`'s DPR-2 `integrated camera gestures,
+The repaired command selects from the complete 18-path Git diff against
+`25a8d7c`, then runs `acceptance/check-integration.sh --main-ci --plan <plan>`
+under one `timeout 1500` envelope. Selection, HTTP lint/pytest, build, discovery,
+browser setup/body/teardown share that envelope; the budget is never reset.
+
+Both deadlines interrupt `product.spec.ts`'s DPR-2 `integrated camera gestures,
 exact selection, aligned scales and adaptive inspection retain scalar storage`.
-Its trace ends during forced-close teardown; no completed camera assertion result
-is available for that density. Native browser JSON never finalized. Six later
-cases also lack completed evidence. The 1000×700 pane case passed at both densities,
-and the historical camera case passed at DPR 1; neither repairs the incomplete
-whole gate. Issue-owned backend ports closed; two surviving static servers were
-verified against the isolated snapshot and terminated.
+The repaired partial trace reaches native lower bound (13.331 s), wheel/pinch
+(19.105 s), and matrix selection (25.676 s) before interruption during axis
+selection. The final `mouse.up` reports a closed browser after timeout; this is
+not a completed camera assertion failure. Native browser JSON never finalized.
+Six later cases also lack completed evidence. The 1000×700 pane case and focused
+camera case pass at both densities; neither repairs the incomplete whole gate.
+Original surviving static servers were verified and terminated. Repaired cleanup
+terminates only processes verified as owned by its isolated snapshot; all six
+owned ports (30060–30065) are closed, with no owned backend/static survivors.
+Cleanup takes 0.184 s, for 1500.187 s including cleanup.
 
 The pending set also includes stale-view fencing, DPR-change inspection, two
 inventory captures, adaptive magnifier and linked two-card scientific parity.
@@ -146,6 +203,12 @@ These remain selected, mandatory assertions. They are not converted into skips.
 All 30 observed browser skips correspond to missing actual references or existing
 unsupported tiny MoE fixtures; HTTP's 10 skips retain its reference/CUDA rules.
 CPU fixture success is not complete actual-reference or CUDA acceptance.
+
+The cancelled activation application job has 14 s before acceptance and 21 s
+after it (artifact/report teardown): 35 s outside the acceptance step. These
+observed CI costs require headroom under the unchanged 25-minute workflow limit;
+they are not a new passing CI measurement or a speedup denominator. The repaired
+local gate already exceeds its own envelope without that extra CI work.
 
 Component native attempt sums include setup/body/teardown: **1424.791 s** total,
 **77.141 s** Before Hooks, **47.294 s** After Hooks and **1300.356 s** body/remainder.
@@ -174,10 +237,14 @@ Scoped controlled #274 and #276 timing comparisons remain in their linked proof
 maps and are not summed/double-counted as cumulative savings. **Complete final
 acceptance within budget and a cumulative timing-success conclusion are unmet.**
 
-Before execution can finish, investigate the measured full-gate cost/interruption
-and establish an authorized repair with retained owners, then obtain fresh complete
-exact-target validation inside the existing budget. Do not merely rerun unchanged
-suites, increase timeouts, drop DPR/native cases or waive final integration CI.
+The remaining problem is complete HTTP-plus-browser cost within the existing
+budget. The passing local repair does not establish that outcome, and the partial
+trace does not establish a product defect or a single causal bottleneck. Before
+execution can finish, investigate the remaining complete-gate cost and establish
+a concrete authorized repair with retained owners, then obtain fresh complete
+exact-target validation inside the existing budget with CI setup/report headroom.
+The one repaired complete-attempt authorization is exhausted. Do not merely
+rerun unchanged suites, increase timeouts, drop DPR/native cases or waive final CI.
 
 The new selected-command regression fails against the pinned original entrypoint
 (`--plan` rejected), then passes after implementation. Unknown nested scripts are
