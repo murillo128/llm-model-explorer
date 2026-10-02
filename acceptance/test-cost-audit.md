@@ -4,6 +4,13 @@ This report records observed results for #272–#277. The accepted product contr
 remain in `docs/spec/`. Full local reference and CUDA success are separate from
 CPU fixture success. No test-count or percentage quota was used.
 
+Current result: the five user-authorized UI duplication groups are consolidated
+at `21c83bd13b0732c0df8233b48efac894b77e6711`, with passing focused replacement
+proof. The newly authorized complete gate still exits 124 at 1500.005 s: HTTP
+finishes, but two final DPR-2 browser cases lack completed evidence. Issue #277
+returns to `investigation-required`; PR #288 remains draft. No complete retry or
+final-CI waiver follows this result.
+
 ## Revisions, environment and measurement scope
 
 - Activation baseline: `f014a3447d9f86da7707417a1bd34347ad1cf27a`.
@@ -107,7 +114,7 @@ uses documentation/infrastructure owners. Manual workflows and final epic PRs
 force full selection, independently of paths. `check.sh` remains complete;
 main integration continues to avoid duplicated component/API checks.
 
-## Measured outcome and validation
+## Harness repair and earlier complete attempts
 
 The 2026-10-02 authorized continuation repairs test-harness overhead. The existing
 real-WebGL probe cases now use independent native-draw and observer-only
@@ -325,3 +332,43 @@ setup/report headroom. Normal native JSON/JUnit completion, every mandatory case
 successful, truthful optional skips and owned process/port cleanup remain required.
 No product source, scalar/count/resource/error observer, renderer, retained fixture
 size, worker/retry/timeout/tolerance or actual-reference prerequisite is changed.
+
+### Complete consolidated result
+
+The exact isolated target is `21c83bd13b0732c0df8233b48efac894b77e6711`, against
+the unchanged integration tip `25a8d7c3be08e4e74383a988cef74feafeef8414`.
+Selection consumes its complete 32-path Git diff, including deletions, and selects
+all product owners. No source changes occur during validation. The selected
+command is the same `acceptance/check-integration.sh --main-ci --plan <plan>`
+inside one `timeout 1500` envelope; browser discovery confirms all 85 pairs.
+
+| Personally executed consolidated check | Observed result |
+| --- | --- |
+| Retained generic card/component/connection/summary/inspection/isolation and full-size owners, all configured applicable projects | 52 passed, zero skips/failures/retries; finalized JSON, 201.507 s native wall |
+| Generic production journey at both densities plus retained deterministic native bindings | 6 passed, 3 existing unsupported-fixture skips; finalized JSON, 94.602 s native wall |
+| Native selector/entrypoint/report controls | 33 passed, 60 subtests passed, 5.31 s; the first run detects the three stale relocated filenames in the full-command expectation |
+| Complete HTTP in the consolidated gate | 62 logical tests passed, 10 existing capability/reference skips, 209.01 s; finalized JUnit has zero failures/errors and 132 entries including 60 subtests |
+| Complete consolidated HTTP-plus-browser gate | **Exit 124 at 1500.005 s**; partial browser log has 56 passes / 27 truthful skips / 2 uncompleted mandatory pairs; native browser JSON never finalizes |
+
+All DPR-1 cases complete. DPR-2 camera, stale-response fencing, inspection during
+DPR change and both inventory captures also pass. The deadline interrupts
+`polish magnifier follows edges after scrolling resize DPR and source replacement`
+at DPR 2; the following `integrated two-card embeddings have real scientific
+parity with the same checkpoint matrix` at DPR 2 has not run. This is missing
+completed evidence, not a failed magnifier assertion. Both cases pass at DPR 1.
+The partial DPR-2 trace remains outside Git for investigation.
+
+Cleanup terminates only the three processes verified as belonging to this isolated
+snapshot. All six owned ports (30100–30105) are closed, with no owned backend/static
+survivors. Cleanup takes 0.305 s, for 1500.310 s including cleanup. Earlier failed
+attempts remain intact. The prior observed 35 s of CI setup/report work is additional
+headroom; this local gate already exhausts its own envelope.
+
+The new selection and focused proof establish ownership consolidation, not complete
+timing acceptance or a causal whole-pipeline speedup. The remaining bounded problem
+is complete retained HTTP/scientific-browser cost within the unchanged workflow
+budget and its setup/report headroom. The changed-code complete-attempt authority
+is exhausted; no unchanged retry, case skip, larger timeout or new repair campaign
+is inferred from this failure. Production backend/API/UI source, accepted specs,
+locks and the reusable `test-quality/SKILL.md` remain byte-identical. Report-only
+publication edits are reconciled against this exercised source and selection.
