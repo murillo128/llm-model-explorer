@@ -121,7 +121,14 @@ for (const target of ['selected', 'connection'] as const) {
     await findComponent(page, 'layer-2.attention.Q'); await ready(page);
     // Keep the connection within the retained viewport when shared-scope
     // geometry replaces the overview; selection and the pending camera oracle stay exact.
-    if (target === 'connection') { await graphAction(page, 'Fit view'); await ready(page); }
+    if (target === 'connection') {
+      const completed = await page.evaluate(() => window.cameraProbe.events.filter((e) => e.event === 'fitView completed').length);
+      await graphAction(page, 'Fit view');
+      // Manual Fit queues a renderer frame without reopening initialization.
+      // Snapshot its committed camera, not the still-ready preceding viewport.
+      await expect.poll(() => page.evaluate(() => window.cameraProbe.events.filter((e) => e.event === 'fitView completed').length)).toBe(completed + 1);
+      await ready(page);
+    }
     const previous = await sample(page);
     await pending(page);
     await page.getByRole('button', { name: 'Explore structure', exact: true }).click();

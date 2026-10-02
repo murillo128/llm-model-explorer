@@ -410,3 +410,15 @@ Full/manual retains all non-retired extended/reference/CUDA checks. The new rout
 combined gate has a 1200 s envelope (900 s engineering target); the workflow remains
 25 minutes with explicit setup/report headroom. Two changed-target complete routine
 attempts at most are authorized; focused checks precede them.
+
+The first reduced complete component run at `98e5299` finished 450/451 cases.
+The unchanged `architecture-camera.spec.ts` connection-center setup sampled the
+camera after manual Fit returned from its click but before React Flow's queued
+frame completed. Its final exact Back comparison therefore used the preceding
+camera. React Flow's native `fitView` promise resolves after the queued fit;
+`aria-busy` covers initialization, not that manual command. Repair only the test
+setup to await the probe's actual Fit completion before taking its snapshot.
+Retain the pending-generation and exact Back assertions. Preserve the failed run,
+exercise a controlled delayed real Fit as a red reproducer, and run the camera
+family and complete affected components after the repair. No production change,
+retry, tolerance or retired test is involved.
