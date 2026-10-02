@@ -59,7 +59,10 @@ export default defineConfig({
     { name: 'dpr1', use: { baseURL: `http://127.0.0.1:${dpr1.ui}`, deviceScaleFactor: 1 } },
     // DPR 1 owns all cases, including newly added untagged tests. Only explicit
     // physical-pixel/interaction contracts need a second density invocation.
-    { name: 'dpr2', grep: /@density/, use: { baseURL: `http://127.0.0.1:${dpr2.ui}`, deviceScaleFactor: 2 } },
+    // Project grep replaces the global grep, so extended density must satisfy
+    // both classifications rather than replay ordinary DPR-2 cases.
+    { name: 'dpr2', grep: portfolio === 'extended' ? /(?=.*@density)(?=.*@extended)/ : /@density/,
+      use: { baseURL: `http://127.0.0.1:${dpr2.ui}`, deviceScaleFactor: 2 } },
   ],
   webServer: [{
     command: `LMEX_STATIC_PORT=${dpr1.ui} LMEX_BACKEND_PORT=${dpr1.backend} node acceptance/static.mjs`,
