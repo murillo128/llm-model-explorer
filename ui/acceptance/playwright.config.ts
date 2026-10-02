@@ -15,6 +15,9 @@ const traceRequested = process.argv.some((argument, i) =>
 const phase = traceRequested ? 'diagnostic' : process.env.LMEX_TEST_PHASE ?? portfolio;
 if (!['routine', 'extended', 'full', 'diagnostic'].includes(phase)) throw new Error(`Invalid evidence phase: ${phase}`);
 if (phase !== 'diagnostic' && phase !== portfolio) throw new Error(`Evidence phase ${phase} disagrees with portfolio ${portfolio}`);
+// Playwright reloads this config in workers without the original CLI arguments.
+// Carry the resolved phase into those processes so attachments and JSON agree.
+process.env.LMEX_TEST_PHASE = phase;
 const evidenceRoot = process.env.LMEX_EVIDENCE_DIR
   ? resolve(process.env.LMEX_EVIDENCE_DIR, 'browser')
   : new URL('../test-results/acceptance/', import.meta.url).pathname;
