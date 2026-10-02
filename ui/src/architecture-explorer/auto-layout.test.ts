@@ -6,6 +6,7 @@ import { makeExplicitFixture } from '../../tests/architecture-explicit-fixture';
 import { summaryFixture } from '../../tests/architecture-summary-fixture';
 import { interfaceFixture } from '../../tests/architecture-interface-fixture';
 import { overviewFixture } from '../../tests/architecture-overview-fixture';
+import { connectorFixture } from '../../tests/architecture-routing-fixture';
 import { groupHeaderHeight, layerGap } from './auto-layout';
 import { deriveMlpGroups } from './derived-groups';
 import type { Box, Graph, Layout, Point } from './graph';
@@ -123,9 +124,10 @@ function geometry(layout: Layout) {
         expect(port.label.y + port.label.height + port.label.clearance, `${current.id}.${port.portId} label must stay inside its container`)
           .toBeLessThanOrEqual(current.absoluteY + current.height + tolerance);
       }
-      for (let i = 2; i < ordered.length; i++) {
-        expect(Math.abs(ordered[i]!.y - ordered[i - 1]!.y - (ordered[1]!.y - ordered[0]!.y)), `${current.id}.${side} rows must have equal pitch`)
-          .toBeLessThan(tolerance);
+      for (let i = 1; i < ordered.length; i++) {
+        const previous = ordered[i - 1]!, next = ordered[i]!;
+        expect(next.label.y - next.label.clearance, `${current.id}.${side} rows need padded spacing`)
+          .toBeGreaterThanOrEqual(previous.label.y + previous.label.height + previous.label.clearance - tolerance);
       }
     }
   }
@@ -278,6 +280,69 @@ function parallelBoundaryFixture(nested: boolean): Graph {
 }
 
 describe('generated horizontal graph geometry', () => {
+  it.each([false, true].flatMap((nested) => [false, true].flatMap((unused) => [false, true].map((dimensions) => ({ nested, unused, dimensions })))))('aligns a partial forwarding bundle with an unrelated peer (nested=$nested, unused=$unused, dimensions=$dimensions)', async ({ nested, unused, dimensions }) => {
+    const graph = connectorFixture(true, nested, unused), original = structuredClone(graph);
+    const options = { expanded: nested ? ['model', 'inner'] : ['model'], showUnused: true, dimensions };
+    const layout = await layoutGraph(graph, options);
+    if (unused) expect(layout.ports.some((p) => p.nodeId === 'model' && p.portId === 'unused')).toBe(true);
+    for (const id of options.expanded) {
+      // ELK puts the unused row between mask/current_mask in this one case.
+      // The preceding two-signal run still fits; all three cannot be straight.
+      const names = nested && unused && !dimensions && id === 'model' ? ['positions', 'mask'] : ['positions', 'mask', 'current_mask'];
+      for (const name of names) {
+        const boundary = layout.ports.find((p) => p.nodeId === id && p.portId === name)!;
+        expect(boundary, JSON.stringify(layout.ports.map((p) => [p.nodeId, p.portId]))).toBeDefined();
+        const peer = layout.ports.find((p) => p.nodeId === 'language' && p.portId === name)!;
+        expect(boundary.absoluteY, `${id}.${name} must align with its exact peer despite unrelated ports`).toBeCloseTo(peer.absoluteY, 5);
+      }
+      assertBoundaryOrder(layout, id, 'left', ['positions', 'mask', 'current_mask', 'state']);
+      assertNoBoundaryCrossings(layout, id, 'left', ['positions', 'mask', 'current_mask', 'state']);
+    }
+    for (const edge of layout.projection.edges) {
+      const route = layout.routes.find((r) => r.id === edge.id)!;
+      if (!(nested && unused && !dimensions && edge.source.node_id === 'model' && edge.source.port_id === 'current_mask'))
+        expect(route.sections.flat().every((p) => Math.abs(p.y - route.sections[0]![0]!.y) < tolerance), edge.id).toBe(true);
+      for (const path of edge.paths) for (const segment of path) expect(segment).toEqual(original.edges.find((e) => e.id === segment.id));
+    }
+    geometry(layout); distinguishSignals(layout);
+    if (dimensions) dimensionLabels(layout);
+    expect(graph).toEqual(original);
+    expect(stableLayout(await layoutGraph(graph, options))).toEqual(stableLayout(layout));
+  });
+  it.each([false, true])('keeps the screenshot-shaped mixed peers direct where feasible, with genuine fan-out and a constrained route (dimensions=%s)', async (dimensions) => {
+    const graph = connectorFixture(), original = structuredClone(graph);
+    const layout = await layoutGraph(graph, { expanded: ['model'], showUnused: true, dimensions });
+    geometry(layout); distinguishSignals(layout);
+    if (dimensions) dimensionLabels(layout);
+    // Dimension labels change peer/header space; the unobstructed fixture above
+    // owns direct-bundle proof with dimensions enabled.
+    for (const name of dimensions ? [] : ['state', 'question', 'positions', 'mask', 'current_mask', 'opt_idx']) {
+      const edge = layout.projection.edges.find((e) => e.source.node_id === 'model' && e.source.port_id === name)!;
+      const points = layout.routes.find((r) => r.id === edge.id)!.sections.flat();
+      expect(points, name).toHaveLength(2);
+      expect(points[0]!.y).toBe(points[1]!.y);
+    }
+    const constrained = layout.projection.edges.find((e) => e.source.port_id === 'decide_idx')!;
+    expect(layout.routes.find((r) => r.id === constrained.id)!.sections.flat().length).toBeGreaterThan(2);
+    expect(layout.projection.edges.filter((e) => e.source.node_id === 'language' && e.source.port_id === 'out')).toHaveLength(2);
+    expect(graph).toEqual(original);
+  });
+  it('aligns a partial output-side bundle and its unrelated singleton', async () => {
+    const graph = connectorFixture(true);
+    for (const node of graph.nodes) for (const port of node.ports) port.direction = port.direction === 'input' ? 'output' : 'input';
+    for (const edge of graph.edges) [edge.source, edge.target] = [edge.target, edge.source];
+    const original = structuredClone(graph);
+    const layout = await layoutGraph(graph, { expanded: ['model'], showUnused: true, dimensions: true });
+    geometry(layout); distinguishSignals(layout); dimensionLabels(layout);
+    for (const name of ['positions', 'mask', 'current_mask', 'state']) {
+      const edge = layout.projection.edges.find((e) => e.target.node_id === 'model' && e.target.port_id === name)!;
+      const points = layout.routes.find((r) => r.id === edge.id)!.sections.flat();
+      expect(points).toHaveLength(2); expect(points[0]!.y).toBe(points[1]!.y);
+    }
+    assertBoundaryOrder(layout, 'model', 'right', ['positions', 'mask', 'current_mask', 'state']);
+    assertNoBoundaryCrossings(layout, 'model', 'right', ['positions', 'mask', 'current_mask', 'state']);
+    expect(graph).toEqual(original);
+  });
   it.each([false, true].flatMap((nested) => [false, true].map((dimensions) => ({ nested, dimensions }))))(
     'regularizes three parallel lanes in routed order (nested=$nested, dimensions=$dimensions)', async ({ nested, dimensions }) => {
     const graph = parallelBoundaryFixture(nested), expectedGraph = structuredClone(graph),

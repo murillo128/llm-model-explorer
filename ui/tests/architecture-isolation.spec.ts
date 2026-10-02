@@ -1,12 +1,13 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import type { Graph, Layout } from '../src/architecture-explorer/graph';
+import type { Graph } from '../src/architecture-explorer/graph';
+import type { PreparedLayout } from '../src/architecture-explorer/layout';
 import type { ProjectionOptions } from '../src/architecture-explorer/projection';
 import { openShared, findComponent, graphAction, graphPreference } from './architecture-controls';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
 interface IsolationProbe {
-  requests: { graph: Graph; options: ProjectionOptions }[]; layouts: Layout[];
+  requests: { graph: Graph; options: ProjectionOptions }[]; replies: PreparedLayout[];
   reject: boolean; hold: boolean; release?: () => void;
 }
 declare global { interface Window { isolationProbe: IsolationProbe } }
@@ -22,7 +23,7 @@ async function state(page: Page) {
   return page.evaluate(() => ({ options: window.isolationProbe.requests.at(-1)!.options,
     camera: document.querySelector('.react-flow__viewport')?.getAttribute('style'),
     selection: document.querySelector('[aria-label="Graph selection"]')?.getAttribute('data-node-id'),
-    layout: window.isolationProbe.layouts.at(-1)!, count: window.isolationProbe.requests.length }));
+    layout: window.isolationProbe.replies.at(-1)!.layout, count: window.isolationProbe.requests.length }));
 }
 async function isolate(page: Page, id: string) {
   await findComponent(page, id); await ready(page);
@@ -31,13 +32,13 @@ async function isolate(page: Page, id: string) {
 }
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    window.isolationProbe = { requests: [], layouts: [], reject: false, hold: false };
+    window.isolationProbe = { requests: [], replies: [], reject: false, hold: false };
     const Original = window.Worker;
     window.Worker = class extends Original {
       constructor(url: string | URL, options?: WorkerOptions) {
         super(url, options);
-        this.addEventListener('message', (event: MessageEvent<{ layout?: Layout }>) => {
-          if (event.data.layout) window.isolationProbe.layouts.push(event.data.layout);
+        this.addEventListener('message', (event: MessageEvent<PreparedLayout | { error: string }>) => {
+          if ('layout' in event.data) window.isolationProbe.replies.push(event.data);
         });
       }
       override postMessage(message: unknown, transfer: Transferable[] | StructuredSerializeOptions = []) {
@@ -53,8 +54,8 @@ test.beforeEach(async ({ page }) => {
           if (probe.hold) {
             probe.hold = false;
             // Preserve a queued old callback, even after worker cancellation and replacement.
-            const layout = probe.layouts.at(-1)!;
-            probe.release = () => callback?.call(this, new MessageEvent('message', { data: { layout } }));
+            const reply = probe.replies.at(-1)!;
+            probe.release = () => callback?.call(this, new MessageEvent('message', { data: reply }));
             return;
           }
         }

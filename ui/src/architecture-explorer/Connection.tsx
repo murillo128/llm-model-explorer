@@ -1,21 +1,25 @@
-import { useContext, useId, useLayoutEffect, useRef } from 'react';
+import { useContext, useLayoutEffect, useRef } from 'react';
 import type { PointerEvent } from 'react';
 import type { Edge, EdgeProps } from '@xyflow/react';
 import type { Graph, Route } from './graph';
 import { formatShape } from './graph';
 import type { Endpoint, ProjectedEdge, ProjectedNode, Projection } from './projection';
 import { endpointKey } from './projection';
-import { ConnectionContext, routePath } from './connection-context';
+import { ConnectionContext } from './connection-context';
+import { arrowTransform, type RouteDisplay } from './route-display';
+import { arrowLength, arrowWidth, minimumReadableZoom } from './route-metrics';
 
-export type ConnectionEdge = Edge<{ connection: ProjectedEdge; route: Route; projection: Projection; dimensions: boolean }, 'connection'>;
+export type ConnectionEdge = Edge<{ connection: ProjectedEdge; route: Route; display: RouteDisplay; projection: Projection; dimensions: boolean }, 'connection'>;
 
 
 export function Connection({ data }: EdgeProps<ConnectionEdge>) {
   const interaction = useContext(ConnectionContext);
-  const markerId = useId().replaceAll(':', '');
   if (!data) return null;
-  const { connection, route, projection, dimensions } = data;
+  const { connection, route, display, projection, dimensions } = data;
   const active = interaction.emphasized.has(connection.id);
+  // Below readable scale, bound the graph-space painted envelope as well as
+  // the glyph. This keeps the precomputed fillet clearance valid in Fit views.
+  const strokeScale = Math.min(1, interaction.zoom / minimumReadableZoom);
   const sourceNode = projection.nodes.find((n) => n.id === connection.source.node_id)!;
   const targetNode = projection.nodes.find((n) => n.id === connection.target.node_id)!;
   const sourcePort = sourceNode.ports.find((p) => p.id === connection.source.port_id)!;
@@ -39,15 +43,13 @@ export function Connection({ data }: EdgeProps<ConnectionEdge>) {
       if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); interaction.pin(connection.id, event.currentTarget as unknown as HTMLElement); }
     }}>
     <title>{label}</title>
-    <defs><marker id={markerId} viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
-      <path d="M1,1 L11,6 L1,11 Z" className="architecture-arrow" />
-    </marker></defs>
-    {route.sections.map((points, i) => <g key={i}>
-      {active && <path d={routePath(points)} className="architecture-edge-halo" vectorEffect="non-scaling-stroke" />}
-      <path d={routePath(points)} className="architecture-edge-line" vectorEffect="non-scaling-stroke"
-        markerEnd={i === route.sections.length - 1 ? `url(#${markerId})` : undefined} />
-      <path d={routePath(points)} className="architecture-edge-hit" vectorEffect="non-scaling-stroke" />
+    {display.sections.map(({ path }, i) => <g key={i}>
+      {active && <path d={path} className="architecture-edge-halo" vectorEffect="non-scaling-stroke" style={{ strokeWidth: 5.5 * strokeScale }} />}
+      <path d={path} className="architecture-edge-line" vectorEffect="non-scaling-stroke" style={{ strokeWidth: (active ? 2.5 : 1.3) * strokeScale }} />
+      <path d={path} className="architecture-edge-hit" vectorEffect="non-scaling-stroke" />
     </g>)}
+    <path d={`M0,0 L-${arrowLength},-${arrowWidth / 2} L-${arrowLength},${arrowWidth / 2} Z`}
+      transform={arrowTransform(display.target, display.tangent, interaction.zoom)} className="architecture-arrow" />
     {route.junctions.map((point, i) => <circle key={i} cx={point.x} cy={point.y} r={3} className="architecture-junction" />)}
     {dimensions && route.labels?.map((label, i) => <g key={i} className="architecture-edge-label" pointerEvents="none">
       <rect x={label.x} y={label.y} width={label.width} height={label.height} rx={2} fill="var(--ui-surface-soft)" />

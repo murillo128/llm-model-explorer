@@ -97,7 +97,13 @@ async function fill(page: Page, text: string) {
   await editor.press('ControlOrMeta+A');
   await page.keyboard.insertText(text);
   await expect(page.locator('[data-annotations]')).toHaveAttribute('data-annotations', 'current');
-  if (text.trim()) await expect(page.locator('.matrix-scroll')).toBeVisible();
+  if (text.trim()) {
+    // Tokenization can settle while the previous and staging matrices coexist.
+    // Measure the completed replacement, not that transient allocation state.
+    await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
+    await expect(page.locator('.matrix-scroll')).toHaveCount(1);
+    await expect(page.locator('.matrix-scroll')).toBeVisible();
+  }
   await layoutSettled(page);
 }
 

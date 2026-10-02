@@ -106,8 +106,8 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
       const labelTop = position.label.y - position.absoluteY + hit / 2;
       const bridgeLeft = Math.min(hit / 2, labelLeft);
       const bridgeRight = Math.max(hit / 2, labelLeft + position.label.width);
-      // The transparent region overlaps the label and extends one unit into
-      // the terminal hit box without reaching the next port row.
+      // Reach the terminal center across the full label width so a diagonal
+      // pointer move stays on this port, including the raised-label gap.
       return <div key={port.id}>
         <button className="architecture-port nodrag nopan" data-node-id={node.id} data-port-id={port.id}
           data-absolute-x={position.absoluteX} data-absolute-y={position.absoluteY}
@@ -121,7 +121,7 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
           <span className="architecture-port-dot" />
           <span className="architecture-port-hit-bridge" aria-hidden="true"
             style={{ left: bridgeLeft, top: labelTop, width: bridgeRight - bridgeLeft,
-              height: Math.max(labelTop + position.label.height, 1) - labelTop }} />
+              height: Math.max(labelTop + position.label.height, hit / 2) - labelTop }} />
           <span className="architecture-port-label" data-emphasized={active} data-raised={position.label.raised}
             data-layout-bounds={JSON.stringify(position.label)}
             title={`${port.direction}: ${port.interfaceLabel ?? port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
@@ -191,6 +191,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     return grouped;
   }, [result.layout]);
   const routesById = useMemo(() => new Map(result.layout?.routes.map((route) => [route.id, route])), [result.layout]);
+  const displays = result.displays;
   const variants = useMemo(() => new Map(graph.repetitions.flatMap((r) => r.instances.map((i) => [i.node_id, `Instance ${i.index} · ${i.variant.replaceAll('_', ' ')}`] as const))), [graph]);
   const mlps = useMemo(() => [
     ...graph.nodes.flatMap((node) => node.kind === 'group' && node.parent_id && semanticRole(node) === 'mlp'
@@ -478,7 +479,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     view.boundary!.templatePort ? p.templatePort?.templateId === view.boundary!.templatePort.templateId &&
       p.templatePort.nodeRole === view.boundary!.templatePort.nodeRole && p.templatePort.portRole === view.boundary!.templatePort.portRole
       : p.endpoints.some((e) => view.boundary!.endpoints.some((s) => endpointKey(s) === endpointKey(e)))).map((p) => ({ node_id: n.id, port_id: p.id }))) ?? [] : [], [view.boundary, result.layout]);
-  const lineHit = useMemo(() => connectionHitResolver(result.layout?.projection.edges ?? [], result.layout?.routes ?? []), [result.layout]);
+  const lineHit = useMemo(() => connectionHitResolver(result.layout?.projection.edges ?? [], result.layout?.routes ?? [], displays), [result.layout, displays]);
   const emphasis = useMemo(() => {
     const projection = result.layout?.projection;
     if (!projection) return new Set<string>();
@@ -548,8 +549,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     id: edge.id, source: edge.source.node_id, target: edge.target.node_id, sourceHandle: `source:${edge.source.port_id}`,
     targetHandle: `target:${edge.target.port_id}`, type: 'connection', focusable: false, selectable: false,
     zIndex: emphasis.has(edge.id) ? 100 : 2,
-    data: { connection: edge, route: routesById.get(edge.id)!, projection: result.layout!.projection, dimensions: cardDimensions },
-  })), [cardDimensions, emphasis, result.layout, routesById]);
+    data: { connection: edge, route: routesById.get(edge.id)!, display: displays!.get(edge.id)!, projection: result.layout!.projection, dimensions: cardDimensions },
+  })), [cardDimensions, emphasis, result.layout, routesById, displays]);
   const activeInspectionEdge = result.layout?.projection.edges.find((e) => e.id === inspection?.edgeId);
   const activeInspectionNode = inspection?.nodeId ? projected.get(inspection.nodeId) : undefined;
   const sourceNodeIds = useMemo(() => {
