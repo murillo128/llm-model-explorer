@@ -203,7 +203,9 @@ function makeProduct(page: Page, testInfo: TestInfo) {
       }
     }
     await timing.attach(testInfo, log, probe);
-    if (probe === null && testInfo.status !== testInfo.expectedStatus) return;
+    // Setup failures retain their original reference/server diagnostic. Cleanup
+    // above still runs; resource assertions require the installed browser probe.
+    if (!timing.bodyStarted) return;
     expect(probe?.capturePixels).toBe(capturePixels);
     if (capturePixels) {
       expect(probe?.framebufferReadbacks).toBeGreaterThan(0);
