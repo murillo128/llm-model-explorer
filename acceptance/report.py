@@ -143,7 +143,7 @@ def main():
             for key in ("numTotalTests", "numPassedTests", "numFailedTests", "numPendingTests")
         },
         "component_browser": browser_results(output / "component-browser.json"),
-        "product_browser": browser_results(ui / "test-results/acceptance.json"),
+        "product_browser": browser_results(output / "browser/full/report.json"),
         "network_measurements": {
             p.attrib["name"]: p.attrib["value"]
             for p in ET.parse(output / "network.xml").iter("property")
