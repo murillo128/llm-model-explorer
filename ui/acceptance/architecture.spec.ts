@@ -489,7 +489,7 @@ test('deterministic production [smollm2] shows the precise model-owned load fail
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveCount(0);
 });
 
-test('deterministic production [smollm2] port labels keep cable clearance and share terminal emphasis', async ({ page }, info) => {
+test('deterministic production [smollm2] port labels keep cable clearance and share terminal emphasis', { tag: '@density' }, async ({ page }, info) => {
   const graph = await selectGraph(page);
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   const ready = () => expect(canvas).toHaveAttribute('aria-busy', 'false');
@@ -616,7 +616,7 @@ test('deterministic production [smollm2] port labels keep cable clearance and sh
 for (const reference of [false, true]) for (const family of [
   'smollm2', 'qwen3', 'qwen35', 'vjepa2', 'deepseek_v2', 'glm4_moe_lite', 'kimi_linear',
 ]) {
-  test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and logical weight modal`, async ({ page }, info) => {
+  test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and logical weight modal`, { tag: '@density' }, async ({ page }, info) => {
     test.setTimeout(reference && family === 'kimi_linear' ? 900_000 : reference ? 600_000 : 90_000);
     const graph = expandCompactGraph(await selectGraph(page));
     expect(graph.coverage).toBe('complete');
@@ -914,7 +914,7 @@ for (const reference of [false, true]) for (const family of [
   });
 }
 
-test('complete local reference [kimi_linear] issue 178 full expansion and focused router weight', async ({ page }, info) => {
+test('complete local reference [kimi_linear] issue 178 full expansion and focused router weight', { tag: '@density' }, async ({ page }, info) => {
   test.setTimeout(600_000);
   const graph = expandCompactGraph(await selectGraph(page));
   expect(graph.coverage).toBe('complete');
@@ -937,7 +937,7 @@ test('complete local reference [kimi_linear] issue 178 full expansion and focuse
   await inspectActualMoeWeightAtWidth(page, info, graph, 'kimi_linear', expert, 1440);
 });
 
-test('deterministic production [kimi_linear] complete repeated experts remain reachable after Find', async ({ page }, info) => {
+test('deterministic production [kimi_linear] complete repeated experts remain reachable after Find', { tag: '@density' }, async ({ page }, info) => {
   test.setTimeout(300_000);
   const graph = expandCompactGraph(await selectGraph(page));
   expect(graph.coverage).toBe('complete');
@@ -974,7 +974,7 @@ test('deterministic production [kimi_linear] complete repeated experts remain re
   await expect(page.getByRole('dialog')).toContainText(parameter.name);
 });
 
-test('complete local reference [qwen3] exhaustive global detail remains reachable at readable scale', async ({ page }, info) => {
+test('complete local reference [qwen3] exhaustive global detail remains reachable at readable scale', { tag: '@density' }, async ({ page }, info) => {
   const graph = await selectGraph(page);
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   await graphAction(page, 'Show all operations');

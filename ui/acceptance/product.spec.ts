@@ -140,7 +140,7 @@ test.afterEach(async ({ page, capturePixels }, testInfo) => {
 test.describe(() => {
   test.use({ capturePixels: true });
 
-test('production UI renders before producer completes; native geometry, inspection and cleanup', async ({ page, context }, testInfo) => {
+test('production UI renders before producer completes; native geometry, inspection and cleanup', { tag: '@density' }, async ({ page, context }, testInfo) => {
   await page.setViewportSize({ width: 1000, height: 500 });
   await control('arm', { kind: 'logical_tensor' });
   const started = await page.evaluate(() => performance.now());
@@ -360,7 +360,7 @@ test('real producer errors are distinct from cancellation in both primary and au
   expect(Object.keys((await control()).artifacts)).toEqual(before);
 });
 
-test('local reference Base opens normalization, both MLP orientations and embedding with exact samples', async ({ page }, testInfo) => {
+test('local reference Base opens normalization, both MLP orientations and embedding with exact samples', { tag: '@density' }, async ({ page }, testInfo) => {
   test.setTimeout(300_000);
   const models = await (await fetch(`${backend}/models`)).json();
   const model = models.models.find((m: any) => /SmolLM2-135M/.test(m.id) && !/instruct/i.test(m.id));
@@ -572,7 +572,7 @@ test('repeated prompt edits and explorer unmounts cancel real embedding readers 
   }
 });
 
-test.describe('production native pane geometry', () => {
+test.describe('production native pane geometry', { tag: '@density' }, () => {
   for (const viewport of [{ width: 1000, height: 700 }, { width: 390, height: 640 }]) {
     test(`compact shell, navigation and four overflow modes at ${viewport.width}×${viewport.height}`, async ({ page }, testInfo) => {
       await page.setViewportSize(viewport);
@@ -638,7 +638,7 @@ test.describe('production native pane geometry', () => {
   }
 });
 
-test('production prompt pixels, selection, history and composition survive embedding completion', async ({ page }) => {
+test('production prompt pixels, selection, history and composition survive embedding completion', { tag: '@density' }, async ({ page }) => {
   const editor = await tokenizer(page);
   await control('arm', { kind: 'input_embeddings' });
   await editor.fill('hello world');
@@ -692,7 +692,7 @@ test('production prompt pixels, selection, history and composition survive embed
   await closeSession(page);
 });
 
-test('integrated inventory preferences and metadata preserve streaming panel geometry', async ({ page }, testInfo) => {
+test('integrated inventory preferences and metadata preserve streaming panel geometry', { tag: '@density' }, async ({ page }, testInfo) => {
   const name = 'layout.fits.weight';
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('acceptance/fixture');
   await expect(page.locator('.tensor-tree').first()).toBeVisible();
@@ -758,7 +758,7 @@ test('integrated inventory preferences and metadata preserve streaming panel geo
   await closeSession(page);
 });
 
-test('production matrix navigation centers underfilled data and links zoom selection across fixed profile tracks', async ({ page }, testInfo) => {
+test('production matrix navigation centers underfilled data and links zoom selection across fixed profile tracks', { tag: '@density' }, async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await open(page, 'layout.fits.weight'); await complete(page);
   await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
@@ -845,7 +845,7 @@ test('production matrix navigation centers underfilled data and links zoom selec
   await closeSession(page);
 });
 
-test('integrated camera gestures, exact selection, aligned scales and adaptive inspection retain scalar storage', async ({ page }, testInfo) => {
+test('integrated camera gestures, exact selection, aligned scales and adaptive inspection retain scalar storage', { tag: '@density' }, async ({ page }, testInfo) => {
   await open(page, 'layout.fits.weight'); await complete(page);
   await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
   let c = await camera(page, 32, 32);
@@ -935,11 +935,17 @@ test('integrated camera gestures, exact selection, aligned scales and adaptive i
 });
 
 for (const [name, low, high] of [
-  ['science', -2, 6], ['scale.concentrated', Math.fround(-.0001), Math.fround(.0002)],
-  ['scale.outliers', -1000, 3000], ['scale.constant', 2, 2], ['scale.nonfinite', null, null],
+  // TCP and component-renderer owners retain the full domain matrix. These
+  // bridges cover asymmetric finite metadata and the distinct null fallback.
+  ['science', -2, 6], ['scale.nonfinite', null, null],
 ] as const) test(`production distribution scale is truthful for ${name}`, async ({ page }) => {
+  await control('arm', { kind: 'tensor_distributions' });
   await open(page, `${name}.weight`); await complete(page);
-  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  await expect(page.locator('[data-result=distributions]')).toHaveAttribute('data-state', 'streaming');
+  const held = await control();
+  expect(held.control.entered).toBe(true);
+  expect(held.control.released).toBe(false);
+  expect(Object.values(held.artifacts).some((artifact: any) => artifact.manifest.spec.operation === 'tensor_distributions')).toBe(false);
   for (const ruler of await page.locator('.distribution-scale').all()) {
     if (low === null) {
       await expect(ruler).toHaveAttribute('aria-label', /no finite values/);
@@ -947,8 +953,7 @@ for (const [name, low, high] of [
     } else {
       await expect(ruler).toHaveAttribute('data-minimum', String(low));
       await expect(ruler).toHaveAttribute('data-maximum', String(high));
-      if (low === high) await expect(ruler).toHaveAttribute('aria-label', /constant, samples in bin 50/);
-      else expect(await ruler.evaluate(n => parseFloat((n as HTMLElement).style.getPropertyValue('--distribution-zero'))))
+      expect(await ruler.evaluate(n => parseFloat((n as HTMLElement).style.getPropertyValue('--distribution-zero'))))
         .toBeCloseTo(-low / (high! - low) * 100);
     }
   }
@@ -968,13 +973,16 @@ for (const [name, low, high] of [
     await expect(dialog.locator('dt').filter({ hasText: /^True finite maximum$/ }).locator('+ dd')).toHaveAttribute('title', `True finite maximum: ${high}`);
   }
   const stable = await dialog.textContent();
+  await control('release', {});
+  await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
+  expect(await dialog.textContent()).toBe(stable);
   await page.locator('.matrix-scroll').dispatchEvent('wheel', { deltaY: -100, ctrlKey: true });
   expect(await dialog.textContent()).toBe(stable);
   await page.keyboard.press('Escape');
   await closeSession(page);
 });
 
-test('production stale results remain visible and generation-fenced while embedding camera leaves prompt intact', async ({ page }, testInfo) => {
+test('production stale results remain visible and generation-fenced while embedding camera leaves prompt intact', { tag: '@density' }, async ({ page }, testInfo) => {
   const editor = await tokenizer(page);
   await editor.fill('AAA'); await embeddingDone(page, 4);
   await editor.press('End');
@@ -1045,7 +1053,7 @@ test('production stale results remain visible and generation-fenced while embedd
   await closeSession(page);
 });
 
-test('production inspection tolerates DPR change before viewport resize notification', async ({ page }) => {
+test('production inspection tolerates DPR change before viewport resize notification', { tag: '@density' }, async ({ page }) => {
   await open(page); await complete(page);
   await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
   await page.locator('.matrix-scroll').focus();
@@ -1204,7 +1212,7 @@ for (const width of [390, 1178, 1440]) test(`architecture safety baseline preser
 });
 
 for (const width of [1178, 1440]) {
-  test(`polish inventory captures retain selected scientific work at ${width}px`, async ({ page }, info) => {
+  test(`polish inventory captures retain selected scientific work at ${width}px`, { tag: '@density' }, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     await open(page); await complete(page);
     await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
@@ -1314,7 +1322,7 @@ for (const width of [1178, 1440]) {
   });
 }
 
-test('polish magnifier follows edges after scrolling resize DPR and source replacement', async ({ page }, info) => {
+test('polish magnifier follows edges after scrolling resize DPR and source replacement', { tag: '@density' }, async ({ page }, info) => {
   await open(page); await complete(page);
   await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
   await zoom(page, 576, 1536, 2);
@@ -1443,7 +1451,7 @@ async function captureScience(page: Page) {
   });
 }
 
-test('integrated two-card embeddings have real scientific parity with the same checkpoint matrix', async ({ page }, info) => {
+test('integrated two-card embeddings have real scientific parity with the same checkpoint matrix', { tag: '@density' }, async ({ page }, info) => {
   await captureScience(page);
   await open(page, 'embedding.parity.weight');
   await complete(page);
