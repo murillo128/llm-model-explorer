@@ -32,8 +32,14 @@ isolated component readable and its bounds unchanged`. Full-size reference,
 expert completeness, memory/layout and first/last-at-scale cases are unchanged.
 Fractional-DPR/pixel, native scroll, pointer capture/cancel, focus, context-loss
 and GL lifetime assertions remain at their browser/renderer owners.
-The #269/#270 and CLM/Kev/formula/port-order cases are unchanged. This audit found
+At the #274 revision, #269/#270 and CLM/Kev/formula/port-order cases were unchanged. This audit found
 no faithful cheap replacement for their native layout/event claims.
+The later user-authorized #277 consolidation separates real package/composition
+TCP proof from generic graph presentation and removes the same-generator dense
+28-layer stress duplicate while retaining the larger 30-layer case. Current
+component collection is 520 (370 desktop, 138 narrow, 12 native scrollbars).
+See the [current ownership map](../../acceptance/integration-test-ownership.md#architecture-and-package-families);
+the historical #274 measurements below remain unchanged.
 
 ## Negative controls
 

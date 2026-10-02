@@ -34,6 +34,10 @@ timeouts, worker budgets, retries or optional capability rules change.
 The coarse backend, example, shared and architecture integration selections are
 intentional: shared startup and native weight streams cross those boundaries.
 Routing does not claim that a filename-level map can isolate individual semantics.
+CLM/Kev exports and adapted-projection composition now run in
+`acceptance/test_native_packages.py`, discovered by the complete HTTP owner;
+generic graph browser files own their shared presentation. Full integration
+discovers all remaining product specs and retains actual-reference bindings.
 
 ## Revision and failure contract
 

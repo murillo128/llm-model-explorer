@@ -13,8 +13,8 @@ CPU fixture success. No test-count or percentage quota was used.
 - Authorized harness repair: `11b555125d35f2f17482583b3e229c7947c1bd12`
   stops redundant post-first-render observation with pixel capture disabled.
   `985cff82e697316221ee55f8bcccf2d641d433ec` batches settled-frame observations
-  and is the exact fresh complete integration target. Report-only edits after
-  that target do not change exercised code or selection.
+  and is the earlier repaired complete integration target. The user-authorized
+  UI consolidation below changes test ownership and selection after that target.
 - Routing guard: `33ba0d5d1f0e8d5e2141ae6ba9cc5fc8ffbacd84`, narrowing
   infrastructure exceptions to exact known paths. Independent negative controls
   fail on the preceding selector and pass after the correction. The native files selected by both
@@ -46,7 +46,7 @@ This environment difference is disclosed, not assigned a measured timing cause.
 
 ## Retained owners and expanded work
 
-| Boundary | Activation | Optimized full selection | Explanation |
+| Boundary | Activation | Selection before UI consolidation | Explanation |
 | --- | ---: | ---: | --- |
 | UI component browser | 776 | 521 | #273 removes 244 duplicate project invocations; #274 moves 11 temporal invocations to their cheap owner and compacts four non-scale graph cases |
 | Production browser | 128 | 93 (61 DPR 1 + 32 DPR 2) | #276 relocates three repeated distribution inputs with complete independent TCP/component owners and retains density-specific native cases |
@@ -163,12 +163,13 @@ Affected typecheck/lint and diff checks pass. Native discovery preserves all
 93 product and 521 component case/project pairs, tags, expected statuses and
 timeouts. Full API/shared routing still selects every retained product pair.
 
-**Acceptance is unmet. Issue #277 returns to `investigation-required`; the PR
-remains draft.** The original complete attempt and the single explicitly authorized
+**At `985cff8`, acceptance was unmet and issue #277 returned to
+`investigation-required` with a draft PR.** The original complete attempt and the single explicitly authorized
 repaired-code complete attempt both exhausted the unchanged 25-minute budget.
 The repaired attempt follows passing focused proof and measured benefit; it is
-not an unchanged rerun. No further complete attempt or extra timing-baseline run
-is started after its failure. No timeout increase or coverage reduction is used.
+not an unchanged rerun. No unchanged complete retry or extra timing-baseline run
+followed that failure. The later explicit consolidation authority is recorded
+below. No timeout increase was used.
 
 | Personally executed check | Observed result | Wall time / qualification |
 | --- | --- | --- |
@@ -243,8 +244,9 @@ trace does not establish a product defect or a single causal bottleneck. Before
 execution can finish, investigate the remaining complete-gate cost and establish
 a concrete authorized repair with retained owners, then obtain fresh complete
 exact-target validation inside the existing budget with CI setup/report headroom.
-The one repaired complete-attempt authorization is exhausted. Do not merely
-rerun unchanged suites, increase timeouts, drop DPR/native cases or waive final CI.
+That repaired complete-attempt authorization was exhausted. The later user-authorized
+consolidation below permits specific relocations and one changed-code complete
+validation; it does not permit unchanged retries, larger timeouts or a final-CI waiver.
 
 The new selected-command regression fails against the pinned original entrypoint
 (`--plan` rejected), then passes after implementation. Unknown nested scripts are
@@ -270,3 +272,56 @@ command logs and timing summaries remain outside Git in `/tmp/issue-277-evidence
 The concise report is repository evidence. Source and exercised-plan identity are
 reconciled after report-only edits. Epic-child product CI deferral is retained;
 this evidence does not waive complete applicable CI on the final integration PR.
+
+## User-authorized UI consolidation — issue #277
+
+The user requested removing all five audited duplication groups. The controlling
+issue records that authority and the precise retained owners before implementation;
+it supersedes the earlier fixed-93-pair restriction only for these relocations.
+The preceding measurements describe their named revisions, not this new selection.
+
+| Removed repetition / plausible defect | Independent remaining owner and gap closed |
+| --- | --- |
+| `architecture.spec.ts::openParameter` title/body click, exact selection, camera/layout/scope/no-request replay for every weight | `architecture-card-actions.spec.ts` and `architecture-inspection.spec.ts` retain literal generic gesture/modal assertions. One real production graph journey at both DPRs carries these gestures across the live boundary; every numeric inspection still dispatches exact graph IDs and checks actual stream/source values. |
+| Component expansion/isolation, dimensions, search and explorer-state replay for each family; deterministic binding replay at DPR 2 | One production graph journey samples every declared component variant at both DPRs, retaining real port/trunk hits and literal preference/state assertions. Per-family real graph/compact projection, source conservation, exhaustive layout/reachability and native/decoded numeric bindings remain. Every actual-reference pair, size and prerequisite is unchanged. |
+| Same-generator dense 28/30-layer component stress | Keep the larger 30-layer dense case, independently different 24-layer hybrid and 24+12 two-stack cases. Full node/edge size, last instance, bounded document, culling and layout/memory evidence remain. Fixture metadata used elsewhere is unchanged; titles describe topology. |
+| CLM/Kev exporter→graph→weight HTTP→visible-canvas browser repeats | New mandatory `acceptance/test_native_packages.py` cases use fresh real exports and production CLI/TCP. Exact native head/factor IDs and float32 bytes are checked against independently read physical Safetensors. Existing exporter/admission/algebra/cache tests remain. Generic browser owners retain expand, parameter dispatch, real canvas and lifecycle. Supplied invalid reference roots fail. |
+| Native adapted-hierarchy UI repeat and metadata-only real LoRA/QLoRA browser assertions | New mandatory TCP composition case checks literal child order, formulas/scalars/ports and physical-source A/B streams. The existing generic inspection case is extended for nested expand/isolate/Back, visible reshape/transpose/softmax/scale, factor=2, axis=-1, ports and distinct A/B dispatch. It passed before deleting the old browser case. Complete real-reference target/shape/algebra remains in `test_lora_reference.py`; actual base/factor browser bindings remain. |
+
+Native discovery against `e73cc34` records product **93 → 85** (59 DPR 1,
+26 DPR 2), component **521 → 520** (370 desktop, 138 narrow, 12 native
+scrollbars), and three added mandatory native TCP cases. Product removes seven
+deterministic `full graph, concrete bindings and logical weight modal` DPR-2
+pairs (SmolLM2, Qwen3, Qwen3.5, V-JEPA2, DeepSeek V2, GLM4 MoE Lite, Kimi Linear)
+and the DPR-1 CLM/Kev/adapted-hierarchy pairs; it adds the generic production
+journey at DPR 1 and 2. Three removed deterministic pairs were already optional
+unsupported-fixture skips, not runnable savings. All actual-reference case/project
+pairs compare equal. The four component full-size titles become three topology
+titles, and the existing factor-inspection title becomes the nested-source title;
+there is no additional project deselection. Exact lists stay outside Git in
+`consolidation/collection-delta.json` under the existing evidence directory.
+
+The four formerly repeated runnable deterministic families took 162.6 s across
+both DPRs in the preceding partial native log; the three relocated package cases
+took 37.1 s. These are complete-case costs, not deletion savings: retained bindings,
+new TCP proof and the new production journey still cost time. No cumulative
+speedup is inferred by summing removed-case durations.
+
+Focused proof so far: the production journey at both DPRs plus all retained
+deterministic bindings completes normally (6 passed, 3 unchanged unsupported-fixture
+skips, 94.602 s native wall). The generic nested-source replacement passes on host
+WebGL before deletion of the old case. CLM/Kev TCP cases pass; the first composition
+attempt exposes an incorrect test provenance lookup, corrected to the existing
+exact `rule`/`source` contract, then the affected composition case passes. An initial
+restricted generic attempt cannot allocate WebGL; host execution passes without
+expectation changes. Native selector/entrypoint/report controls pass (33 tests,
+60 subtests) after the retained full-command expectation removes the three relocated
+browser filenames. HTTP discovery includes all three new cases: 72 collected.
+
+The newly authorized complete changed-code gate is recorded after execution.
+The unchanged 1500-second envelope must include
+selection, HTTP, build and production-browser setup/body/teardown, with workflow
+setup/report headroom. Normal native JSON/JUnit completion, every mandatory case
+successful, truthful optional skips and owned process/port cleanup remain required.
+No product source, scalar/count/resource/error observer, renderer, retained fixture
+size, worker/retry/timeout/tolerance or actual-reference prerequisite is changed.

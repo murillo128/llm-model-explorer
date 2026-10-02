@@ -87,9 +87,32 @@ test('card gestures toggle expansion and explicit controls inspect without chang
   await requests(page, 0);
 });
 
-test('generic graph navigation and inspection expose both LoRA factor tensors', async ({ page }) => {
+test('nested source groups retain supplied formulas, scalars, ports and distinct weights', async ({ page }) => {
   await open(page, 'lab/alpha', false, true);
-  await graphAction(page, 'Show all operations');
+  const graph = page.getByLabel('Architecture graph', { exact: true });
+  const ready = () => expect(graph).toHaveAttribute('aria-busy', 'false');
+  const card = (id: string) => page.locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`);
+  await findComponent(page, 'adapted-projection'); await ready();
+  await expect(card('adapted-projection').locator('.architecture-tensor-row')).toHaveCount(0);
+  const children = ['linear1', 'lora_A', 'lora_B', 'lora_scale', 'lora_add'];
+  for (const id of children) await expect(card(id)).toHaveCount(0);
+  await graphAction(page, 'Toggle selected group'); await ready();
+  await graphAction(page, 'Fit view'); await ready();
+  for (const id of children) await expect(card(id)).toBeAttached();
+  await graphAction(page, 'Explore component'); await ready();
+  await expect(graph).toHaveAttribute('data-scope-id', 'adapted-projection');
+  await graphAction(page, 'Back'); await ready();
+  for (const [id, formula, scalar] of [
+    ['lora_scale', 'out = factor * x', 'factor = 2'],
+    ['reshape', 'out = reshape(x, ...)', null], ['transpose', 'out = transpose(x, ...)', null],
+    ['softmax', 'out = softmax(x, axis=axis)', 'axis = -1'],
+  ] as const) {
+    await findComponent(page, id); await ready();
+    await expect(card(id).locator('.architecture-node-type > .architecture-summary-text')).toHaveAccessibleName(formula);
+    if (scalar) await expect(card(id).getByLabel(scalar, { exact: true })).toBeVisible();
+    for (const port of ['x', 'out']) await expect(card(id).locator(`[data-port-id="${port}"].architecture-port`)).toBeVisible();
+  }
+  await requests(page, 0);
   await inspect(page, 'lora_A', 'LoRA A projection');
   await expect(page.getByRole('dialog')).toHaveAccessibleName('LoRA A projection');
   await expect(page.getByText(/Module: model\.layers\.1\.self_attn\.q_proj\.lora_A/)).toBeVisible();

@@ -121,19 +121,7 @@ async function openParameter(page: Page, graph: Graph, parameter: Graph['paramet
   await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
   await expect(page.getByRole('alert')).toHaveCount(0);
   const card = page.locator(`.react-flow__node[data-id=${JSON.stringify(node.id)}]`);
-  const canvas = page.getByLabel('Architecture graph', { exact: true });
-  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
-  const layoutCount = await canvas.getAttribute('data-layout-count'), scope = await canvas.getAttribute('data-scope-id');
   const beforeSelection = observed.length;
-  for (const target of ['.architecture-node-label', '.architecture-node-heading']) {
-    await card.locator(target).click(target === '.architecture-node-heading' ? { position: { x: 2, y: (await card.locator(target).boundingBox())!.height - 2 } } : {});
-    await expect(card.locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    expect(await canvas.getAttribute('data-layout-count')).toBe(layoutCount);
-    expect(await canvas.getAttribute('data-scope-id')).toBe(scope);
-    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
-  }
-  expect(observed.slice(beforeSelection)).toEqual([]);
   if (isolated && await page.getByLabel('Architecture graph', { exact: true }).getAttribute('data-scope-id') !== node.id) {
     const requests = observed.length;
     await card.locator('.architecture-navigate').click();
@@ -234,7 +222,7 @@ async function selectGraph(page: Page): Promise<Graph> {
   return body.graph;
 }
 
-async function inspectComponents(page: Page, graph: Graph, info: TestInfo, family: string, reference: boolean) {
+async function inspectComponents(page: Page, graph: Graph, info: TestInfo) {
   const role = (node: Graph['nodes'][number], value: string) => node.attributes.some((a) => a.name === 'semantic_role' && a.value === value);
   const layerRepetitions = graph.repetitions.filter((repetition) =>
     repetition.instances.some((instance) => !instance.variant.startsWith('routed_')),
@@ -251,10 +239,10 @@ async function inspectComponents(page: Page, graph: Graph, info: TestInfo, famil
   const capture = async (name: string) => {
     if (info.project.name !== 'dpr1') return;
     const viewport = page.viewportSize()!;
-    for (const width of reference && family === 'qwen35' ? [1178, viewport.width] : [viewport.width]) {
+    for (const width of [viewport.width]) {
       await page.setViewportSize({ ...viewport, width });
       await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-      const path = info.outputPath(`${reference ? 'reference' : 'fixture'}-${family}-${name}-${width}.png`);
+      const path = info.outputPath(`generic-components-${name}-${width}.png`);
       await page.screenshot({ path });
       await info.attach(`components-${name}-${width}`, { path, contentType: 'image/png' });
     }
@@ -271,10 +259,8 @@ async function inspectComponents(page: Page, graph: Graph, info: TestInfo, famil
     expect(b!.x).toBeGreaterThanOrEqual(a!.x + a!.width - 1);
   };
   for (const repetition of layerRepetitions) {
-    const instances = family === 'qwen35'
-      ? repetition.instances.filter((instance, index, all) => !instance.variant.startsWith('routed_') &&
-        all.findIndex((other) => other.variant === instance.variant) === index)
-      : repetition.instances.filter((instance) => !instance.variant.startsWith('routed_')).slice(0, 1);
+    const instances = repetition.instances.filter((instance, index, all) => !instance.variant.startsWith('routed_') &&
+      all.findIndex(other => other.variant === instance.variant) === index);
     for (const instance of instances) {
       const attention = components.find((n) => n.parent_id === instance.node_id && role(n, 'attention'))!;
       const mlp = components.find((n) => n.parent_id === instance.node_id && role(n, 'mlp'))!;
@@ -303,7 +289,7 @@ async function inspectComponents(page: Page, graph: Graph, info: TestInfo, famil
   }
 }
 
-async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family: string, reference: boolean) {
+async function inspectIsolation(page: Page, graph: Graph, info: TestInfo) {
   const canvas = page.getByLabel('Architecture graph', { exact: true });
   const ready = async () => {
     await expect(canvas).toHaveAttribute('aria-busy', 'false');
@@ -316,7 +302,7 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
   )!;
   const owner = layerRepetition.instances.find((instance) => !instance.variant.startsWith('routed_'))!.node_id;
   const components = graph.nodes.filter((node) => node.parent_id === owner && (role(node, 'attention') || role(node, 'mlp')));
-  const widths = reference && ['qwen3', 'vjepa2'].includes(family) && info.project.name === 'dpr1' ? [1178, 1440] : [1440];
+  const widths = [page.viewportSize()!.width];
   for (const width of widths) {
     await page.setViewportSize({ width, height: 1000 });
     for (const component of components) {
@@ -329,8 +315,8 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
       await expect(root).toBeAttached();
       const camera = await page.locator('.react-flow__viewport').getAttribute('style');
       const count = await canvas.getAttribute('data-layout-count');
-      if (reference && info.project.name === 'dpr1' && ['qwen3', 'vjepa2'].includes(family)) {
-        const path = info.outputPath(`isolated-${family}-${name}-${width}-initial.png`);
+      if (info.project.name === 'dpr1') {
+        const path = info.outputPath(`isolated-generic-${name}-${width}-initial.png`);
         await page.screenshot({ path }); await info.attach(`isolated-${name}-${width}-initial`, { path, contentType: 'image/png' });
       }
       // Explicit Fit includes every context endpoint. Sample real pointer hits
@@ -349,7 +335,7 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
           ? other.source === input.target && other.port === input.targetPort
           : other.source === input.source && other.port === input.port),
       })).find((item) => item.branches.length > 1);
-      if (family === 'qwen3') expect(fanout, 'Dense Attention/MLP inputs retain their genuine shared fan-out').toBeTruthy();
+      if (name === 'mlp') expect(fanout, 'The fixture MLP input retains its genuine shared fan-out').toBeTruthy();
       if (fanout) {
         const source = fanout.branches[0]!;
         const branches = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(source.source)}][data-source-port=${JSON.stringify(source.port)}]`);
@@ -358,21 +344,21 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
         const port = page.locator(`.architecture-port[data-node-id=${JSON.stringify(fanout.input.source)}][data-port-id=${JSON.stringify(fanout.input.port)}]`);
         await port.locator('.architecture-port-dot').hover();
         await expect.poll(() => page.locator('.architecture-connection[data-emphasized="true"]').evaluateAll((elements) => elements.map((e) => e.getAttribute('data-edge-id')!).sort())).toEqual(expected);
-        if (reference && info.project.name === 'dpr1' && ['qwen3', 'vjepa2'].includes(family)) {
-          const path = info.outputPath(`isolated-${family}-${name}-${width}-boundary.png`);
+        if (info.project.name === 'dpr1') {
+          const path = info.outputPath(`isolated-generic-${name}-${width}-boundary.png`);
           await page.screenshot({ path }); await info.attach(`isolated-${name}-${width}-boundary`, { path, contentType: 'image/png' });
         }
         const trunk = await fanoutPoint(page, branchList, branchList);
         await page.mouse.move(trunk.x, trunk.y);
         await expect.poll(() => page.locator('.architecture-connection[data-emphasized="true"]').evaluateAll((elements) => elements.map((e) => e.getAttribute('data-edge-id')!).sort())).toEqual(expected);
       }
-      if (reference && info.project.name === 'dpr1' && ['qwen3', 'vjepa2'].includes(family)) {
-        const path = info.outputPath(`isolated-${family}-${name}-${width}.png`);
+      if (info.project.name === 'dpr1') {
+        const path = info.outputPath(`isolated-generic-${name}-${width}.png`);
         await page.screenshot({ path }); await info.attach(`isolated-${name}-${width}`, { path, contentType: 'image/png' });
       }
       expect(await canvas.getAttribute('data-layout-count')).toBe(count);
       expect(observed.slice(requests)).toEqual([]);
-      await info.attach(`isolated-${family}-${name}-${width}-geometry`, { body: JSON.stringify({
+      await info.attach(`isolated-generic-${name}-${width}-geometry`, { body: JSON.stringify({
         width, graph: graph.graph_id, scope: component.id, sourceNodes: graph.nodes.length,
         visibleNodes: Number(await canvas.getAttribute('data-visible-nodes')), visibleEdges: Number(await canvas.getAttribute('data-visible-edges')),
         layoutMs: Number(await canvas.getAttribute('data-layout-ms')), initialCamera: camera,
@@ -388,7 +374,7 @@ async function inspectIsolation(page: Page, graph: Graph, info: TestInfo, family
 
 test.beforeEach(async ({ page }, info) => {
   timing = new HarnessTiming();
-  const family = /\[(\w+)\]/.exec(info.title)![1]!;
+  const family = /\[(\w+)\]/.exec(info.title)?.[1] ?? 'qwen35';
   const reference = info.title.startsWith('complete local reference');
   if (!reference && ['deepseek_v2', 'glm4_moe_lite'].includes(family)) {
     test.skip(true, `${family} has no deterministic local checkpoint fixture; actual-reference coverage owns this family`);
@@ -613,10 +599,59 @@ test('deterministic production [smollm2] port labels keep cable clearance and sh
   expect(observed.slice(isolatedRequests)).toEqual([]);
 });
 
+test('production graph navigation preserves declared structure and retained UI state', { tag: '@density' }, async ({ page }, info) => {
+  const graph = expandCompactGraph(await selectGraph(page));
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  await inspectComponents(page, graph, info);
+  await inspectIsolation(page, graph, info);
+  await viewOptions(page);
+  await expect(page.getByLabel('Show dimensions')).not.toBeChecked();
+  await page.keyboard.press('Escape');
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill(' ');
+  await graphAction(page, 'Show all operations');
+  const ids = await page.getByRole('tree', { name: 'Model components', exact: true }).locator('[data-node-id]')
+    .evaluateAll(options => options.map(o => (o as HTMLElement).dataset.nodeId));
+  expect(new Set(ids)).toEqual(new Set(componentsOf(graph).map(n => n.id)));
+  await page.keyboard.press('Escape');
+  await graphAction(page, 'Show all operations');
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
+  await graphPreference(page, 'Show dimensions', true);
+  const parameter = graph.parameters.find(p => p.inspection.status === 'available' && p.logical_shape?.length === 2)!;
+  const node = graph.nodes.find(n => n.parameter_ids.includes(parameter.id))!;
+  await findComponent(page, node.id);
+  const card = page.locator(`.react-flow__node[data-id=${JSON.stringify(node.id)}]`);
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const count = await canvas.getAttribute('data-layout-count'), scope = await canvas.getAttribute('data-scope-id');
+  const requests = observed.length;
+  for (const target of ['.architecture-node-label', '.architecture-node-heading']) {
+    await card.locator(target).click(target === '.architecture-node-heading'
+      ? { position: { x: 2, y: (await card.locator(target).boundingBox())!.height - 2 } } : {});
+    await expect(card.locator('.architecture-node')).toHaveAttribute('data-selected', 'true');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(await canvas.getAttribute('data-layout-count')).toBe(count);
+    expect(await canvas.getAttribute('data-scope-id')).toBe(scope);
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+  }
+  expect(observed.slice(requests)).toEqual([]);
+  await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
+  await viewOptions(page); await expect(page.getByLabel('Show dimensions')).toBeChecked();
+  await page.keyboard.press('Escape');
+  await graphAction(page, 'Collapse all');
+  await expect(canvas).toHaveAttribute('data-visible-nodes', '1');
+  for (const node of graph.nodes.filter(n => ['input', 'output'].includes(n.kind))) {
+    await expect(page.locator(`.architecture-browser-row[data-node-id=${JSON.stringify(node.id)}]`)).toHaveCount(0);
+  }
+  await page.getByRole('button', { name: 'Center selected', exact: true }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+});
+
 for (const reference of [false, true]) for (const family of [
   'smollm2', 'qwen3', 'qwen35', 'vjepa2', 'deepseek_v2', 'glm4_moe_lite', 'kimi_linear',
 ]) {
-  test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and logical weight modal`, { tag: '@density' }, async ({ page }, info) => {
+  test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and logical weight modal`, { tag: reference ? '@density' : [] }, async ({ page }, info) => {
     test.setTimeout(reference && family === 'kimi_linear' ? 900_000 : reference ? 600_000 : 90_000);
     const graph = expandCompactGraph(await selectGraph(page));
     expect(graph.coverage).toBe('complete');
@@ -663,16 +698,6 @@ for (const reference of [false, true]) for (const family of [
     }
     const canvas = page.getByLabel('Architecture graph', { exact: true });
     await recordGraph(page, info, 'compact-graph', graph);
-    await inspectComponents(page, graph, info, family, reference);
-    await inspectIsolation(page, graph, info, family, reference);
-    await viewOptions(page);
-    await expect(page.getByLabel('Show dimensions')).not.toBeChecked();
-    await page.keyboard.press('Escape');
-    await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill(' ');
-    await graphAction(page, 'Show all operations');
-    const ids = await page.getByRole('tree', { name: 'Model components', exact: true }).locator('[data-node-id]').evaluateAll((options) => options.map((o) => (o as HTMLElement).dataset.nodeId));
-    expect(new Set(ids)).toEqual(new Set(componentsOf(graph).map((n) => n.id)));
-    await page.keyboard.press('Escape');
     await graphAction(page, 'Show all operations');
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
     await recordGraph(page, info, 'exhaustive-graph', graph);
@@ -692,12 +717,6 @@ for (const reference of [false, true]) for (const family of [
         await findComponent(page, last.node_id);
         await expect(page.getByRole('combobox', { name: /Expand instance of/ }).locator('option:checked')).toContainText(new RegExp(`instance ${last.index}`, 'i'));
       }
-    }
-    if (!actualMoeReference) {
-      await graphPreference(page, 'Show dimensions', true);
-      await viewOptions(page);
-      await expect(page.getByLabel('Show dimensions')).toBeChecked();
-      await page.keyboard.press('Escape');
     }
     const client = await page.context().newCDPSession(page);
     const browserMemory = browserProcessMemory();
@@ -896,21 +915,8 @@ for (const reference of [false, true]) for (const family of [
       expect(observed.slice(requests).some((p) => p.endsWith('/data'))).toBe(false);
       await page.keyboard.press('Escape');
     }
-    await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
-    await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
-    await expect(canvas).toHaveAttribute('aria-busy', 'false', { timeout: 90_000 });
-    await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));
-    await viewOptions(page);
-    if (!actualMoeReference) await expect(page.getByLabel('Show dimensions')).toBeChecked();
-    await page.keyboard.press('Escape');
     if (family === 'vjepa2') expect(observed.some((p) => p.endsWith('/tokenize'))).toBe(false);
-    await graphAction(page, 'Collapse all');
-    await expect(canvas).toHaveAttribute('data-visible-nodes', '1');
-    for (const node of graph.nodes.filter((n) => ['input', 'output'].includes(n.kind))) {
-      await expect(page.locator(`.architecture-browser-row[data-node-id=${JSON.stringify(node.id)}]`)).toHaveCount(0);
-    }
-    await page.getByRole('button', { name: 'Center selected', exact: true }).click();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+
   });
 }
 

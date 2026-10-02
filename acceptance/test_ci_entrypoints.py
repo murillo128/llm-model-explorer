@@ -270,9 +270,6 @@ class CiEntrypointsTest(unittest.TestCase):
             browser[4:],
             [
                 r"architecture\.spec\.ts",
-                r"clm\.spec\.ts",
-                r"kev\.spec\.ts",
-                r"lora\-hierarchy\.spec\.ts",
                 r"lora\-reference\.spec\.ts",
                 r"product\.spec\.ts",
                 "--project=dpr1",

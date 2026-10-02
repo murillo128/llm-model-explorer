@@ -187,7 +187,7 @@ All returned rows matched exactly. Delimiters: `{'<|fim_prefix|>': 248060, '<|fi
 
 ## Production browser and deterministic regression proof
 
-`ui/acceptance/kev.spec.ts` passed with the complete real export at DPR 1 and 2
+The historical `ui/acceptance/kev.spec.ts` passed with the complete real export at DPR 1 and 2
 (19.0 s and 19.4 s; 39.8 s including setup). It selected Kev, expanded layer 0's
 adapted `linear_attn.in_proj_a`, opened its native A factor, then expanded the
 pointer head and opened `q.weight`. Both numeric responses succeeded and both
@@ -196,6 +196,13 @@ visually inspected. The same download-free fixture path passed at DPR 1 and 2
 (12.2 s and 13.1 s; 26.6 s including setup). Screenshots/traces stay outside Git.
 The sandbox could not expose Xvfb to Chromium; these headed runs used the
 permitted host execution path with temporary X servers and isolated ports.
+
+Issue #277 relocated the native package proof to
+`acceptance/test_native_packages.py` (`kev` input): production CLI/TCP graph
+admission and exact A-factor/pointer bytes from physical Safetensors. It retains
+`LMEX_KEV_REFERENCE_MODEL_ROOT`; generic Architecture Explorer browser tests own
+the shared gestures, exact modal dispatch, rendering and lifecycle. The historical
+reference results above are not a new execution of that relocated test.
 
 - Focused backend suite: 305 passed across Kev, Qwen3.5, PEFT, LoRA,
   model-owned architecture, CLM, catalogue and session lifecycle.
