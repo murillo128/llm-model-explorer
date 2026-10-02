@@ -441,6 +441,25 @@ retain every cache/process assertion and restore native pytest imports. The
 private wheel/import-location/CPU guards remain. Validate the actual spawned
 competition first, then complete all 1,950 cases from a new immutable target.
 
+## Audit-return routing repair plan
+
+The exact-head audit of `79f3f3ae7f0831cb8b87de89d7fb87b348378698`
+found two omitted owners. Shared backend test modules must select their backend
+consumers and genuine extended thresholds; shared `acceptance/test_network.py`
+must select all HTTP consumers, including the real `Service(model_root=...)`
+branches. The LoRA browser route must include `test_lora_reference.py`, whose
+independent source-byte/shape/algebra assertions own the retired browser matrix.
+
+Use the existing finite owner map to classify known shared test modules before
+isolated-file rules. Backend fallback stays within backend; HTTP fallback stays
+within HTTP and keeps browser/build setup non-applicable. Regression assertions
+use independently inspected current imports/owners, fail on the audited selector,
+and pass after repair. Exercise the real selector/entrypoint commands and their
+failure propagation, then run the native LoRA TCP owner with absent and invalid
+supplied reference controls. Preserve truthful capability skips. Reconcile the
+final complete-diff plan to prior passing executable proof; this routing repair
+does not require another unchanged broad timing sample.
+
 ## Revised portfolio — adopted decisions and final validation
 
 Python 3.14 validation uses 3.14.7 and the same locked PyTorch 2.14.0+cpu

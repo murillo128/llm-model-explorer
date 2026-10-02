@@ -7,18 +7,24 @@ compatibility scope, reasons and exact tested revisions.
 
 | Changed surface | Selected proof |
 | --- | --- |
-| Existing backend `tests/test_*.py` | That pytest file; analysis selects its genuine extended thresholds. Helpers, unknown/deleted/nested tests remain broad. |
+| Isolated existing backend `tests/test_*.py` | That pytest file. Known modules exporting helpers/oracles select all backend tests and genuine extended thresholds before the isolated-file rule. Other helpers and unknown/deleted/nested tests remain broad. |
 | Existing matrix/tensor/renderer/distribution/magnifier/tokenizer/architecture browser spec | That native file plus complete UI fast checks. Unknown/deleted/nested specs remain broad. |
 | UI unit test | Complete UI fast checks; ordinary tests remain included. |
 | Split production spec | Its actual responsibility and corresponding real HTTP files. |
+| `lora-reference.spec.ts` | Its extended browser cases plus TCP architecture, Base reference and independent LoRA/QLoRA reference owners. |
 | `product-harness.ts` | All five tensor/tokenizer production spec consumers. |
-| HTTP test file | That native pytest file; browser/build/Node/Chromium setup explicitly non-applicable. |
+| Isolated HTTP test file | That native pytest file; browser/build/Node/Chromium setup explicitly non-applicable. |
+| Shared `acceptance/test_network.py` | All native HTTP tests, including model-root, export, embedding and actual-reference consumers; browser/build setup stays non-applicable. |
 | Architecture UI production | Architecture component files, `architecture.spec.ts`, TCP architecture/native packages. |
 | Tokenizer UI production | Tokenizer component files; transport, scientific, bindings and tokenizer-layout production files and their HTTP owners. |
 | Rendering/matrix production | Matrix/native, tokenizer and architecture component owners plus complete integration. |
 | Backend production/examples | Backend checks and real integration; backend production/support conservatively includes numerical threshold/allocator proof. Examples additionally select graph components. |
 | API/generator/normative/shared/unknown/configuration | All applicable routine owners and potentially affected extended owners. |
 | Operational Markdown/known runner infrastructure | Explicit product non-applicability; existing documentation/infrastructure checks. |
+
+Maintain the finite shared-backend-module classification when adding imports of
+helpers from a `test_*.py` module. Filename-based isolation applies only after
+these shared owners; it does not prove a test module has no consumers.
 
 `@extended` classifies genuine long/reference cases. Ordinary untagged tests run
 by default. DPR 1 owns ordinary production cases; `@density` adds only meaningful

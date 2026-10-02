@@ -144,10 +144,10 @@ class SelectionTest(unittest.TestCase):
         plan = selector.select(["ui/tests/matrix-zoom.spec.ts"])
         self.assertEqual(plan["integration"], [])
         self.assertEqual(selector.targets(plan, "browser"), ["matrix-zoom.spec.ts"])
-        backend = selector.select(["backend/tests/test_tensor_analysis.py"])
+        backend = selector.select(["backend/tests/test_session_operations.py"])
         self.assertEqual(backend["owners"], ["backend"])
-        self.assertEqual(selector.backend_targets(backend), ["tests/test_tensor_analysis.py"])
-        self.assertIn("backend", backend["extended"])
+        self.assertEqual(selector.backend_targets(backend), ["tests/test_session_operations.py"])
+        self.assertEqual(backend["extended"], [])
         scientific = selector.select(["ui/acceptance/scientific.spec.ts"])
         self.assertEqual(selector.targets(scientific, "integration"), ["scientific.spec.ts"])
         self.assertEqual(
@@ -158,6 +158,68 @@ class SelectionTest(unittest.TestCase):
                 "acceptance/test_network.py",
             ],
         )
+
+    def test_shared_backend_test_modules_reach_all_native_consumers_and_thresholds(self):
+        # Existing imports include quantized_flows -> tensor_analysis and
+        # embedding_analysis -> embeddings -> tokenization -> models. A helper
+        # module remains shared even though its filename starts with test_.
+        for name in (
+            "architecture_analysis",
+            "artifacts",
+            "dense_architecture",
+            "embeddings",
+            "lmex",
+            "model_defined_service",
+            "models",
+            "operations",
+            "peft_adapters",
+            "quantized_models",
+            "qwen35_architecture",
+            "streaming",
+            "tensor_analysis",
+            "tensor_data",
+            "tokenization",
+            "vjepa2_architecture",
+        ):
+            with self.subTest(module=name):
+                plan = selector.select([f"backend/tests/test_{name}.py"])
+                self.assertEqual(plan["owners"], ["backend"])
+                self.assertEqual(selector.backend_targets(plan), ["tests"])
+                self.assertEqual(plan["extended"], ["backend"])
+                selector.validate(plan)
+
+    def test_shared_http_test_module_reaches_real_model_root_and_stream_consumers(self):
+        plan = selector.select(["acceptance/test_network.py"])
+        self.assertEqual(plan["owners"], ["integration"])
+        self.assertEqual(selector.targets(plan, "integration"), [])
+        files = selector.network_targets(plan)
+        for name in (
+            "network",
+            "architecture",
+            "native_packages",
+            "embeddings",
+            "distribution_scales",
+            "polish",
+            "reference",
+            "lora_reference",
+        ):
+            self.assertIn(f"acceptance/test_{name}.py", files)
+        self.assertIn("integration", plan["extended"])
+        selector.validate(plan)
+
+    def test_lora_browser_selects_its_independent_reference_tcp_owner(self):
+        plan = selector.select(["ui/acceptance/lora-reference.spec.ts"])
+        self.assertEqual(selector.targets(plan, "integration"), ["lora-reference.spec.ts"])
+        self.assertEqual(
+            selector.network_targets(plan),
+            [
+                "acceptance/test_architecture.py",
+                "acceptance/test_lora_reference.py",
+                "acceptance/test_reference.py",
+            ],
+        )
+        self.assertIn("integration", plan["extended"])
+        selector.validate(plan)
 
     def test_http_only_edit_has_no_unchanged_browser_consumer(self):
         plan = selector.select(["acceptance/test_report.py"])

@@ -302,6 +302,50 @@ class CiEntrypointsTest(unittest.TestCase):
             ],
         )
 
+    def test_shared_http_helper_runs_consumers_without_browser_setup(self):
+        for name in ("network", "architecture", "native_packages", "embeddings", "lora_reference"):
+            (self.root / f"acceptance/test_{name}.py").touch()
+        plan = self.plan("acceptance/test_network.py")
+        result, commands = self.run_gate("--routine", "--main-ci", "--plan", str(plan))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        selected = next(
+            command for command in commands if command[:3] == ["python", "-m", "pytest"]
+        )
+        self.assertEqual(
+            selected[3:8],
+            [
+                "acceptance/test_architecture.py",
+                "acceptance/test_embeddings.py",
+                "acceptance/test_lora_reference.py",
+                "acceptance/test_native_packages.py",
+                "acceptance/test_network.py",
+            ],
+        )
+        self.assertFalse(any(command[0] in {"npm", "xvfb-run"} for command in commands))
+
+    def test_lora_route_runs_reference_tcp_owner_and_propagates_its_failure(self):
+        plan = self.plan("ui/acceptance/lora-reference.spec.ts")
+        result, commands = self.run_gate("--routine", "--main-ci", "--plan", str(plan))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        selected = next(
+            command for command in commands if command[:3] == ["python", "-m", "pytest"]
+        )
+        self.assertEqual(
+            selected[3:6],
+            [
+                "acceptance/test_architecture.py",
+                "acceptance/test_lora_reference.py",
+                "acceptance/test_reference.py",
+            ],
+        )
+        self.log.unlink()
+        result, commands = self.run_gate(
+            "--routine", "--main-ci", "--plan", str(plan), fail=" ".join(selected)
+        )
+        self.assertEqual(result.returncode, 7, result.stderr)
+        self.assertEqual(commands[-1], selected)
+        self.assertFalse(any(command[0] in {"npm", "xvfb-run"} for command in commands))
+
     def test_selected_build_pytest_and_browser_failures_propagate(self):
         plan = self.plan("ui/src/tokenizer/editor.ts")
         result, commands = self.run_gate("--main-ci", "--plan", str(plan))

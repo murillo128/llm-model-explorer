@@ -9,6 +9,30 @@ from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[2]
 OWNERS = {"backend", "api", "ui", "browser", "integration"}
+# These native test modules also export fixtures/oracles to other tests and
+# support modules. Keep the finite classification aligned with their imports;
+# a test_ filename alone does not establish isolation.
+SHARED_BACKEND_TESTS = {
+    f"backend/tests/test_{name}.py"
+    for name in (
+        "architecture_analysis",
+        "artifacts",
+        "dense_architecture",
+        "embeddings",
+        "lmex",
+        "model_defined_service",
+        "models",
+        "operations",
+        "peft_adapters",
+        "quantized_models",
+        "qwen35_architecture",
+        "streaming",
+        "tensor_analysis",
+        "tensor_data",
+        "tokenization",
+        "vjepa2_architecture",
+    )
+}
 
 
 def normalized(path):
@@ -45,7 +69,19 @@ def select(paths, *, full=False):
     if full or not paths:
         broad("context", "explicit full mode" if full else "empty diff; full fallback")
     for path in paths:
-        if (
+        if path in SHARED_BACKEND_TESTS:
+            add(path, "shared backend test fixtures/oracles and native consumers", ("backend",))
+            extended.add("backend")
+        elif path == "acceptance/test_network.py":
+            add(
+                path,
+                "shared real CLI/service/stream helpers and all HTTP consumers",
+                integrations=tuple(
+                    "network:" + file.name
+                    for file in sorted((ROOT / "acceptance").glob("test_*.py"))
+                ),
+            )
+        elif (
             path.startswith("backend/tests/test_")
             and Path(path).parent.as_posix() == "backend/tests"
             and path.endswith(".py")
@@ -53,8 +89,6 @@ def select(paths, *, full=False):
         ):
             owners.add("backend")
             backend_tests.add(path.removeprefix("backend/"))
-            if path == "backend/tests/test_tensor_analysis.py":
-                extended.add("backend")
             reasons.append(f"{path}: isolated backend test; its native file owns validation")
         elif path in {
             "ui/acceptance/scientific.spec.ts",
@@ -402,7 +436,7 @@ def network_targets(plan):
         "tokenizer-layout": ("network", "embeddings"),
         "bindings": ("embeddings", "polish", "reference"),
         "architecture": ("architecture", "native_packages"),
-        "lora-reference": ("architecture", "reference"),
+        "lora-reference": ("architecture", "lora_reference", "reference"),
         "product": ("network", "embeddings", "polish", "distribution_scales", "reference"),
     }
     files = set()
