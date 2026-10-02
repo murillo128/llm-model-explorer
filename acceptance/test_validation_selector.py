@@ -175,10 +175,17 @@ class SelectionTest(unittest.TestCase):
         self.assertEqual(len(selector.targets(harness, "integration")), 5)
         deleted = selector.select(["ui/tests/matrix-deleted.spec.ts"])
         self.assertEqual(deleted["browser"], ["full"])
-        for path in ["future/unknown.py", "ui/tests/future/new.spec.ts"]:
+        for path in [
+            "future/unknown.py",
+            "ui/tests/future/new.spec.ts",
+            "backend/tests/conftest.py",
+            "backend/tests/test_deleted.py",
+        ]:
             plan = selector.select([path])
             self.assertEqual(plan["portfolio"], "routine")
             self.assertEqual(set(plan["extended"]), {"backend", "integration"})
+        dependency = selector.select(["backend/src/llm_model_explorer/model_files.py"])
+        self.assertIn("backend", dependency["extended"])
         self.assertEqual(selector.select([], full=True)["portfolio"], "full")
         with self.assertRaises(ValueError):
             selector.validate(selector.select([]) | {"portfolio": "quiet"})

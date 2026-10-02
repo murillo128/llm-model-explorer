@@ -47,6 +47,7 @@ def select(paths, *, full=False):
     for path in paths:
         if (
             path.startswith("backend/tests/test_")
+            and Path(path).parent.as_posix() == "backend/tests"
             and path.endswith(".py")
             and (ROOT / path).is_file()
         ):
@@ -77,6 +78,7 @@ def select(paths, *, full=False):
             )
         elif (
             path.startswith("ui/tests/")
+            and Path(path).parent.as_posix() == "ui/tests"
             and path.endswith(".spec.ts")
             and (ROOT / path).is_file()
             and Path(path).name.startswith(
@@ -122,6 +124,8 @@ def select(paths, *, full=False):
             )
         ):
             add(path, "operational documentation; existing documentation/infrastructure owners")
+        elif path.startswith("backend/tests/"):
+            broad(path, "shared, deleted or unknown backend test support")
         elif path.startswith(("backend/", "examples/")):
             add(
                 path,
@@ -129,6 +133,11 @@ def select(paths, *, full=False):
                 ("backend", "integration"),
                 integrations=("full",),
             )
+            # Model/storage/session and other backend dependencies may affect
+            # threshold values or the real allocator stream. Be conservative
+            # for production/support inputs; isolated tests were handled above.
+            if path.startswith("backend/"):
+                extended.add("backend")
             if path.startswith("examples/"):
                 add(
                     path,

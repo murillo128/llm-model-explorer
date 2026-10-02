@@ -422,3 +422,11 @@ Retain the pending-generation and exact Back assertions. Preserve the failed run
 exercise a controlled delayed real Fit as a red reproducer, and run the camera
 family and complete affected components after the repair. No production change,
 retry, tolerance or retired test is involved.
+
+Final routing inspection exposed missing extended backend selection for shared
+`backend/tests/conftest.py`, deleted tests and model-file dependencies. A focused
+negative control fails on the preceding selector for that omission. Shared,
+deleted and nested backend test support now falls back conservatively; production
+backend/support inputs include the real threshold/allocator checks. Direct
+existing backend/browser tests retain their finite file route. This changes
+selection only; the complete refactor plan already selected those same owners.

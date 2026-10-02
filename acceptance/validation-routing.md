@@ -16,7 +16,7 @@ compatibility scope, reasons and exact tested revisions.
 | Architecture UI production | Architecture component files, `architecture.spec.ts`, TCP architecture/native packages. |
 | Tokenizer UI production | Tokenizer component files; transport, scientific, bindings and tokenizer-layout production files and their HTTP owners. |
 | Rendering/matrix production | Matrix/native, tokenizer and architecture component owners plus complete integration. |
-| Backend production/examples | Backend checks and real integration; examples additionally select graph components. |
+| Backend production/examples | Backend checks and real integration; backend production/support conservatively includes numerical threshold/allocator proof. Examples additionally select graph components. |
 | API/generator/normative/shared/unknown/configuration | All applicable routine owners and potentially affected extended owners. |
 | Operational Markdown/known runner infrastructure | Explicit product non-applicability; existing documentation/infrastructure checks. |
 
