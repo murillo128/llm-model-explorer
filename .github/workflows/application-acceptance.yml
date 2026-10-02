@@ -76,7 +76,7 @@ jobs:
           # Independent API/generated checks belong to their exact-target workflows.
           bash acceptance/check-integration.sh --routine --main-ci --plan validation-plan.json
       - name: Run affected extended product proof
-        if: steps.plan.outputs.integration_browser == 'true'
+        if: steps.plan.outputs.integration_extended == 'true'
         run: python3 .github/scripts/validation_selector.py --plan validation-plan.json --run integration --main --extended
       - uses: actions/upload-artifact@v4
         if: always()
@@ -84,5 +84,4 @@ jobs:
           name: application-acceptance-evidence
           path: |
             ${{ env.LMEX_EVIDENCE_DIR }}/
-            ui/test-results/
           retention-days: 14

@@ -21,6 +21,7 @@ repo_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_dir"
 export LMEX_EVIDENCE_DIR=${LMEX_EVIDENCE_DIR:-$(mktemp -d /tmp/lmex-integration-evidence-XXXXXX)}
 mkdir -p "$LMEX_EVIDENCE_DIR"
+export LMEX_EVIDENCE_DIR=$(realpath "$LMEX_EVIDENCE_DIR")
 export LMEX_TEST_PORTFOLIO=$portfolio
 export HF_HUB_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false

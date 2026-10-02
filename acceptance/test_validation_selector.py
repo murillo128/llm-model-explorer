@@ -22,7 +22,7 @@ class SelectionTest(unittest.TestCase):
                 "ui/src/architecture-explorer/Graph.tsx",
                 {"ui", "browser", "integration"},
                 ["architecture"],
-                ["architecture"],
+                ["architecture", "lora-reference"],
             ),
             (
                 "ui/src/tokenizer/editor.ts",
@@ -124,7 +124,14 @@ class SelectionTest(unittest.TestCase):
         self.assertEqual(plan["browser"], ["architecture", "tokenizer"])
         self.assertEqual(
             plan["integration"],
-            ["architecture", "bindings", "scientific", "tokenizer-layout", "transport"],
+            [
+                "architecture",
+                "bindings",
+                "lora-reference",
+                "scientific",
+                "tokenizer-layout",
+                "transport",
+            ],
         )
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -183,15 +190,30 @@ class SelectionTest(unittest.TestCase):
         ):
             with self.subTest(module=name):
                 plan = selector.select([f"backend/tests/test_{name}.py"])
-                self.assertEqual(plan["owners"], ["backend"])
+                cross_boundary = name in {
+                    "dense_architecture",
+                    "lmex",
+                    "models",
+                    "operations",
+                    "quantized_models",
+                    "qwen35_architecture",
+                    "streaming",
+                    "tensor_data",
+                    "vjepa2_architecture",
+                }
+                self.assertEqual(
+                    plan["owners"], ["backend", "integration"] if cross_boundary else ["backend"]
+                )
                 self.assertEqual(selector.backend_targets(plan), ["tests"])
-                self.assertEqual(plan["extended"], ["backend"])
+                self.assertEqual(
+                    plan["extended"], ["backend", "integration"] if cross_boundary else ["backend"]
+                )
                 selector.validate(plan)
 
     def test_shared_http_test_module_reaches_real_model_root_and_stream_consumers(self):
         plan = selector.select(["acceptance/test_network.py"])
         self.assertEqual(plan["owners"], ["integration"])
-        self.assertEqual(selector.targets(plan, "integration"), [])
+        self.assertEqual(selector.targets(plan, "integration"), ["architecture.spec.ts"])
         files = selector.network_targets(plan)
         for name in (
             "network",
@@ -206,6 +228,124 @@ class SelectionTest(unittest.TestCase):
             self.assertIn(f"acceptance/test_{name}.py", files)
         self.assertIn("integration", plan["extended"])
         selector.validate(plan)
+
+    def test_cross_boundary_fixture_closure_selects_actual_native_consumers(self):
+        cases = [
+            (
+                "backend/tests/test_lora_architecture.py",
+                {"acceptance/test_native_packages.py"},
+                set(),
+            ),
+            ("backend/tests/clm_fixtures.py", {"acceptance/test_native_packages.py"}, set()),
+            ("backend/tests/kev_fixtures.py", {"acceptance/test_native_packages.py"}, set()),
+            (
+                "backend/tests/test_kimi_linear_architecture.py",
+                {"acceptance/test_architecture.py"},
+                {"architecture.spec.ts"},
+            ),
+            (
+                "backend/tests/fixtures/kimi-linear-reference.json",
+                {"acceptance/test_architecture.py"},
+                {"architecture.spec.ts"},
+            ),
+            *[
+                (
+                    f"backend/tests/{name}",
+                    {
+                        "acceptance/test_architecture.py",
+                        "acceptance/test_native_packages.py",
+                        "acceptance/test_polish.py",
+                    },
+                    {"architecture.spec.ts"},
+                )
+                for name in (
+                    "dense_fixtures.py",
+                    "quantized_oracles.py",
+                    "test_quantized_models.py",
+                    "test_models.py",
+                    "test_tensor_data.py",
+                    "test_streaming.py",
+                    "test_operations.py",
+                    "test_lmex.py",
+                    "cache_helpers.py",
+                    "fixtures/quantized-configs.json",
+                )
+            ],
+        ]
+        for path, http, browser in cases:
+            with self.subTest(path=path):
+                plan = selector.select([path])
+                self.assertIn("backend", plan["owners"])
+                self.assertIn("integration", plan["owners"])
+                self.assertTrue(http <= set(selector.network_targets(plan)))
+                self.assertTrue(browser <= set(selector.targets(plan, "integration")))
+                self.assertFalse(plan["compatibility_full"])
+                selector.validate(plan)
+
+    def test_existing_unclassified_test_names_do_not_establish_isolation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for path in [
+                "backend/tests/test_future_helper.py",
+                "ui/tests/matrix-future.spec.ts",
+                "ui/src/api/future.test.ts",
+                "acceptance/test_future_helper.py",
+            ]:
+                file = root / path
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.touch()
+                with self.subTest(path=path), patch.object(selector, "ROOT", root):
+                    plan = selector.select([path])
+                    self.assertIn("integration", plan["owners"])
+                    self.assertNotEqual(plan["integration"], [])
+
+    def test_cross_boundary_union_is_deterministic_and_preserves_full_owner(self):
+        paths = [
+            "backend/tests/test_session_operations.py",
+            "backend/tests/test_quantized_models.py",
+            "backend/tests/test_lora_architecture.py",
+        ]
+        first = selector.select(paths)
+        self.assertEqual(first, selector.select([*reversed(paths), paths[0]]))
+        self.assertEqual(first["backend_tests"], ["tests"])
+        files = selector.network_targets(first)
+        self.assertEqual(files, sorted(set(files)))
+        self.assertTrue(
+            {
+                "acceptance/test_native_packages.py",
+                "acceptance/test_polish.py",
+                "acceptance/test_architecture.py",
+            }
+            <= set(files)
+        )
+
+    def test_architecture_ui_selects_lora_browser_and_independent_tcp(self):
+        plan = selector.select(["ui/src/architecture-explorer/ArchitectureControls.tsx"])
+        self.assertIn("lora-reference.spec.ts", selector.targets(plan, "integration"))
+        self.assertIn("acceptance/test_lora_reference.py", selector.network_targets(plan))
+
+    def test_extended_only_routine_and_reference_full_do_not_launch_duplicate_phases(self):
+        plan = selector.select(["ui/acceptance/lora-reference.spec.ts"])
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch.object(selector.subprocess, "run") as command,
+        ):
+            selector.run_browser(plan, "integration", main=True)
+            command.assert_not_called()
+            selector.run_browser(plan, "integration", main=True, extended=True)
+            command.assert_called_once()
+        with (
+            patch.dict(
+                "os.environ",
+                {"LMEX_LORA_REFERENCE_MODEL_ROOT": "/invalid/supplied/reference"},
+                clear=True,
+            ),
+            patch.object(selector.subprocess, "run") as command,
+        ):
+            selector.run_browser(plan, "integration", main=True)
+            self.assertEqual(command.call_args.kwargs["env"]["LMEX_TEST_PORTFOLIO"], "full")
+            selector.run_browser(plan, "integration", main=True, extended=True)
+            command.assert_called_once()
 
     def test_lora_browser_selects_its_independent_reference_tcp_owner(self):
         plan = selector.select(["ui/acceptance/lora-reference.spec.ts"])

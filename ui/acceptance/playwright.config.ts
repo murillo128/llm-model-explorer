@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { resolve } from 'node:path';
 
 const requestedPortfolio = process.env.LMEX_TEST_PORTFOLIO ?? 'routine';
 // Explicit reference inputs (including invalid ones) and required mode must not
@@ -7,6 +8,17 @@ const referencesRequested = Boolean(process.env.LMEX_REFERENCE_MODEL_DIR ||
   process.env.LMEX_ARCHITECTURE_REFERENCES || process.env.LMEX_LORA_REFERENCE_MODEL_ROOT ||
   process.env.LMEX_REQUIRE_ARCHITECTURE_REFERENCES === '1');
 const portfolio = requestedPortfolio === 'routine' && referencesRequested ? 'full' : requestedPortfolio;
+if (!['routine', 'extended', 'full'].includes(portfolio)) throw new Error(`Invalid portfolio: ${portfolio}`);
+const traceRequested = process.argv.some((argument, i) =>
+  argument.startsWith('--trace=') ? argument !== '--trace=off' :
+    argument === '--trace' && process.argv[i + 1] !== 'off');
+const phase = traceRequested ? 'diagnostic' : process.env.LMEX_TEST_PHASE ?? portfolio;
+if (!['routine', 'extended', 'full', 'diagnostic'].includes(phase)) throw new Error(`Invalid evidence phase: ${phase}`);
+if (phase !== 'diagnostic' && phase !== portfolio) throw new Error(`Evidence phase ${phase} disagrees with portfolio ${portfolio}`);
+const evidenceRoot = process.env.LMEX_EVIDENCE_DIR
+  ? resolve(process.env.LMEX_EVIDENCE_DIR, 'browser')
+  : new URL('../test-results/acceptance/', import.meta.url).pathname;
+const phaseRoot = resolve(evidenceRoot, phase);
 
 const componentPort = Number(process.env.UI_TEST_PORT ?? 4173);
 const isolatedPorts = Boolean(process.env.UI_TEST_PORT);
@@ -34,8 +46,8 @@ export default defineConfig({
   retries: 0,
   ...(portfolio === 'extended' ? { grep: /@extended/ } : {}),
   ...(portfolio === 'routine' ? { grepInvert: /@extended/ } : {}),
-  outputDir: '../test-results/acceptance',
-  reporter: [['list'], ['json', { outputFile: '../test-results/acceptance.json' }]],
+  outputDir: resolve(phaseRoot, 'artifacts'),
+  reporter: [['list'], ['json', { outputFile: resolve(phaseRoot, 'report.json') }]],
   use: {
     headless: false,
     viewport: { width: 1440, height: 1000 },

@@ -570,6 +570,35 @@ Python versions.
 
 ## Audit-return completed evidence
 
+### Cross-boundary and phase continuation plan
+
+The next contract starts at `83843e38e666151aeaa9837b839cfaf1ba1108a3`.
+An ad-hoc read-only inventory inspected 372 repository source/fixture files,
+ordinary and function-local Python imports, embedded preparation commands,
+dynamic CLM/Kev exporters, TypeScript imports and native JSON/HTML/oracle inputs.
+The static graph is an overapproximation: manually inspected CLI branches keep
+the ordinary tensor/tokenizer harness separate from architecture/polish fixtures.
+No test module was executed for discovery. Inventory artifacts stay outside Git.
+
+Before changing routing, retain the known leaf controls (session operations,
+matrix zoom and HTTP report) and record the direct LoRA, Kimi and multi-hop
+dense/quantized/model/stream/helper closure in the routing guide. Positively
+reviewed current leaves may narrow; unclassified existing files cannot infer
+isolation from a filename. Shared fixtures conservatively select their relevant
+native family and threshold owners, without adding full Python compatibility for
+every test-only edit.
+
+Focused regressions cover the issue's direct/transitive/embedded inputs,
+deterministic unions, new-existing/nested/deleted paths, shared HTTP plus reference
+browser consumers, architecture UI plus LoRA, effective reference/full promotion,
+extended-only routine non-applicability, distinct phase evidence, prerequisites and
+failure propagation. Expected targets come from inspected consumer imports and
+commands, not the selector's own map. Prove omissions on the starting selector,
+then use native discovery/prerequisite/report/trace controls and deduplicated real
+architecture/native-package/polish TCP plus architecture browser routine/extended
+proof. Keep prior timings attached to their tested targets; the remaining complete
+routine attempt is reserved for a material need after scoped reconciliation.
+
 The bounded routing repairs are validated at
 `1610d796297771b5a44ff628852bd11bf443d40a`, against unchanged integration
 `25a8d7c3be08e4e74383a988cef74feafeef8414`:

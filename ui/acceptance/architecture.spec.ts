@@ -38,7 +38,6 @@ const python = `${repo}backend/.venv/bin/python`;
 // and exhausted the reference deadline during explorer restoration. Retain
 // call/network traces; explicit screenshots, graph/memory records and numeric
 // oracles below still cover the complete graph at the required widths.
-test.use({ trace: { mode: 'retain-on-failure', snapshots: false, screenshots: false } });
 let service: ReturnType<typeof spawn>;
 let root: string;
 let backend: string;

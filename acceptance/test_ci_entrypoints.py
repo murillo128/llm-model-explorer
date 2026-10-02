@@ -21,6 +21,10 @@ name = Path(sys.argv[0]).name
 args = sys.argv[1:]
 with open(os.environ['CI_COMMAND_LOG'], 'a') as log:
     log.write(json.dumps([name, *args]) + '\\n')
+if name == 'npm' and 'test:acceptance' in args:
+    with open(os.environ['CI_COMMAND_LOG'] + '.phases', 'a') as log:
+        log.write(json.dumps({'phase': os.environ.get('LMEX_TEST_PHASE'),
+                             'portfolio': os.environ.get('LMEX_TEST_PORTFOLIO')}) + '\\n')
 if ' '.join([name, *args]) == os.environ.get('CI_FAIL_COMMAND'):
     sys.exit(7)
 if name == 'xvfb-run':
@@ -278,7 +282,7 @@ class CiEntrypointsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 7, result.stderr)
         self.assertEqual(commands[-1], selected)
 
-    def test_shared_api_plan_preserves_complete_acceptance(self):
+    def test_shared_api_plan_preserves_complete_acceptance_phases(self):
         plan = self.plan("docs/spec/api/contract.md")
         result, commands = self.run_gate("--plan", str(plan))
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -293,7 +297,6 @@ class CiEntrypointsTest(unittest.TestCase):
             [
                 r"architecture\.spec\.ts",
                 r"bindings\.spec\.ts",
-                r"lora\-reference\.spec\.ts",
                 r"native\.spec\.ts",
                 r"scientific\.spec\.ts",
                 r"tokenizer\-layout\.spec\.ts",
@@ -301,8 +304,26 @@ class CiEntrypointsTest(unittest.TestCase):
                 "--project=dpr1",
             ],
         )
+        result = self.run_extended(plan)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        commands = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertIn(
+            [
+                "npm",
+                "run",
+                "test:acceptance",
+                "--",
+                r"architecture\.spec\.ts",
+                r"bindings\.spec\.ts",
+                r"lora\-reference\.spec\.ts",
+                r"native\.spec\.ts",
+                r"tokenizer\-layout\.spec\.ts",
+                "--project=dpr1",
+            ],
+            commands,
+        )
 
-    def test_shared_http_helper_runs_consumers_without_browser_setup(self):
+    def test_shared_http_helper_runs_tcp_and_architecture_reference_browser(self):
         for name in ("network", "architecture", "native_packages", "embeddings", "lora_reference"):
             (self.root / f"acceptance/test_{name}.py").touch()
         plan = self.plan("acceptance/test_network.py")
@@ -321,7 +342,8 @@ class CiEntrypointsTest(unittest.TestCase):
                 "acceptance/test_network.py",
             ],
         )
-        self.assertFalse(any(command[0] in {"npm", "xvfb-run"} for command in commands))
+        self.assertIn(["npm", "run", "build"], commands)
+        self.assertIn(["npm", "run", "test:acceptance", "--", r"architecture\.spec\.ts"], commands)
 
     def test_lora_route_runs_reference_tcp_owner_and_propagates_its_failure(self):
         plan = self.plan("ui/acceptance/lora-reference.spec.ts")
@@ -352,7 +374,7 @@ class CiEntrypointsTest(unittest.TestCase):
         for path, node, browser in (
             ("acceptance/test_report.py", "false", "false"),
             ("acceptance/test_architecture.py", "true", "false"),
-            ("acceptance/test_network.py", "true", "false"),
+            ("acceptance/test_network.py", "true", "true"),
             ("ui/acceptance/lora-reference.spec.ts", "true", "true"),
         ):
             with self.subTest(path=path):
@@ -377,6 +399,85 @@ class CiEntrypointsTest(unittest.TestCase):
         steps = self.workflow("application-acceptance")["jobs"]["application"]["steps"]
         node_step = next(step for step in steps if step.get("uses") == "actions/setup-node@v4")
         self.assertEqual(node_step["if"], "steps.plan.outputs.integration_node == 'true'")
+
+    def test_native_package_input_keeps_python_only_real_tcp_command(self):
+        (self.root / "acceptance/test_native_packages.py").touch()
+        plan = self.plan("backend/tests/test_lora_architecture.py")
+        result, commands = self.run_gate("--routine", "--main-ci", "--plan", str(plan))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        selected = next(
+            command for command in commands if command[:3] == ["python", "-m", "pytest"]
+        )
+        self.assertEqual(selected[3], "acceptance/test_native_packages.py")
+        self.assertFalse(any(command[0] in {"npm", "xvfb-run"} for command in commands))
+
+    def run_extended(self, plan, fail=None):
+        env = dict(self.env)
+        if fail:
+            env["CI_FAIL_COMMAND"] = fail
+        return subprocess.run(
+            [
+                sys.executable,
+                str(self.root / ".github/scripts/validation_selector.py"),
+                "--plan",
+                str(plan),
+                "--run",
+                "integration",
+                "--main",
+                "--extended",
+            ],
+            cwd=self.root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+
+    def test_lora_routine_is_non_applicable_and_extended_remains_required(self):
+        plan = self.plan("ui/acceptance/lora-reference.spec.ts")
+        result, commands = self.run_gate("--routine", "--main-ci", "--plan", str(plan))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(["npm", "run", "build"], commands)
+        self.assertFalse(
+            any(command[:3] == ["npm", "run", "test:acceptance"] for command in commands)
+        )
+        result = self.run_extended(plan)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        phases = [
+            json.loads(line) for line in Path(str(self.log) + ".phases").read_text().splitlines()
+        ]
+        self.assertEqual(phases, [{"phase": "extended", "portfolio": "extended"}])
+
+    def test_reference_promotion_runs_full_once_and_skips_later_extended(self):
+        self.env["LMEX_LORA_REFERENCE_MODEL_ROOT"] = "/invalid/supplied/reference"
+        plan = self.plan("ui/acceptance/lora-reference.spec.ts")
+        result, commands = self.run_gate("--routine", "--main-ci", "--plan", str(plan))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.run_extended(plan)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        phases = [
+            json.loads(line) for line in Path(str(self.log) + ".phases").read_text().splitlines()
+        ]
+        self.assertEqual(phases, [{"phase": "full", "portfolio": "full"}])
+
+    def test_extended_failure_after_routine_success_preserves_both_phase_identities(self):
+        plan = self.plan("ui/acceptance/architecture.spec.ts")
+        result, _ = self.run_gate("--routine", "--main-ci", "--plan", str(plan))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.run_extended(
+            plan, fail=r"npm run test:acceptance -- architecture\.spec\.ts --project=dpr1"
+        )
+        self.assertEqual(result.returncode, 7, result.stderr)
+        phases = [
+            json.loads(line) for line in Path(str(self.log) + ".phases").read_text().splitlines()
+        ]
+        self.assertEqual(
+            phases,
+            [
+                {"phase": "routine", "portfolio": "routine"},
+                {"phase": "extended", "portfolio": "extended"},
+            ],
+        )
 
     def test_selected_build_pytest_and_browser_failures_propagate(self):
         plan = self.plan("ui/src/tokenizer/editor.ts")

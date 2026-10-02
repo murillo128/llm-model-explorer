@@ -34,6 +34,246 @@ SHARED_BACKEND_TESTS = {
     )
 }
 
+# Positive leaf classifications reviewed at 83843e3. New/deleted/nested inputs
+# stay conservative; update these and consumer groups when relationships change.
+BACKEND_LEAVES = {
+    "backend/tests/test_app.py",
+    "backend/tests/test_architecture_artifacts.py",
+    "backend/tests/test_architecture_grouping.py",
+    "backend/tests/test_architecture_service.py",
+    "backend/tests/test_architecture_templates.py",
+    "backend/tests/test_bitsandbytes_nf4.py",
+    "backend/tests/test_catalogue_cache.py",
+    "backend/tests/test_cli.py",
+    "backend/tests/test_clm_export.py",
+    "backend/tests/test_compact_architecture.py",
+    "backend/tests/test_deepseek_v2_architecture.py",
+    "backend/tests/test_embedding_analysis.py",
+    "backend/tests/test_glm4_moe_lite_architecture.py",
+    "backend/tests/test_kev_export.py",
+    "backend/tests/test_model_defined_architecture.py",
+    "backend/tests/test_model_defined_templates.py",
+    "backend/tests/test_model_defined_templates_service.py",
+    "backend/tests/test_operation_cards.py",
+    "backend/tests/test_quantized_decoding.py",
+    "backend/tests/test_quantized_flows.py",
+    "backend/tests/test_session_operations.py",
+    "backend/tests/test_sessions.py",
+    "backend/tests/test_settings.py",
+}
+BROWSER_LEAVES = {
+    "ui/tests/acceptance-probe.spec.ts",
+    "ui/tests/api-transport.spec.ts",
+    "ui/tests/architecture-browser.spec.ts",
+    "ui/tests/architecture-camera.spec.ts",
+    "ui/tests/architecture-card-actions.spec.ts",
+    "ui/tests/architecture-components.spec.ts",
+    "ui/tests/architecture-connections.spec.ts",
+    "ui/tests/architecture-controls.spec.ts",
+    "ui/tests/architecture-inspection.spec.ts",
+    "ui/tests/architecture-interfaces.spec.ts",
+    "ui/tests/architecture-isolation.spec.ts",
+    "ui/tests/architecture-notifications.spec.ts",
+    "ui/tests/architecture-overview.spec.ts",
+    "ui/tests/architecture-shell.spec.ts",
+    "ui/tests/architecture-summaries.spec.ts",
+    "ui/tests/architecture.spec.ts",
+    "ui/tests/distribution-scale.spec.ts",
+    "ui/tests/magnifier-adaptation.spec.ts",
+    "ui/tests/matrix-centering.spec.ts",
+    "ui/tests/matrix-explorer.spec.ts",
+    "ui/tests/matrix-inspection.spec.ts",
+    "ui/tests/matrix-overlay-scrollbars.spec.ts",
+    "ui/tests/matrix-zoom-pixels.spec.ts",
+    "ui/tests/matrix-zoom-selection.spec.ts",
+    "ui/tests/matrix-zoom.spec.ts",
+    "ui/tests/model-diagnostics.spec.ts",
+    "ui/tests/pane-loading.spec.ts",
+    "ui/tests/renderer.spec.ts",
+    "ui/tests/sessions.spec.ts",
+    "ui/tests/shell-feedback.spec.ts",
+    "ui/tests/shell-viewport.spec.ts",
+    "ui/tests/shell.spec.ts",
+    "ui/tests/tensor-explorer-scrollbars.spec.ts",
+    "ui/tests/tensor-explorer.spec.ts",
+    "ui/tests/tensor-header.spec.ts",
+    "ui/tests/tensor-inventory.spec.ts",
+    "ui/tests/tensor-navigation.spec.ts",
+    "ui/tests/tokenizer-embeddings.spec.ts",
+    "ui/tests/tokenizer-layout.spec.ts",
+    "ui/tests/tokenizer-model-switch.spec.ts",
+    "ui/tests/tokenizer-prompt-regression.spec.ts",
+    "ui/tests/tokenizer.spec.ts",
+}
+HTTP_LEAVES = {
+    "acceptance/test_architecture.py",
+    "acceptance/test_ci_entrypoints.py",
+    "acceptance/test_distribution_scales.py",
+    "acceptance/test_embeddings.py",
+    "acceptance/test_lora_reference.py",
+    "acceptance/test_native_packages.py",
+    "acceptance/test_polish.py",
+    "acceptance/test_reference.py",
+    "acceptance/test_report.py",
+    "acceptance/test_validation_selector.py",
+}
+UI_UNIT_LEAVES = {
+    "ui/src/api/architecture-client.test.ts",
+    "ui/src/api/architecture-schema.test.ts",
+    "ui/src/api/architecture-validation.test.ts",
+    "ui/src/api/client.test.ts",
+    "ui/src/api/embedding-analysis.test.ts",
+    "ui/src/api/embeddings.test.ts",
+    "ui/src/api/lmex-decoder.test.ts",
+    "ui/src/api/lora-architecture.test.ts",
+    "ui/src/api/runtime-config.test.ts",
+    "ui/src/api/testing/wire-conformance.test.ts",
+    "ui/src/app/App.test.tsx",
+    "ui/src/app/Bootstrap.test.tsx",
+    "ui/src/app/ModelDiagnostics.test.tsx",
+    "ui/src/app/ToastHost.test.tsx",
+    "ui/src/app/feedback.test.ts",
+    "ui/src/app/model-diagnostics.test.ts",
+    "ui/src/app/session-controller.test.ts",
+    "ui/src/architecture-explorer/ArchitectureControls.test.tsx",
+    "ui/src/architecture-explorer/ArchitectureExplorer.test.tsx",
+    "ui/src/architecture-explorer/ArchitectureInspection.test.tsx",
+    "ui/src/architecture-explorer/ArchitectureWorkspace.test.tsx",
+    "ui/src/architecture-explorer/CardSummary.test.tsx",
+    "ui/src/architecture-explorer/auto-layout.test.ts",
+    "ui/src/architecture-explorer/browser-model.test.ts",
+    "ui/src/architecture-explorer/card-actions.test.ts",
+    "ui/src/architecture-explorer/component-actions.test.tsx",
+    "ui/src/architecture-explorer/connection-hit.test.ts",
+    "ui/src/architecture-explorer/graph.test.ts",
+    "ui/src/architecture-explorer/interfaces.test.ts",
+    "ui/src/architecture-explorer/invariants.test.ts",
+    "ui/src/architecture-explorer/model-defined-shared.test.ts",
+    "ui/src/architecture-explorer/overview.test.ts",
+    "ui/src/architecture-explorer/projection.test.ts",
+    "ui/src/architecture-explorer/repeated-layout.test.ts",
+    "ui/src/architecture-explorer/routing-clearance.test.ts",
+    "ui/src/architecture-explorer/routing-compare.test.ts",
+    "ui/src/architecture-explorer/scope-navigation.test.ts",
+    "ui/src/architecture-explorer/scope.test.ts",
+    "ui/src/architecture-explorer/shared-structure.test.ts",
+    "ui/src/architecture-explorer/useCanvasCallback.test.tsx",
+    "ui/src/components/TensorHeader.test.tsx",
+    "ui/src/components/TensorTree.test.tsx",
+    "ui/src/components/TensorWorkspace.test.tsx",
+    "ui/src/explorers/stream-words.test.ts",
+    "ui/src/matrix-explorer/MatrixExplorer.test.tsx",
+    "ui/src/rendering/camera-history.test.ts",
+    "ui/src/rendering/chroma.test.ts",
+    "ui/src/rendering/distribution-scale.test.ts",
+    "ui/src/rendering/geometry.test.ts",
+    "ui/src/rendering/inspection-layout.test.ts",
+    "ui/src/rendering/matrix-camera-navigation.test.ts",
+    "ui/src/rendering/matrix-row-selection.test.ts",
+    "ui/src/rendering/matrix-scrollbars.test.ts",
+    "ui/src/rendering/wheel-gesture.test.ts",
+    "ui/src/rendering/zoom-selection-geometry.test.ts",
+    "ui/src/test/pixel-comparison.test.ts",
+    "ui/src/tokenizer/annotations.test.ts",
+    "ui/src/tokenizer/embedding-controller.test.ts",
+}
+
+# Cross-boundary closure includes function-local/embedded imports and fixture JSON.
+CROSS_BOUNDARY_BACKEND = {
+    "backend/tests/architecture_assertions.py": ("architecture",),
+    "backend/tests/architecture_grouping_cases.py": ("architecture",),
+    "backend/tests/cache_helpers.py": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "backend/tests/clm_fixtures.py": ("network:test_native_packages.py",),
+    "backend/tests/dense_fixtures.py": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "backend/tests/fixtures/architecture-semantics-baseline.json": ("architecture",),
+    "backend/tests/fixtures/dense-reference-metadata.json": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "backend/tests/fixtures/kimi-linear-reference.json": ("architecture",),
+    "backend/tests/fixtures/quantized-configs.json": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "backend/tests/fixtures/qwen35-reference.json": ("architecture",),
+    "backend/tests/fixtures/qwen35-tiny.json": ("architecture",),
+    "backend/tests/fixtures/vjepa2-reference.json": ("architecture",),
+    "backend/tests/fixtures/vjepa2-tiny.json": ("architecture",),
+    "backend/tests/kev_fixtures.py": ("network:test_native_packages.py",),
+    "backend/tests/quantized_oracles.py": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "backend/tests/test_dense_architecture.py": ("architecture",),
+    "backend/tests/test_kimi_linear_architecture.py": ("architecture",),
+    "backend/tests/test_lmex.py": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "backend/tests/test_lora_architecture.py": ("network:test_native_packages.py",),
+    "backend/tests/test_models.py": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "backend/tests/test_operations.py": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "backend/tests/test_quantized_models.py": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "backend/tests/test_qwen35_architecture.py": ("architecture",),
+    "backend/tests/test_streaming.py": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "backend/tests/test_tensor_data.py": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "backend/tests/test_vjepa2_architecture.py": ("architecture",),
+}
+
+INTEGRATION_SUPPORT = {
+    "acceptance/architecture_fixtures.py": (
+        "architecture",
+        "network:test_polish.py",
+        "network:test_lora_reference.py",
+    ),
+    "acceptance/kimi_linear_fixture.py": ("architecture",),
+    "acceptance/polish_fixtures.py": ("network:test_polish.py",),
+    "acceptance/architecture_reference.py": (
+        "architecture",
+        "lora-reference",
+        "network:test_polish.py",
+    ),
+    "acceptance/quantized_reference.py": (
+        "architecture",
+        "lora-reference",
+        "bindings",
+        "network:test_polish.py",
+    ),
+    "acceptance/reference.py": ("bindings", "network:test_reference.py"),
+}
+
 
 def normalized(path):
     if not isinstance(path, str) or not path or "\\" in path:
@@ -69,24 +309,42 @@ def select(paths, *, full=False):
     if full or not paths:
         broad("context", "explicit full mode" if full else "empty diff; full fallback")
     for path in paths:
-        if path in SHARED_BACKEND_TESTS:
+        if path in CROSS_BOUNDARY_BACKEND:
+            add(
+                path,
+                "backend fixture/import closure and real TCP/browser consumers",
+                ("backend",),
+                integrations=CROSS_BOUNDARY_BACKEND[path],
+            )
+            if path in SHARED_BACKEND_TESTS or path in {
+                "backend/tests/cache_helpers.py",
+                "backend/tests/dense_fixtures.py",
+                "backend/tests/quantized_oracles.py",
+                "backend/tests/fixtures/quantized-configs.json",
+            }:
+                extended.add("backend")
+        elif path in INTEGRATION_SUPPORT:
+            add(
+                path,
+                "shared integration fixture/oracle and real consumers",
+                integrations=INTEGRATION_SUPPORT[path],
+            )
+        elif path in SHARED_BACKEND_TESTS:
             add(path, "shared backend test fixtures/oracles and native consumers", ("backend",))
             extended.add("backend")
         elif path == "acceptance/test_network.py":
             add(
                 path,
                 "shared real CLI/service/stream helpers and all HTTP consumers",
-                integrations=tuple(
-                    "network:" + file.name
-                    for file in sorted((ROOT / "acceptance").glob("test_*.py"))
+                integrations=(
+                    "architecture",
+                    *(
+                        "network:" + file.name
+                        for file in sorted((ROOT / "acceptance").glob("test_*.py"))
+                    ),
                 ),
             )
-        elif (
-            path.startswith("backend/tests/test_")
-            and Path(path).parent.as_posix() == "backend/tests"
-            and path.endswith(".py")
-            and (ROOT / path).is_file()
-        ):
+        elif path in BACKEND_LEAVES and (ROOT / path).is_file():
             owners.add("backend")
             backend_tests.add(path.removeprefix("backend/"))
             reasons.append(f"{path}: isolated backend test; its native file owns validation")
@@ -110,34 +368,16 @@ def select(paths, *, full=False):
             add(
                 path, "per-test service/probe harness consumers", ("ui",), integrations=("product",)
             )
-        elif (
-            path.startswith("ui/tests/")
-            and Path(path).parent.as_posix() == "ui/tests"
-            and path.endswith(".spec.ts")
-            and (ROOT / path).is_file()
-            and Path(path).name.startswith(
-                (
-                    "architecture",
-                    "matrix",
-                    "tensor",
-                    "tokenizer",
-                    "renderer",
-                    "distribution",
-                    "magnifier",
-                )
-            )
-        ):
+        elif path in BROWSER_LEAVES and (ROOT / path).is_file():
             add(
                 path,
                 "changed native browser file",
                 ("ui",),
                 ("file:" + path.removeprefix("ui/tests/"),),
             )
-        elif path.startswith("ui/src/") and re.search(r"\.test\.[tj]sx?$", path):
+        elif path in UI_UNIT_LEAVES and (ROOT / path).is_file():
             add(path, "UI unit test uses the native unit/type/lint owner", ("ui",))
-        elif (
-            path.startswith("acceptance/test_") and path.endswith(".py") and (ROOT / path).is_file()
-        ):
+        elif path in HTTP_LEAVES and (ROOT / path).is_file():
             add(
                 path,
                 "changed HTTP test file and its boundary bridge",
@@ -185,7 +425,7 @@ def select(paths, *, full=False):
                 "graph, responsive controls and real native weight modal",
                 ("ui", "browser", "integration"),
                 ("architecture",),
-                ("architecture",),
+                ("architecture", "lora-reference"),
             )
         elif path.startswith(("ui/src/rendering/", "ui/src/matrix-explorer/")):
             add(
@@ -267,7 +507,7 @@ def select(paths, *, full=False):
         owners.add("integration")
     return {
         "portfolio": "full" if full else "routine",
-        "backend_tests": sorted(backend_tests),
+        "backend_tests": ["tests"] if "tests" in backend_tests else sorted(backend_tests),
         "extended": sorted(extended),
         "compatibility_full": compatibility_full,
         "paths": paths,
@@ -487,25 +727,58 @@ def validate(plan):
         network_targets(plan)
 
 
+def effective_plan(plan):
+    """Resolve reference promotion at the plan/config seam, before phase routing."""
+    requested = plan.get("requested_portfolio", plan["portfolio"])
+    if requested not in {"routine", "full"}:
+        raise ValueError("Invalid requested portfolio")
+    references = [
+        name
+        for name in (
+            "LMEX_REFERENCE_MODEL_DIR",
+            "LMEX_ARCHITECTURE_REFERENCES",
+            "LMEX_LORA_REFERENCE_MODEL_ROOT",
+        )
+        if os.environ.get(name)
+    ]
+    if os.environ.get("LMEX_REQUIRE_ARCHITECTURE_REFERENCES") == "1":
+        references.append("LMEX_REQUIRE_ARCHITECTURE_REFERENCES")
+    return plan | {
+        "requested_portfolio": requested,
+        "portfolio": "full"
+        if requested == "full" or plan["portfolio"] == "full" or references
+        else "routine",
+        "reference_inputs": references,
+    }
+
+
+def phase_targets(plan, gate, *, extended=False):
+    files = targets(plan, gate)
+    if gate != "integration":
+        return [] if extended else files
+    if extended:
+        if plan["portfolio"] == "full" or gate not in plan["extended"]:
+            return []
+        # Reviewed files with no extended cases. Unknown files remain required.
+        return [name for name in files if name not in {"transport.spec.ts", "scientific.spec.ts"}]
+    if plan["portfolio"] == "routine":
+        # This one declared owner contains only extended cases. No other empty
+        # discovery result is accepted as successful/non-applicable execution.
+        return [name for name in files if name != "lora-reference.spec.ts"]
+    return files
+
+
 def run_browser(plan, gate, *, main=False, extended=False):
+    plan = effective_plan(plan)
     validate(plan)
     if gate not in plan["owners"]:
         print(f"{gate}: explicitly non-applicable")
         return
-    files = targets(plan, gate)
+    files = phase_targets(plan, gate, extended=extended)
     if not files:
-        print("integration browser: explicitly non-applicable; selected HTTP tests still required")
+        phase = "extended" if extended else plan["portfolio"]
+        print(f"{gate} {phase} browser: explicitly non-applicable; selected owners remain required")
         return
-    if extended:
-        if gate not in plan["extended"] or plan["portfolio"] == "full":
-            print(f"{gate}: extended explicitly non-applicable/already included")
-            return
-        # Known logical files have no extended classification. Unknown/nested
-        # native files stay selected conservatively, including future extended tags.
-        files = [name for name in files if name not in {"transport.spec.ts", "scientific.spec.ts"}]
-        if not files:
-            print(f"{gate}: no classified extended consumer")
-            return
     projects = (
         []
         if main
@@ -529,9 +802,10 @@ def run_browser(plan, gate, *, main=False, extended=False):
         *projects,
     ]
     print(json.dumps(command), flush=True)
-    environment = os.environ | {
-        "LMEX_TEST_PORTFOLIO": "extended" if extended else plan["portfolio"]
-    }
+    phase = "extended" if extended else plan["portfolio"]
+    environment = os.environ | {"LMEX_TEST_PORTFOLIO": phase, "LMEX_TEST_PHASE": phase}
+    if environment.get("LMEX_EVIDENCE_DIR"):
+        environment["LMEX_EVIDENCE_DIR"] = str(Path(environment["LMEX_EVIDENCE_DIR"]).resolve())
     subprocess.run(command, cwd=ROOT / "ui", env=environment, check=True)
 
 
@@ -569,11 +843,14 @@ def main():
             plan = select(paths)
         else:
             plan = select([], full=True)
+        plan = effective_plan(plan)
         validate(plan)
         if args.output:
             args.output.write_text(json.dumps(plan, indent=2) + "\n")
         if args.github_output:
-            integration_browser = bool(targets(plan, "integration"))
+            routine_browser = bool(phase_targets(plan, "integration"))
+            extended_browser = bool(phase_targets(plan, "integration", extended=True))
+            integration_browser = routine_browser or extended_browser
             network = network_targets(plan) if "integration" in plan["owners"] else []
             # The TCP architecture owner runs the independent semantic oracle
             # with Node's native TypeScript support, without npm or Chromium.
@@ -586,6 +863,8 @@ def main():
                 output.write(f"compatibility_full={str(plan['compatibility_full']).lower()}\n")
                 output.write(f"portfolio={plan['portfolio']}\n")
                 output.write(f"integration_browser={str(integration_browser).lower()}\n")
+                output.write(f"integration_routine={str(routine_browser).lower()}\n")
+                output.write(f"integration_extended={str(extended_browser).lower()}\n")
                 output.write(f"integration_node={str(integration_node).lower()}\n")
                 output.write(f"backend_extended={str('backend' in plan['extended']).lower()}\n")
         if args.summary:
@@ -596,7 +875,14 @@ def main():
         if args.network_targets:
             print("\n".join(network_targets(plan)))
         elif args.integration_browser_needed:
-            print(str(bool(targets(plan, "integration"))).lower())
+            print(
+                str(
+                    bool(
+                        phase_targets(plan, "integration")
+                        or phase_targets(plan, "integration", extended=True)
+                    )
+                ).lower()
+            )
         elif args.backend_targets:
             print("\n".join(backend_targets(plan)))
         elif args.run:
