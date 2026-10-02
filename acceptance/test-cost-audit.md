@@ -6,10 +6,11 @@ CPU fixture success. No test-count or percentage quota was used.
 
 Current execution is the revised 2026-10-02 risk-based contract for #277. The
 historical three complete attempts below remain failed evidence of their revisions.
-The new routine/extended/full portfolio is implemented; focused real numeric and
-production checks pass. Complete candidate validation is pending, so PR #288
-remains draft. Current commands and coverage trades are in the revised portfolio
-section below; earlier tables retain their historical meaning.
+The new routine/extended/full portfolio is implemented and locally validated.
+Complete routine acceptance finishes normally in 561.084 s, all 451 components
+pass, and required primary/extended/installed-wheel compatibility checks pass.
+Current commands, exact revisions and deliberate coverage trades are in the final
+revised portfolio section below; earlier tables retain their historical meaning.
 
 ## Revisions, environment and measurement scope
 
@@ -439,3 +440,105 @@ the owned run was interrupted at 236.600 s for diagnosis. Preserve that failure,
 retain every cache/process assertion and restore native pytest imports. The
 private wheel/import-location/CPU guards remain. Validate the actual spawned
 competition first, then complete all 1,950 cases from a new immutable target.
+
+## Revised portfolio — adopted decisions and final validation
+
+Python 3.14 validation uses 3.14.7 and the same locked PyTorch 2.14.0+cpu
+(the CPU-package guard passes); dependencies are installed in an owned temporary
+environment, never reinstalled into another checkout's environment.
+
+The executable target is `95059bbaac6f101f0c5baf9ed23e4bb7dd6cefd0`, based on
+`25a8d7c3be08e4e74383a988cef74feafeef8414`. The complete component target is
+`8378490db4105a7fff173646dd0786bbdf1f1821`; subsequent selector/CI edits preserve
+its exact UI/config/dependency contents and its complete 451-case selection.
+Routine acceptance was measured at `03884a3ef7a622ffd55effb03952fc2f62f4da13`;
+later executable changes are the backend CI manual Python matrix and the
+wheel harness import mode. Neither changes its selected files, command,
+UI/backend/API dependencies or routine execution. The complete primary backend
+target remains `799f703bcd4d4537eca20b312d46c581c4c260ca`: backend code/tests/config
+are byte-identical after the wheel-only repair. Report-only publication changes are reconciled by exact Git diff.
+Backend/API/UI production source and `docs/spec/**` are unchanged. The reusable
+`skills/test-quality/SKILL.md`, runner, dispatcher and canonical epic context are
+unchanged. The repository-specific testing reference records the new commands.
+
+| Worklist | Adopted change or no-change decision |
+| --- | --- |
+| 1 | Traces off in both routine configurations; native `--trace on` remains usable. The unchanged 1000×700 headed case passes with the same assertions: native wall 51.764 s before / 13.009 s after. This single scoped sample does not establish a global percentage. Invalid-reference diagnostics also produce a real trace ZIP with zero retries. |
+| 2 | Seven component files use explicit shape/overflow/fractional/DPR 2/narrow representatives. Complete native collection falls 520→451 (370/138/12→336/106/9 by desktop/narrow/native project); four churn transitions retain the real wheel/pinch/cell/lifetime bridge. Combination-specific and longer-churn defects outside those representatives are accepted coverage loss. |
+| 3 | Split product checks into five responsibility files with isolated per-test closures. Keep short real first-pixels and three-request two-card scientific proofs, one camera bridge, real network/state failure journeys and teardown. Retire overlapping integrated navigation/magnifier/shell/capture narratives; their exact risks and remaining owners are recorded in the ownership map. |
+| 4 | Routine production is 38 pairs (34 DPR 1 / 4 DPR 2); full is 53 (49/4), against 85 (59/26). Thus 32 full invocations retire and 15 remain extended. References lose redundant density replay; absent-reference skips are not counted as runnable savings. Invalid supplied and required-reference controls still fail with their original diagnostic. |
+| 5 | Keep nineteen native numerical inputs, seven independent cold endpoint representatives and exact cold/warm metadata+payload comparison once with recomputation forbidden. Retire twelve endpoint repetitions and two DONE-only dtype wrappers; exact F16/BF16 conversion bytes remain independently tested. Focused routine analysis/data: 90 passed, 19 CUDA skips, two extended deselections in 166.72 s. |
+| 6 | Actual test files and finite consumer groups select their native owners. HTTP-only edits avoid browser/build/Node/Chromium. Unknown/shared/deleted support is conservative, including real extended backend dependencies. Native orchestration/diff/empty/failure controls: 32 methods and 60 subtests pass. Ordinary new untagged cases stay routine. |
+| 7 | No service pooling: retained cold/cache/barrier/cancel/error/model-mutation cases need independent state. Historical eight-case startup is 63.149 s; a new reset framework has no demonstrated benefit after retiring duplicate journeys. No repeated fixture-copy campaign. |
+| 8 | Routine nested returns/remaps use three adversarial cycles; sixteen-cycle lifetime, large native pane/prompt, references and actual 2**24+1/Linux allocator proof remain extended at their original sizes. Three available production cases pass / twelve missing-local-reference skips in 69.198 s; sixteen cycles and original 1000×700 pane / forty-line 1178px prompt remain. Actual backend thresholds are included in the full primary and compatibility checks below. Deferred work is not eliminated work. |
+| 9 | Ruff/format/mypy and the optimized primary suite belong to 3.12. Ordinary main 3.14 runs eighteen isolated installed-wheel CLI/server/session/dtype-shape cases; runtime/dependency/packaging/unknown/manual scope selects full compatibility. Manual CI includes both versions. Python 3.12 isolated smoke: eighteen passes, 48.69 s native / 52.918 s envelope. Python 3.14 complete isolated wheel: 1,930 passes / twenty CUDA skips, 1,950 collected, 1022.353 s native / 1029.816 s envelope; default eighteen-case mode: eighteen passes, 56.12 s native / 63.254 s envelope. Imported package paths remain inside the private wheel environment and the CPU guard passes. Default exhaustive cross-version compatibility confidence is deliberately reduced. |
+| 10 | Independent API exact fixture drift and UI binding drift have one dedicated CI owner each. Local full commands retain both; integration `--main-ci` delegates their duplicated execution. Existing validator and generated-binding checks pass. Reject cross-workflow build caching for a build measured around 0.4 s. |
+| 11 | Transport-only production cases use headless Chromium with real TCP/WebGL. Native scrolling, camera, pointer/window, prompt/IME/focus and pixel cases stay headed. One SwiftShader production worker and two component workers remain; no renderer or GPU provisioning change. |
+| 12 | Retain the prior probe fast path and settled-frame batching; retired narratives remove repeated full observations. Keep the real populated-pixel barrier, exact scalar/upload/resource counters and compact timing attachments. No observer framework. |
+| 13 | Keep cheap independent numerical/protocol/security/API/exporter and real Git/lease/command checks after inspecting the remaining families. No deletion quota or mass mutation campaign. UI units remain 1,043; protocol fixtures remain 118 instance / 262 architecture / 132 wire, with 365 references resolved. |
+| 14 | Keep separate production static and development consumers and both configured density servers. Their independent purpose and small startup cost do not justify pooling/caching machinery. HTTP-only routes now omit all browser infrastructure. Additional static-server savings are unmeasured. |
+| 15 | Keep workflow identities, 25-minute limit, exact diff/head/base semantics, same-repository/least-privilege restrictions, epic-child local deferral and final aggregate gates. Use conditional setup for irrelevant owners; no passing-status fabrication, branch-rule/controller or runner change. |
+| 16 | Serialize heavy measurements on isolated snapshots/ports. Keep worker and production thread defaults; no speculative threading change or another issue's process cleanup. Native attempt-duration sums are host-work observations, not CPU seconds or elapsed pipeline time. |
+
+The compact [native case/project sets](issue-277-case-sets.json) record complete
+old/new production identities, the seven changed component sets and backend
+parameter/version dispositions. Native backend collection is 1,964→1,950, with
+1,948 routine and two actual extended tests. The 3.14 default has eighteen runtime
+cases; fuller affected/manual validation retains all 1,950.
+
+| Personally executed proof | Completed result / measured clock |
+| --- | --- |
+| Complete routine HTTP + production browser, one envelope | 66 logical HTTP passes / 60 subtest passes / 10 optional skips; 33 browser passes / five existing unsupported-fixture skips. Exit 0 in **561.084 s**, including selection/setup/build/discovery/teardown, within 900 s target and 1200 s limit. Native HTTP 189.277 s; browser 369.900 s / 366.281 s attempt sum. One complete changed-target attempt, no retries. |
+| Complete component browser | 451 passed, zero skips/failures/flakes/retries; 583.171 s native / 583.704 s envelope. Native attempt-duration sum 1,134.831 s across two workers; JSON omits hook breakdown, which is unavailable rather than zero. |
+| Complete primary backend, including real extended thresholds | 1,930 passed / twenty CUDA skips, 1,950 collected; both real extended tests pass. Native 974.20 s / measured envelope 975.073 s. |
+| Isolated installed-wheel runtime/full compatibility | Python 3.12 isolated smoke: eighteen passes, 48.69 s native / 52.918 s envelope. Python 3.14 complete isolated wheel: 1,930 passes / twenty CUDA skips, 1,950 collected, 1022.353 s native / 1029.816 s envelope; default eighteen-case mode: eighteen passes, 56.12 s native / 63.254 s envelope. Imported package paths remain inside the private wheel environment and the CPU guard passes. |
+| Affected extended production | Three available production cases pass / twelve missing-local-reference skips in 69.198 s; sixteen cycles and original 1000×700 pane / forty-line 1178px prompt remain. Actual backend thresholds are included in the full primary and compatibility checks below. |
+| UI/API fast checks | API binding drift, TypeScript, ESLint, all 1,043 units/58 files and build pass; independent API validation and exact fixture comparison pass. Backend lint/format (136 files) and mypy (111 files) pass. Unchanged checked contents/dependencies are reconciled to the final target. |
+| Selection and command controls | 32 methods / 60 subtests pass, including real native discovery, exact Git rename/deletion inputs, selected command failures and missing required groups. Their command stubs prove orchestration, not application behavior. |
+
+Across the 33 completed production timing attachments, native phases sum to
+39.920 s fixture generation, 207.045 s backend spawn-to-ready, 3.664 s browser
+setup, 107.924 s bodies and 5.894 s teardown. Generation may overlap startup;
+these are not additive elapsed phases or CPU seconds. Vite reports 227 ms compile
+time. The 1.907 s combined remainder outside native HTTP/browser clocks includes
+selection, lint, fresh npm/build startup and wrapper overhead.
+
+Routine timing includes selection, HTTP lint/checks, fresh build, discovery,
+server/browser setup, bodies and normal teardown. Dependency installation and
+checkout are outside that local clock; workflow setup/report headroom is separate. Routine plus affected production
+extended commands total 630.282 s. The earlier observed 35 s workflow overhead
+is historical, not a fresh end-to-end Actions measurement; cold dependency
+installation is unmeasured. The unchanged 25-minute ceiling has ample measured
+command headroom, but no product Actions success is inferred from local clocks.
+No complete baseline exists for a whole-pipeline percentage. The old
+component observation was 521 cases / 742.602 s native / 1,424.791 s attempt sum;
+its scope differs, so it cannot isolate the effects of trace removal and changed
+matrices. The three 1,500-second complete failures above remain failed evidence.
+
+Native JSON/JUnit, negative-control failures, logs/screenshots/trace and detailed
+phase attachments remain outside Git in `/tmp/issue-277-evidence/portfolio/`.
+No model files, tensor caches, large logs or traces are committed. All final passing validations finish normally and close only their owned processes/ports. CPU fixture
+success does not certify unavailable CUDA or complete local reference models.
+
+The initial 450/451 component run failed an unchanged camera setup race. A
+controlled delayed real Fit reproduces the same exact Back mismatch; awaiting
+actual Fit completion before the snapshot preserves every product assertion and
+passes all eighteen camera cases and the complete 451-case suite. An initial
+all-Fit diagnostic gate blocked a later command and is not used as regression
+proof. A Vite worker URL setup failure with symlinked dependencies is retained;
+private copied locked dependencies pass all 1,043 units without changing Vite.
+Reference setup failures initially lost their diagnostic during fixture teardown;
+the fixture now preserves the original exception while still cleaning resources.
+The extended-helper routing negative control fails before its correction and
+passes afterward. These repairs do not change production behavior or weaken
+expectations, deadlines, tolerances or retry policy.
+
+The first full installed-wheel 3.14 run failed cache competition before the
+production helper executed: pytest importlib naming made `tests.test_artifacts`
+unimportable to spawn. Its 594 passes / one failure and deliberate interruption
+at 236.600 s are retained, with remaining cases unvalidated on that attempt.
+Restoring native pytest imports preserves private wheel/location/CPU checks and
+all cache assertions. The real four-process competition passes (1 selected /
+1,949 deselected, 13.14 s); the repaired complete 1,950-case wheel run supplies
+final proof, with finalized JUnit. The two real extended tests pass on both
+Python versions.

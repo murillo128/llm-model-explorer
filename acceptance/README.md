@@ -84,8 +84,9 @@ with the existing API interpreter (PyYAML parses the workflow invocation) using
 See [validation routing](validation-routing.md) for the ownership table, complete
 changed-path/revision rules, commands and failure/fallback behavior. All product
 workflows inspect changes before conditional steps, including normative API specs,
-examples and shared configuration. `workflow_dispatch` and the final epic PR force
-full optimized coverage. `check.sh` remains complete and independent from selection;
+examples and shared configuration. `workflow_dispatch` selects full coverage;
+the final epic PR forces the complete mandatory routine portfolio plus affected
+extended proof. `check.sh` remains complete and independent from selection;
 `check-integration.sh --main-ci` without a plan remains complete integration.
 
 ## Per-case density ownership
@@ -94,14 +95,16 @@ full optimized coverage. `check.sh` remains complete and independent from select
 selects `@density` cases in `dpr2`. Add that native tag only for physical pixels,
 DPR-dependent geometry or a distinct density interaction. New untagged cases
 always run at DPR 1. Ordering, cancellation, provenance and package selection
-keep their real integration scenario once. Deliberate in-scenario DPR transitions
-remain active; the two initial densities retain opposite transition directions.
+keep their real integration scenario once. The explicit 1→2→1 transition remains
+active and checks notification delivery in both directions.
 See the [per-family ownership and density matrix](integration-test-ownership.md)
 for exact retained proofs and domain inputs moved to TCP/component-renderer owners.
 
-From `ui/`, `npm run test:acceptance -- --list` shows the full expanded selection;
-`--project=dpr1` shows the PR/epic selection. Full local/main execution uses both
-configured projects. Unavailable references remain explicit skips, and strict
+From `ui/`, `npm run test:acceptance -- --list` shows the routine selection;
+`LMEX_TEST_PORTFOLIO=full npm run test:acceptance -- --list` shows every non-retired
+case, and `LMEX_TEST_PORTFOLIO=extended` selects the extended cases. Routine and
+full local/main execution use both configured projects for their density tags.
+Unavailable references remain explicit skips, and strict
 reference mode still fails missing inputs in the base project. Fixture selection
 is never a substitute for actual-reference acceptance.
 
