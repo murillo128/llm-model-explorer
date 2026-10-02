@@ -238,16 +238,27 @@ class SelectionTest(unittest.TestCase):
             ),
             ("backend/tests/clm_fixtures.py", {"acceptance/test_native_packages.py"}, set()),
             ("backend/tests/kev_fixtures.py", {"acceptance/test_native_packages.py"}, set()),
-            (
-                "backend/tests/test_kimi_linear_architecture.py",
-                {"acceptance/test_architecture.py"},
-                {"architecture.spec.ts"},
-            ),
-            (
-                "backend/tests/fixtures/kimi-linear-reference.json",
-                {"acceptance/test_architecture.py"},
-                {"architecture.spec.ts"},
-            ),
+            *[
+                (
+                    f"backend/tests/{name}",
+                    {"acceptance/test_architecture.py"},
+                    {"architecture.spec.ts"},
+                )
+                for name in (
+                    "architecture_assertions.py",
+                    "architecture_grouping_cases.py",
+                    "test_dense_architecture.py",
+                    "test_kimi_linear_architecture.py",
+                    "test_qwen35_architecture.py",
+                    "test_vjepa2_architecture.py",
+                    "fixtures/architecture-semantics-baseline.json",
+                    "fixtures/kimi-linear-reference.json",
+                    "fixtures/qwen35-reference.json",
+                    "fixtures/qwen35-tiny.json",
+                    "fixtures/vjepa2-reference.json",
+                    "fixtures/vjepa2-tiny.json",
+                )
+            ],
             *[
                 (
                     f"backend/tests/{name}",
@@ -268,6 +279,7 @@ class SelectionTest(unittest.TestCase):
                     "test_operations.py",
                     "test_lmex.py",
                     "cache_helpers.py",
+                    "fixtures/dense-reference-metadata.json",
                     "fixtures/quantized-configs.json",
                 )
             ],
@@ -280,6 +292,37 @@ class SelectionTest(unittest.TestCase):
                 self.assertTrue(http <= set(selector.network_targets(plan)))
                 self.assertTrue(browser <= set(selector.targets(plan, "integration")))
                 self.assertFalse(plan["compatibility_full"])
+                selector.validate(plan)
+
+    def test_integration_support_selects_its_fixture_and_reference_consumers(self):
+        cases = [
+            (
+                "architecture_fixtures.py",
+                {"test_architecture.py", "test_native_packages.py", "test_polish.py"},
+                {"architecture.spec.ts"},
+            ),
+            ("kimi_linear_fixture.py", {"test_architecture.py"}, {"architecture.spec.ts"}),
+            ("polish_fixtures.py", {"test_polish.py"}, set()),
+            (
+                "architecture_reference.py",
+                {"test_architecture.py", "test_lora_reference.py", "test_polish.py"},
+                {"architecture.spec.ts", "lora-reference.spec.ts"},
+            ),
+            (
+                "quantized_reference.py",
+                {"test_architecture.py", "test_lora_reference.py", "test_polish.py"},
+                {"architecture.spec.ts", "lora-reference.spec.ts", "bindings.spec.ts"},
+            ),
+            ("reference.py", {"test_reference.py"}, {"bindings.spec.ts"}),
+        ]
+        for name, http, browser in cases:
+            with self.subTest(path=name):
+                plan = selector.select([f"acceptance/{name}"])
+                self.assertEqual(plan["owners"], ["integration"])
+                self.assertTrue(
+                    {f"acceptance/{file}" for file in http} <= set(selector.network_targets(plan))
+                )
+                self.assertEqual(set(selector.targets(plan, "integration")), browser)
                 selector.validate(plan)
 
     def test_existing_unclassified_test_names_do_not_establish_isolation(self):
