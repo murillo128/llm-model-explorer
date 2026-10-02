@@ -75,7 +75,7 @@ test('saved pane width is applied in the first rendered frame for both explorers
   }
 });
 
-test('inventory shell survives delayed session and inventory changes without replacing user choices', async ({ page }) => {
+test('inventory shell survives delayed session and inventory changes without replacing user choices', { tag: '@responsive' }, async ({ page }) => {
   const session = gate(), inventory = gate();
   let inventoryCalls = 0;
   await configure(page, async (path, method) => {
@@ -118,7 +118,7 @@ test('inventory shell survives delayed session and inventory changes without rep
   if (page.viewportSize()!.width > 760) await expect(divider).toHaveAttribute('aria-valuenow', '296');
 });
 
-test('saved collapsed browser stays collapsed through graph retrieval and keeps its width on explorer return', async ({ page }) => {
+test('saved collapsed browser stays collapsed through graph retrieval and keeps its width on explorer return', { tag: '@responsive' }, async ({ page }) => {
   await preference(page, 'lmex.architecture-browser.pane', { visible: false, width: 344 });
   const graph = gate();
   let architectureCalls = 0;
@@ -204,7 +204,7 @@ test('unavailable architecture and model replacement keep the browser shell with
   await expect(page.getByRole('button', { name: 'Expand browser' })).toBeVisible();
 });
 
-test('architecture retrieval error and retry retain the open browser and pending user collapse', async ({ page }) => {
+test('architecture retrieval error and retry retain the open browser and pending user collapse', { tag: '@responsive' }, async ({ page }) => {
   await preference(page, 'lmex.architecture-browser.pane', { visible: true, width: 344 });
   const retry = gate();
   let architectureCalls = 0;

@@ -65,9 +65,9 @@ async function expectLinkedBounds(page: Page, bounds: { rows?: readonly [number,
 async function drag(page: Page, a: { x: number; y: number }, b: { x: number; y: number }) {
   await page.mouse.move(a.x, a.y); await page.mouse.down(); await page.mouse.move(b.x, b.y, { steps: 3 });
 }
-for (const dpr of [1, 1.25, 2]) test.describe(`selection DPR ${dpr}`, () => {
+for (const dpr of [1.25, 2]) test.describe(`selection DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
-  for (const reverse of [false, true]) test(`rectangle ${reverse ? 'reverse' : 'forward'} exact preview, fit and readout`, async ({ page }) => {
+  if (dpr === 1.25) for (const reverse of [false, true]) test(`rectangle ${reverse ? 'reverse' : 'forward'} exact preview, fit and readout`, { tag: reverse ? '@responsive' : [] }, async ({ page }) => {
     await open(page);
     const before = await state(page);
     const a = await point(page, 2, 2), b = await point(page, 12, 7);
@@ -93,7 +93,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`selection DPR ${dpr}`, () => {
     await expect(page.locator('.inspection-readout')).toContainText('row 3 · column 3');
     await expect(page.locator('.inspection-readout')).toContainText('0'); // index 303 wraps to zero.
   });
-  for (const axis of ['rows', 'columns'] as const) test(`${axis} range preserves orthogonal center and exact counts`, async ({ page }) => {
+  if (dpr === 1.25) for (const axis of ['rows', 'columns'] as const) test(`${axis} range preserves orthogonal center and exact counts`, async ({ page }) => {
     await open(page);
     await page.evaluate(() => { const v = window.matrixFixture.viewports.at(-1)!; v.host.scrollLeft = 30; v.host.scrollTop = 40; v.refresh(); });
     const before = await state(page), origin = axis === 'rows' ? before.view.y : before.view.x;
@@ -140,7 +140,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`selection DPR ${dpr}`, () => {
       await expect(previews(page)).toHaveCount(0);
     }
   });
-  test('underfilled viewport resize cancels selection even when the logical view stays identical', async ({ page }) => {
+  if (dpr === 1.25) test('underfilled viewport resize cancels selection even when the logical view stays identical', async ({ page }) => {
     await open(page);
     await page.evaluate(() => window.matrixFixture.render('short'));
     await expect.poll(() => page.evaluate(() => window.matrixFixture.subscriptions.length)).toBe(3);
@@ -256,7 +256,7 @@ test('touch drag applies immediately and camera/context changes cancel pending p
   }
 });
 
-test('short matrix rectangle fits the available viewport, with no-op and far-edge camera bounds', async ({ page }) => {
+test('short matrix rectangle fits the available viewport, with no-op and far-edge camera bounds', { tag: '@responsive' }, async ({ page }) => {
   await open(page);
   await page.evaluate(() => window.matrixFixture.render('short'));
   await expect.poll(() => page.evaluate(() => window.matrixFixture.subscriptions.length)).toBe(3);

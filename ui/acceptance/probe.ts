@@ -69,6 +69,7 @@ export function installProbe({ capturePixels }: ProbeOptions) {
     metrics.maxUploadBytes = Math.max(metrics.maxUploadBytes, data?.byteLength ?? 0);
   });
   wrap('drawArrays', (gl) => {
+    if (!capturePixels && metrics.firstRender) return;
     if (gl.getParameter(gl.FRAMEBUFFER_BINDING)) return;
     const canvas = gl.canvas as HTMLCanvasElement;
     if (metrics.uploads && canvas.closest('.matrix-scroll')) metrics.firstRender ||= performance.now();

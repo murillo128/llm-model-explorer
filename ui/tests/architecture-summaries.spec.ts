@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { findComponent, graphPreference } from './architecture-controls';
 
-test('compact summaries retain values, exact port hits and bounded geometry at either width', async ({ page }, info) => {
+test('compact summaries retain values, exact port hits and bounded geometry at either width', { tag: '@responsive' }, async ({ page }, info) => {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html?fixture=summaries`);
   const graph = page.getByLabel('Architecture graph', { exact: true });
   const ready = () => expect(graph).toHaveAttribute('aria-busy', 'false');

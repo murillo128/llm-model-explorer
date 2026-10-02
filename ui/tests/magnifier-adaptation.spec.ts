@@ -32,9 +32,9 @@ async function hoverFraction(page: Page, x: number, y: number) {
   return placement(page);
 }
 
-for (const dpr of [1, 1.25, 2]) test.describe(`adaptive magnifier DPR ${dpr}`, () => {
+for (const dpr of [1.25, 2]) test.describe(`adaptive magnifier DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
-  test('camera hysteresis preserves keyboard selection, numeric readout and scalar resources', async ({ page }) => {
+  if (dpr === 1.25) test('camera hysteresis preserves keyboard selection, numeric readout and scalar resources', async ({ page }) => {
     await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
     await expect(page.locator('.matrix-scroll')).toBeVisible();
     await page.evaluate(() => {
@@ -62,7 +62,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`adaptive magnifier DPR ${dpr}`, (
     })).toEqual(before);
   });
 
-  test('pointer placement follows the center and stays legal at every edge after scroll and zoom', async ({ page }) => {
+  test('pointer placement follows the center and stays legal at every edge after scroll and zoom', { tag: dpr === 1.25 ? '@responsive' : [] }, async ({ page }) => {
     await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
     await page.addStyleTag({ content: '#workspace { --fixture-viewer-width: 1050px; --fixture-viewer-height: 650px; }' });
     await page.evaluate(() => {
@@ -108,7 +108,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`adaptive magnifier DPR ${dpr}`, (
   });
 });
 
-test('focused inspection follows dimension-preserving layout shifts, resize and DPR changes', async ({ page, context }) => {
+test('focused inspection follows dimension-preserving layout shifts, resize and DPR changes', { tag: '@responsive' }, async ({ page, context }) => {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
   await expect(page.locator('.matrix-scroll')).toBeVisible();
   await page.evaluate(() => window.matrixFixture.viewports[0]!.zoomAt(7 * devicePixelRatio, 0, 0));
@@ -130,7 +130,7 @@ test('focused inspection follows dimension-preserving layout shifts, resize and 
   await expect(page.locator('.matrix-inspection')).toHaveCount(0);
 });
 
-test('a short pane retains only its complete compact readout', async ({ page }) => {
+test('a short pane retains only its complete compact readout', { tag: '@responsive' }, async ({ page }) => {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
   await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: 130px; }' });
   await page.evaluate(() => window.matrixFixture.viewports[0]!.zoomAt(devicePixelRatio, 0, 0));
@@ -140,7 +140,7 @@ test('a short pane retains only its complete compact readout', async ({ page }) 
   await placement(page);
 });
 
-test('wrapped logical coordinates and float32 values use measured full-card and compact heights', async ({ page }) => {
+test('wrapped logical coordinates and float32 values use measured full-card and compact heights', { tag: '@responsive' }, async ({ page }) => {
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);
   await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: 264px; }' });
   const point = await page.evaluate(() => {

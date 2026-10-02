@@ -34,7 +34,7 @@ async function start(page: Page) {
   return page.getByRole('textbox', { name: 'Prompt', exact: true });
 }
 
-test('empty, loading and unavailable embeddings share integrated title/body cards', async ({ page }) => {
+test('empty, loading and unavailable embeddings share integrated title/body cards', { tag: '@responsive' }, async ({ page }) => {
   const editor = await start(page);
   const prompt = page.locator('.prompt-panel');
   const promptBounds = (await prompt.boundingBox())!;
@@ -56,7 +56,7 @@ test('empty, loading and unavailable embeddings share integrated title/body card
   expect(await page.evaluate(() => window.embeddingHarness.auxiliary.length)).toBe(0);
 });
 
-for (const dpr of [1, 2]) test(`exact progressive rows, linked annotations and frozen editor at DPR ${dpr}`, async ({ page }) => {
+for (const dpr of [1, 2]) test(`exact progressive rows, linked annotations and frozen editor at DPR ${dpr}`, { tag: dpr === 2 ? '@responsive' : [] }, async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: page.viewportSize()!.width, height: page.viewportSize()!.height, deviceScaleFactor: dpr, mobile: false });
@@ -200,7 +200,7 @@ test('overlapping Unicode IDs and inserted specials link individual sequence row
   expect(await page.evaluate(() => window.tokenizerHarness.source())).toBe('😀');
 });
 
-test('oversized embeddings use native internal scroll and release scalar resources on edit', async ({ page }) => {
+test('oversized embeddings use native internal scroll and release scalar resources on edit', { tag: '@responsive' }, async ({ page }) => {
   const editor = await start(page);
   // Reserve a deliberately small viewport: automatic allocation can now show
   // most of this fixture without vertical scrolling.
@@ -279,7 +279,7 @@ test('token hover and activation take over keyboard matrix inspection without mo
   })).toEqual(before);
 });
 
-for (const dpr of [1, 2]) test(`panel cameras and offscreen token reveal stay independent at DPR ${dpr}`, async ({ page }) => {
+for (const dpr of [1, 2]) test(`panel cameras and offscreen token reveal stay independent at DPR ${dpr}`, { tag: dpr === 1 ? '@responsive' : [] }, async ({ page }) => {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: page.viewportSize()!.width, height: page.viewportSize()!.height, deviceScaleFactor: dpr, mobile: false });
   const editor = await start(page);
@@ -702,7 +702,7 @@ async function alignedGuides(page: Page, ranges: [number, number][]) {
   });
 }
 
-for (const dpr of [1, 2]) test(`persistent source selection maps exact rows without camera or scientific side effects at DPR ${dpr}`, async ({ page }, testInfo) => {
+for (const dpr of [1, 2]) test(`persistent source selection maps exact rows without camera or scientific side effects at DPR ${dpr}`, { tag: '@responsive' }, async ({ page }, testInfo) => {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { ...page.viewportSize()!, deviceScaleFactor: dpr, mobile: false });
   const editor = await start(page);

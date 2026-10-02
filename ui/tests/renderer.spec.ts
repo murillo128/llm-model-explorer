@@ -327,7 +327,7 @@ test('unavailable WebGL2 is an explicit error with a visible retry explanation',
   expect(result.canvases).toBe(0);
 });
 
-test('production non-React demonstration accepts progressive data and late statistics', async ({ page }, testInfo) => {
+test('production non-React demonstration accepts progressive data and late statistics', { tag: '@responsive' }, async ({ page }, testInfo) => {
   await page.goto('/renderer-demo.html');
   await expect(page.locator('#progress')).toContainText('98,304 / 786,432');
   await page.getByRole('button', { name: 'Receive next chunk' }).click();

@@ -125,7 +125,7 @@ async function capture(page: Page, info: TestInfo, name: string) {
   await info.attach(name, { path, contentType: 'image/png' });
 }
 
-test('short, wrapped and long prompts grow to a workspace cap with prompt-only scrolling', async ({ page }, info) => {
+test('short, wrapped and long prompts grow to a workspace cap with prompt-only scrolling', { tag: '@responsive' }, async ({ page }, info) => {
   await start(page);
   await fill(page, 'A short prompt');
   const short = await geometry(page);
@@ -167,7 +167,7 @@ test('short, wrapped and long prompts grow to a workspace cap with prompt-only s
   await capture(page, info, 'long-manual');
 });
 
-test('splitter has keyboard bounds and double activation returns to automatic allocation', async ({ page }) => {
+test('splitter has keyboard bounds and double activation returns to automatic allocation', { tag: '@responsive' }, async ({ page }) => {
   await start(page);
   await fill(page, 'Editable prompt');
   const split = divider(page);
@@ -203,7 +203,7 @@ test('splitter has keyboard bounds and double activation returns to automatic al
   await bounded(page);
 });
 
-test('pointer dragging continuously reallocates space and clamps both panel bounds', async ({ page }) => {
+test('pointer dragging continuously reallocates space and clamps both panel bounds', { tag: '@responsive' }, async ({ page }) => {
   await start(page);
   await fill(page, 'A short prompt');
   const before = await geometry(page);

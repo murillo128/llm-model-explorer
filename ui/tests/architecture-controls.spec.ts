@@ -127,7 +127,7 @@ test('keyboard search selects before explicit Center reveals collapsed repeated 
   expect(await snapshot(page)).toEqual(before);
 });
 
-test('browser and canvas disclosure preserve the same multi-instance window and neighboring cards', async ({ page }) => {
+test('browser and canvas disclosure preserve the same multi-instance window and neighboring cards', { tag: '@responsive' }, async ({ page }) => {
   const results = [];
   for (const surface of ['canvas', 'browser'] as const) {
     await page.goto(`${harness}?fixture=components`); await ready(page);
@@ -159,7 +159,7 @@ test('browser and canvas disclosure preserve the same multi-instance window and 
 });
 
 for (const window of ['compact', 'multi-instance'] as const) test(`browser disclosure reveals only the hidden exact instance and preserves the ${window} window`, async ({ page }) => {
-  await page.goto(`${harness}?fixture=components-large`); await ready(page);
+  await page.goto(`${harness}?fixture=components-window`); await ready(page);
   if (window === 'compact') {
     // Establish the stack overview explicitly; initial Model policy is covered separately.
     await page.locator('[data-node-id="model"] .architecture-browser-disclosure').click(); await ready(page);
@@ -168,15 +168,15 @@ for (const window of ['compact', 'multi-instance'] as const) test(`browser discl
   const before = await snapshot(page), options = before.requests.at(-1)!.options;
   const instanceIds = (layout: Layout) => layout.projection.nodes.filter((node) => /^layer-\d+$/.test(node.id)).map((node) => node.id);
   const visible = instanceIds(before.layouts.at(-1)!);
-  expect(visible).not.toContain('layer-10');
-  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('layer-10');
+  expect(visible).not.toContain('layer-5');
+  await page.getByRole('searchbox', { name: 'Search components', exact: true }).fill('layer-5');
   const disclosure = page.getByRole('group', { name: 'Model search results', exact: true })
-    .locator('[data-node-id="layer-10"] .architecture-browser-disclosure');
+    .locator('[data-node-id="layer-5"] .architecture-browser-disclosure');
   await disclosure.click();
   const opened = await snapshot(page);
   expect(opened.requests.at(-1)!.options.repetitions).toEqual(options.repetitions);
-  expect(instanceIds(opened.layouts.at(-1)!)).toEqual([...visible, 'layer-10']);
-  expect(opened.layouts.at(-1)!.projection.nodes.find((node) => node.id === 'layer-10')?.expanded).toBe(true);
+  expect(instanceIds(opened.layouts.at(-1)!)).toEqual([...visible, 'layer-5']);
+  expect(opened.layouts.at(-1)!.projection.nodes.find((node) => node.id === 'layer-5')?.expanded).toBe(true);
   assertTransportProjection(opened.requests.at(-1)!.graph, opened.layouts.at(-1)!);
   // Bring the acted-on geometry into view before contracting it. Anchoring an
   // off-screen browser target need not make it visible without an explicit fit.
@@ -223,7 +223,7 @@ test('breadcrumbs, first/last and mixed variants preserve two independent stack 
   await expect(page.getByRole('button', { name: 'Explore stack Encoder layers', exact: true })).toBeVisible();
 });
 
-for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack canvas MLP ${activation} navigation keeps focus and instance controls consistent`, async ({ page }) => {
+for (const activation of ['pointer', 'keyboard'] as const) test(`cross-stack canvas MLP ${activation} navigation keeps focus and instance controls consistent`, { tag: '@responsive' }, async ({ page }) => {
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('mixed-stacks'); await ready(page);
   await findComponent(page, 'encoder.layer-3.gate'); await ready(page);
   await findComponent(page, 'predictor.layer-1.attention.Q'); await ready(page);
@@ -312,7 +312,7 @@ test('edge pin, inspection and clear leave focus navigation and layout unchanged
   await expect(page.getByRole('button', { name: 'Clear connection selection', exact: true })).toHaveCount(0);
 });
 
-test('all operations and camera fit remain distinct; popovers stay in the panel at constrained widths', async ({ page }) => {
+test('all operations and camera fit remain distinct; popovers stay in the panel at constrained widths', { tag: '@responsive' }, async ({ page }) => {
   // Use the safety suite's connected computation fixture for exhaustive topology
   // assertions; the minimal schema fixture contains open group input interfaces.
   await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption('connections'); await ready(page);
@@ -349,7 +349,7 @@ test('partial graphs without repetition retain coverage and component navigation
 });
 
 
-test('camera dock is unique, fixed while panning and zooming, and has keyboard tooltips', async ({ page }, info) => {
+test('camera dock is unique, fixed while panning and zooming, and has keyboard tooltips', { tag: '@responsive' }, async ({ page }, info) => {
   const dock = page.getByRole('group', { name: 'Graph camera', exact: true });
   const bounds = await dock.boundingBox(), before = await snapshot(page);
   for (const label of ['Zoom in', 'Zoom out', 'Fit view']) {

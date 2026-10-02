@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { color } from './scalar-oracle';
 import type {} from './matrix-explorer-harness';
 
-for (const dpr of [1, 2]) test(`zoomed profile pixels track exact matrix rows and columns at DPR ${dpr}`, async ({ page }, testInfo) => {
+for (const dpr of [1, 2]) test(`zoomed profile pixels track exact matrix rows and columns at DPR ${dpr}`, { tag: dpr === 2 ? '@responsive' : [] }, async ({ page }, testInfo) => {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: page.viewportSize()!.width, height: page.viewportSize()!.height, deviceScaleFactor: dpr, mobile: false });
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/matrix-explorer.html`);

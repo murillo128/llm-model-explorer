@@ -4,7 +4,7 @@ import { models, sessionA } from '../src/test/shell-fixtures';
 
 // Issue #112 changes panel allocation; retain references for the actual inline
 // source/bracket/ID presentation inside the compact adaptive prompt.
-test('adaptive prompt pixels and inline annotation geometry', async ({ page }) => {
+test('adaptive prompt pixels and inline annotation geometry', { tag: '@responsive' }, async ({ page }) => {
   await page.route('**/runtime-config.json', route => route.fulfill({ json: { backend_base_url: 'https://backend.example' } }));
   await page.route('https://backend.example/**', route => {
     const path = new URL(route.request().url()).pathname;

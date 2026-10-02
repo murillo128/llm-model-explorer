@@ -167,7 +167,7 @@ for (const fixture of cases) test(`${fixture.name}: authoritative domain, bin pl
   expect(await page.evaluate(() => window.explorerFixture.metrics.uploads)).toBe(drawing.uploads);
 });
 
-test.describe('DPR 2 decimal ruler labels', () => {
+test.describe('DPR 2 decimal ruler labels', { tag: '@responsive' }, () => {
   test.use({ deviceScaleFactor: 2 });
   const decimalDomains = [
     { name: 'float32 extremes', low: -3.4028234663852886e38, high: 3.4028234663852886e38 },
@@ -217,7 +217,7 @@ test.describe('DPR 2 decimal ruler labels', () => {
   });
 });
 
-test.describe('fractional physical-pixel layout', () => {
+test.describe('fractional physical-pixel layout', { tag: '@responsive' }, () => {
   test.use({ deviceScaleFactor: 1.25 });
   test('rulers follow the histogram canvases after viewport resizing', async ({ page }) => {
     await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);

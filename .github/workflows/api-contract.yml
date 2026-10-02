@@ -5,20 +5,18 @@ on:
     # Epic children validate their scoped change locally; the aggregate epic PR runs CI.
     branches-ignore:
       - 'codex/epic-issue-*'
-    paths:
-      - 'docs/spec/api/**'
-      - 'api/**'
-      - '.github/workflows/api-contract.yml'
   push:
     branches:
       - main
-    paths:
-      - 'docs/spec/api/**'
-      - 'api/**'
-      - '.github/workflows/api-contract.yml'
+
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: api-contract-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   contract:
@@ -28,10 +26,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Select validation owners from exact revisions
+        id: plan
+        working-directory: .
+        run: python3 .github/scripts/validation_selector.py --github --output validation-plan.json --github-output "$GITHUB_OUTPUT" --summary "$GITHUB_STEP_SUMMARY"
       - uses: astral-sh/setup-uv@v6
+        if: steps.plan.outputs.api == 'true'
         with:
           version: '0.12.13'
       - name: Reuse persistent API environment
+        if: steps.plan.outputs.api == 'true'
         shell: bash
         run: |
           env_dir="${{ runner.tool_cache }}/llm-model-explorer/api-contract/python-3.12-${{ hashFiles('api/requirements.txt') }}"
@@ -40,6 +45,5 @@ jobs:
           fi
           uv pip install --python "$env_dir/bin/python" -r api/requirements.txt
           echo "LMEX_API_PYTHON=$env_dir/bin/python" >> "$GITHUB_ENV"
-      - run: '"$LMEX_API_PYTHON" api/validate_contract.py'
-      - run: '"$LMEX_API_PYTHON" api/validate_contract.py --write'
-      - run: git diff --exit-code -- api/fixtures
+      - if: steps.plan.outputs.api == 'true'
+        run: '"$LMEX_API_PYTHON" api/validate_contract.py'

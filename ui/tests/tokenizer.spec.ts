@@ -144,7 +144,7 @@ test('missing offsets remain explicitly unmapped and HTML-like native/source str
   await expect.poll(() => page.evaluate(() => window.tokenizerHarness.source())).toBe(text);
 });
 
-test('dense annotations and long unmapped text remain scrollable without overlapping source lines', async ({ page }) => {
+test('dense annotations and long unmapped text remain scrollable without overlapping source lines', { tag: '@responsive' }, async ({ page }) => {
   const editor = await start(page);
   const text = 'abcdefghij\n\nlast\n\n\n\n\n';
   await editor.fill(text); await count(page, 2);
