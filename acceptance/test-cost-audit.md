@@ -567,3 +567,50 @@ all cache assertions. The real four-process competition passes (1 selected /
 1,949 deselected, 13.14 s); the repaired complete 1,950-case wheel run supplies
 final proof, with finalized JUnit. The two real extended tests pass on both
 Python versions.
+
+## Audit-return completed evidence
+
+The bounded routing repairs are validated at
+`1610d796297771b5a44ff628852bd11bf443d40a`, against unchanged integration
+`25a8d7c3be08e4e74383a988cef74feafeef8414`:
+
+- Six new regressions cover sixteen shared backend helper modules, actual shared
+  HTTP consumers, LoRA's independent TCP owner, command failure propagation and
+  Node-versus-browser prerequisites. The first five fail on the audited selector
+  (twenty assertion failures, including sixteen subtests); the Node control fails
+  before its repair (five assertions). All **38 selector/entrypoint methods** pass
+  after correction, including the existing real Git, discovery and failure guards.
+- The real shared-HTTP plan completes normally: **72 logical passes, 80 subtest
+  passes and ten unchanged capability skips**, 82 collected logical cases and
+  162 JUnit suite entries. Native JUnit wall is **191.031 s**; the complete selected
+  HTTP/lint/entrypoint envelope is **191.807 s**. Browser/build setup is explicitly
+  non-applicable. All owned TCP service processes have exited.
+- The native LoRA TCP owner reports one truthful skip with no reference supplied.
+  Supplying a nonexistent model root instead produces one failure, zero skips and
+  the original `FileNotFoundError`. This verifies prerequisite truth, not actual
+  full-model LoRA/QLoRA acceptance. Ruff/format and scoped diff checks pass.
+
+The first shared-HTTP execution at `ef4ac78eb50033753f9a9fb01e2fd91bd262d33a`
+is retained: one missing-Node setup failure, seventy logical passes and ten
+capability skips, normal exit 1 at **191.595 s**. The isolated shell lacked Node;
+inspection also found CI omitted Node setup for the selected independent TCP
+architecture semantic oracle. The corrected workflow provisions the existing
+Node 24 version for that owner without installing npm/Chromium or building UI.
+The repaired exact-target run above passes; no assertion or timeout changed.
+
+Complete final-diff selection resolves the same backend, HTTP, component and
+production-browser files/portfolios as the audited head. The redundant raw backend
+file plus `tests` entry now normalizes to `tests`; effective native targets are
+identical. Backend source/tests/config/dependencies, API, UI source/tests/config,
+the integration/wheel entrypoints and normative specifications are byte-identical
+to the audited head. Its passing primary/wheel, component and extended evidence
+therefore remains applicable; only changed routing/HTTP controls are freshly run.
+The **561.084 s** complete routine measurement remains explicitly tied to its
+earlier target, not a new timing sample of this repair. Six logical HTTP tests and
+twenty subtest invocations are added; no further coverage retirement or performance
+percentage is claimed. Final report-only publication is reconciled separately.
+
+Native reports, both negative-control logs, the missing-Node failure, final plans,
+source reconciliation and cleanup evidence remain outside Git under
+`/tmp/issue-277-evidence/audit-return/`. The prior failures and all unavailable
+reference/CUDA qualifications remain visible.
