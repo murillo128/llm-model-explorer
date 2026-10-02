@@ -11,8 +11,8 @@ python_bin="$repo_dir/backend/.venv/bin/python"
 "${LMEX_CONTRACT_PYTHON:-$repo_dir/api/.venv/bin/python}" api/validate_contract.py
 # validate_contract performs an exact generated-fixture comparison. Do not
 # rewrite golden files or mistake intentional fixture edits for generator drift.
-backend/.venv/bin/ruff check --config backend/pyproject.toml acceptance
-backend/.venv/bin/ruff format --check --config backend/pyproject.toml acceptance
+backend/.venv/bin/ruff check --config backend/pyproject.toml acceptance .github/scripts/validation_selector.py
+backend/.venv/bin/ruff format --check --config backend/pyproject.toml acceptance .github/scripts/validation_selector.py
 (
   cd backend
   .venv/bin/ruff check .

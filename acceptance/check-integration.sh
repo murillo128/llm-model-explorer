@@ -2,15 +2,18 @@
 # Integrated gate for CI. Dedicated workflows own component checks on main.
 set -euo pipefail
 main_ci=false
-if [ "$#" -gt 1 ]; then
-  echo "Usage: $0 [--main-ci]" >&2
-  exit 2
-fi
-case "${1:-}" in
-  '') ;;
-  --main-ci) main_ci=true ;;
-  *) echo "Usage: $0 [--main-ci]" >&2; exit 2 ;;
-esac
+plan=''
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --main-ci) main_ci=true; shift ;;
+    --plan)
+      if [ "$#" -lt 2 ] || [ -n "$plan" ]; then
+        echo "Usage: $0 [--main-ci] [--plan FILE]" >&2; exit 2
+      fi
+      plan=$(realpath "$2"); shift 2 ;;
+    *) echo "Usage: $0 [--main-ci] [--plan FILE]" >&2; exit 2 ;;
+  esac
+done
 
 repo_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_dir"
@@ -19,6 +22,12 @@ mkdir -p "$LMEX_EVIDENCE_DIR"
 export HF_HUB_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false
 python_bin="$repo_dir/backend/.venv/bin/python"
+network_args=(acceptance)
+if [ -n "$plan" ]; then
+  # Command substitution must propagate errors before mapfile can hide them.
+  selected=$(python3 .github/scripts/validation_selector.py --plan "$plan" --network-targets)
+  mapfile -t network_args <<< "$selected"
+fi
 
 # Preserve the existing PR/epic gate. Main delegates these checks to api-contract.
 if [ "$main_ci" = false ]; then
@@ -28,9 +37,9 @@ if [ "$main_ci" = false ]; then
 fi
 
 # acceptance/ is not covered by backend-ci's backend/** path filter.
-backend/.venv/bin/ruff check --config backend/pyproject.toml acceptance
-backend/.venv/bin/ruff format --check --config backend/pyproject.toml acceptance
-"$python_bin" -m pytest acceptance -ra --durations=25 -o junit_family=legacy --junitxml="$LMEX_EVIDENCE_DIR/network.xml"
+backend/.venv/bin/ruff check --config backend/pyproject.toml acceptance .github/scripts/validation_selector.py
+backend/.venv/bin/ruff format --check --config backend/pyproject.toml acceptance .github/scripts/validation_selector.py
+"$python_bin" -m pytest "${network_args[@]}" -ra --durations=25 -o junit_family=legacy --junitxml="$LMEX_EVIDENCE_DIR/network.xml"
 
 (
   cd ui
@@ -41,12 +50,16 @@ backend/.venv/bin/ruff format --check --config backend/pyproject.toml acceptance
   fi
   # Build the production UI from this checkout; never reuse another SHA's build.
   npm run build
-  browser_args=()
-  if [ "$main_ci" = false ]; then
-    browser_args=(-- --project=dpr1)
+  if [ -n "$plan" ]; then
+    selector_args=()
+    if [ "$main_ci" = true ]; then selector_args=(--main); fi
+    python3 ../.github/scripts/validation_selector.py --plan "$plan" --run integration "${selector_args[@]}"
+  else
+    browser_args=()
+    if [ "$main_ci" = false ]; then browser_args=(-- --project=dpr1); fi
+    # Main retains both configured DPR projects and their native density tags.
+    xvfb-run -a npm run test:acceptance "${browser_args[@]}"
   fi
-  # Main retains both configured DPR projects, with real backend/browser tests.
-  xvfb-run -a npm run test:acceptance "${browser_args[@]}"
 )
 
 echo "Integration acceptance evidence: $LMEX_EVIDENCE_DIR"

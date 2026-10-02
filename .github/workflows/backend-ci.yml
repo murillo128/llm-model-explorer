@@ -5,14 +5,8 @@ on:
     # Epic children validate their scoped change locally; the aggregate epic PR runs CI.
     branches-ignore:
       - 'codex/epic-issue-*'
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
   push:
     branches: [main]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
   workflow_dispatch:
 
 permissions:
@@ -38,18 +32,31 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Select validation owners from exact revisions
+        id: plan
+        working-directory: .
+        run: python3 .github/scripts/validation_selector.py --github --output validation-plan.json --github-output "$GITHUB_OUTPUT" --summary "$GITHUB_STEP_SUMMARY"
       - uses: astral-sh/setup-uv@v6
+        if: steps.plan.outputs.backend == 'true'
         with:
           version: '0.12.13'
       - name: Select persistent Python environment
+        if: steps.plan.outputs.backend == 'true'
         shell: bash
         run: echo "UV_PROJECT_ENVIRONMENT=${{ runner.tool_cache }}/llm-model-explorer/backend/python-${{ matrix.python }}-${{ hashFiles('backend/uv.lock') }}" >> "$GITHUB_ENV"
-      - run: uv sync --locked --python '${{ matrix.python }}'
-      - run: uv run --locked ruff check .
-      - run: uv run --locked ruff format --check .
-      - run: uv run --locked mypy
-      - run: uv run --locked pytest --durations=25
+      - if: steps.plan.outputs.backend == 'true'
+        run: uv sync --locked --python '${{ matrix.python }}'
+      - if: steps.plan.outputs.backend == 'true'
+        run: uv run --locked ruff check .
+      - if: steps.plan.outputs.backend == 'true'
+        run: uv run --locked ruff format --check .
+      - if: steps.plan.outputs.backend == 'true'
+        run: uv run --locked mypy
+      - if: steps.plan.outputs.backend == 'true'
+        run: uv run --locked pytest --durations=25
       - name: Build and smoke-test the installed wheel outside the source tree
+        if: steps.plan.outputs.backend == 'true'
         run: |
           uv build
           backend_python="${UV_PROJECT_ENVIRONMENT}/bin/python"

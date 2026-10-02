@@ -58,11 +58,21 @@ the whole domain matrix in every browser scenario.
 ## CI selection, isolation and evidence
 
 The existing workflows separately own backend, API, UI, application acceptance and
-Skillforge runner checks. Preserve accepted epic-child local validation and the
-final aggregate CI boundary. PR/main Python and browser matrices have different
-accepted scopes; a skill edit does not expand or waive either. Inspect changed
-paths and current filters, including `docs/spec/api/**`, before declaring the
-applicable set complete. Report a routing gap rather than inventing an exemption.
+Skillforge runner checks. The product workflows share
+[the repository-local selector](../../../.github/scripts/validation_selector.py);
+selection runs before conditional steps with complete exact Git diffs. See
+[the ownership map and invocation contract](../../../acceptance/validation-routing.md).
+Normative specs, API/generated inputs, examples and unknown/shared configuration
+reach their consumers. Pure operational Markdown uses documentation/infrastructure
+owners. Invalid diff context falls back to full product coverage; invalid plans or
+empty required groups fail. Fast checks remain full for each selected owner.
+
+Preserve accepted epic-child local validation and the final aggregate CI boundary.
+PR/main Python and browser matrices retain their accepted different scopes;
+manual workflow runs and final epic PRs select the complete optimized gates.
+`acceptance/check.sh` is always complete; `check-integration.sh --main-ci` without
+a plan runs full integration without duplicated component/API checks. Focused
+commands consume an explicit complete path list, never an inferred commit title.
 
 Use isolated caches, ports and artifact paths for concurrent checks. Do not edit a
 checkout while tests run or reuse another revision's UI build as acceptance proof.
@@ -73,8 +83,9 @@ before claiming CI savings.
 
 Infrastructure tests use the existing `.github/scripts/test_*.py` unittest files
 and executor-routing workflow. Inspect the current revision before selecting
-suites: pending runner-synchronization PRs are not installed capabilities. Fake
-Devin tests do not verify the user's installed CLI or OS sandbox. Documentation-only
+suites: runner synchronization is merged; verify current host capability separately
+from repository code. Fake Devin tests do not verify the user's installed CLI or
+OS sandbox. Documentation-only
 skill changes need scoped diff, link/frontmatter/routing and scenario review, not a
 new product suite or source-keyword tests pretending to measure agent behavior.
 

@@ -9,6 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 STUB = """import json
 import os
@@ -31,13 +33,27 @@ class CiEntrypointsTest(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix="lmex-ci-entrypoints-")
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
-        for directory in ("acceptance", "ui", "backend/.venv/bin", "bin"):
+        for directory in (
+            "acceptance",
+            "ui/tests",
+            "ui/acceptance",
+            "backend/.venv/bin",
+            "bin",
+            ".github/scripts",
+        ):
             (self.root / directory).mkdir(parents=True)
         shutil.copyfile(
             ROOT / "acceptance/check-integration.sh",
             self.root / "acceptance/check-integration.sh",
         )
         shutil.copyfile(ROOT / "acceptance/check.sh", self.root / "acceptance/check.sh")
+        shutil.copyfile(
+            ROOT / ".github/scripts/validation_selector.py",
+            self.root / ".github/scripts/validation_selector.py",
+        )
+        for directory in ("ui/tests", "ui/acceptance"):
+            for path in (ROOT / directory).glob("*.spec.ts"):
+                (self.root / directory / path.name).touch()
         for name in ("ruff", "mypy", "pytest"):
             self.stub(self.root / "backend/.venv/bin" / name)
         # Deliberately do not create api/.venv: main must not need API tooling.
@@ -54,6 +70,24 @@ class CiEntrypointsTest(unittest.TestCase):
             "LMEX_CONTRACT_PYTHON": str(self.root / "bin/contract-python"),
         }
         self.env.pop("CI_FAIL_COMMAND", None)
+
+    def plan(self, *paths):
+        changed = self.root / "paths.json"
+        changed.write_text(json.dumps(paths))
+        destination = self.root / "validation-plan.json"
+        subprocess.run(
+            [
+                sys.executable,
+                str(self.root / ".github/scripts/validation_selector.py"),
+                "--paths",
+                str(changed),
+                "--output",
+                str(destination),
+            ],
+            check=True,
+            capture_output=True,
+        )
+        return destination
 
     def stub(self, path):
         path.write_text(f"#!{sys.executable}\n{STUB}")
@@ -87,7 +121,14 @@ class CiEntrypointsTest(unittest.TestCase):
         self.assertEqual(
             commands,
             [
-                ["ruff", "check", "--config", "backend/pyproject.toml", "acceptance"],
+                [
+                    "ruff",
+                    "check",
+                    "--config",
+                    "backend/pyproject.toml",
+                    "acceptance",
+                    ".github/scripts/validation_selector.py",
+                ],
                 [
                     "ruff",
                     "format",
@@ -95,6 +136,7 @@ class CiEntrypointsTest(unittest.TestCase):
                     "--config",
                     "backend/pyproject.toml",
                     "acceptance",
+                    ".github/scripts/validation_selector.py",
                 ],
                 [
                     "python",
@@ -192,3 +234,182 @@ class CiEntrypointsTest(unittest.TestCase):
         result, commands = self.run_gate(script="check.sh", fail=command)
         self.assertEqual(result.returncode, 7, result.stderr)
         self.assertEqual(" ".join(commands[-1]), command)
+
+    def test_tokenizer_plan_executes_real_selected_network_and_browser_commands(self):
+        plan = self.plan("ui/src/tokenizer/editor.ts")
+        result, commands = self.run_gate("--main-ci", "--plan", str(plan))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        pytest = next(command for command in commands if command[:3] == ["python", "-m", "pytest"])
+        self.assertEqual(
+            pytest[3:11],
+            [
+                "acceptance/test_network.py",
+                "acceptance/test_embeddings.py",
+                "acceptance/test_polish.py",
+                "acceptance/test_distribution_scales.py",
+                "acceptance/test_reference.py",
+                "acceptance/test_ci_entrypoints.py",
+                "acceptance/test_report.py",
+                "acceptance/test_validation_selector.py",
+            ],
+        )
+        self.assertIn(["npm", "run", "test:acceptance", "--", "product.spec.ts"], commands)
+        self.assertIn(["npm", "run", "build"], commands)
+
+    def test_shared_api_plan_preserves_complete_acceptance(self):
+        plan = self.plan("docs/spec/api/contract.md")
+        result, commands = self.run_gate("--plan", str(plan))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(
+            any(command[:4] == ["python", "-m", "pytest", "acceptance"] for command in commands)
+        )
+        browser = next(
+            command for command in commands if command[:3] == ["npm", "run", "test:acceptance"]
+        )
+        self.assertEqual(
+            browser[4:],
+            [
+                "architecture.spec.ts",
+                "clm.spec.ts",
+                "kev.spec.ts",
+                "lora-hierarchy.spec.ts",
+                "lora-reference.spec.ts",
+                "product.spec.ts",
+                "--project=dpr1",
+            ],
+        )
+
+    def test_selected_build_pytest_and_browser_failures_propagate(self):
+        plan = self.plan("ui/src/tokenizer/editor.ts")
+        result, commands = self.run_gate("--main-ci", "--plan", str(plan))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        failing = [
+            command
+            for command in commands
+            if command[:3]
+            in (
+                ["python", "-m", "pytest"],
+                ["npm", "run", "build"],
+                ["npm", "run", "test:acceptance"],
+            )
+        ]
+        for command in failing:
+            with self.subTest(command=command):
+                self.log.unlink()
+                result, commands = self.run_gate(
+                    "--main-ci", "--plan", str(plan), fail=" ".join(command)
+                )
+                self.assertEqual(result.returncode, 7, result.stderr)
+                self.assertEqual(commands[-1], command)
+
+    def test_empty_required_plan_and_missing_plan_fail_before_checks(self):
+        plan = self.plan("ui/src/tokenizer/editor.ts")
+        data = json.loads(plan.read_text())
+        data["integration"] = []
+        plan.write_text(json.dumps(data))
+        for path in (plan, self.root / "missing.json"):
+            with self.subTest(path=path):
+                result, commands = self.run_gate("--plan", str(path))
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(commands, [])
+
+    def workflow(self, name):
+        # Parse actual invocation/security/event structure rather than matching
+        # source strings in place of command execution.
+        source = (ROOT / f".github/workflows/{name}.yml").read_text()
+
+        def unique_keys(node):
+            if isinstance(node, yaml.MappingNode):
+                keys = [key.value for key, _ in node.value]
+                self.assertEqual(len(keys), len(set(keys)), f"Duplicate YAML key in {name}")
+                for _, child in node.value:
+                    unique_keys(child)
+            elif isinstance(node, yaml.SequenceNode):
+                for child in node.value:
+                    unique_keys(child)
+
+        unique_keys(yaml.compose(source, Loader=yaml.BaseLoader))
+        return yaml.load(source, Loader=yaml.BaseLoader)
+
+    def test_workflow_selection_invocation_outputs_and_trigger_contract(self):
+        for name in ("backend-ci", "api-contract", "ui-ci", "application-acceptance"):
+            with self.subTest(workflow=name):
+                workflow = self.workflow(name)
+                for event in ("push", "pull_request", "workflow_dispatch"):
+                    self.assertIn(event, workflow["on"])
+                    self.assertNotIn("paths", workflow["on"][event] or {})
+                self.assertEqual(workflow["permissions"], {"contents": "read"})
+                job = next(iter(workflow["jobs"].values()))
+                self.assertIn("head.repo.full_name == github.repository", job["if"])
+                steps = job["steps"]
+                checkout = next(step for step in steps if step.get("uses") == "actions/checkout@v4")
+                self.assertEqual(checkout["with"]["fetch-depth"], "0")
+                self.assertEqual(checkout["with"]["persist-credentials"], "false")
+                invocation = next(step for step in steps if step.get("id") == "plan")
+                env = self.env | {
+                    "GITHUB_OUTPUT": str(self.root / "outputs"),
+                    "GITHUB_STEP_SUMMARY": str(self.root / "summary"),
+                }
+                result = subprocess.run(
+                    ["bash", "-euc", invocation["run"]],
+                    cwd=self.root,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("integration=true", (self.root / "outputs").read_text())
+                self.assertIn("full fallback", (self.root / "summary").read_text())
+                plan = json.loads((self.root / "validation-plan.json").read_text())
+                self.assertEqual(plan["browser"], ["full"])
+
+    def test_ui_workflow_executes_domain_union_and_failure(self):
+        self.plan("ui/src/tokenizer/editor.ts", "ui/src/architecture-explorer/Graph.tsx")
+        job = self.workflow("ui-ci")["jobs"]["ui"]
+        invocation = next(
+            step["run"] for step in job["steps"] if step.get("name") == "Run browser tests"
+        )
+        env = self.env | {"GITHUB_REF": "refs/heads/feature"}
+        result = subprocess.run(
+            ["bash", "-euc", invocation],
+            cwd=self.root / "ui",
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        commands = [json.loads(line) for line in self.log.read_text().splitlines()]
+        browser = next(
+            command for command in commands if command[:3] == ["npm", "run", "test:browser"]
+        )
+        self.assertIn("tokenizer-embeddings.spec.ts", browser)
+        self.assertIn("architecture-camera.spec.ts", browser)
+        self.assertNotIn("matrix-explorer.spec.ts", browser)
+        self.assertEqual(browser[-2:], ["--project=desktop", "--project=native-scrollbars"])
+        env["CI_FAIL_COMMAND"] = " ".join(browser)
+        result = subprocess.run(
+            ["bash", "-euc", invocation],
+            cwd=self.root / "ui",
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 7, result.stderr)
+
+    def test_application_workflow_invokes_selected_main_gate(self):
+        self.plan("ui/src/tokenizer/editor.ts")
+        job = self.workflow("application-acceptance")["jobs"]["application"]
+        invocation = next(
+            step["run"] for step in job["steps"] if step.get("name") == "Run application acceptance"
+        )
+        result = subprocess.run(
+            ["bash", "-euc", invocation],
+            cwd=self.root,
+            env=self.env | {"GITHUB_REF": "refs/heads/main"},
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        commands = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertNotIn(["contract-python", "api/validate_contract.py"], commands)
+        self.assertIn(["npm", "run", "test:acceptance", "--", "product.spec.ts"], commands)
