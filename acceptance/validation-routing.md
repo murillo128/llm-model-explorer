@@ -61,7 +61,7 @@ bash acceptance/check.sh
 # Complete integration only (main policy keeps all configured DPR projects):
 bash acceptance/check-integration.sh --main-ci
 # Focused routes from a complete operator-supplied path list:
-printf '%s\n' '["ui/src/tokenizer/PromptEditor.tsx"]' > /tmp/changed-paths.json
+printf '%s\n' '["ui/src/tokenizer/TokenizerExplorer.tsx"]' > /tmp/changed-paths.json
 python3 .github/scripts/validation_selector.py --paths /tmp/changed-paths.json --output /tmp/validation-plan.json
 (cd ui && npm run check)
 python3 .github/scripts/validation_selector.py --plan /tmp/validation-plan.json --run browser --main

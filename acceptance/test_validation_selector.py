@@ -149,6 +149,24 @@ class SelectionTest(unittest.TestCase):
         ):
             self.assertIn(name, files)
 
+    def test_full_owner_includes_new_nested_spec_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for directory, name in (
+                ("ui/tests/future", "component.spec.ts"),
+                ("ui/acceptance/future", "product.spec.ts"),
+            ):
+                path = root / directory / name
+                path.parent.mkdir(parents=True)
+                path.touch()
+            plan = selector.select([], full=True)
+            self.assertEqual(
+                selector.targets(plan, "browser", root=root), ["future/component.spec.ts"]
+            )
+            self.assertEqual(
+                selector.targets(plan, "integration", root=root), ["future/product.spec.ts"]
+            )
+
     def test_empty_or_invalid_required_selection_fails(self):
         plan = selector.select(["ui/src/tokenizer/a.ts"])
         for value in ([], ["typo"]):

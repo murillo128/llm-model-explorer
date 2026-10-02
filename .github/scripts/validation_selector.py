@@ -198,7 +198,7 @@ def targets(plan, gate, *, root=ROOT):
     groups = plan[gate]
     if gate == "browser":
         patterns = {
-            "full": ("*.spec.ts",),
+            "full": ("**/*.spec.ts",),
             "architecture": ("architecture*.spec.ts",),
             "matrix": (
                 "matrix*.spec.ts",
@@ -211,7 +211,7 @@ def targets(plan, gate, *, root=ROOT):
         }
         directory = root / "ui/tests"
     elif gate == "integration":
-        patterns = {"full": ("*.spec.ts",), "product": ("product.spec.ts",)}
+        patterns = {"full": ("**/*.spec.ts",), "product": ("product.spec.ts",)}
         directory = root / "ui/acceptance"
     else:
         raise ValueError(f"Unknown gate: {gate}")
@@ -219,7 +219,11 @@ def targets(plan, gate, *, root=ROOT):
     for group in groups:
         if group not in patterns:
             raise ValueError(f"Unknown required group: {group}")
-        matched = {file.name for pattern in patterns[group] for file in directory.glob(pattern)}
+        matched = {
+            file.relative_to(directory).as_posix()
+            for pattern in patterns[group]
+            for file in directory.glob(pattern)
+        }
         if not matched:
             raise ValueError(f"Empty required {gate} group: {group}")
         files.update(matched)
@@ -281,7 +285,8 @@ def run_browser(plan, gate, *, main=False):
         "run",
         "test:browser" if gate == "browser" else "test:acceptance",
         "--",
-        *files,
+        # Playwright CLI file filters are regular expressions, not literal paths.
+        *map(re.escape, files),
         *projects,
     ]
     print(json.dumps(command), flush=True)

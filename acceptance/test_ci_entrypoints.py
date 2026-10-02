@@ -253,7 +253,7 @@ class CiEntrypointsTest(unittest.TestCase):
                 "acceptance/test_validation_selector.py",
             ],
         )
-        self.assertIn(["npm", "run", "test:acceptance", "--", "product.spec.ts"], commands)
+        self.assertIn(["npm", "run", "test:acceptance", "--", r"product\.spec\.ts"], commands)
         self.assertIn(["npm", "run", "build"], commands)
 
     def test_shared_api_plan_preserves_complete_acceptance(self):
@@ -269,12 +269,12 @@ class CiEntrypointsTest(unittest.TestCase):
         self.assertEqual(
             browser[4:],
             [
-                "architecture.spec.ts",
-                "clm.spec.ts",
-                "kev.spec.ts",
-                "lora-hierarchy.spec.ts",
-                "lora-reference.spec.ts",
-                "product.spec.ts",
+                r"architecture\.spec\.ts",
+                r"clm\.spec\.ts",
+                r"kev\.spec\.ts",
+                r"lora\-hierarchy\.spec\.ts",
+                r"lora\-reference\.spec\.ts",
+                r"product\.spec\.ts",
                 "--project=dpr1",
             ],
         )
@@ -382,9 +382,9 @@ class CiEntrypointsTest(unittest.TestCase):
         browser = next(
             command for command in commands if command[:3] == ["npm", "run", "test:browser"]
         )
-        self.assertIn("tokenizer-embeddings.spec.ts", browser)
-        self.assertIn("architecture-camera.spec.ts", browser)
-        self.assertNotIn("matrix-explorer.spec.ts", browser)
+        self.assertIn(r"tokenizer\-embeddings\.spec\.ts", browser)
+        self.assertIn(r"architecture\-camera\.spec\.ts", browser)
+        self.assertNotIn(r"matrix\-explorer\.spec\.ts", browser)
         self.assertEqual(browser[-2:], ["--project=desktop", "--project=native-scrollbars"])
         env["CI_FAIL_COMMAND"] = " ".join(browser)
         result = subprocess.run(
@@ -412,4 +412,4 @@ class CiEntrypointsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         commands = [json.loads(line) for line in self.log.read_text().splitlines()]
         self.assertNotIn(["contract-python", "api/validate_contract.py"], commands)
-        self.assertIn(["npm", "run", "test:acceptance", "--", "product.spec.ts"], commands)
+        self.assertIn(["npm", "run", "test:acceptance", "--", r"product\.spec\.ts"], commands)
