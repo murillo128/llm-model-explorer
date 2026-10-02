@@ -34,7 +34,9 @@ export default defineConfig({
   },
   projects: [
     { name: 'dpr1', use: { baseURL: `http://127.0.0.1:${dpr1.ui}`, deviceScaleFactor: 1 } },
-    { name: 'dpr2', use: { baseURL: `http://127.0.0.1:${dpr2.ui}`, deviceScaleFactor: 2 } },
+    // DPR 1 owns all cases, including newly added untagged tests. Only explicit
+    // physical-pixel/interaction contracts need a second density invocation.
+    { name: 'dpr2', grep: /@density/, use: { baseURL: `http://127.0.0.1:${dpr2.ui}`, deviceScaleFactor: 2 } },
   ],
   webServer: [{
     command: `LMEX_STATIC_PORT=${dpr1.ui} LMEX_BACKEND_PORT=${dpr1.backend} node acceptance/static.mjs`,

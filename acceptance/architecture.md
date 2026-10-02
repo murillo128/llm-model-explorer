@@ -11,8 +11,8 @@ checkpoints are distinct from actual-reference evidence.
 
 Install the locked dependencies using `acceptance/README.md`, then run
 `acceptance/check.sh`. This includes the new TCP tests and production browser
-cases at DPR 1 and 2, alongside existing tensor, tokenizer, embedding, native
-camera and continuity regressions. No test application downloads model assets.
+cases at DPR 1 plus explicitly tagged density cases at DPR 2, alongside
+existing tensor, tokenizer, embedding, native camera and continuity regressions. No test application downloads model assets.
 
 For an operator-owned full reference run, create a JSON manifest outside Git:
 
@@ -74,6 +74,17 @@ that snapshot is not peak whole-browser RSS or GPU memory. The backend prepares
 all admitted sibling checkpoints, so readiness/RSS cover the configured parent
 root; per-model preparation logs distinguish their work. Keep raw graphs, caches,
 logs, traces, weight bytes and local-path manifests outside Git.
+
+## Per-case density ownership
+
+The [integration ownership matrix](integration-test-ownership.md#architecture-and-package-families)
+keeps every unique architecture/package scenario at DPR 1. Full graph/modal,
+port-target and complete expert/readable-scale scenarios also run at DPR 2 via
+`@density`. Load diagnostics, late-response fencing, native package bindings and
+layout-lifetime scenarios run once, with their full graph sizes and cycle counts.
+Actual-reference tests remain selected at DPR 1, including strict required mode;
+the configured second-density reference interactions remain explicit. No fixture
+or component-browser success establishes actual checkpoint support.
 
 ## Deterministic coverage and its limits
 
