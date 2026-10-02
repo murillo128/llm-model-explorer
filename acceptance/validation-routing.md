@@ -13,7 +13,7 @@ compatibility scope, reasons and exact tested revisions.
 | Split production spec | Its actual responsibility and corresponding real HTTP files. |
 | `lora-reference.spec.ts` | Its extended browser cases plus TCP architecture, Base reference and independent LoRA/QLoRA reference owners. |
 | `product-harness.ts` | All five tensor/tokenizer production spec consumers. |
-| Isolated HTTP test file | That native pytest file; browser/build/Node/Chromium setup explicitly non-applicable. |
+| Isolated HTTP test file | That native pytest file; browser/build/Chromium setup explicitly non-applicable. TCP architecture semantics require Node 24 without npm dependencies. |
 | Shared `acceptance/test_network.py` | All native HTTP tests, including model-root, export, embedding and actual-reference consumers; browser/build setup stays non-applicable. |
 | Architecture UI production | Architecture component files, `architecture.spec.ts`, TCP architecture/native packages. |
 | Tokenizer UI production | Tokenizer component files; transport, scientific, bindings and tokenizer-layout production files and their HTTP owners. |
@@ -25,6 +25,9 @@ compatibility scope, reasons and exact tested revisions.
 Maintain the finite shared-backend-module classification when adding imports of
 helpers from a `test_*.py` module. Filename-based isolation applies only after
 these shared owners; it does not prove a test module has no consumers.
+The application workflow installs Node when browsers or the independent TCP
+architecture semantic oracle require it. HTTP-only plans still omit npm,
+Chromium, UI build and browser servers.
 
 `@extended` classifies genuine long/reference cases. Ordinary untagged tests run
 by default. DPR 1 owns ordinary production cases; `@density` adds only meaningful

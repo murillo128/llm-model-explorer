@@ -573,14 +573,20 @@ def main():
         if args.output:
             args.output.write_text(json.dumps(plan, indent=2) + "\n")
         if args.github_output:
+            integration_browser = bool(targets(plan, "integration"))
+            network = network_targets(plan) if "integration" in plan["owners"] else []
+            # The TCP architecture owner runs the independent semantic oracle
+            # with Node's native TypeScript support, without npm or Chromium.
+            integration_node = integration_browser or bool(
+                set(network) & {"acceptance", "acceptance/test_architecture.py"}
+            )
             with args.github_output.open("a") as output:
                 for owner in sorted(OWNERS):
                     output.write(f"{owner}={str(owner in plan['owners']).lower()}\n")
                 output.write(f"compatibility_full={str(plan['compatibility_full']).lower()}\n")
                 output.write(f"portfolio={plan['portfolio']}\n")
-                output.write(
-                    f"integration_browser={str(bool(targets(plan, 'integration'))).lower()}\n"
-                )
+                output.write(f"integration_browser={str(integration_browser).lower()}\n")
+                output.write(f"integration_node={str(integration_node).lower()}\n")
                 output.write(f"backend_extended={str('backend' in plan['extended']).lower()}\n")
         if args.summary:
             with args.summary.open("a") as summary:

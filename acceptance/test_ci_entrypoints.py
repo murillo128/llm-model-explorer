@@ -346,6 +346,38 @@ class CiEntrypointsTest(unittest.TestCase):
         self.assertEqual(commands[-1], selected)
         self.assertFalse(any(command[0] in {"npm", "xvfb-run"} for command in commands))
 
+    def test_http_semantic_oracle_selects_node_without_browser_dependencies(self):
+        for name in ("network", "architecture", "report"):
+            (self.root / f"acceptance/test_{name}.py").touch()
+        for path, node, browser in (
+            ("acceptance/test_report.py", "false", "false"),
+            ("acceptance/test_architecture.py", "true", "false"),
+            ("acceptance/test_network.py", "true", "false"),
+            ("ui/acceptance/lora-reference.spec.ts", "true", "true"),
+        ):
+            with self.subTest(path=path):
+                plan = self.plan(path)
+                output = self.root / "outputs"
+                output.write_text("")
+                subprocess.run(
+                    [
+                        sys.executable,
+                        str(self.root / ".github/scripts/validation_selector.py"),
+                        "--plan",
+                        str(plan),
+                        "--github-output",
+                        str(output),
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
+                flags = dict(line.split("=", 1) for line in output.read_text().splitlines())
+                self.assertEqual(flags.get("integration_node"), node)
+                self.assertEqual(flags["integration_browser"], browser)
+        steps = self.workflow("application-acceptance")["jobs"]["application"]["steps"]
+        node_step = next(step for step in steps if step.get("uses") == "actions/setup-node@v4")
+        self.assertEqual(node_step["if"], "steps.plan.outputs.integration_node == 'true'")
+
     def test_selected_build_pytest_and_browser_failures_propagate(self):
         plan = self.plan("ui/src/tokenizer/editor.ts")
         result, commands = self.run_gate("--main-ci", "--plan", str(plan))

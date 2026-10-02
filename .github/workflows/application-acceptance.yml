@@ -37,7 +37,7 @@ jobs:
         with:
           version: '0.12.13'
       - uses: actions/setup-node@v4
-        if: steps.plan.outputs.integration_browser == 'true'
+        if: steps.plan.outputs.integration_node == 'true'
         with:
           node-version-file: ui/.nvmrc
       - name: Select isolated browser ports
