@@ -132,3 +132,104 @@ cold/warm identity, missing-cache/restart/partial capability and complete expert
 TCP tests. These default HTTP gates and the exact numerical/component owners
 above stay in `acceptance/check.sh`. No workflow, command orchestration, fixture
 hook, model download or shipped implementation changes belong to this issue.
+
+## Validation and measured cost
+
+Implementation revision: **`3f63b7de84fa88690a9404ac03242615d2b52c12`**;
+its acceptance-source hashes match the tree used for validation. The following
+commit only records this evidence. Baseline is the exact incoming revision above,
+archived independently in `/tmp/issue-276-baseline`; Python source resolution was
+pinned to each checkout and each had its own production build. Dependencies were
+installed once before comparison. No other repository Actions runs were active
+at the start; the shared host was not controlled as a quiet benchmark.
+
+Environment: Linux 6.8.0-139 x86_64/glibc 2.39, Python 3.12.14,
+PyTorch 2.14.0+cpu, Transformers 4.57.6, pytest 9.1.1,
+FastAPI 0.141.1/Starlette 1.6.0, Node 24.14.0/npm 11.9.0,
+locked Playwright 1.63.0/Chromium 153.0.8010.12. The actual probe reported
+SwiftShader Vulkan through ANGLE, 8192 texture/renderbuffer/viewport limits.
+Acceptance used one headed worker, zero retries, fresh backends/model/cache roots
+and ports 29702–29705 (comparison), 29722–29725 (full run). Component owners used
+one worker and ports 29740–29741. No references were supplied or downloaded.
+
+One complete scoped before/after sample uses the five original distribution
+inputs plus Unicode/late-response tokenization at both DPRs, versus the two
+retained progressive distribution inputs and that tokenization case at DPR 1.
+Both samples passed without skips or retries: **12 → 3 invocations**. The stronger
+producer-barrier assertions are included in the after sample.
+
+| Phase (seconds) | Before | After |
+| --- | ---: | ---: |
+| Production build wall, including npm | 0.83 | 0.97 |
+| Browser command wall, including npm/Xvfb | 216.12 | 52.21 |
+| Native browser wall | 215.673 | 51.762 |
+| Sum of native attempt durations | 214.184 | 50.897 |
+| Fixture generation sum (inside backend startup) | 0.458 | 0.107 |
+| Backend spawn-to-ready sum | 93.618 | 21.654 |
+| Browser setup sum | 1.778 | 0.433 |
+| Body sum | 115.164 | 27.797 |
+| Teardown sum | 2.819 | 0.798 |
+
+These are selection savings in one focused sample, not lower latency per test
+or a whole-pipeline percentage. Generation overlaps backend startup and must
+not be added again. #273's component-project savings and #275's zero fixture
+savings are not counted. The complete baseline application run remains cancelled
+in #272's evidence; it is not a speedup denominator.
+
+Validation on the implementation sources:
+
+- Native collection reconciles all 64 old families: 61 remain at DPR 1, only the
+  three documented domain inputs relocate, and all 32 DPR-2 cases carry the native
+  density tag and also run at DPR 1. There are no new/missing unexplained families.
+- Complete production selection: **63 passed / 30 explicit skips**, native wall
+  **1353.341 s**, zero retries, failures, interruptions, global errors or unrun
+  cases. Both historical deadline regressions passed at both densities with their
+  unchanged assertions/deadlines. Missing actual references and unavailable tiny
+  MoE fixtures account for the skips; these remain missing reference evidence.
+- Exact component-browser owners: **37 passed**, 46.139 s, no skips/flakes/retries.
+  This covers the complete distribution-scale file and the renderer's three
+  tightly-centered/outlier/constant-fallback cases cited above.
+- Exact TCP owners: **16 passed / one CUDA skip**, 86.88 s. All four independent
+  distribution inputs, shared cancellation/session/socket/failure/no-partial-cache,
+  progressive counts, restart/invalidation and ordered duplicate embeddings pass.
+- Backend `test_native_numerics`: **19 passed**. Distribution scale, real header
+  and Matrix Explorer unit owners: **30 passed** across three files.
+- UI typecheck, lint, production build, source-hash reconciliation, relative
+  documentation links and `git diff --check` pass. The existing bundle-size
+  warning remains; it is not a new failure.
+
+The first sandboxed baseline attempt could not connect Chromium to Xvfb and
+failed at browser launch, before application assertions. It was excluded from
+comparison; the same unchanged baseline then passed with host Xvfb access. This
+is an execution-environment correction, not a configured test retry or a timeout
+waiver. Raw native lists, the old-to-new collection map, JSON reports, JUnit,
+harness phases and logs stay outside Git in `/tmp/issue-276-evidence`.
+
+Reproduce from `ui/` with the locked Node environment and isolated ports:
+
+```sh
+npm run typecheck
+npm run lint
+npm run build
+UI_TEST_PORT=29720 HF_HUB_OFFLINE=1 TOKENIZERS_PARALLELISM=false \
+  xvfb-run -a npm run test:acceptance
+UI_TEST_PORT=29740 PLAYWRIGHT_WORKERS=1 xvfb-run -a npm run test:browser -- \
+  distribution-scale.spec.ts renderer.spec.ts \
+  --grep 'authoritative domain|readable labels preserve|rulers follow the histogram|late robust statistics|robust contrast'
+npm test -- distribution-scale.test.ts TensorHeader.test.tsx MatrixExplorer.test.tsx
+```
+
+From the repository root, with `PYTHONPATH` selecting this checkout's
+`backend/src` and root:
+
+```sh
+backend/.venv/bin/python -m pytest acceptance/test_distribution_scales.py \
+  acceptance/test_network.py acceptance/test_embeddings.py -q -ra
+backend/.venv/bin/python -m pytest backend/tests/test_tensor_analysis.py \
+  -k native_numerics -q
+```
+
+The existing application/UI/backend/API workflows explicitly defer epic-child
+PRs targeting `codex/epic-issue-*`; the routing workflow has no changed applicable
+paths. Local scoped evidence supplies this child gate; the final aggregate epic
+PR still owes all applicable CI. No workflow or command orchestration was changed.
