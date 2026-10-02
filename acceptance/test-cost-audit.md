@@ -430,3 +430,12 @@ deleted and nested backend test support now falls back conservatively; productio
 backend/support inputs include the real threshold/allocator checks. Direct
 existing backend/browser tests retain their finite file route. This changes
 selection only; the complete refactor plan already selected those same owners.
+
+The first full installed-wheel 3.14 run exposed a harness import-mode defect:
+`importlib` named the unchanged spawned helper `tests.test_artifacts`, but the
+child's test-helper-only path could not import that namespace. The real cache
+competition failed with `ModuleNotFoundError: tests`; 594 cases passed before
+the owned run was interrupted at 236.600 s for diagnosis. Preserve that failure,
+retain every cache/process assertion and restore native pytest imports. The
+private wheel/import-location/CPU guards remain. Validate the actual spawned
+competition first, then complete all 1,950 cases from a new immutable target.

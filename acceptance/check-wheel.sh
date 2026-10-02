@@ -33,5 +33,7 @@ runtime=(
   "$repo_dir/backend/tests/test_tensor_data.py::test_exact_shapes_and_native_source_unchanged"
 )
 if [ "$mode" = --full ]; then runtime=("$repo_dir/backend/tests"); fi
+# Preserve native pytest imports so spawn can resolve test helper functions.
+# Only the helper directory is exposed; the installed package guard above stays.
 PYTHONPATH="$repo_dir/backend/tests" HF_HUB_OFFLINE=1 TOKENIZERS_PARALLELISM=false \
-  "$wheel_python" -m pytest --import-mode=importlib "${runtime[@]}" --durations=10
+  "$wheel_python" -m pytest "${runtime[@]}" --durations=10
