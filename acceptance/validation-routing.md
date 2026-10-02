@@ -5,6 +5,11 @@ the four product workflows and the selected integration entrypoint. It reads
 complete normalized paths, returns finite owners and reasons, and resolves native
 Playwright files. Test titles and commit messages never determine selection.
 
+Full discovery includes nested spec files. Acceptance uses the native
+`**/*.spec.ts` matcher, with new untagged cases owned by DPR 1. Selected CLI file
+filters escape literal paths because Playwright interprets them as regular
+expressions; special filename characters cannot silently omit a selected file.
+
 | Surface | Fast owners | Expensive owners |
 | --- | --- | --- |
 | `ui/src/architecture-explorer/` | Full UI check | Every `architecture*.spec.ts`; complete TCP/product acceptance including native weight modal, CLM, Kev and LoRA |
