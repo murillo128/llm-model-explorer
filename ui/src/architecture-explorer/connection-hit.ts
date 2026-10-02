@@ -1,6 +1,7 @@
 import type { Point, Route } from './graph';
 import type { ProjectedEdge } from './projection';
 import { endpointKey } from './projection';
+import type { RouteDisplay } from './route-display';
 
 type Segment = { start: Point; end: Point };
 type RoutedConnection = { id: string; segments: Segment[] };
@@ -33,9 +34,9 @@ function sharesAt(owner: Segment, candidate: Segment, point: Point): boolean {
  * including aliases across collapsed groups; labels/shapes never join signals.
  * Snap to the owning line inside its generous CSS hit corridor before resolving
  * collinear overlap, so nearby parallel lines and crossings stay independent. */
-export function connectionHitResolver(edges: ProjectedEdge[], routes: Route[]) {
+export function connectionHitResolver(edges: ProjectedEdge[], routes: Route[], displays?: ReadonlyMap<string, RouteDisplay>) {
   const routed = new Map(routes.map((route) => [route.id, { id: route.id,
-    segments: route.sections.flatMap((points) => points.slice(1).flatMap((end, i) => {
+    segments: (displays?.get(route.id)?.sections.map((s) => s.samples) ?? route.sections).flatMap((points) => points.slice(1).flatMap((end, i) => {
       const start = points[i]!;
       return start.x === end.x && start.y === end.y ? [] : [{ start, end }];
     })),

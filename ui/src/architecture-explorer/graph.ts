@@ -11,7 +11,7 @@ import { overviewExpansion } from './overview';
 export type Graph = components['schemas']['ArchitectureGraph'];
 export type GraphNode = components['schemas']['ArchitectureNode'];
 export type Shape = components['schemas']['ArchitectureShape'];
-export interface Box { id: string; parentId?: string; x: number; y: number; width: number; height: number; absoluteX: number; absoluteY: number }
+export interface Box { id: string; parentId?: string; x: number; y: number; width: number; height: number; absoluteX: number; absoluteY: number; headerHeight?: number }
 export interface Point { x: number; y: number }
 export interface PortPosition extends Point { nodeId: string; portId: string; absoluteX: number; absoluteY: number; side: 'left' | 'right';
   label: { x: number; y: number; width: number; height: number; clearance: number; raised: boolean } }

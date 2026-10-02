@@ -6,6 +6,7 @@ import type { Locator, Page, TestInfo } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
 import { makeProjectionFixture } from './architecture-projection-fixture';
 import type { Graph } from '../src/architecture-explorer/graph';
+import { cameraProbe } from './architecture-camera-probe';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
 const graph = (page: Page) => page.getByLabel('Architecture graph', { exact: true });
@@ -13,6 +14,119 @@ const connection = (page: Page, source: string, from: string, target: string, to
   `.architecture-connection[data-source-node=${JSON.stringify(source)}][data-source-port=${JSON.stringify(from)}][data-target-node=${JSON.stringify(target)}][data-target-port=${JSON.stringify(to)}]`);
 const port = (page: Page, node: string, id: string) => page.locator(
   `.architecture-port[data-node-id=${JSON.stringify(node)}][data-port-id=${JSON.stringify(id)}]`);
+
+test('mixed-peer connector arrow paint remains readable at zoom 0.8, 1 and 2 @responsive', async ({ page }, info) => {
+  await cameraProbe(page);
+  await page.goto(`${harness}?fixture=connector-readability`);
+  await ready(page);
+  const expand = page.getByRole('button', { name: 'Expand component Model', exact: true });
+  if (await expand.count()) { await expand.click(); await ready(page); }
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  await capture(page, info, 'mixed-overview');
+  if (info.project.name === 'desktop') {
+    const edge = connection(page, 'model', 'decide_idx', 'decision', 'index');
+    const bend = await edge.evaluate((element) => {
+      for (const path of element.querySelectorAll<SVGPathElement>('.architecture-edge-hit')) {
+        if (!path.getAttribute('d')!.includes('Q')) continue;
+        const matrix = path.getScreenCTM()!, length = path.getTotalLength();
+        for (let at = 2; at < length - 2; at += 2) {
+          const a = path.getPointAtLength(at - 1), b = path.getPointAtLength(at + 1);
+          if (Math.abs(a.x - b.x) < 0.2 || Math.abs(a.y - b.y) < 0.2) continue;
+          const p = path.getPointAtLength(at).matrixTransform(matrix);
+          if (document.elementFromPoint(p.x, p.y)?.closest('.architecture-connection') === element) return { x: p.x, y: p.y };
+        }
+      }
+      return null;
+    });
+    expect(bend, 'A necessary rounded bend must be natively targetable').not.toBeNull();
+    const before = await stableState(page);
+    await page.mouse.move(bend!.x, bend!.y); await emphasized(page, [edge]); await unchanged(page, before);
+    await page.mouse.move(0, 0); await emphasized(page, []);
+  }
+  const measurements = [];
+  for (const zoom of [0.8, 1, 2]) {
+    await page.evaluate(async (zoom) => {
+      const target = window.cameraProbe.store.getState().nodes.find((n) => n.id === 'language')!;
+      await window.cameraProbe.flow.setCenter(target.position.x, target.position.y + 100, { zoom });
+    }, zoom);
+    await expect.poll(() => page.evaluate(() => window.cameraProbe.flow.getZoom())).toBe(zoom);
+    await page.mouse.move(0, 0);
+    await capture(page, info, `mixed-terminal-${zoom}`);
+    const edge = connection(page, 'model', 'positions', 'language', 'positions');
+    const m = await paintedArrow(page, edge, info, `arrow-${zoom}`);
+    measurements.push(m);
+    const before = await stableState(page);
+    await port(page, 'language', 'positions').focus();
+    await expect(edge).toHaveAttribute('data-emphasized', 'true');
+    expect(await edge.locator('.architecture-arrow').boundingBox()).toEqual(m.bounds);
+    await unchanged(page, before);
+    await page.getByRole('button', { name: 'Fit view', exact: true }).focus();
+
+  }
+  await info.attach('arrow-measurements', { body: JSON.stringify(measurements), contentType: 'application/json' });
+  for (const m of measurements) expect(m.length).toBeGreaterThanOrEqual(8);
+  for (const m of measurements) expect(m.length).toBeLessThanOrEqual(12);
+});
+/** Inspect transformed triangle geometry and actual screenshot pixels. Canvas
+ * decodes the screenshot only; it never substitutes for browser SVG painting. */
+async function paintedArrow(page: Page, edge: Locator, info: TestInfo, name: string) {
+  const m = await edge.evaluate((element) => {
+    const arrow = element.querySelector<SVGPathElement>('.architecture-arrow')!;
+    const matrix = arrow.getScreenCTM()!, tip = arrow.getPointAtLength(0).matrixTransform(matrix);
+    const bounds = arrow.getBoundingClientRect().toJSON() as { x: number; y: number; width: number; height: number; right: number; bottom: number };
+    const target = [...document.querySelectorAll<HTMLElement>('.architecture-port')].find((p) =>
+      p.dataset.nodeId === element.getAttribute('data-target-node') && p.dataset.portId === element.getAttribute('data-target-port'))!;
+    const dot = target.querySelector('.architecture-port-dot')!.getBoundingClientRect();
+    const zoom = new DOMMatrix(getComputedStyle(document.querySelector('.react-flow__viewport')!).transform).a;
+    const collidingLabels = [...document.querySelectorAll('.architecture-port-label')].filter((label) => {
+      const rect = label.getBoundingClientRect();
+      return rect.left < bounds.right && rect.right > bounds.x && rect.top < bounds.bottom && rect.bottom > bounds.y;
+    }).map((label) => label.textContent);
+    return { bounds, length: bounds.width, width: bounds.height, separation: dot.left - 3 * zoom - tip.x,
+      direction: dot.x + dot.width / 2 > tip.x && Math.abs(dot.y + dot.height / 2 - tip.y) <= 2 * zoom,
+      collidingLabels, fill: getComputedStyle(arrow).fill };
+  });
+  expect(m.direction).toBe(true);
+  expect(m.separation).toBeGreaterThanOrEqual(1.9);
+  expect(m.collidingLabels).toEqual([]);
+  expect(m.length).toBeGreaterThanOrEqual(8); expect(m.length).toBeLessThanOrEqual(12);
+  expect(m.width).toBeCloseTo(8, 4);
+  const viewport = page.viewportSize()!;
+  expect(m.bounds.x).toBeGreaterThan(1); expect(m.bounds.right).toBeLessThan(viewport.width - 1);
+  expect(m.bounds.y).toBeGreaterThan(1); expect(m.bounds.bottom).toBeLessThan(viewport.height - 1);
+  const clip = { x: Math.floor(m.bounds.x) - 1, y: Math.floor(m.bounds.y) - 1,
+    width: Math.ceil(m.bounds.right) - Math.floor(m.bounds.x) + 2, height: Math.ceil(m.bounds.bottom) - Math.floor(m.bounds.y) + 2 };
+  const screenshot = await page.screenshot({ clip, scale: 'device' });
+  await info.attach(name, { body: screenshot, contentType: 'image/png' });
+  const paint = await page.evaluate(async ({ png, fill, clip, bounds }) => {
+    const image = new Image(); image.src = `data:image/png;base64,${png}`; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+    const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, image.width, image.height).data;
+    const rgb = fill.match(/[\d.]+/g)!.slice(0, 3).map(Number), dpr = image.width / clip.width;
+    let paintedOffLine = 0;
+    for (let y = 0; y < image.height; y++) for (let x = 0; x < image.width; x++) {
+      const px = clip.x + (x + 0.5) / dpr, py = clip.y + (y + 0.5) / dpr;
+      if (px <= bounds.x || px >= bounds.right || Math.abs(py - bounds.y - bounds.height / 2) < 1.5) continue;
+      const at = (y * image.width + x) * 4;
+      if (rgb.every((v, i) => Math.abs(v - pixels[at + i]!) < 35)) paintedOffLine++;
+    }
+    return paintedOffLine / (dpr * dpr);
+  }, { png: screenshot.toString('base64'), fill: m.fill, clip, bounds: m.bounds });
+  expect(paint, 'The triangle must paint beyond the centerline, without clipping or masking').toBeGreaterThan(6);
+  return { ...m, bounds: { x: m.bounds.x, y: m.bounds.y, width: m.bounds.width, height: m.bounds.height }, paint };
+}
+
+test('destination glyph paints at DPR 2', async ({ browser }, info) => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  try {
+    const page = await context.newPage(); await cameraProbe(page);
+    await page.goto(`${harness}?fixture=connector-readability`); await ready(page);
+    await page.evaluate(() => window.cameraProbe.flow.setCenter(600, 400, { zoom: 1 }));
+    await paintedArrow(page, connection(page, 'model', 'positions', 'language', 'positions'), info, 'glyph-dpr2');
+  } finally { await context.close(); }
+});
+
 async function capture(page: Page, info: TestInfo, name: string) {
   const path = info.outputPath(`${name}.png`);
   await page.screenshot({ path });
@@ -72,7 +186,7 @@ async function unchanged(page: Page, before: Awaited<ReturnType<typeof stableSta
 async function emphasized(page: Page, expected: Locator[]) {
   const ids = await Promise.all(expected.map(async (edge) => {
     await expect(edge).toHaveCount(1);
-    await expect(edge.locator('.architecture-edge-line[marker-end]')).toHaveCount(1);
+    await expect(edge.locator('.architecture-arrow')).toHaveCount(1);
     return (await edge.getAttribute('data-edge-id'))!;
   }));
   await expect.poll(() => page.locator('.architecture-connection[data-emphasized="true"]').evaluateAll((edges) =>

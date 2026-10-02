@@ -404,6 +404,43 @@ Connection routing must keep distinct signals visually distinguishable. Routes s
 
 Order external context cards and visual boundary ports with their exact connected producers and consumers where feasible, without changing source hierarchy or execution order. Align simple connections before adding bends; keep any unavoidable crossing in open routing space. Each port's displayed name and optional dimensions have a padded rectangle that no connection may cross. A connection must depart its source and approach its destination on a straight horizontal lane past any label on that side, with a small margin before a bend or branch. Other signals may not cross that lane; genuine fan-out may share the source lane before branching beyond it. Container gutters and row spacing may grow to preserve these clearances, while bounded layout failure remains explicit and recoverable.
 
+Expanded boundary rows use topology-local alignment. Resolve inner geometry first,
+then align feasible ordered one-to-one runs to their exact peer card or boundary,
+including partial runs and singletons. Keep regular spacing within a feasible
+parallel bundle; unrelated destination groups may have different gaps. This
+supersedes the former whole-side equal-pitch requirement. Unused ports and fan-out
+must not disable an unrelated feasible run. Preserve ELK's topology-resolved
+`FIXED_SIDE` order, exact port identities and source records. Label/header/terminal
+clearance and monotone order take priority over straightness; an infeasible wish
+retains a compliant bent route. Layout and rendered labels share row metrics.
+
+Repair affected routes against their final terminals. Prefer a clear direct
+segment, or a simple horizontal–vertical–horizontal route when departure and
+approach space permit it, over reconnecting to obsolete rows. Remove duplicate
+and unnecessary collinear vertices, preserving genuine junctions and every
+protected obstacle/corridor. Grow only genuinely required clearance; retain the
+cancellable worker, three-pass bound and explicit recoverable geometry failure.
+
+Keep an orthogonal canonical spine. Display necessary non-junction turns using
+small deterministic fillets, with an approximately eight-unit preferred radius,
+clamped to adjacent segment lengths, straight terminal space and a conservative
+painted envelope including the visible halo. Reduce a locally constrained radius
+to zero when needed; never round through a padded label, card/header, terminal
+corridor or shared branch point. Visible line, hover halo and pointer-hit path
+use the same display geometry. Reuse the display index for native pointer hits;
+crossings, touches and nearby parallel routes never imply shared-source identity.
+
+Each projected directed connection has one arrow at its actual destination,
+resolved from the terminal and final nonzero tangent rather than section order
+or port direction. The semantic route meets the exact port center. Its decorative
+tip remains at least two CSS pixels before the largest normal/emphasized terminal
+footprint. Target a painted triangle ten CSS pixels long and eight wide, with
+length remaining within eight to twelve CSS pixels at zoom 0.8, 1 and 2. Reserve
+straight terminal space for the glyph, footprint, separation and bend margin;
+include its envelope in label clearance. Bound compensation below zoom 0.8.
+Zoom changes presentation only, without relayout or changing the camera controls,
+connection identities, state/context styles or emphasis behavior.
+
 Changing hover, keyboard focus, or pinned connection selection must not move nodes, change port positions, refit the camera, or recompute layout. A layout failure is recoverable and explicit; it must not silently fall back to an unreadable vertical stacking mode.
 
 ## Clean default presentation and dimensions

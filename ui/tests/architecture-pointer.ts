@@ -12,9 +12,17 @@ export async function fanoutPoint(page: Page, edges: Locator[], expected: Locato
       const element = [...document.querySelectorAll('.architecture-connection')].find((edge) => edge.getAttribute('data-edge-id') === id)!;
       const segments = [...element.querySelectorAll<SVGPathElement>('.architecture-edge-hit')].flatMap((path) => {
         const matrix = path.getScreenCTM()!;
-        const values = path.getAttribute('d')!.match(/[-+]?(?:\d*\.?\d+)(?:e[-+]?\d+)?/gi)!.map(Number);
+        const length = path.getTotalLength(), count = Math.min(2048, Math.max(1, Math.ceil(length * Math.hypot(matrix.a, matrix.b) / 2)));
         const points: DOMPoint[] = [];
-        for (let i = 0; i < values.length; i += 2) points.push(new DOMPoint(values[i], values[i + 1]).matrixTransform(matrix));
+        for (let i = 0; i <= count; i++) {
+          const p = path.getPointAtLength(length * i / count).matrixTransform(matrix);
+          while (points.length > 1) {
+            const a = points.at(-2)!, b = points.at(-1)!;
+            if (Math.abs((b.x - a.x) * (p.y - b.y) - (b.y - a.y) * (p.x - b.x)) > 0.0001) break;
+            points.pop();
+          }
+          points.push(p);
+        }
         return points.slice(1).map((point, i) => [points[i]!, point] as const);
       });
       return { id, segments };

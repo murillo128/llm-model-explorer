@@ -4,7 +4,7 @@ import { routeClearanceFailures } from './routing-clearance';
 import { endpointKey } from './projection';
 import { interfaceFixture } from '../../tests/architecture-interface-fixture';
 import { makeExplicitFixture } from '../../tests/architecture-explicit-fixture';
-import { rotaryContextFixture } from '../../tests/architecture-routing-fixture';
+import { connectorFixture, rotaryContextFixture } from '../../tests/architecture-routing-fixture';
 import type { Graph, Layout, Point } from './graph';
 
 const port = (id: string, direction: 'input' | 'output') => ({ id, label: id, direction, shape: [{ kind: 'constant' as const, value: 16 }] });
@@ -69,6 +69,16 @@ it('rejects a bend beside a terminal instead of returning a misleading layout', 
   expect(routeClearanceFailures(layout.projection, layout.ports, damaged).some((failure) => failure.includes('terminal turns'))).toBe(true);
 });
 
+it('rejects a glyph overlapping an elevated label even when its centerline clears it', async () => {
+  const layout = await layoutGraph(connectorFixture(true), { expanded: ['model'] });
+  const edge = layout.projection.edges.find((e) => e.source.port_id === 'positions')!;
+  const target = layout.ports.find((p) => p.nodeId === edge.target.node_id && p.portId === edge.target.port_id)!;
+  target.label = { ...target.label, x: target.absoluteX - 20, y: target.absoluteY - 10, width: 8, height: 4, clearance: 4 };
+  const failures = routeClearanceFailures(layout.projection, layout.ports, layout.routes);
+  expect(failures).toContain(`${edge.id}: destination decoration crosses ${target.nodeId}.${target.portId} label`);
+  expect(failures.some((failure) => failure === `${edge.id}: crosses ${target.nodeId}.${target.portId} label`)).toBe(false);
+});
+
 it('permits a forced crossing only in open space between fixed, opposite-order terminal pairs', async () => {
   const graph: Graph = { graph_id: 'crossing-routing', scope: 'language_model', coverage: 'partial', symbols: [], parameters: [], repetitions: [], diagnostics: [],
     nodes: [
@@ -86,17 +96,19 @@ it('permits a forced crossing only in open space between fixed, opposite-order t
   const sourceTop = ports.find((position) => position.nodeId === 'source' && position.portId === 'top')!;
   const sourceBottom = ports.find((position) => position.nodeId === 'source' && position.portId === 'bottom')!;
   const left = sourceTop.absoluteX;
-  const right = ports.find((position) => position.nodeId === 'target')!.absoluteX;
+  // Reserve the new 30-unit arrow approach as well as the departure lanes.
+  const right = ports.find((position) => position.nodeId === 'target')!.absoluteX + 40;
   const top = sourceTop.absoluteY, bottom = sourceBottom.absoluteY, middle = (top + bottom) / 2;
   for (const position of ports.filter((candidate) => candidate.nodeId === 'target')) {
+    position.x += 40; position.absoluteX += 40; position.label.x += 40;
     const delta = position.portId === 'bottom' ? bottom - top : top - bottom;
     position.y += delta; position.absoluteY += delta; position.label.y += delta;
   }
   const routes = [
     { id: 'connection:falling', sections: [[{ x: left, y: top }, { x: left + 14, y: top }, { x: left + 14, y: middle },
-      { x: right - 18, y: middle }, { x: right - 18, y: bottom }, { x: right, y: bottom }]], junctions: [] },
+      { x: right - 34, y: middle }, { x: right - 34, y: bottom }, { x: right, y: bottom }]], junctions: [] },
     { id: 'connection:rising', sections: [[{ x: left, y: bottom }, { x: left + 18, y: bottom }, { x: left + 18, y: middle - 4 },
-      { x: right - 16, y: middle - 4 }, { x: right - 16, y: top }, { x: right, y: top }]], junctions: [] },
+      { x: right - 32, y: middle - 4 }, { x: right - 32, y: top }, { x: right, y: top }]], junctions: [] },
   ];
   expect(routeClearanceFailures(layout.projection, ports, routes)).toEqual([]);
   const routed = { ...layout, routes };

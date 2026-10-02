@@ -10,5 +10,3 @@ export const ConnectionContext = createContext<{
   selectPort?: (port: Endpoint) => void;
   pin: (id: string, trigger: HTMLElement) => void;
 }>({ emphasized: new Set(), ports: new Set(), zoom: 1, lineHit: (id) => [id], hover: () => {}, focus: () => {}, pin: () => {} });
-
-export const routePath = (points: Point[]) => points.map((p, i) => `${i ? 'L' : 'M'}${p.x},${p.y}`).join(' ');

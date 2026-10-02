@@ -9,13 +9,19 @@ import type { ProjectionOptions } from './projection';
 import { layoutRepeatedInteriors } from './repeated-layout';
 import { assertProtectedRoutes } from './routing-clearance';
 import { BoundaryRowSpace, regularizeBoundaryRows } from './boundary-rows';
+import { approachLength } from './route-metrics';
 
 export const groupHeaderHeight = 64;
 export const layerGap = 40;
 export const nodeGap = 28;
 const rootId = 'layout-root';
+const terminalOptions: LayoutOptions = {
+  'elk.layered.spacing.edgeNodeBetweenLayers': String(approachLength + 2),
+  'elk.spacing.edgeNode': String(approachLength + 2),
+};
 
 const scopeOptions: LayoutOptions = {
+  ...terminalOptions,
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
   'elk.edgeRouting': 'ORTHOGONAL',
@@ -23,9 +29,7 @@ const scopeOptions: LayoutOptions = {
   'elk.layered.mergeEdges': 'false',
   'elk.layered.mergeHierarchyEdges': 'false',
   'elk.layered.spacing.nodeNodeBetweenLayers': String(layerGap),
-  'elk.layered.spacing.edgeNodeBetweenLayers': '24',
   'elk.spacing.nodeNode': String(nodeGap),
-  'elk.spacing.edgeNode': '20',
   'elk.spacing.edgeEdge': '16',
   'elk.layered.spacing.edgeEdgeBetweenLayers': '16',
   'elk.randomSeed': '1',
@@ -74,11 +78,6 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
   const annotated = new Set([...graph.repetitions.flatMap((r) => r.instances.map((i) => i.node_id)),
     ...graph.diagnostics.flatMap((d) => d.node_id ? [d.node_id] : [])]);
   const metricsByNode = new Map<string, ReturnType<typeof cardMetrics>>();
-  const sourceCounts = new Map<string, number>();
-  for (const edge of projection.edges) {
-    const key = endpointKey(edge.source);
-    sourceCounts.set(key, (sourceCounts.get(key) ?? 0) + 1);
-  }
   for (const [index, node] of projection.nodes.entries()) {
     const raised = new Set(node.ports.filter((port) => raisedPorts.has(endpointKey({ node_id: node.id, port_id: port.id }))).map((port) => port.id));
     const metrics = cardMetrics(node, cardSummary(node.record, parameters), Boolean(options.dimensions), annotated.has(node.id), raised);
@@ -108,10 +107,6 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
       id, width: metrics.width, height, ports,
       ...(node.expanded ? { children: [] } : {}),
       layoutOptions: { ...scopeOptions,
-        // A true boundary fan-out needs a usable exclusive tail at fit scale.
-        // Keep ordinary serial scopes at their existing compact spacing.
-        'elk.layered.spacing.edgeNodeBetweenLayers': node.expanded && node.ports.some((port) =>
-          (sourceCounts.get(endpointKey({ node_id: node.id, port_id: port.id })) ?? 0) > 1) ? '32' : '24',
         'elk.portConstraints': node.expanded ? 'FIXED_SIDE' : 'FIXED_POS',
         'elk.portLabels.placement': 'INSIDE',
         'elk.spacing.portPort': String(metrics.portGap),
@@ -163,8 +158,10 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
   // and worker asset there; Node-only geometry tests use its bundled adapter.
   let engine: ElkEngine;
   const nodeAdapter = import.meta.env.SSR || import.meta.env.MODE === 'test';
-  if (nodeAdapter) engine = new (await import('elkjs/lib/elk.bundled.js')).default({ algorithms: ['layered'] });
-  else engine = new ELK({ algorithms: ['layered'], workerFactory: () => new Worker(elkWorkerUrl) });
+  // Independent repeated-interior wrapper roots need the same glyph corridor
+  // as the outer graph, even though they supply their own hierarchy options.
+  if (nodeAdapter) engine = new (await import('elkjs/lib/elk.bundled.js')).default({ algorithms: ['layered'], defaultLayoutOptions: terminalOptions });
+  else engine = new ELK({ algorithms: ['layered'], defaultLayoutOptions: terminalOptions, workerFactory: () => new Worker(elkWorkerUrl) });
   let laidOut: ElkNode;
   let stubs: Awaited<ReturnType<typeof layoutRepeatedInteriors>>['stubs'];
   const abort = () => { if (!nodeAdapter) engine.terminateWorker(); };
@@ -210,7 +207,7 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
     if (id) {
       const parentId = parent && sourceIds.get(parent.id);
       boxes.push({ id, ...(parentId ? { parentId } : {}), x: node.x ?? 0, y: node.y ?? 0,
-        absoluteX, absoluteY, width: node.width!, height: node.height! });
+        absoluteX, absoluteY, width: node.width!, height: node.height!, headerHeight: metricsByNode.get(id)!.headerHeight });
       for (const port of node.ports ?? []) {
         const identity = portIds.get(port.id);
         if (!identity) continue; // Internal routing proxy, never a source port.
@@ -279,7 +276,7 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
     }
   }
   const widthGrowth = regularizeBoundaryRows(projection, boxes, ports, routes, metricsByNode);
-  assertProtectedRoutes(projection, ports, routes);
+  assertProtectedRoutes(projection, ports, routes, boxes);
   const represented = new Set([...projection.edges.flatMap((edge) => edge.originalEdgeIds), ...(projection.boundaryPaths ?? []).flat().map((e) => e.id)]);
   return { boxes, ports, routes, projection, edgeIds: graph.edges.filter((edge) => represented.has(edge.id)).map((edge) => edge.id),
     width: (laidOut.width ?? 0) + widthGrowth, height: laidOut.height ?? 0, milliseconds: performance.now() - started };

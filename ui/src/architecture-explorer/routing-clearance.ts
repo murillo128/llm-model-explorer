@@ -1,10 +1,19 @@
-import type { Point, PortPosition, Route } from './graph';
+import type { Box, Point, PortPosition, Route } from './graph';
 import { endpointKey, type ProjectedEdge, type Projection } from './projection';
+import { approachLength, departureLength, arrowWidth, arrowLength, arrowSeparation, terminalFootprint, minimumReadableZoom } from './route-metrics';
 
 const margin = 8;
 const laneHalfWidth = 2;
 const epsilon = 0.001;
 type Rectangle = { x: number; y: number; width: number; height: number };
+
+function decoration(port: PortPosition): Rectangle {
+  const width = (arrowLength + arrowSeparation) / minimumReadableZoom, height = arrowWidth / minimumReadableZoom;
+  return { x: port.absoluteX - terminalFootprint - width, y: port.absoluteY - height / 2, width, height };
+}
+function overlaps(a: Rectangle, b: Rectangle) {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+}
 
 function crosses(a: Point, b: Point, rect: Rectangle) {
   const left = rect.x + epsilon, right = rect.x + rect.width - epsilon;
@@ -25,8 +34,8 @@ export function endpointCorridor(port: PortPosition, source: boolean): Rectangle
   const label = port.label;
   // The text lives inside an ordinary card and above an expanded boundary's
   // own cable. Extend the lane past the text only on the side being routed.
-  const end = source ? Math.max(x + 12, label.x > x ? label.x + label.width + margin : x + 12) :
-    Math.min(x - 12, label.x + label.width < x ? label.x - margin : x - 12);
+  const end = source ? Math.max(x + departureLength, label.x > x ? label.x + label.width + margin : x + departureLength) :
+    Math.min(x - approachLength, label.x + label.width < x ? label.x - margin : x - approachLength);
   return { x: Math.min(x, end), y: port.absoluteY - laneHalfWidth,
     width: Math.abs(end - x), height: laneHalfWidth * 2 };
 }
@@ -76,8 +85,13 @@ export function routeClearanceFailures(projection: Projection, ports: PortPositi
     if (!edge) { failures.push(`${route.id}: unknown connection`); continue; }
     const lines = segments(route);
     const points = route.sections.flat();
-    const bounds = { left: Math.min(...points.map((point) => point.x)), right: Math.max(...points.map((point) => point.x)),
-      top: Math.min(...points.map((point) => point.y)), bottom: Math.max(...points.map((point) => point.y)) };
+    const target = positions.get(endpointKey(edge.target)), glyph = target && decoration(target);
+    // The broad phase must include paint above a completely straight spine.
+    // Otherwise a raised label can clear the line and still mask the triangle.
+    const bounds = { left: Math.min(...points.map((point) => point.x), glyph?.x ?? Infinity),
+      right: Math.max(...points.map((point) => point.x), glyph ? glyph.x + glyph.width : -Infinity),
+      top: Math.min(...points.map((point) => point.y), glyph?.y ?? Infinity),
+      bottom: Math.max(...points.map((point) => point.y), glyph ? glyph.y + glyph.height : -Infinity) };
     for (const [endpoint, source] of [[edge.source, true], [edge.target, false]] as const) {
       const port = positions.get(endpointKey(endpoint));
       if (!port || !ownTerminal(route, port, source, endpointCorridor(port, source))) {
@@ -93,6 +107,12 @@ export function routeClearanceFailures(projection: Projection, ports: PortPositi
       if (rect.x > bounds.right || rect.x + rect.width < bounds.left || rect.y > bounds.bottom || rect.y + rect.height < bounds.top) continue;
       if ('label' in obstacle) {
         if (lines.some(([a, b]) => crosses(a, b, rect))) failures.push(`${route.id}: crosses ${obstacle.label.nodeId}.${obstacle.label.portId} label`);
+        if (glyph) {
+          // Conservative maximum glyph envelope; the semantic line still meets
+          // the port center. The triangle never extends above/below this band.
+          if (overlaps(glyph, rect))
+            failures.push(`${route.id}: destination decoration crosses ${obstacle.label.nodeId}.${obstacle.label.portId} label`);
+        }
         continue;
       }
       const corridor = obstacle.corridor;
@@ -114,7 +134,15 @@ export function routeClearanceFailures(projection: Projection, ports: PortPositi
   return failures;
 }
 
-export function assertProtectedRoutes(projection: Projection, ports: PortPosition[], routes: Route[]) {
+export function assertProtectedRoutes(projection: Projection, ports: PortPosition[], routes: Route[], boxes: Box[] = []) {
   const failures = routeClearanceFailures(projection, ports, routes);
+  const positions = new Map(ports.map((p) => [endpointKey({ node_id: p.nodeId, port_id: p.portId }), p]));
+  const expanded = new Set(projection.nodes.filter((n) => n.expanded).map((n) => n.id));
+  const obstacles = [...boxes.map((b) => ({ x: b.absoluteX, y: b.absoluteY, width: b.width, height: expanded.has(b.id) ? b.headerHeight ?? 64 : b.height })),
+    ...routes.flatMap((r) => r.labels ?? [])];
+  for (const edge of projection.edges) {
+    const target = positions.get(endpointKey(edge.target));
+    if (target && obstacles.some((rect) => overlaps(decoration(target), rect))) failures.push(`${edge.id}: destination decoration crosses a card/header or dimension label`);
+  }
   if (failures.length) throw new Error(`Port-label routing clearance failed (${failures.slice(0, 3).join('; ')}). Collapse groups and retry.`);
 }

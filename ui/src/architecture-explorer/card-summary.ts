@@ -50,14 +50,14 @@ export function cardMetrics(node: ProjectedNode, summary: CardSummary, dimension
   const hasSubtitle = Boolean(summary.formula || node.summary || annotation);
   const labelHeight = dimensions ? 32 : 16;
   const centeredTop = -8;
-  const raisedTop = -labelHeight - 4;
+  const raisedTop = -labelHeight - 10;
   const portStart = 54 + (hasSubtitle ? 24 : 0);
   // A centered row followed by a raised row is the widest vertical case.
   const mixedRows = (['input', 'output'] as const).some((direction) => {
     const ports = node.ports.filter((port) => port.direction === direction);
     return ports.some((port, index) => index > 0 && !raisedPorts.has(ports[index - 1]!.id) && raisedPorts.has(port.id));
   });
-  const portGap = mixedRows ? labelHeight * 2 + 4 : dimensions ? 40 : 24;
+  const portGap = mixedRows ? labelHeight * 2 + 10 : labelHeight + 20;
   const portRows = Math.max(node.ports.filter((p) => p.direction === 'input').length,
     node.ports.filter((p) => p.direction === 'output').length);
   const metadataTop = portStart + portRows * portGap + 4;
@@ -77,6 +77,6 @@ export function cardMetrics(node: ProjectedNode, summary: CardSummary, dimension
   const width = Math.max(contentWidth, portLabelWidth('input') + portLabelWidth('output') + 48);
   return { width,
     height, headerHeight: summary.parameters.length || summary.constants.length ? height : Math.max(64, portStart),
-    portStart, portGap, metadataTop, rowHeight, portLabels,
+    portStart, portGap, minimumPortGap: labelHeight + 20, metadataTop, rowHeight, portLabels,
     portLabelWidth: { input: portLabelWidth('input'), output: portLabelWidth('output') } };
 }
