@@ -94,6 +94,8 @@ class SelectionTest(unittest.TestCase):
             ".github/scripts/validation_selector.py",
             "new-product/module.py",
             ".github/scripts/new_product_input.py",
+            ".github/scripts/product/codex_profile.py",
+            "scripts/codex_profile.py",
             "package-lock.json",
         ):
             with self.subTest(path=path):

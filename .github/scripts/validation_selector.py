@@ -92,7 +92,7 @@ def select(paths, *, full=False):
             ".github/scripts/test_validation_selector.py",
         ):
             broad(path, "shared composition, tests, fixtures, configuration or routing")
-        elif path.startswith((".github/scripts/", "scripts/")) and Path(path).name in {
+        elif path == f".github/scripts/{Path(path).name}" and Path(path).name in {
             "prepare_pr_audit.py",
             "devin_runner.py",
             "test_epic_scheduler.py",
