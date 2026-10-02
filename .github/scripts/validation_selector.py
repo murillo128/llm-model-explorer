@@ -41,6 +41,14 @@ def select(paths, *, full=False):
         elif path.startswith("docs/spec/"):
             # Normative docs are product inputs, including new specifications.
             broad(path, "normative product specification and its consumers")
+        elif (
+            path in ("AGENTS.md", "README.md")
+            or path.endswith(".md")
+            and path.startswith(
+                ("docs/", "skills/", "wiki/", "acceptance/", "ui/", "backend/", "examples/")
+            )
+        ):
+            add(path, "operational documentation; existing documentation/infrastructure owners")
         elif path.startswith(("backend/", "examples/")):
             add(
                 path,
@@ -84,12 +92,6 @@ def select(paths, *, full=False):
             ".github/scripts/test_validation_selector.py",
         ):
             broad(path, "shared composition, tests, fixtures, configuration or routing")
-        elif (
-            path in ("AGENTS.md", "README.md")
-            or path.endswith(".md")
-            and path.startswith(("docs/", "skills/", "wiki/"))
-        ):
-            add(path, "operational documentation; existing documentation/infrastructure owners")
         elif path.startswith((".github/scripts/", "scripts/")) and Path(path).name in {
             "prepare_pr_audit.py",
             "devin_runner.py",

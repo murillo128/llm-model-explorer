@@ -102,6 +102,21 @@ class SelectionTest(unittest.TestCase):
                 self.assertEqual(plan["browser"], ["full"])
                 self.assertEqual(plan["integration"], ["full"])
 
+    def test_operational_markdown_is_explicitly_non_applicable(self):
+        for path in (
+            "acceptance/README.md",
+            "acceptance/test-cost-audit.md",
+            "ui/evidence/domain-test-ownership.md",
+            "backend/README.md",
+            "examples/clm/evidence.md",
+            "examples/kev/README.md",
+        ):
+            with self.subTest(path=path):
+                plan = selector.select([path])
+                self.assertEqual(plan["owners"], [])
+                self.assertEqual(plan["browser"], [])
+                self.assertEqual(plan["integration"], [])
+
     def test_union_and_new_native_cases(self):
         plan = selector.select(["ui/src/tokenizer/a.ts", "ui/src/architecture-explorer/a.ts"])
         self.assertEqual(plan["browser"], ["architecture", "tokenizer"])
