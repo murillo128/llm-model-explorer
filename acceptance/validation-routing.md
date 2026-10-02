@@ -12,7 +12,7 @@ compatibility scope, reasons and exact tested revisions.
 | UI unit test | Complete UI fast checks; ordinary tests remain included. |
 | Split production spec | Its actual responsibility and corresponding real HTTP files. |
 | `product-harness.ts` | All five tensor/tokenizer production spec consumers. |
-| HTTP test file | That pytest file plus a real transport bridge; architecture/native packages use the architecture bridge. |
+| HTTP test file | That native pytest file; browser/build/Node/Chromium setup explicitly non-applicable. |
 | Architecture UI production | Architecture component files, `architecture.spec.ts`, TCP architecture/native packages. |
 | Tokenizer UI production | Tokenizer component files; transport, scientific, bindings and tokenizer-layout production files and their HTTP owners. |
 | Rendering/matrix production | Matrix/native, tokenizer and architecture component owners plus complete integration. |

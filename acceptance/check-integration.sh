@@ -26,10 +26,12 @@ export HF_HUB_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false
 python_bin="$repo_dir/backend/.venv/bin/python"
 network_args=(acceptance)
+has_browser=true
 if [ -n "$plan" ]; then
   # Command substitution must propagate errors before mapfile can hide them.
   selected=$(python3 .github/scripts/validation_selector.py --plan "$plan" --network-targets)
   mapfile -t network_args <<< "$selected"
+  has_browser=$(python3 .github/scripts/validation_selector.py --plan "$plan" --integration-browser-needed)
 fi
 
 # Full local execution keeps contract checks. CI delegates to exact-target API/UI gates.
@@ -46,6 +48,10 @@ backend/.venv/bin/ruff format --check --config backend/pyproject.toml acceptance
   cd ui
   if [ "$main_ci" = false ]; then
     npm run api:check
+  fi
+  if [ "$has_browser" = false ]; then
+    echo "Production browser/build: explicitly non-applicable; selected HTTP checks completed"
+    exit 0
   fi
   # Build the production UI from this checkout; never reuse another SHA's build.
   npm run build

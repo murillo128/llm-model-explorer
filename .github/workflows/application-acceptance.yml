@@ -37,11 +37,11 @@ jobs:
         with:
           version: '0.12.13'
       - uses: actions/setup-node@v4
-        if: steps.plan.outputs.integration == 'true'
+        if: steps.plan.outputs.integration_browser == 'true'
         with:
           node-version-file: ui/.nvmrc
       - name: Select isolated browser ports
-        if: steps.plan.outputs.integration == 'true'
+        if: steps.plan.outputs.integration_browser == 'true'
         shell: bash
         run: |
           base_port=$((20000 + (GITHUB_RUN_ID % 7000) * 6))
@@ -56,7 +56,7 @@ jobs:
       - if: steps.plan.outputs.integration == 'true'
         run: uv sync --locked --project backend --python 3.12
       - name: Restore locked node_modules
-        if: steps.plan.outputs.integration == 'true'
+        if: steps.plan.outputs.integration_browser == 'true'
         id: node-modules
         uses: actions/cache@v4
         with:
@@ -64,10 +64,10 @@ jobs:
             ui/node_modules
             ui/scripts/api-generator/node_modules
           key: ui-node-modules-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ui/.nvmrc', 'ui/package.json', 'ui/package-lock.json', 'ui/scripts/api-generator/package.json') }}
-      - if: steps.plan.outputs.integration == 'true' && (steps.node-modules.outputs.cache-hit != 'true')
+      - if: steps.plan.outputs.integration_browser == 'true' && (steps.node-modules.outputs.cache-hit != 'true')
         run: npm ci --prefix ui
       - name: Ensure the locked Chromium build is available
-        if: steps.plan.outputs.integration == 'true'
+        if: steps.plan.outputs.integration_browser == 'true'
         run: cd ui && npx playwright install chromium
       - name: Run application acceptance
         if: steps.plan.outputs.integration == 'true'
@@ -76,7 +76,7 @@ jobs:
           # Independent API/generated checks belong to their exact-target workflows.
           bash acceptance/check-integration.sh --routine --main-ci --plan validation-plan.json
       - name: Run affected extended product proof
-        if: steps.plan.outputs.integration == 'true'
+        if: steps.plan.outputs.integration_browser == 'true'
         run: python3 .github/scripts/validation_selector.py --plan validation-plan.json --run integration --main --extended
       - uses: actions/upload-artifact@v4
         if: always()

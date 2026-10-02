@@ -159,6 +159,17 @@ class SelectionTest(unittest.TestCase):
             ],
         )
 
+    def test_http_only_edit_has_no_unchanged_browser_consumer(self):
+        plan = selector.select(["acceptance/test_report.py"])
+        self.assertEqual(plan["owners"], ["integration"])
+        self.assertEqual(selector.targets(plan, "integration"), [])
+        self.assertEqual(selector.network_targets(plan), ["acceptance/test_report.py"])
+        selector.validate(plan)
+        with self.assertRaises(ValueError):
+            selector.validate(plan | {"integration": ["network:test_missing_file.py"]})
+        with self.assertRaises(ValueError):
+            selector.validate(plan | {"integration": []})
+
     def test_helper_unknown_deletion_and_portfolio_truth(self):
         harness = selector.select(["ui/acceptance/product-harness.ts"])
         self.assertEqual(len(selector.targets(harness, "integration")), 5)

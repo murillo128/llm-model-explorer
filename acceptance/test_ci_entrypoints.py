@@ -261,6 +261,23 @@ class CiEntrypointsTest(unittest.TestCase):
         )
         self.assertIn(["npm", "run", "build"], commands)
 
+    def test_http_only_route_executes_pytest_without_build_or_browser(self):
+        (self.root / "acceptance/test_report.py").touch()
+        plan = self.plan("acceptance/test_report.py")
+        result, commands = self.run_gate("--routine", "--main-ci", "--plan", str(plan))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        selected = next(
+            command for command in commands if command[:3] == ["python", "-m", "pytest"]
+        )
+        self.assertEqual(selected[3], "acceptance/test_report.py")
+        self.assertFalse(any(command[0] in {"npm", "xvfb-run"} for command in commands))
+        self.log.unlink()
+        result, commands = self.run_gate(
+            "--routine", "--main-ci", "--plan", str(plan), fail=" ".join(selected)
+        )
+        self.assertEqual(result.returncode, 7, result.stderr)
+        self.assertEqual(commands[-1], selected)
+
     def test_shared_api_plan_preserves_complete_acceptance(self):
         plan = self.plan("docs/spec/api/contract.md")
         result, commands = self.run_gate("--plan", str(plan))

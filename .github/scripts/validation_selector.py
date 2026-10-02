@@ -359,11 +359,9 @@ def targets(plan, gate, *, root=ROOT):
         if gate == "browser" and group.startswith("file:"):
             patterns[group] = (normalized(group.removeprefix("file:")),)
         if gate == "integration" and group.startswith("network:"):
-            patterns[group] = (
-                ("architecture.spec.ts",)
-                if "architecture" in group or "native_packages" in group
-                else ("transport.spec.ts",)
-            )
+            # A changed HTTP test has no browser consumer. Its nonempty native
+            # pytest selection is validated independently below.
+            continue
         if group not in patterns:
             raise ValueError(f"Unknown required group: {group}")
         matched = {
@@ -374,7 +372,12 @@ def targets(plan, gate, *, root=ROOT):
         if not matched:
             raise ValueError(f"Empty required {gate} group: {group}")
         files.update(matched)
-    if gate in plan["owners"] and not files:
+    network_only = (
+        gate == "integration"
+        and bool(groups)
+        and all(group.startswith("network:") for group in groups)
+    )
+    if gate in plan["owners"] and not files and not network_only:
         raise ValueError(f"Empty required {gate} selection")
     return sorted(files)
 
@@ -399,6 +402,8 @@ def network_targets(plan):
             name = normalized(group.removeprefix("network:"))
             if "/" in name or not name.startswith("test_") or not name.endswith(".py"):
                 raise ValueError("Invalid HTTP test file")
+            if not (ROOT / "acceptance" / name).is_file():
+                raise ValueError(f"Empty required HTTP file: {name}")
             files.add(f"acceptance/{name}")
         elif group in owners:
             files.update(f"acceptance/test_{name}.py" for name in owners[group])
@@ -445,6 +450,9 @@ def run_browser(plan, gate, *, main=False, extended=False):
         print(f"{gate}: explicitly non-applicable")
         return
     files = targets(plan, gate)
+    if not files:
+        print("integration browser: explicitly non-applicable; selected HTTP tests still required")
+        return
     if extended:
         if gate not in plan["extended"] or plan["portfolio"] == "full":
             print(f"{gate}: extended explicitly non-applicable/already included")
@@ -497,6 +505,7 @@ def main():
     parser.add_argument("--run", choices=("browser", "integration"))
     parser.add_argument("--network-targets", action="store_true")
     parser.add_argument("--backend-targets", action="store_true")
+    parser.add_argument("--integration-browser-needed", action="store_true")
     parser.add_argument("--extended", action="store_true")
     parser.add_argument("--main", action="store_true")
     args = parser.parse_args()
@@ -526,6 +535,9 @@ def main():
                     output.write(f"{owner}={str(owner in plan['owners']).lower()}\n")
                 output.write(f"compatibility_full={str(plan['compatibility_full']).lower()}\n")
                 output.write(f"portfolio={plan['portfolio']}\n")
+                output.write(
+                    f"integration_browser={str(bool(targets(plan, 'integration'))).lower()}\n"
+                )
                 output.write(f"backend_extended={str('backend' in plan['extended']).lower()}\n")
         if args.summary:
             with args.summary.open("a") as summary:
@@ -534,6 +546,8 @@ def main():
                 )
         if args.network_targets:
             print("\n".join(network_targets(plan)))
+        elif args.integration_browser_needed:
+            print(str(bool(targets(plan, "integration"))).lower())
         elif args.backend_targets:
             print("\n".join(backend_targets(plan)))
         elif args.run:
