@@ -111,6 +111,13 @@ Existing upload/count/resource/reader/error and resize/DPR/replacement/loss
 assertions remain. Demonstrate the unnecessary-query assertion red against the
 old probe, then green after the fast path. Compare retained camera/native-pane
 cases on quiet isolated snapshots before the single authorized repaired full gate.
+The first sample shows little elapsed benefit from the fast path. The bounded
+follow-through batches native scroll, origin, rectangle and document observations
+from the successful settled-frame poll, camera profile/inspection rectangles,
+and simultaneous texture/reader cleanup. Raw native scroll/DPR remains the
+independent origin oracle; wheel/pinch/drag/scroll actions, intermediate preview
+states, resize/frame barriers and all original geometric/resource expectations
+remain. No observation is reused across an action or viewport change.
 
 **Acceptance is unmet. Issue #277 returns to `investigation-required`; the PR
 remains draft.** One complete selected integration attempt exhausted the unchanged

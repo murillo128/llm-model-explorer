@@ -401,20 +401,25 @@ async function closeSession(page: Page) {
   await page.getByRole('button', { name: 'Session options', exact: true }).click();
   await page.getByRole('button', { name: 'Close session', exact: true }).click();
   await idle();
-  await expect.poll(async () => (await metrics(page)).textures).toBe(0);
-  await expect.poll(async () => (await metrics(page)).readers).toBe(0);
+  await expect.poll(async () => {
+    const resource = await metrics(page);
+    return [resource.textures, resource.readers];
+  }).toEqual([0, 0]);
 }
 async function embeddingDone(page: Page, rows: number, timeout = 15_000) {
   await expect(page.getByText(`[${rows} × 576] · float32`).filter({ visible: true })).toBeVisible({ timeout });
   await expect(page.locator('.input-embeddings [data-embeddings]')).toHaveAttribute('data-embeddings', 'current');
   await expect(page.locator('.input-embeddings .embedding-layer:not([data-staging]) .matrix-panel-status')).toBeEmpty();
 }
+function expectDocumentFits(page: Page, geometry: { document: number[]; body: number[]; scroll: number[] }) {
+  expect(geometry).toEqual({ document: [page.viewportSize()!.width, page.viewportSize()!.height],
+    body: [page.viewportSize()!.width, page.viewportSize()!.height], scroll: [0, 0] });
+}
 async function documentFits(page: Page) {
-  expect(await page.evaluate(() => ({
+  expectDocumentFits(page, await page.evaluate(() => ({
     document: [document.documentElement.scrollWidth, document.documentElement.scrollHeight],
     body: [document.body.scrollWidth, document.body.scrollHeight], scroll: [scrollX, scrollY],
-  }))).toEqual({ document: [page.viewportSize()!.width, page.viewportSize()!.height],
-    body: [page.viewportSize()!.width, page.viewportSize()!.height], scroll: [0, 0] });
+  })));
 }
 
 test('real ordered embeddings render progressively with exact duplicate rows and linked annotations', async ({ page, context }, testInfo) => {
@@ -601,32 +606,35 @@ test.describe('production native pane geometry', { tag: '@density' }, () => {
         const geometry = () => page.evaluate(() => {
           const m = document.querySelector<HTMLElement>('.matrix-scroll')!;
           const rect = (s: string) => { const r = document.querySelector(s)!.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; };
-          return { horizontal: m.scrollWidth > m.clientWidth, vertical: m.scrollHeight > m.clientHeight,
+          return { dpr: devicePixelRatio, horizontal: m.scrollWidth > m.clientWidth, vertical: m.scrollHeight > m.clientHeight,
             gutter: m.offsetWidth - m.clientWidth, scroll: [m.scrollLeft, m.scrollTop],
             extent: [m.scrollWidth, m.scrollHeight], client: [m.clientWidth, m.clientHeight],
             matrix: rect('.matrix-scroll canvas'), row: rect('.row-distributions canvas'), column: rect('.column-distributions canvas'),
-            origins: ['.matrix-scroll canvas', '.row-distributions canvas', '.column-distributions canvas'].map(s => document.querySelector(s)!.getAttribute('data-origin')) };
+            origins: ['.matrix-scroll canvas', '.row-distributions canvas', '.column-distributions canvas'].map(s => document.querySelector(s)!.getAttribute('data-origin')),
+            pageGeometry: { document: [document.documentElement.scrollWidth, document.documentElement.scrollHeight],
+              body: [document.body.scrollWidth, document.body.scrollHeight], scroll: [scrollX, scrollY] } };
         });
-        await expect.poll(async () => { const g = await geometry(); return [g.horizontal, g.vertical]; }).toEqual([horizontal, vertical]);
-        const initial = await geometry(); expect(initial.gutter).toBe(0);
+        let initial!: Awaited<ReturnType<typeof geometry>>;
+        await expect.poll(async () => { initial = await geometry(); return [initial.horizontal, initial.vertical]; }).toEqual([horizontal, vertical]);
+        expect(initial.gutter).toBe(0);
         const inventory = page.getByRole('complementary', { name: 'Tensor inventory' });
         await inventory.evaluate(e => { e.scrollTop = e.scrollHeight; });
         expect(await inventory.evaluate(e => e.scrollTop)).toBeGreaterThan(0);
         expect((await geometry()).scroll).toEqual(initial.scroll);
         for (const [x, y] of [[0, 0], [1e9, 0], [0, 1e9], [1e9, 1e9]]) {
           await page.locator('.matrix-scroll').evaluate((e, [x, y]) => { e.scrollLeft = x!; e.scrollTop = y!; }, [x, y]);
+          let g!: Awaited<ReturnType<typeof geometry>>;
           await expect.poll(async () => {
-            const g = await geometry();
-            return g.origins;
-          }).toEqual(await page.locator('.matrix-scroll').evaluate(e => {
-            const x = Math.round(e.scrollLeft * devicePixelRatio), y = Math.round(e.scrollTop * devicePixelRatio);
-            return [`${x},${y}`, `0,${y}`, `${x},0`];
-          }));
-          const g = await geometry();
+            g = await geometry();
+            // Independent native scroll/DPR oracle, observed in the same settled
+            // frame as all three renderer origins and their rectangles.
+            const x = Math.round(g.scroll[0]! * g.dpr), y = Math.round(g.scroll[1]! * g.dpr);
+            return g.origins.map((origin, i) => origin === [`${x},${y}`, `0,${y}`, `${x},0`][i]);
+          }).toEqual([true, true, true]);
           expect(g.matrix[1]).toBe(g.row[1]); expect(g.matrix[0]).toBe(g.column[0]);
           expect(g.matrix[3]).toBe(g.row[3]); expect(g.matrix[2]).toBe(g.column[2]);
           expect(g.scroll).toEqual([x ? g.extent[0]! - g.client[0]! : 0, y ? g.extent[1]! - g.client[1]! : 0]);
-          await documentFits(page); evidence.push({ name, ...g });
+          expectDocumentFits(page, g.pageGeometry); evidence.push({ name, ...g });
         }
         timing.mark(`native pane ${name}`);
       }
@@ -900,10 +908,17 @@ test('integrated camera gestures, exact selection, aligned scales and adaptive i
       const wanted = Math.max(0, Math.min((horizontal ? 576 : 1536) - span, oldCenter - span / 2));
       expect(Math.abs((horizontal ? selected.y : selected.x) - wanted)).toBeLessThanOrEqual(2 * c.dpr / expected);
     }
-    await expect(page.locator('.row-distributions canvas')).toHaveAttribute('data-origin', `0,${selected.y}`);
-    await expect(page.locator('.column-distributions canvas')).toHaveAttribute('data-origin', `${selected.x},0`);
-    const row = (await page.locator('.row-distributions canvas').boundingBox())!;
-    const column = (await page.locator('.column-distributions canvas').boundingBox())!;
+    let profiles!: { origin: string | null; rect: DOMRect }[];
+    await expect.poll(async () => {
+      profiles = await page.evaluate(() => ['.row-distributions canvas', '.column-distributions canvas'].map(selector => {
+        const nodes = document.querySelectorAll(selector);
+        if (nodes.length !== 1) throw new Error(`Expected one profile: ${selector}`);
+        const node = nodes[0]!;
+        return { origin: node.getAttribute('data-origin'), rect: node.getBoundingClientRect().toJSON() as DOMRect };
+      }));
+      return profiles.map(p => p.origin);
+    }).toEqual([`0,${selected.y}`, `${selected.x},0`]);
+    const [row, column] = profiles.map(p => p.rect) as [DOMRect, DOMRect];
     expect(row.width * c.dpr).toBe(100); expect(column.height * c.dpr).toBe(100);
     expect(row.y).toBe(selected.rect.top); expect(column.x).toBe(selected.rect.left);
     expect(row.height).toBe(selected.rect.height); expect(column.width).toBe(selected.rect.width);
@@ -917,17 +932,25 @@ test('integrated camera gestures, exact selection, aligned scales and adaptive i
     await expect(page.locator('.inspection-readout')).toHaveText(`row 3 · column 3${value(3 * 1536 + 3)}`);
     await expect(page.locator('.magnifier-card')).toHaveCount(visible ? 1 : 0);
     if (visible) {
-      const card = (await page.locator('.matrix-inspection').boundingBox())!;
-      const pane = (await page.locator('.matrix-surfaces').boundingBox())!;
+      const geometry = await page.evaluate(() => {
+        const rect = (selector: string) => {
+          const nodes = document.querySelectorAll(selector);
+          if (nodes.length !== 1) throw new Error(`Expected one inspection surface: ${selector}`);
+          return nodes[0]!.getBoundingClientRect().toJSON() as DOMRect;
+        };
+        return { card: rect('.matrix-inspection'), pane: rect('.matrix-surfaces'),
+          profiles: [...document.querySelectorAll('.row-distributions canvas, .column-distributions canvas')].map(p => p.getBoundingClientRect().toJSON() as DOMRect),
+          guides: [rect('.magnifier-guide-horizontal').height, rect('.magnifier-guide-vertical').width] };
+      });
+      const { card, pane } = geometry;
       expect(card.x).toBeGreaterThanOrEqual(pane.x); expect(card.y).toBeGreaterThanOrEqual(pane.y);
       expect(card.x + card.width).toBeLessThanOrEqual(pane.x + pane.width);
       expect(card.y + card.height).toBeLessThanOrEqual(pane.y + pane.height);
-      for (const panel of await page.locator('.row-distributions canvas, .column-distributions canvas').all()) {
-        const p = (await panel.boundingBox())!;
+      expect(geometry.profiles).toHaveLength(2);
+      for (const p of geometry.profiles) {
         expect(card.x + card.width <= p.x || card.x >= p.x + p.width || card.y + card.height <= p.y || card.y >= p.y + p.height).toBe(true);
       }
-      expect(await page.locator('.magnifier-guide-horizontal').evaluate(n => n.getBoundingClientRect().height)).toBe(1);
-      expect(await page.locator('.magnifier-guide-vertical').evaluate(n => n.getBoundingClientRect().width)).toBe(1);
+      expect(geometry.guides).toEqual([1, 1]);
     }
     timing.mark(`camera inspection ${size} ${visible}`);
   }
