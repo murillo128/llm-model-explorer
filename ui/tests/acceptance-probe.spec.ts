@@ -2,18 +2,47 @@
 import { test, expect } from '@playwright/test';
 import { installProbe } from '../acceptance/probe';
 
+function countNativeDraws() {
+  const proto = WebGL2RenderingContext.prototype;
+  const native = proto.drawArrays;
+  const evidence = { draws: 0 };
+  (window as any).__nativeDrawEvidence = evidence;
+  proto.drawArrays = function (...args) {
+    const result = Reflect.apply(native, this, args);
+    evidence.draws++;
+    return result;
+  };
+}
+
 for (const capturePixels of [false, true]) test(`probe capture ${capturePixels}: real draws retain independent counters and exact evidence`, async ({ page }) => {
-  await page.addInitScript(installProbe, { capturePixels });
+  // A single init script orders the independent native counter beneath the probe.
+  await page.addInitScript({ content: `(${countNativeDraws.toString()})(); (${installProbe.toString()})(${JSON.stringify({ capturePixels })});` });
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/renderer.html`);
   await page.waitForFunction(() => Boolean(window.harness));
   const result = await page.evaluate(() => {
-    const host = document.createElement('div'); host.className = 'matrix-scroll'; document.body.append(host);
-    const renderer = window.harness.create([2, 3]); host.append(renderer.canvas); renderer.canvas.id = 'observed';
+    // Only queries made inside the wrapped draw belong to the probe observer;
+    // legitimate renderer queries outside drawArrays are not probe overhead.
+    const proto = WebGL2RenderingContext.prototype;
+    const observedDraw = proto.drawArrays, getParameter = proto.getParameter;
+    let observingDraw = false, framebufferQueries = 0;
+    proto.drawArrays = function (...args) {
+      observingDraw = true;
+      try { return Reflect.apply(observedDraw, this, args); } finally { observingDraw = false; }
+    };
+    proto.getParameter = function (...args) {
+      if (observingDraw && args[0] === this.FRAMEBUFFER_BINDING) framebufferQueries++;
+      return Reflect.apply(getParameter, this, args);
+    };
+    const observations = () => ({ nativeDraws: (window as any).__nativeDrawEvidence.draws, framebufferQueries });
+    const renderer = window.harness.create([2, 3]); renderer.canvas.id = 'observed';
     const probe = (window as any).__acceptance;
     const query = () => { try { return probe.pixel('#observed', 0, 0); } catch (error) { return String(error); } };
     const missing = query();
     renderer.setView(3, 2); renderer.setTransfer({ anchors: [-1, 1] });
+    renderer.draw(); const beforeUpload = probe.metrics().firstRender;
     probe.captureScalars = true; renderer.upload(new Float32Array([-1, 0, 1, 1, 0, -1]));
+    renderer.draw(); const outsideMatrix = probe.metrics().firstRender;
+    const host = document.createElement('div'); host.className = 'matrix-scroll'; document.body.append(host); host.append(renderer.canvas);
     renderer.draw();
     // Count uploads are separately controlled and remain exact with capture off.
     const gl = renderer.canvas.getContext('webgl2')!;
@@ -23,17 +52,28 @@ for (const capturePixels of [false, true]) test(`probe capture ${capturePixels}:
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 2, 1, gl.RED_INTEGER, gl.UNSIGNED_INT, new Uint32Array([16909060, 4294967295]));
     gl.deleteTexture(counts); host.classList.remove('row-distributions');
     const reader = new ReadableStream().getReader(); reader.releaseLock();
-    const first = structuredClone(probe.metrics()), pixel = query();
-    renderer.draw(); const second = probe.metrics();
+    const first = structuredClone(probe.metrics()), firstObservations = observations(), pixel = query();
     const texture = renderer.canvas.getContext('webgl2')!;
-    const bytes = new Uint8Array(4); texture.readPixels(0, 1, 1, 1, texture.RGBA, texture.UNSIGNED_BYTE, bytes);
+    const readActual = () => {
+      const bytes = new Uint8Array(4); texture.readPixels(0, 1, 1, 1, texture.RGBA, texture.UNSIGNED_BYTE, bytes);
+      return [...bytes];
+    };
+    const actual = readActual();
+    renderer.setTransfer({ anchors: [-2, 2] }); renderer.draw();
+    const second = probe.metrics(), secondObservations = observations(), secondPixel = query(), secondActual = readActual();
     texture.enable(0xDEAD); texture.getError();
     renderer.canvas.dispatchEvent(new Event('webglcontextlost', { bubbles: true, cancelable: true }));
     renderer.dispose();
-    return { missing, pixel, actual: [...bytes], first, second, final: probe.metrics(), values: probe.scalarValues, counts: probe.countValues };
+    return { missing, beforeUpload, outsideMatrix, pixel, actual, secondPixel, secondActual,
+      first, second, firstObservations, secondObservations, final: probe.metrics(), values: probe.scalarValues, counts: probe.countValues };
   });
+  expect(result.beforeUpload).toBe(0); expect(result.outsideMatrix).toBe(0);
+  expect(result.firstObservations.nativeDraws).toBe(3);
+  expect(result.secondObservations.nativeDraws).toBe(result.firstObservations.nativeDraws + 1);
+  expect(result.firstObservations.framebufferQueries).toBeGreaterThan(0);
   expect(result.first.uploads).toBeGreaterThan(0);
   expect(result.first.firstUpload).toBeGreaterThan(0); expect(result.first.firstRender).toBeGreaterThan(0);
+  expect(result.second.firstRender).toBe(result.first.firstRender);
   expect(result.first.createdTextures).toBe(2); expect(result.final.textures).toBe(0);
   expect(result.values).toEqual([-1, 0, 1, 1, 0, -1]);
   expect(result.counts).toEqual({ rows: [16909060, 4294967295], columns: [] });
@@ -42,10 +82,13 @@ for (const capturePixels of [false, true]) test(`probe capture ${capturePixels}:
   if (capturePixels) {
     expect(result.missing).toContain('Missing pixel snapshot');
     expect(result.pixel).toEqual(result.actual);
+    expect(result.secondPixel).toEqual(result.secondActual); expect(result.secondPixel).not.toEqual(result.pixel);
+    expect(result.secondObservations.framebufferQueries).toBe(result.firstObservations.framebufferQueries + 1);
     expect(result.first.framebufferReadbacks).toBeGreaterThan(0);
     expect(result.second.framebufferReadbacks).toBe(result.first.framebufferReadbacks + 1);
     expect(result.second.snapshotAllocations).toBe(result.first.snapshotAllocations);
   } else {
+    expect(result.secondObservations.framebufferQueries).toBe(result.firstObservations.framebufferQueries);
     expect(result.missing).toContain('capture is disabled'); expect(result.pixel).toContain('capture is disabled');
     expect(result.second.framebufferReadbacks).toBe(0); expect(result.second.snapshotAllocations).toBe(0);
   }

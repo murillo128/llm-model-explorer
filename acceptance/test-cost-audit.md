@@ -101,6 +101,17 @@ main integration continues to avoid duplicated component/API checks.
 
 ## Measured outcome and validation
 
+The 2026-10-02 continuation authorizes a bounded harness repair. Extend the
+existing real-WebGL probe false/true cases with independent native-draw and
+observer-only framebuffer-query counters. Pre-upload and non-matrix draws must
+not record first render; the first eligible draw records it once. Later draws
+must still reach native GL. With capture off they must avoid redundant observer
+queries/readbacks; with capture on they must refresh exact pixels and counters.
+Existing upload/count/resource/reader/error and resize/DPR/replacement/loss
+assertions remain. Demonstrate the unnecessary-query assertion red against the
+old probe, then green after the fast path. Compare retained camera/native-pane
+cases on quiet isolated snapshots before the single authorized repaired full gate.
+
 **Acceptance is unmet. Issue #277 returns to `investigation-required`; the PR
 remains draft.** One complete selected integration attempt exhausted the unchanged
 25-minute budget. No second full application attempt, extra timing-baseline run,

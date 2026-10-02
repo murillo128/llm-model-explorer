@@ -628,6 +628,7 @@ test.describe('production native pane geometry', { tag: '@density' }, () => {
           expect(g.scroll).toEqual([x ? g.extent[0]! - g.client[0]! : 0, y ? g.extent[1]! - g.client[1]! : 0]);
           await documentFits(page); evidence.push({ name, ...g });
         }
+        timing.mark(`native pane ${name}`);
       }
       await expect(page.locator('.matrix-panel-header')).not.toContainText('complete');
       await page.screenshot({ path: testInfo.outputPath('compact-tensor.png') });
@@ -855,6 +856,7 @@ test('integrated camera gestures, exact selection, aligned scales and adaptive i
   await expect(page.locator('[data-result=distributions]')).toHaveCount(0);
   await nativeCamera(page);
   expect((await camera(page, 576, 1536)).scaleX).toBe(1);
+  timing.mark('camera native lower bound');
   const resource = await metrics(page);
   const rulers = await page.locator('.distribution-scale').evaluateAll(nodes => nodes.map(n => n.getAttribute('aria-label')));
   const canvas = await page.locator('.matrix-scroll canvas').elementHandle();
@@ -873,6 +875,7 @@ test('integrated camera gestures, exact selection, aligned scales and adaptive i
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await expect.poll(async () => (await camera(page, 576, 1536)).scaleX).toBeGreaterThan(after.scaleX);
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false }); await cdp.detach();
+  timing.mark('camera wheel and pinch');
   for (const axis of ['matrix', 'rows', 'columns'] as const) {
     await page.getByRole('button', { name: 'Fit width', exact: true }).click();
     await zoom(page, 576, 1536, 6);
@@ -904,6 +907,7 @@ test('integrated camera gestures, exact selection, aligned scales and adaptive i
     expect(row.width * c.dpr).toBe(100); expect(column.height * c.dpr).toBe(100);
     expect(row.y).toBe(selected.rect.top); expect(column.x).toBe(selected.rect.left);
     expect(row.height).toBe(selected.rect.height); expect(column.width).toBe(selected.rect.width);
+    timing.mark(`camera ${axis} selection`);
   }
   await page.getByRole('button', { name: 'Fit width', exact: true }).click();
   for (const [size, visible] of [[7, true], [9, true], [10.1, false], [9, false], [7, true]] as const) {
@@ -925,6 +929,7 @@ test('integrated camera gestures, exact selection, aligned scales and adaptive i
       expect(await page.locator('.magnifier-guide-horizontal').evaluate(n => n.getBoundingClientRect().height)).toBe(1);
       expect(await page.locator('.magnifier-guide-vertical').evaluate(n => n.getBoundingClientRect().width)).toBe(1);
     }
+    timing.mark(`camera inspection ${size} ${visible}`);
   }
   expect(await page.locator('.distribution-scale').evaluateAll(nodes => nodes.map(n => n.getAttribute('aria-label')))).toEqual(rulers);
   expect(await metrics(page)).toMatchObject({ uploads: resource.uploads, createdTextures: resource.createdTextures, gpuBytes: resource.gpuBytes, errors: [] });
@@ -1354,8 +1359,10 @@ test('polish magnifier follows edges after scrolling resize DPR and source repla
   await page.locator('.matrix-scroll').evaluate(n => { n.scrollLeft = 180; n.scrollTop = 140; });
   await expect.poll(async () => (await camera(page, 576, 1536)).y).toBeGreaterThan(0);
   await sweep();
+  timing.mark('inspection after scroll');
   const before = await camera(page, 576, 1536);
   await page.setViewportSize({ width: 1178, height: 900 }); await sweep();
+  timing.mark('inspection after resize');
   let current = await camera(page, 576, 1536);
   expect(current.scaleX).toBeCloseTo(before.scaleX);
   expect(current.x).toBeCloseTo(before.x); expect(current.y).toBeCloseTo(before.y);
@@ -1365,6 +1372,7 @@ test('polish magnifier follows edges after scrolling resize DPR and source repla
   await expect.poll(() => page.evaluate(() => devicePixelRatio)).toBe(changedDpr);
   await page.evaluate(() => window.dispatchEvent(new Event('resize')));
   await sweep();
+  timing.mark('inspection after DPR change');
   current = await camera(page, 576, 1536);
   // A DPR increase can make the entire data axis fit. Preserve the previous
   // logical origin only within the new native scrollbar bounds.

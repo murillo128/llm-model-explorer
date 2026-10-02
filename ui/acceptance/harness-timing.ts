@@ -7,6 +7,11 @@ export class HarnessTiming {
   ready = 0;
   bodyStarted = 0;
   teardownStarted = 0;
+  steps: { name: string; elapsedMs: number }[] = [];
+
+  mark(name: string) {
+    this.steps.push({ name, elapsedMs: performance.now() - this.bodyStarted });
+  }
 
   async attach(info: TestInfo, backendLog: string, probe: unknown) {
     const fixtureLine = backendLog.split('\n').find(line => line.startsWith('LMEX_HARNESS '));
@@ -17,6 +22,7 @@ export class HarnessTiming {
       browserSetupMs: this.bodyStarted && this.ready ? this.bodyStarted - this.ready : null,
       testBodyMs: this.teardownStarted && this.bodyStarted ? this.teardownStarted - this.bodyStarted : null,
       teardownMs: this.teardownStarted ? performance.now() - this.teardownStarted : null,
+      steps: this.steps,
       probe,
     }) });
   }
