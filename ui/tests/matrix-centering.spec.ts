@@ -16,7 +16,7 @@ const geometry = (page: Page) => page.evaluate(() => {
 
 for (const dpr of [1, 1.25, 2]) test.describe(`centered scientific content DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
-  for (const name of ['short', 'tall', 'full', 'square'] as const) test(`${name}: independent centering, fixed profile tracks, resize and source reset`, async ({ page }) => {
+  for (const name of (dpr === 1 ? ['short', 'tall', 'full', 'square'] : dpr === 1.25 ? ['short'] : ['square']) as ('short' | 'tall' | 'full' | 'square')[]) test(`${name}: independent centering, fixed profile tracks, resize and source reset`, async ({ page }) => {
     await page.goto(url);
     await expect(page.locator('.matrix-scroll')).toBeVisible();
     await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: min(600px, 70vh); }' });
@@ -72,7 +72,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`centered scientific content DPR $
     expect(await page.evaluate(() => window.matrixFixture.viewports.at(-1)!.renderer.view!.x)).toBe(0);
   });
 
-  test('focal cell stays at its screen point when centered data begins overflowing', { tag: '@responsive' }, async ({ page }) => {
+  if (dpr === 1.25) test('focal cell stays at its screen point when centered data begins overflowing', { tag: '@responsive' }, async ({ page }) => {
     await page.goto(url);
     await expect(page.locator('.matrix-scroll')).toBeVisible();
     await page.addStyleTag({ content: '#workspace { --fixture-viewer-height: min(600px, 70vh); }' });

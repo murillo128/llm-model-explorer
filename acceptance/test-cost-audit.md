@@ -1,362 +1,708 @@
-# Test cost and coverage baseline — issue #272
+# Consolidated test cost and retained coverage — epic #278
 
-## Pinned scope and evidence
+This report records observed results for #272–#277. The accepted product contracts
+remain in `docs/spec/`. Full local reference and CUDA success are separate from
+CPU fixture success. No test-count or percentage quota was used.
 
-Activation baseline: **`f014a3447d9f86da7707417a1bd34347ad1cf27a`**, 2026-10-01.
-Both `main` and `codex/epic-issue-278` contained this exact revision at inventory
-time. The [parent activation decision](https://github.com/murillo128/llm-model-explorer/issues/278#issuecomment-5938413270)
-released the earlier hold regardless of CI outcome. This report changes no
-product behavior, test selection, fixture sizes, workers, retries or workflow gates.
+Current execution is the revised 2026-10-02 risk-based contract for #277. The
+historical three complete attempts below remain failed evidence of their revisions.
+The new routine/extended/full portfolio is implemented and locally validated.
+Complete routine acceptance finishes normally in 561.084 s, all 451 components
+pass, and required primary/extended/installed-wheel compatibility checks pass.
+Current commands, exact revisions and deliberate coverage trades are in the final
+revised portfolio section below; earlier tables retain their historical meaning.
 
-Incoming work is integrated, not merely completed on another branch:
+## Revisions, environment and measurement scope
 
-| Delivery | Integrated source |
-| --- | --- |
-| Native CLM #266 / Kev #267 / integration #268 | [PR #271](https://github.com/murillo128/llm-model-explorer/pull/271), [#281](https://github.com/murillo128/llm-model-explorer/pull/281), [#282](https://github.com/murillo128/llm-model-explorer/pull/282); merge commits `06b69be0`, `679094ac`, `f014a344` |
-| Adapted projection hierarchy and formula consistency #269 | [PR #280](https://github.com/murillo128/llm-model-explorer/pull/280), merge `8934df7c` |
-| Routed boundary order and regular terminal pitch #270 | [PR #279](https://github.com/murillo128/llm-model-explorer/pull/279), merge `15d8ca43` |
+- Activation baseline: `f014a3447d9f86da7707417a1bd34347ad1cf27a`.
+- Final child activation/integration base: `25a8d7c3be08e4e74383a988cef74feafeef8414`.
+- Isolated selected/full browser and integration snapshot:
+  `6aca73f8bd11034b6e1b4b6ddfaf7cbacb461f35`.
+- Authorized harness repair: `11b555125d35f2f17482583b3e229c7947c1bd12`
+  stops redundant post-first-render observation with pixel capture disabled.
+  `985cff82e697316221ee55f8bcccf2d641d433ec` batches settled-frame observations
+  and is the earlier repaired complete integration target. The user-authorized
+  UI consolidation below changes test ownership and selection after that target.
+- Routing guard: `33ba0d5d1f0e8d5e2141ae6ba9cc5fc8ffbacd84`, narrowing
+  infrastructure exceptions to exact known paths. Independent negative controls
+  fail on the preceding selector and pass after the correction. The native files selected by both
+  exercised plans remain identical. Subsequent discovery safeguards are
+  recorded below; application source and assertions remain unchanged.
 
-The activation search found no open PRs or newer overlapping implementation;
-the other cost-reduction children #273–#277 were queued. Relevant baseline coverage
-includes `test_clm_export.py` (52 parameterized cases), `test_kev_export.py` (69),
-`test_lora_architecture.py` (11), `test_architecture_grouping.py` (8), and
-`test_operation_cards.py` (9). UI owners include `CardSummary.test.tsx`,
-`auto-layout.test.ts` (routed order, nested boundaries, fan-out and equal pitch),
-`architecture-interfaces.spec.ts`, and the new production `clm.spec.ts`,
-`kev.spec.ts`, `lora-hierarchy.spec.ts` (one case each, two DPR invocations each).
-Their collection is included below; an incomplete production run does not prove
-all of them executed.
+The host is the same 16-logical-CPU Linux host (62 GiB RAM), Node 24.14.0/npm
+11.9.0, Python 3.12.14, Playwright 1.63.0/Chromium 153 revision 1243,
+PyTorch 2.14.0+cpu and SwiftShader. Component browsers use two workers;
+production acceptance uses one headed worker. Retries are zero. References are
+not supplied. Dependencies/locks match the activation baseline. Local uv is
+0.12.16; CI's configured 0.12.13 is unchanged. Warm dependency installation was
+shared, outside the reported native browser clocks; fresh builds and browser/server
+setup/body/teardown are included. There is no adopted one-time fixture cache:
+per-case generation and fresh backend/cache/session startup remain included.
 
-Inspected exact-baseline Actions evidence, all attempt 1:
+Heavy suites are serialized on isolated archives with separate ports/reports.
+One restricted-environment attempt failed WebGL resource allocation (15 passes,
+43 failures); an unchanged host probe and the complete host tokenizer route pass.
+Those failed environment results are retained and excluded from timing comparisons.
+No assertions, deadlines, tolerances or retry settings were changed.
+The repair's before/after/batched samples and repaired complete gate all set
+`PYTHONDONTWRITEBYTECODE=1`; the earlier `6aca73` full-gate driver did not.
+This environment difference is disclosed, not assigned a measured timing cause.
 
-- [UI checks](https://github.com/murillo128/llm-model-explorer/actions/runs/36906375279), success;
-  [native HTML report and per-test attachments](https://github.com/murillo128/llm-model-explorer/actions/runs/36906375279/artifacts/11185597924).
-- [Backend checks](https://github.com/murillo128/llm-model-explorer/actions/runs/36906374974), both Python jobs successful; logs retain the slowest 25 phases.
-- [Application acceptance](https://github.com/murillo128/llm-model-explorer/actions/runs/36906375007), **cancelled**;
-  [HTTP JUnit, failure traces and screenshots](https://github.com/murillo128/llm-model-explorer/actions/runs/36906375007/artifacts/11186078553).
+- Final discovery/CLI-filter safeguards: `33eb17a75c557c8ef6a38103ade3493600437d64`.
+  Native registration proves every existing case/project pair unchanged, adds a
+  new nested untagged spec to DPR 1, and preserves literal regex-special filenames.
 
-The design-time `98a279fd` and historical `8653837c` are not this baseline.
-Historical [UI run](https://github.com/murillo128/llm-model-explorer/actions/runs/36866492723)
-reported 24 s fast checks and 19m27s browser; historical
-[Application run](https://github.com/murillo128/llm-model-explorer/actions/runs/36866492565)
-reported HTTP 35 passed/10 skipped in 212.65 s and an unfinished browser run.
-Neither cancelled run establishes end-to-end coverage or a speedup denominator.
+## Retained owners and expanded work
 
-## Environment and reproducible inventory
+| Boundary | Activation | Selection before UI consolidation | Explanation |
+| --- | ---: | ---: | --- |
+| UI component browser | 776 | 521 | #273 removes 244 duplicate project invocations; #274 moves 11 temporal invocations to their cheap owner and compacts four non-scale graph cases |
+| Production browser | 128 | 93 (61 DPR 1 + 32 DPR 2) | #276 relocates three repeated distribution inputs with complete independent TCP/component owners and retains density-specific native cases |
+| UI unit | 1,038 | 1,043 | Five added temporal/history cases, including inclusive 180 ms cutoff and burst/interruption/reset oracles |
+| HTTP/orchestration/report pytest | 45 | 69 collected | Five report tests, seven additional entrypoint tests and twelve selector test methods; real HTTP owners remain intact |
+| Backend | 1,964 per Python | Unchanged | Both accepted main Python versions (3.12/3.14), storage/numerical/session/native exporter and installed-wheel proofs remain |
+| Independent API | 118 instance / 262 architecture / 132 wire fixtures | Unchanged | 365 references resolved; bindings checked separately by the UI |
 
-Lock/input SHA-256 at the baseline:
+#275 deliberately adopts **no fixture-copy optimization**: measured immutable
+inputs were generally cheaper to generate than copy, and one plausible architecture
+profile's isolated advantage did not establish cumulative savings. There is no
+shared live backend, session/cache state or cached test result. Its generation/copy
+measurements and scoped lifecycle evidence remain in the
+[activation report at the integration base](https://github.com/murillo128/llm-model-explorer/blob/25a8d7c3be08e4e74383a988cef74feafeef8414/acceptance/test-cost-audit.md).
+No setup saving is attributed to that child.
 
-| Input | SHA-256 |
-| --- | --- |
-| `backend/uv.lock` | `f5f2bc667e0f431bf761ffe743bcc4b94e0115ca364e111c7dcb5391b6fc9fd9` |
-| `ui/package-lock.json` | `f35b169f20ad45cf2d27f92f2863cfd757a1f6128303a574025c98f7105ef44a` |
-| `api/requirements.txt` | `d410e21212d4f226bc26434bead7b3cdedcc6191fd95e1504493ec5df4f08fb1` |
+Exact retained proof is documented in
+[the domain/compact-fixture map](../ui/evidence/domain-test-ownership.md) and
+[the production/density map](integration-test-ownership.md). Scale-sensitive
+48-instance graphs, intrinsic fractional DPR, native scrollbars, pointer capture,
+keyboard/focus, scalar/texture ownership, progressive publication, cancellation,
+sharing, failure cleanup, port/parameter identity and independent numerical values
+remain at their real owners. Newly admitted CLM/Kev/LoRA/formula/routed-port cases
+are included. The original temporal/window/title faults fail independent controls;
+no known failed case was removed by routing.
 
-The self-hosted Linux host has 16 logical CPUs and 62 GiB RAM. CI used Node
-24.14.0, npm 11.9.0, uv 0.12.13, Python 3.12.14/3.14.7, pytest 9.1.1,
-PyTorch 2.14.0+cpu, FastAPI 0.141.1, Starlette 1.6.0, Transformers 4.57.6,
-Playwright 1.63.0 and locked Chromium 153.0.8010.12 (revision 1243).
-The focused local check used Python 3.12.14 and the same locked application/Node
-packages; local uv was 0.12.16. These are distinct setup environments.
+## Responsibility routing
 
-CI component browsers used **two workers**, desktop 1440×900 and narrow 390×844,
-plus the headed native-scrollbars project. Acceptance used **one headed worker**,
-1440×1000, DPR 1/2, with per-case viewport overrides. Retries are zero.
-Both browser configs request SwiftShader. The focused acceptance attachment
-actually reports `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)
-(0x0000C0DE)), SwiftShader driver)`, texture/renderbuffer/viewport limits 8192.
-CI component attachments observe those limits but do not record the renderer
-string: the configured backend alone is not physical-GPU evidence.
+[The conservative ownership and invocation map](validation-routing.md) is backed
+by one stdlib selector. Its full/focused native collections are:
 
-Warm persistent Python environments, locked `node_modules` cache hits, installed
-Chromium, failure-only traces/screenshots and opt-in framebuffer capture already
-exist. They are not new proposed savings. Main CI ran component/browser and
-acceptance concurrently; both backend Python jobs overlapped from 18:29–18:45 UTC.
-Consequently these timings are a **contended CI baseline**, not an isolated quiet
-performance sample. The local focused run had no active repository Actions jobs;
-an unrelated long-running headless Chrome and a LAN backend remained on the host
-(observed host load 1.68/1.97/5.12). They were not terminated or reset. It is not
-a controlled quiet benchmark either.
-
-Native collection commands, from the unmodified baseline (dependencies as in
-[README](README.md)); keep their large outputs outside Git:
-
-```sh
-# repository root
-backend/.venv/bin/python -m pytest backend/tests --collect-only -q
-backend/.venv/bin/python -m pytest acceptance --collect-only -q
-"$LMEX_CONTRACT_PYTHON" api/validate_contract.py
-# ui/
-npx vitest list --no-static-parse --json
-npx playwright test --list --reporter=json
-npx playwright test --config acceptance/playwright.config.ts --list --reporter=json
-```
-
-Vitest 5 defaults to static list parsing: it returned 323 templates here and did
-not expand the parameterized runtime cases. The runtime list above returned the
-1,038 cases actually executed by baseline CI. Counts below come from collection
-and native artifacts, never source-text `test(` counts.
-
-| Boundary | Collected cases / expansion | Observed baseline result |
-| --- | --- | --- |
-| Backend pytest | 456 distinct test functions → 1,964 parameterized cases, 41 files; each Python job repeats the same set | Each job: 1,944 passed, 20 CUDA skips; main uses 3.12/3.14, PR uses 3.12 |
-| Independent API | 118 schema-instance cases + 262 architecture cases; 132 reproducible wire fixtures; 365 references resolved | Validator personally passed at the baseline; this is a custom contract checker, not 512 pytest tests |
-| UI Vitest | 1,038 runtime cases, 57 files; one configured jsdom project | 1,038 passed |
-| UI component Playwright | 394 distinct collected title paths: 382 common cases × desktop/narrow + 12 native-scrollbar cases = **776 invocations**, 42 files | 775 passed, one intentional narrow-only pane-loading skip, no failures/flaky outcomes/retries |
-| `acceptance/test_*.py` | 32 distinct functions → **45 cases**, eight files; includes nine cheap CI-entrypoint orchestration checks | 35 passed, ten explicit skips; JUnit has zero errors/failures |
-| Production Playwright | **64 cases × DPR 1/2 = 128 invocations**; product 35, architecture 24, LoRA reference 2, CLM 1, Kev 1, LoRA hierarchy 1 | Cancelled: list log records 36 passes, 14 skips, two failures through invocation 52; the other 76 lack terminal results |
-
-Backend/HTTP function counts strip pytest parameter suffixes; browser logical
-counts deduplicate only project names, retaining intrinsic DPR/shape/viewport
-parameters as collected cases. Production PR/epic CI selects DPR 1 (64);
-main/local full runs select both (128). Component PR CI selects desktop plus
-native-scrollbars (394); main/local full runs select all projects (776).
-This PR adds five cheap parser tests, so post-change HTTP collection is 50;
-the baseline remains 45. No baseline case is removed.
-
-No reference variables were supplied to these runs. HTTP skips comprise the
-explicit issue-178 reference gate, four complete architecture references, the
-LoRA pair, CUDA, two packed Qwen references and SmolLM2 Base. Browser skips
-observed before cancellation include unsupported deterministic families and
-missing actual references. CLM/Kev/LoRA hierarchy have deterministic fallbacks;
-fixture success must not be called reference validation. Local model directories
-may exist on the host but were neither selected nor downloaded for this audit.
-
-## Measured cost and limitations
-
-All times below distinguish elapsed wall time from sums across tests. No figure
-is measured CPU usage. Actions step timestamps have one-second granularity.
-
-| Gate | Setup/build/teardown | Test wall time | Sum of test/phase durations |
-| --- | --- | --- | --- |
-| UI checks | 43 s checkout/setup/cache/fast-check/install before browser; fast aggregate itself 33 s, including Vitest 13.18 s and build; 16 s after browser through job completion | Browser step 1,318 s; native report **1,316.178 s**; job start-to-completion 1,377 s | **2,571.637 s** test sum across two workers: Before Hooks 151.594 s, After Hooks 72.937 s, body/unattributed remainder 2,347.106 s |
-| Backend 3.12 | 62 s job setup/sync/lint/mypy before pytest (mypy 56 s); 6 s after pytest, including wheel smoke | Pytest **1,448.67 s**; job 1,517 s | Only slowest 25 phases retained; no full per-test JUnit or phase sum available |
-| Backend 3.14 | 66 s before pytest (mypy 61 s); 9 s after, including wheel smoke | Pytest **1,465.03 s**; job 1,541 s | Same evidence limitation; Python jobs overlap, do not sum as pipeline wall |
-| Real HTTP + production build | HTTP JUnit 268.755 s (pytest 268.76 s); production build about 1.77 s | Application step 1,503 s until cancellation; job 1,538 s | HTTP testcase sum **265.314 s** includes setup/body/teardown. Top-25 console entries alone: setup 114.75 s, call 138.23 s; these are partial sums, teardown is unmeasured, not zero |
-| Production browser | Started 18:27:32.854 UTC; interrupted around 18:48:03; startup/teardown not fully separated | About **1,230 s partial elapsed**, not complete suite wall | No finalized `acceptance.json` in the cancelled artifact; full test/harness phase sums are unavailable |
-
-The UI fast aggregate did not emit independent elapsed times for every
-type/lint/build subcommand. Do not invent them from its 33 s envelope. UI browser
-hook sums do not include all worker/server initialization; body is an explicitly
-unattributed remainder, not a sum of nested overlapping Playwright steps.
-
-Highest measured component families, summed test seconds including hooks:
-
-| Family | Expanded invocations | Sum (s) |
+| Representative surface | Component main / PR | Product main / PR |
 | --- | ---: | ---: |
-| `architecture-controls.spec.ts` | 30 | 264.310 |
-| `architecture-connections.spec.ts` | 20 | 212.205 |
-| `architecture-isolation.spec.ts` | 20 | 188.900 |
-| `tokenizer-embeddings.spec.ts` | 52 | 180.257 |
-| `architecture-card-actions.spec.ts` | 16 | 154.679 |
-| `architecture-interfaces.spec.ts` | 26 | 142.869 |
-| `architecture-browser.spec.ts` | 24 | 136.048 |
+| Tokenizer | 58 / 45 | 46 / 32 |
+| Architecture Explorer | 156 / 121 | 93 / 61 |
+| Rendering/reusable matrix | 476 / 349 | 93 / 61 |
+| Shared/API/unknown | 521 / 383 | 93 / 61 |
 
-All `architecture*.spec.ts` families together sum 1,583.519 s (61.6% of UI
-test sum). This is a ranking, not predicted parallel-wall savings. The 66
-`matrix-zoom.spec.ts` invocations sum 88.118 s; its timing-boundary subset (18)
-sums 22.050 s. Eight `shell-viewport.spec.ts` invocations sum 15.794 s.
+Tokenizer's focused route retains real network/tokenization/embedding owners;
+rendering retains tensor, embedding and architecture weight-modal consumers.
+Architecture integration is intentionally broad because native weight streams and
+shared startup cross boundaries. Selections union all owners. Fast checks stay
+complete for each selected owner; this child deletes no product assertion.
 
-Backend hotspots retain distinct numerical/structural risk: complete expert
-reconstruction in `test_compact_architecture.py` costs 72–93 s per top 3.12
-case; NF4 requested-row order/duplicates/unaligned chunks costs 88.51 s;
-complete Kimi/DeepSeek/GLM graphs cost 43.20/37.90/32.43 s. These are not deletion
-candidates merely because slow. HTTP families sum architecture 85.426 s,
-network 101.474 s, embeddings 31.859 s, polish 32.726 s, distribution 12.388 s,
-entrypoints 1.439 s. The Kimi complete-expert TCP case alone is 61.433 s.
+All four product workflows inspect exact complete Git diffs before conditional
+steps: current PR base/merge-base and head, push before/after including every
+commit, both rename names and deletions. Unknown/missing/non-forward/malformed
+context falls back to full coverage with reasons and revision context. Invalid
+explicit plans and empty required groups fail. Same-repository restrictions,
+contents-only permission, isolated ports, superseded-PR cancellation, logical
+check names and Python/worker budgets remain. Each logical gate is one job; failed,
+cancelled or missing selected commands cannot be aggregated into success. Explicit
+non-applicability is shown separately from executed tests in job summaries.
 
-## Failures and focused evidence
+Normative API/UI/backend/product specs, API/generated inputs, example exporters
+and shared fixture/config/lock inputs reach their consumers. Operational Markdown
+uses documentation/infrastructure owners. Manual workflows and final epic PRs
+force full selection, independently of paths. `check.sh` remains complete;
+main integration continues to avoid duplicated component/API checks.
 
-Both current-baseline failures exhausted the unchanged **90,000 ms** test
-deadline. Trace errors for `product.spec.ts:577` (1000×700 geometry) end in
-`page.evaluate: Target page, context or browser has been closed`; the camera
-case at `:848` ends in `locator.boundingBox` at `:922`, while inspecting profile
-overlap. There is no recorded failing numerical/equality assertion in those
-terminal errors. Readiness polling assertions (`200` versus temporary `0`) in
-trace history are retried setup observations, not their terminal defect.
+## Harness repair and earlier complete attempts
 
-Focused reproduction used an unchanged `git archive` of the baseline in
-`/tmp/issue-272-baseline`, its own built UI, ports 29400–29405 and fresh backends,
-with source resolution pinned to that snapshot. No other checkout was reset:
+The 2026-10-02 authorized continuation repairs test-harness overhead. The existing
+real-WebGL probe cases now use independent native-draw and observer-only
+framebuffer-query counters. Pre-upload and non-matrix draws do not record first
+render; the first eligible draw records it once and later native draws continue.
+The new capture-disabled assertion fails against the old probe for the intended
+reason (queries increase from 3 to 4), while the other two cases pass. All three
+pass after the fast path. Capture-enabled subsequent pixels still match independent
+native `readPixels`, change with the transfer function, and refresh counters without
+new snapshot allocation. Scalar/count/resource/reader/error observations and the
+existing resize/DPR/replacement/context-loss assertions remain active.
 
-```sh
-# /tmp/issue-272-baseline/ui; use the locked Node PATH
-PYTHONPATH=/tmp/issue-272-baseline/backend/src:/tmp/issue-272-baseline \
-  UI_TEST_PORT=29400 HF_HUB_OFFLINE=1 TOKENIZERS_PARALLELISM=false \
-  xvfb-run -a npm run test:acceptance -- --project=dpr1 \
-  --grep 'integrated camera gestures|compact shell, navigation and four overflow modes at 1000'
-```
+The fast path alone shows little elapsed benefit. The bounded follow-through
+batches native scroll, origin, rectangle and document observations from the
+successful settled-frame poll, camera profile/inspection rectangles, and simultaneous
+texture/reader cleanup. Raw native scroll/DPR remains the independent origin oracle;
+wheel/pinch/drag/scroll actions, intermediate preview states, resize/frame barriers
+and all geometric/resource expectations remain. No observation is reused across an
+action or viewport change. Node-side step marks locate phases without browser calls.
 
-Both passed without changed assertions, timeout increases or retries: geometry
-61.655 s, camera 67.803 s; native wall **130.744 s**, sum **129.458 s**.
-Two existing `harness-timing` samples give fixture generation 97.832 ms,
-spawn-to-ready 15,798.977 ms, browser setup 288.667 ms, body 112,902.950 ms,
-teardown 305.661 ms. Product fixture generation is inside spawn-to-ready;
-do not add it again. Architecture fixture generation uses a separate subprocess.
+Three serialized isolated samples retain the same eight native-pane, camera and
+adaptive-inspection invocations, both DPRs, fresh backend/cache/session setup and
+all assertions. Before uses `3f9acfe` with the new regression and timing marks;
+fast-path uses `11b5551`; batching uses `985cff8`.
 
-The observed CI failure cause is deadline exhaustion during real browser work;
-concurrent heavy suites plausibly contributed, but the causal contribution is
-not proven by a two-case run. **Retain/investigate** both regressions. Focused
-passing evidence does not repair the cancelled complete acceptance gate.
-No extra complete expensive suite was started: exact-target backend/UI/HTTP
-evidence already exists, production completion is missing, and the host was not
-quiet. The permitted reporting outcome records this gap instead of repeatedly
-running the repository. Final comparative measurement still needs a complete,
-equivalent-scope sample; no end-to-end speedup is claimed.
+| Retained eight-case sample | Result | Native wall / command envelope |
+| --- | --- | --- |
+| Before repair | 8 passed, zero skips/retries | 461.946 / 462.502 s |
+| Fast path | 8 passed, zero skips/retries | 458.770 / 459.280 s |
+| Fast path and settled-frame batching | 8 passed, zero skips/retries | 365.394 / 365.943 s |
 
-## Cost/coverage owners and proposed child actions
+| Eight-case phase sums (seconds) | Before | Fast path | Batched |
+| --- | ---: | ---: | ---: |
+| Native attempt durations | 459.983 | 457.051 | 363.435 |
+| Backend spawn to ready | 70.139 | 70.155 | 63.149 |
+| Browser setup | 1.447 | 1.397 | 1.344 |
+| Test body | 386.251 | 383.285 | 296.997 |
+| Teardown | 1.469 | 1.497 | 1.355 |
+| Fixture generation (overlaps setup; not added twice) | 0.319 | 0.324 | 0.322 |
 
-The owning contracts are [Tensor Explorer](../docs/spec/ui/tensor-explorer.md),
-[Architecture Explorer](../docs/spec/ui/architecture-explorer.md),
-[backend analysis](../docs/spec/backend/architecture-analysis.md),
-[API semantics](../docs/spec/api/contract.md) and
-[binary streaming](../docs/spec/api/binary-streaming.md).
-Rows authorize no deletion here. A missing independent proof means retain until
-the named child supplies it, with no coverage quota.
+The focused command is `xvfb-run -a npm run test:acceptance -- product.spec.ts
+--grep 'production native pane geometry|integrated camera gestures|polish magnifier
+follows edges' --reporter=list,json` from each isolated snapshot's `ui/` directory.
+Probe proof uses `xvfb-run -a npm run test:browser -- acceptance-probe.spec.ts
+--reporter=list,json,html`. These subsets are profiling/regression evidence,
+not substitutions for the complete gate.
 
-| Exact candidate / classification | Contract and independent expected result | Current matrix / owner | Retained proof, distinct risk and exact proposed action |
-| --- | --- | --- | --- |
-| `ui/tests/shell-viewport.spec.ts` four `fixed shell contains normal states…` cases; **consolidate in #273** | Fixed document, reachable shell controls and 52/28 px chrome; explicit DOM bounds and accessible actions from shell visual-language/Tensor layout | Four self-set viewports (1440×900, 1000×840, 390×640, 280×400) × desktop/narrow = 8; each overrides project viewport, same DPR/browser | Keep all four responsive cases under one project: proposed 8→4 invocations. Remove only the duplicate project invocations; retain native-scrollbar project and other tests that actually use project viewport. `architecture-camera.spec.ts` explicitly depends on the narrow project's geometry and is **retain**, not part of this deduplication. |
-| `ui/tests/matrix-zoom.spec.ts:208` three `wheel gesture timing…` schedules; **migrate conditionally in #274** | Normative ≤180 ms consecutive-event coalescing and >180 ms split; literal schedules `[0,179,358]`, `[0,180,360]`, `[0,40,221]` and explicit undo states | Three schedules × DPR 1/1.25/2 × desktop/narrow = 18; whole file 33 cases/project = 66 | Current `camera-history.test.ts` proves token grouping, **not** elapsed-gap boundaries; `tensor-viewport.ts` owns the threshold. Establish all three independent timing oracles at that owner before reducing boundary repetition. Retain real wheel/trackpad/touch, focal coordinates, local history, current DPR bounds and scalar lifetime in `matrix-zoom.spec.ts:111/:151/:188/:226/:254/:269`, pixel/selection sibling specs. Exact removal set is the 18 boundary invocations only after equivalent faithful cheap proof exists; otherwise retain. |
-| `architecture-browser.spec.ts:91/:151/:293/:346`, `architecture-controls.spec.ts:162`, `architecture-isolation.spec.ts:144`, `components-large` (48 instances); **split/investigate in #274** | Ordered source hierarchy, concrete instance identity, nested Back state and readable native navigation; authored exact IDs/state snapshots, source-conservation unit oracles | Seven collected cases × desktop/narrow = 14 invocations; these call the 48-instance fixture, unlike ordinary 4-instance connections/mixed-stack fixtures | Use a compact adversarial fixture for generic first/nonzero/last instance, mixed branches, distinct bindings and nested restoration. Keep long-list scrolling/virtualization, offscreen selection/Center and scale-sensitive navigation on 48 instances. In particular, retain `unrelated model growth leaves a small isolated component readable and its bounds unchanged` (`isolation:133`), whose large-versus-small comparison is the contract. Proposed replacements require assertion-by-assertion review of the other exact locations; no whole-file deletion. Cheap `projection.test.ts`, `invariants.test.ts`, `ArchitectureExplorer.test.tsx` cannot replace actual pointer/DOM risks. |
-| `architecture.spec.ts` four `full-size … all instances, bounded document, layout and memory evidence` cases; **retain** | Full configured layer counts, exact far-instance reachability, virtualized DOM, bounded document/worker resources; fixture source identities plus explicit bounds/heap observations | Four synthetic reference geometries × desktop/narrow = 8 | Keep genuine large-graph proof even if small navigation cases migrate. These are UI stress fixtures, not evidence for checkpoint analysis. No proposed removal; no smaller fixture can establish the same scale risk. |
-| Entire `ui/acceptance` second DPR repetition; **selective retention plan in #276** | Real production bundle + TCP/CORS/session/LMEX/stream lifecycle; seed-17 scalar values, explicit token IDs, exact bindings and independent numerical references | 64 functional cases × DPR 1/2 = 128; main/full both, PR/epic DPR 1. Product 35, architecture 24, references 2, three new native/hierarchy cases | Keep all functional cases at DPR 1 initially. DPR 2 candidates for reduction: non-geometric tokenizer response ordering (`product:275/:512`), transport lifecycle (`:324/:346/:553/:1547/:1563`), numerical scale input matrix (`:940`), and binding-only repetition. Retain DPR 2 pixel/physical-cell/scrollbar/hover/profile/magnifier/source-linkage risks (`:143/:577/:641/:761/:848/:1048/:1317/:1446`), and constrained graph/port hit targets. Backend unit owners and `test_network.py`/`test_embeddings.py` protect computation/sharing; real TCP and production event fences remain distinct. No blanket 128→64 claim; #276 must enumerate selected titles after #274/#275, preserving failures and references. |
-| Repeated immutable inputs in `acceptance/test_network.py::Service`, `fixtures.py`, `architecture_fixtures.py`, browser product/architecture hooks; **amortize selectively in #275** | Model files read-only, content-derived cache identity, cold publication, per-consumer/session/process isolation; deterministic source bytes and before/after filesystem checks | Fresh model/cache/process per case; product repeats across 35 cases/project, architecture across 24 including skips/references; native CLM/Kev/LoRA hooks add separate generation | Prepare immutable seed/config variants once, then isolated per-test copies; keep fresh backend/cache/session/barriers. Product focused generation was only ~49 ms/case versus ~7.9 s spawn-to-ready, so do not promise startup savings from copying. Architecture generation includes process cost but full phase data is missing. Preserve mutation/invalidation/export-atomicity tests with writable private copies. Never share live backends or mutable cache/session state. CLM/Kev/LoRA hooks lack `harness-timing` and remain separate evidence gaps, not zero cost. |
-| CLM/Kev/LoRA/formula/port-order regressions; **retain** | Native admission/configured heads and hybrid pointer semantics, A/B exact parameter identity, source-backed formulas, regular routed terminal order without rebinding | Backend 52/69/11/8/9 cases above; UI 35 auto-layout and 22 CardSummary cases; new production cases × both DPRs plus interface browser tests | Keep backend `test_clm_export.py`, `test_kev_export.py`, `test_lora_architecture.py`, semantic baseline/grouping and API graph checks; UI `auto-layout.test.ts`, `CardSummary.test.tsx`, `architecture-interfaces.spec.ts`, `clm.spec.ts`, `kev.spec.ts`, `lora-hierarchy.spec.ts`. Explicit source-backed formula strings, configured weights, independently authored ports/pitch expectations detect different defects. No proposed deletion; production transport/weight-modal behavior remains necessary. |
-| Quantized expert/numeric/LMEX backend and API families; **retain** | Every expert/parameter identity, requested row order/duplicates, numerical decode and stream framing/terminal rules | Backend version matrix; independent API schema/wire fixtures; UI decoder split/chunk tests; selected real TCP/browser weights | Keep native storage/numerical/API/generator/wheel-smoke owners. Transport and installed-wheel tests exercise boundaries mocked unit tests cannot. Do not replay every numerical domain input through every browser, but no removal is established by these timings. |
-| Normative API/example workflow routing; **repair in #277** | Independent contract + both consumers must validate applicable changes, even when no implementation file changes | `api-contract.yml` covers `docs/spec/api/**`, `api/**`; UI covers only `openapi.yaml`, `api/fixtures/**`; application covers backend/UI/API/acceptance paths; backend covers backend paths | A `docs/spec/api/contract.md` or `binary-streaming.md`-only change misses UI/application/backend consumer gates. `examples/clm/**`/`examples/kev/**` exporter-only changes also miss them despite runtime admission coupling. #277 should add conservative explicit consumer routing for these paths; protect full API fixtures/generated bindings and real integration. Epic children intentionally ignore `codex/epic-issue-*` PR bases, requiring scoped local proof; final aggregate PR must run applicable gates. No gate is changed here. |
+The batched sample is 96.552 s lower than before in native wall time. This is a
+focused observed comparison, not a whole-pipeline saving or proof that all of the
+difference comes from batching. Per-case setup/body/teardown and step timings are
+retained; backend startup varies too. Separate fresh builds take 0.43–0.46 s.
+Affected typecheck/lint and diff checks pass. Native discovery preserves all
+93 product and 521 component case/project pairs, tags, expected statuses and
+timeouts. Full API/shared routing still selects every retained product pair.
 
-The candidate table distinguishes supported responsive deduplication from work
-that still requires new cheap proof or measured setup evidence. In particular,
-port-pitch/formula changes are not license to recalculate expected graphs from
-production, and a mocked fixture response cannot replace production TCP evidence.
+**At `985cff8`, acceptance was unmet and issue #277 returned to
+`investigation-required` with a draft PR.** The original complete attempt and the single explicitly authorized
+repaired-code complete attempt both exhausted the unchanged 25-minute budget.
+The repaired attempt follows passing focused proof and measured benefit; it is
+not an unchanged rerun. No unchanged complete retry or extra timing-baseline run
+followed that failure. The later explicit consolidation authority is recorded
+below. No timeout increase was used.
 
-## Audit implementation and handoff evidence
+| Personally executed check | Observed result | Wall time / qualification |
+| --- | --- | --- |
+| Isolated tokenizer route, all native projects | 58 passed, zero skips/failures/retries | Native 82.532 s; selector/Xvfb envelope 83.075 s |
+| Shared/API complete component route | 521 passed, zero skips/failures/retries | Native 742.602 s; envelope 743.526 s, fresh build 0.400 s |
+| Original complete HTTP gate (`6aca73`) | 58 passed / 10 capability skips | 167.58 s; 68 cases before the added nested-discovery method |
+| Original complete integration command (`6aca73`) | **Exit 124 at 1500.001 s** | Partial browser log: 56 passed / 30 skips; 7 lack completed evidence |
+| Repaired complete HTTP gate (`985cff8`) | 59 passed / 10 capability skips | 178.67 s; finalized native JUnit, 69 cases |
+| Repaired complete integration command (`985cff8`) | **Exit 124 at 1500.003 s** | Partial browser log: 56 passed / 30 skips; 7 lack completed evidence |
 
-`report.py` now summarizes existing native browser attempt/status counts, retries,
-unrun/interrupted tests, global errors, wall time, per-file test sums and the
-existing `harness-timing` phases. Null/missing phases remain unknown; missing
-artifacts/statistics raise instead of producing an empty successful suite.
-It introduces no dashboard, persisted result cache, metadata requirement or
-timing threshold. Five tiny independent artifacts test pass/fail/skip/retry,
-overlapping phases, interrupted/unrun data and missing inputs.
+The repaired command selects from the complete 18-path Git diff against
+`25a8d7c`, then runs `acceptance/check-integration.sh --main-ci --plan <plan>`
+under one `timeout 1500` envelope. Selection, HTTP lint/pytest, build, discovery,
+browser setup/body/teardown share that envelope; the budget is never reset.
 
-Scoped validation: native collection and independent API validation above;
-`pytest acceptance/test_report.py -q` (five passed); Ruff lint/format for the
-acceptance files; the two-case baseline reproduction described above. No browser
-run was added to validate Markdown. Large reports/lists/traces remain in the
-linked CI artifacts and `/tmp/issue-272-evidence`; focused JSON is
-`/tmp/issue-272-baseline/ui/test-results/acceptance.json`.
+Both deadlines interrupt `product.spec.ts`'s DPR-2 `integrated camera gestures,
+exact selection, aligned scales and adaptive inspection retain scalar storage`.
+The repaired partial trace reaches native lower bound (13.331 s), wheel/pinch
+(19.105 s), and matrix selection (25.676 s) before interruption during axis
+selection. The final `mouse.up` reports a closed browser after timeout; this is
+not a completed camera assertion failure. Native browser JSON never finalized.
+Six later cases also lack completed evidence. The 1000×700 pane case and focused
+camera case pass at both densities; neither repairs the incomplete whole gate.
+Original surviving static servers were verified and terminated. Repaired cleanup
+terminates only processes verified as owned by its isolated snapshot; all six
+owned ports (30060–30065) are closed, with no owned backend/static survivors.
+Cleanup takes 0.184 s, for 1500.187 s including cleanup.
 
-Follow-up #277 must update this same report with exact final revision, selected
-invocation counts, newly added cheap proof, complete applicable gate results and
-equivalent environment/setup/body/teardown comparisons. Do not sum overlapping
-child savings or derive a percentage from either cancelled acceptance run.
+The pending set also includes stale-view fencing, DPR-change inspection, two
+inventory captures, adaptive magnifier and linked two-card scientific parity.
+These remain selected, mandatory assertions. They are not converted into skips.
+All 30 observed browser skips correspond to missing actual references or existing
+unsupported tiny MoE fixtures; HTTP's 10 skips retain its reference/CUDA rules.
+CPU fixture success is not complete actual-reference or CUDA acceptance.
 
-## Fixture preparation decision — issue #275
+The cancelled activation application job has 14 s before acceptance and 21 s
+after it (artifact/report teardown): 35 s outside the acceptance step. These
+observed CI costs require headroom under the unchanged 25-minute workflow limit;
+they are not a new passing CI measurement or a speedup denominator. The repaired
+local gate already exceeds its own envelope without that extra CI work.
 
-**Measured no-op:** retain the current fixture preparation. Issue #275 explicitly
-permits this outcome when repeated deterministic input generation is negligible.
-Its activation pin is `7101337e48ab97f44961045c0cb24060768c6144`; the fixture
-generators, HTTP fixtures, product/architecture/package hooks and timing helper
-are unchanged from the #272 baseline. No template, shared runtime, new fixture
-API, test deletion or project-selection change is introduced. #276 should consume
-the existing setup unchanged. Before/after setup cost and invocation counts are
-therefore unchanged; claimed savings are **zero**.
+Component native attempt sums include setup/body/teardown: **1424.791 s** total,
+**77.141 s** Before Hooks, **47.294 s** After Hooks and **1300.356 s** body/remainder.
+Tokenizer sums are **159.499 s**, **2.487 s**, **4.130 s**, **152.882 s**, respectively.
+Hook/remainder sums are not elapsed pipeline time. Fixture generation remains
+inside native setup; production generation can overlap spawn-to-ready and must
+not be added twice. Current complete production phase sums are **unavailable**,
+not zero. No one-time fixture preparation was adopted.
 
-The focused measurement used the same lock hashes above, Python 3.12.14,
-PyTorch 2.14.0+cpu and Transformers 4.57.6. Each profile ran in a new Python
-subprocess, with two generations into distinct owned temporary roots and an
-ordinary `shutil.copytree` into a third, independent destination for each sample.
-Imports, generation/export and copying had separate `perf_counter` timers.
-The import phase explicitly loaded the lazily imported `dense_fixtures` and
-`quantized_oracles` helpers, and exporter dependencies, before timing generation.
-HTTP used its actual eight Torch threads; the browser default/polish used their
-existing two-thread setting; CLM/Kev used their existing `OMP_NUM_THREADS=2`.
-All runs were offline. There were no active repository Actions runs at the start;
-host load was 2.22/1.98/2.44, so this is a small local diagnostic, not a controlled
-suite benchmark. First/second samples are both retained, including LoRA noise.
+The successful activation UI artifact reports 1316.178 s native wall, 2571.637 s
+attempt sum, 151.594 s Before Hooks and 72.937 s After Hooks for 776 invocations.
+Its other heavy CI jobs overlapped. The optimized 742.602 s is an observed
+comparison, not a reproducible causal whole-pipeline percentage: the permitted
+extra quiet baseline sample was not started once correctness/budget failed.
+The cancelled baseline application run remains an invalid speedup denominator.
+#276's complete standalone optimized browser run (63 passed / 30 skips, 1353.341 s)
+is supporting unchanged-application evidence, not successful execution of this
+full HTTP-plus-browser command.
 
-| Exact input profile / current owner | Imports (ms) | Generation/export, first / second (ms) | Plain copy range (ms) | Model-root bytes |
-| --- | ---: | ---: | ---: | ---: |
-| `fixtures.generate(extended=False)` / HTTP `Service` | 1,394.6 | 13.6 / 12.7 | 2.35–2.38 | 4,736,718 |
-| `fixtures.generate(extended=True)` / product browser | 1,393.7 | 40.1 / 29.9 | 4.57–4.66 | 11,156,928 |
-| `architecture_fixtures.generate` / four separate tiny families | 2,291.1 | 47.8 / 46.4 | 0.90–0.94 | 287,617 |
-| `architecture_fixtures.generate_templates` / instance-weight variant | 2,303.2 | 1.6 / 1.4 | 0.25–0.30 | 7,167 |
-| `polish_fixtures.generate` / product polish variant | 2,213.8 | 49.0 / 48.6 | 1.80–1.86 | 316,358 |
-| `clm_fixtures.fixture` + current exporter / CLM browser | 1,458.2 | 440.9 / 385.3 | 0.87–0.90 | 19,250 |
-| `kev_fixtures.fixture` + current exporter / Kev browser | 1,459.5 | 221.6 / 265.6 | 0.85–0.86 | 26,151 |
-| `make_smollm2_lora` / LoRA hierarchy browser | 2,280.9 | 73.2 / 7.3 | 0.36–0.40 | 15,128 |
+Reproducible affected work reduction is established by native collection and the
+real passing tokenizer route: 58 component invocations instead of 521 full, while
+shared/API selects all 521 and all 93 product invocations. There are **29 added
+cheap cases** relative to activation (five UI temporal, five report, seven
+entrypoint, twelve selector); selector/entrypoint startup costs about 3 s.
+Scoped controlled #274 and #276 timing comparisons remain in their linked proof
+maps and are not summed/double-counted as cumulative savings. **Complete final
+acceptance within budget and a cumulative timing-success conclusion are unmet.**
 
-An initial import-inclusive diagnostic put the first architecture/template calls
-at 2,418.0/2,284.6 ms, versus 47.9/1.3 ms for their second calls. Polish was
-888.6 versus 49.2 ms. Those are lazy dependency imports, not repeated tensor-byte
-generation. The architecture browser's separate generator subprocess still pays
-those imports on each invocation: this is a real residual setup cost, not zero.
-Amortizing that subprocess could avoid its imports, but would not remove the
-fresh backend process's imports or startup. No startup saving is attributed to
-the byte-generation experiment. CLM/Kev timings include real export validation;
-each has only one browser case per DPR (and one in the epic/PR gate), so there is
-little repeated generation to amortize within a worker. LoRA is similarly sparse.
-Kimi's topology fixture and actual local references are not selected: the former
-is not a repeated byte-generation hotspot, and the latter are not generated inputs.
+The remaining problem is complete HTTP-plus-browser cost within the existing
+budget. The passing local repair does not establish that outcome, and the partial
+trace does not establish a product defect or a single causal bottleneck. Before
+execution can finish, investigate the remaining complete-gate cost and establish
+a concrete authorized repair with retained owners, then obtain fresh complete
+exact-target validation inside the existing budget with CI setup/report headroom.
+That repaired complete-attempt authorization was exhausted. The later user-authorized
+consolidation below permits specific relocations and one changed-code complete
+validation; it does not permit unchanged retries, larger timeouts or a final-CI waiver.
 
-For comparison, #272's two unchanged product cases spent 97.8 ms generating
-inputs inside 15,799.0 ms spawn-to-ready and 112,903.0 ms browser body time.
-Even removing all their byte generation would affect less than 0.08% of that
-measured work; copies and one-time template generation would consume part of it.
-A hypothetical template costs `G + N*C`, not just `N*C`, for generation `G`,
-copy cost `C` and `N` cases, before adding template process/import/cleanup costs.
-No template was built or adopted here, so this is a cost model, not a measured
-before/after speedup. No full acceptance run or repaired baseline is claimed.
+The new selected-command regression fails against the pinned original entrypoint
+(`--plan` rejected), then passes after implementation. Unknown nested scripts are
+incorrectly exempted by the preceding selector and select full coverage after its
+exact-path correction. Native entrypoint tests execute selected commands and actual
+workflow shell invocations with stubs, including pytest/build/browser failure
+propagation. Temporary Git histories establish complete pushed ranges, current
+PR merge-base, rename/deletion and invalid diff behavior; stubs establish orchestration
+only, not application correctness.
 
-Reproduce the generation/copy diagnostic from the pinned checkout with the
-existing backend environment and offline settings. Import the exact functions
-in the table (plus their lazy helper dependencies) before the timed loop; use
-the current CLM/Kev browser export recipes with their unchanged revision strings.
-The core loop, repeated twice per profile in a fresh subprocess, is:
+Local cheap checks: full UI binding/type/lint/unit/build checks (1,043 cases),
+independent API validator, selector/entrypoint/report tests and scoped Ruff
+lint/format pass. Infrastructure regressions pass (127 cases).
+`skills/test-quality/SKILL.md` stays byte-identical. Backend/API/spec trees and
+locks match the activation baseline; its successful backend 3.12/3.14 CI and wheel
+smoke remain applicable unchanged-source evidence, not a newly rerun backend suite.
+The baseline [UI CI](https://github.com/murillo128/llm-model-explorer/actions/runs/36906375279)
+passed, while [application CI](https://github.com/murillo128/llm-model-explorer/actions/runs/36906375007)
+was cancelled. That cancellation is never a percentage-speedup denominator.
 
-```python
-with tempfile.TemporaryDirectory(prefix="issue-275-measure-") as temporary:
-    root = Path(temporary)
-    for sample in range(2):
-        models = root / str(sample) / "models"
-        models.mkdir(parents=True)
-        started = time.perf_counter()
-        prepare(models)  # One exact profile from the table; inputs unchanged.
-        generation_ms = (time.perf_counter() - started) * 1000
-        started = time.perf_counter()
-        shutil.copytree(models, root / f"copy-{sample}" / "models")
-        copy_ms = (time.perf_counter() - started) * 1000
-        print(generation_ms, copy_ms)
-```
+The tested local archives/ports, native lists, HTML/JSON/JUnit, harness phases,
+command logs and timing summaries remain outside Git in `/tmp/issue-277-evidence`.
+The concise report is repository evidence. Source and exercised-plan identity are
+reconciled after report-only edits. Epic-child product CI deferral is retained;
+this evidence does not waive complete applicable CI on the final integration PR.
 
-The full measurement script, initial and separated logs, and raw JSON remain in
-`/tmp/issue-275-evidence/`; generated inputs were removed by their owned temporary
-directory contexts. The experiment never populated runtime caches or started
-backends. There is no adopted template/copy lifecycle requiring new isolation or
-partial-template tests. Existing TCP/browser checks retain their independent
-seed-derived numeric, progressive-publication, cancellation and cleanup oracles.
+## User-authorized UI consolidation — issue #277
 
-Scoped validation on the activation tree: two real TCP cases passed in 12.69 s
-(`test_progressive_shared_late_and_slow_consumers` and
-`test_cancel_and_disconnect_release_owned_work[all]`). They assert independent
-seed-derived bytes, distinct session/operation IDs, no publication before release,
-no partial publication after cancellation, and zero readers/operations/tasks.
-The JUnit run emitted one existing `record_property`/default-xunit2 compatibility
-warning; the tests passed. The unchanged production pixel/geometry/progressive
-case at `product.spec.ts:143` passed at DPR 1, one headed worker, ports 29602/29603:
-40.0 s test duration, 41.25 s native wall, no retries or skips. Its timing attachment
-records generation 36.0 ms **inside** spawn-to-ready 7,895.8 ms, browser setup
-150.3 ms, body 31,703.2 ms and teardown 132.0 ms. Pixel capture remained enabled
-for this existing pixel consumer; it finished with zero readers/textures/GPU bytes.
-This is corroboration of the unchanged setup, not a new before/after benchmark.
+The user requested removing all five audited duplication groups. The controlling
+issue records that authority and the precise retained owners before implementation;
+it supersedes the earlier fixed-93-pair restriction only for these relocations.
+The preceding measurements describe their named revisions, not this new selection.
 
-Acceptance Ruff lint/format, UI typecheck/lint/build and `git diff --check` passed.
-The UI was built from this checkout with Node 24.14.0/npm 11.9.0 and locked
-Playwright 1.63.0; the existing bundle-size warning remains. Logs and HTTP JUnit
-are retained with the measurement evidence; native browser JSON is copied there.
-No tests were added, removed, weakened or selected differently in the repository.
-The PR targets `codex/epic-issue-278`, whose accepted CI branch filters defer the
-application/component gates to the aggregate epic PR. This focused success does
-not resolve the cancelled complete acceptance baseline or validate absent models.
+| Removed repetition / plausible defect | Independent remaining owner and gap closed |
+| --- | --- |
+| `architecture.spec.ts::openParameter` title/body click, exact selection, camera/layout/scope/no-request replay for every weight | `architecture-card-actions.spec.ts` and `architecture-inspection.spec.ts` retain literal generic gesture/modal assertions. One real production graph journey at both DPRs carries these gestures across the live boundary; every numeric inspection still dispatches exact graph IDs and checks actual stream/source values. |
+| Component expansion/isolation, dimensions, search and explorer-state replay for each family; deterministic binding replay at DPR 2 | One production graph journey samples every declared component variant at both DPRs, retaining real port/trunk hits and literal preference/state assertions. Per-family real graph/compact projection, source conservation, exhaustive layout/reachability and native/decoded numeric bindings remain. Every actual-reference pair, size and prerequisite is unchanged. |
+| Same-generator dense 28/30-layer component stress | Keep the larger 30-layer dense case, independently different 24-layer hybrid and 24+12 two-stack cases. Full node/edge size, last instance, bounded document, culling and layout/memory evidence remain. Fixture metadata used elsewhere is unchanged; titles describe topology. |
+| CLM/Kev exporter→graph→weight HTTP→visible-canvas browser repeats | New mandatory `acceptance/test_native_packages.py` cases use fresh real exports and production CLI/TCP. Exact native head/factor IDs and float32 bytes are checked against independently read physical Safetensors. Existing exporter/admission/algebra/cache tests remain. Generic browser owners retain expand, parameter dispatch, real canvas and lifecycle. Supplied invalid reference roots fail. |
+| Native adapted-hierarchy UI repeat and metadata-only real LoRA/QLoRA browser assertions | New mandatory TCP composition case checks literal child order, formulas/scalars/ports and physical-source A/B streams. The existing generic inspection case is extended for nested expand/isolate/Back, visible reshape/transpose/softmax/scale, factor=2, axis=-1, ports and distinct A/B dispatch. It passed before deleting the old browser case. Complete real-reference target/shape/algebra remains in `test_lora_reference.py`; actual base/factor browser bindings remain. |
+
+Native discovery against `e73cc34` records product **93 → 85** (59 DPR 1,
+26 DPR 2), component **521 → 520** (370 desktop, 138 narrow, 12 native
+scrollbars), and three added mandatory native TCP cases. Product removes seven
+deterministic `full graph, concrete bindings and logical weight modal` DPR-2
+pairs (SmolLM2, Qwen3, Qwen3.5, V-JEPA2, DeepSeek V2, GLM4 MoE Lite, Kimi Linear)
+and the DPR-1 CLM/Kev/adapted-hierarchy pairs; it adds the generic production
+journey at DPR 1 and 2. Three removed deterministic pairs were already optional
+unsupported-fixture skips, not runnable savings. All actual-reference case/project
+pairs compare equal. The four component full-size titles become three topology
+titles, and the existing factor-inspection title becomes the nested-source title;
+there is no additional project deselection. Exact lists stay outside Git in
+`consolidation/collection-delta.json` under the existing evidence directory.
+
+The four formerly repeated runnable deterministic families took 162.6 s across
+both DPRs in the preceding partial native log; the three relocated package cases
+took 37.1 s. These are complete-case costs, not deletion savings: retained bindings,
+new TCP proof and the new production journey still cost time. No cumulative
+speedup is inferred by summing removed-case durations.
+
+Focused proof so far: the production journey at both DPRs plus all retained
+deterministic bindings completes normally (6 passed, 3 unchanged unsupported-fixture
+skips, 94.602 s native wall). The generic nested-source replacement passes on host
+WebGL before deletion of the old case. CLM/Kev TCP cases pass; the first composition
+attempt exposes an incorrect test provenance lookup, corrected to the existing
+exact `rule`/`source` contract, then the affected composition case passes. An initial
+restricted generic attempt cannot allocate WebGL; host execution passes without
+expectation changes. Native selector/entrypoint/report controls pass (33 tests,
+60 subtests) after the retained full-command expectation removes the three relocated
+browser filenames. HTTP discovery includes all three new cases: 72 collected.
+
+The newly authorized complete changed-code gate is recorded after execution.
+The unchanged 1500-second envelope must include
+selection, HTTP, build and production-browser setup/body/teardown, with workflow
+setup/report headroom. Normal native JSON/JUnit completion, every mandatory case
+successful, truthful optional skips and owned process/port cleanup remain required.
+No product source, scalar/count/resource/error observer, renderer, retained fixture
+size, worker/retry/timeout/tolerance or actual-reference prerequisite is changed.
+
+### Complete consolidated result
+
+The exact isolated target is `21c83bd13b0732c0df8233b48efac894b77e6711`, against
+the unchanged integration tip `25a8d7c3be08e4e74383a988cef74feafeef8414`.
+Selection consumes its complete 32-path Git diff, including deletions, and selects
+all product owners. No source changes occur during validation. The selected
+command is the same `acceptance/check-integration.sh --main-ci --plan <plan>`
+inside one `timeout 1500` envelope; browser discovery confirms all 85 pairs.
+
+| Personally executed consolidated check | Observed result |
+| --- | --- |
+| Retained generic card/component/connection/summary/inspection/isolation and full-size owners, all configured applicable projects | 52 passed, zero skips/failures/retries; finalized JSON, 201.507 s native wall |
+| Generic production journey at both densities plus retained deterministic native bindings | 6 passed, 3 existing unsupported-fixture skips; finalized JSON, 94.602 s native wall |
+| Native selector/entrypoint/report controls | 33 passed, 60 subtests passed, 5.31 s; the first run detects the three stale relocated filenames in the full-command expectation |
+| Complete HTTP in the consolidated gate | 62 logical tests passed, 10 existing capability/reference skips, 209.01 s; finalized JUnit has zero failures/errors and 132 entries including 60 subtests |
+| Complete consolidated HTTP-plus-browser gate | **Exit 124 at 1500.005 s**; partial browser log has 56 passes / 27 truthful skips / 2 uncompleted mandatory pairs; native browser JSON never finalizes |
+
+All DPR-1 cases complete. DPR-2 camera, stale-response fencing, inspection during
+DPR change and both inventory captures also pass. The deadline interrupts
+`polish magnifier follows edges after scrolling resize DPR and source replacement`
+at DPR 2; the following `integrated two-card embeddings have real scientific
+parity with the same checkpoint matrix` at DPR 2 has not run. This is missing
+completed evidence, not a failed magnifier assertion. Both cases pass at DPR 1.
+The partial DPR-2 trace remains outside Git for investigation.
+
+Cleanup terminates only the three processes verified as belonging to this isolated
+snapshot. All six owned ports (30100–30105) are closed, with no owned backend/static
+survivors. Cleanup takes 0.305 s, for 1500.310 s including cleanup. Earlier failed
+attempts remain intact. The prior observed 35 s of CI setup/report work is additional
+headroom; this local gate already exhausts its own envelope.
+
+The new selection and focused proof establish ownership consolidation, not complete
+timing acceptance or a causal whole-pipeline speedup. The remaining bounded problem
+is complete retained HTTP/scientific-browser cost within the unchanged workflow
+budget and its setup/report headroom. The changed-code complete-attempt authority
+is exhausted; no unchanged retry, case skip, larger timeout or new repair campaign
+is inferred from this failure. Production backend/API/UI source, accepted specs,
+locks and the reusable `test-quality/SKILL.md` remain byte-identical. Report-only
+publication edits are reconciled against this exercised source and selection.
+
+## Revised risk-based portfolio — implementation plan for #277
+
+The 2026-10-02 replacement issue contract authorizes deliberate low-value coverage
+retirement and routine/targeted-extended/full portfolios. It supersedes the preceding
+fixed-selection and exhausted-attempt restrictions. The three historical failures
+remain evidence of their revisions. Before removal, the following bounded decisions
+record the proposed retained core and plausible lost detection; final collection,
+validation and timing follow implementation. Additional savings are unmeasured
+unless a comparable execution is explicitly recorded.
+
+| Worklist / exact candidate family | Planned disposition, retained proof or accepted risk | Cost evidence / focused target |
+| --- | --- | --- |
+| 1. Both Playwright configurations, `retain-on-failure` | Routine traces off; explicit native `--trace on` diagnostic mode. Keep JSON, failure screenshots/logs and compact diagnostics. HTML optional. | Compare unchanged 1000×700 production pane with/without trace; no assertion change. |
+| 2. `matrix-zoom.spec.ts` shape×DPR×responsive, selection/pixel/centering/magnifier matrices | Retire interchangeable combinations; explicit representatives retain all four shapes, a fractional DPR, DPR 2 and narrow layout. Cheap camera/geometry/history owners retain arithmetic. Keep native wheel/pinch/exact selection and one resource churn bridge. | Existing native lists; focused affected component files. Lost detection: a combination-specific layout defect outside the chosen representatives. |
+| 3. `product.spec.ts` progressive, camera, magnifier and scientific parity | Short real producer-barrier/source-value/cleanup core, one camera bridge, compact exact three-request two-card proof. Retire repeated luminance/neighborhood/gesture/screenshot sweeps owned by renderer/component tests. Split by responsibility for selection. | Historical complete case durations; focused production core and retained renderer/native owners. |
+| 4. Product prompt/inventory/viewport/density and reference permutations | Logical cases one density. Keep one native DPR bridge and event-order transition. Retire repeated inventory captures/presentation narratives; references and genuinely large traversals targeted extended at one density. | Native before/after pairs; no savings assigned to absent-reference skips. Lost detection: full presentation on every width/model/DPR combination. |
+| 5. `test_tensor_analysis.py::test_endpoints_and_disk_reuse`, 19 inputs | Keep independent 19-input numerics; endpoint representatives cover asymmetric/constant/mixed/nonfinite/empty layouts. Persistent cold/warm exact metadata+bytes once. Retire weak DONE-only dtype wrappers: exact F16/BF16 bytes remain in `test_tensor_data.py::test_exact_shapes_and_native_source_unchanged`. | Focused analysis/data tests. Lost detection: artifact-count-only cross-dtype analysis check, not exact conversion proof. |
+| 6. Selector broad test/directory routes | Finite actual-file responsibility groups, direct changed-test routes and explicit helper consumers. Shared/unknown/new inputs remain conservative; ordinary untagged tests remain routine. Preserve exact Git diff and empty/failure guards. | Native collection, existing selector/entrypoint behavioral controls. |
+| 7. Fresh services per independent case | First remove duplicate journeys. Keep fresh services for cold/cache/barrier/cancel/error/model mutation. Reject service pooling if it requires a new state-reset/isolation framework; read-only candidates must show benefit and safety before adoption. | Historical eight-case startup 63.149 s; no fixture-copy campaign. |
+| 8. Architecture 8/16-cycle lifetime/GC, full-size sweeps; real backend percentile/allocator thresholds | Keep a compact routine return/remap/cleanup/scale bridge; long soak/full traversal and real 2**24+1/allocator threshold retained as targeted extended, with original sizes. | Affected extended checks required on this exact refactor target; deferred work is not eliminated work. |
+| 9. Backend Python 3.12/3.14 workflow | Primary optimized suite on 3.12; version-independent checks once. 3.14 installed-wheel/CLI plus representative real runtime ordinarily; full compatibility for relevant runtime/dependency/packaging changes and manual mode. Isolated wheel installs. | Native Python collections and wheel/runtime proof; reduced default 3.14 confidence explicit. |
+| 10. API/UI generated checks repeated by integration | Dedicated exact-target API/UI workflows own drift and validation. Preserve full local path; CI routine integration avoids duplicate validation/regeneration only with that ownership explicit. | Inspect `--write` behavior, API validator/drift, entrypoint error propagation. No cross-workflow build cache for a ~0.4 s build. |
+| 11. Headed acceptance for logical transport cases | Evaluate headless for non-native state/transport specs; preserve headed native/focus/window cases and SwiftShader. No extra workers merely for elapsed speed. | Focused real transport and native rendering mode checks; no assumed pixel equivalence. |
+| 12. Observer/polling/snapshot work | Keep prior fast path and batching; remove repeated full-state reads/pixel sweeps with retired narratives. Further observer complexity only after measured evidence. Keep independent scalar/count/resource/error and real pixel observers. | Focused probe/retained scientific core; no instrumentation-only campaign. |
+| 13. Remaining backend/UI/API/examples/infrastructure tests | Audit costly repetition and weak wrappers; keep cheap independent numerical/security/protocol/exporter and real lease/Git/command controls. Remove only support with no consumers. No mass mutation or unit-test count quota. | Existing owner suites, import/consumer searches; specific additional retirements recorded before edit. |
+| 14. Component preview+dev and acceptance density servers | Resolve consumers; start only selected density servers where native selection can express this simply. Preserve separate dev and production build evidence. Reject caching/pooling machinery for negligible static startup. | Native config/CLI collection, selected-server startup and cleanup; additional savings unmeasured. |
+| 15. Workflow planning/event duplication | Preserve existing check identities and same-repository/least-privilege gates. Narrow conditional product work from exact paths; no status fabrication, branch-rule change, controller or unrelated runner edits. | Actual workflow shell/selected-failure controls; current event/base/merge identity. |
+| 16. Thread/host contention | Heavy measurements serialized. Evaluate bounded test-only native threads if needed; preserve production defaults and report host work separately. No additional parallel headed workers or another issue's cleanup. | Scoped identical scenario if adopted; otherwise no-change decision with unmeasured opportunity. |
+
+Routine mandatory retains independent float32/statistics/distribution/protocol
+values, a real producer-before-first-pixels bridge, exact source/parameter dispatch,
+shared-consumer survival/cancellation, pre-/midstream errors, stale responses,
+resource teardown, meaningful native/fractional/DPR and graph scale/culling proof.
+Full/manual retains all non-retired extended/reference/CUDA checks. The new routine
+combined gate has a 1200 s envelope (900 s engineering target); the workflow remains
+25 minutes with explicit setup/report headroom. Two changed-target complete routine
+attempts at most are authorized; focused checks precede them.
+
+The first reduced complete component run at `98e5299` finished 450/451 cases.
+The unchanged `architecture-camera.spec.ts` connection-center setup sampled the
+camera after manual Fit returned from its click but before React Flow's queued
+frame completed. Its final exact Back comparison therefore used the preceding
+camera. React Flow's native `fitView` promise resolves after the queued fit;
+`aria-busy` covers initialization, not that manual command. Repair only the test
+setup to await the probe's actual Fit completion before taking its snapshot.
+Retain the pending-generation and exact Back assertions. Preserve the failed run,
+exercise a controlled delayed real Fit as a red reproducer, and run the camera
+family and complete affected components after the repair. No production change,
+retry, tolerance or retired test is involved.
+
+Final routing inspection exposed missing extended backend selection for shared
+`backend/tests/conftest.py`, deleted tests and model-file dependencies. A focused
+negative control fails on the preceding selector for that omission. Shared,
+deleted and nested backend test support now falls back conservatively; production
+backend/support inputs include the real threshold/allocator checks. Direct
+existing backend/browser tests retain their finite file route. This changes
+selection only; the complete refactor plan already selected those same owners.
+
+The first full installed-wheel 3.14 run exposed a harness import-mode defect:
+`importlib` named the unchanged spawned helper `tests.test_artifacts`, but the
+child's test-helper-only path could not import that namespace. The real cache
+competition failed with `ModuleNotFoundError: tests`; 594 cases passed before
+the owned run was interrupted at 236.600 s for diagnosis. Preserve that failure,
+retain every cache/process assertion and restore native pytest imports. The
+private wheel/import-location/CPU guards remain. Validate the actual spawned
+competition first, then complete all 1,950 cases from a new immutable target.
+
+## Audit-return routing repair plan
+
+The exact-head audit of `79f3f3ae7f0831cb8b87de89d7fb87b348378698`
+found two omitted owners. Shared backend test modules must select their backend
+consumers and genuine extended thresholds; shared `acceptance/test_network.py`
+must select all HTTP consumers, including the real `Service(model_root=...)`
+branches. The LoRA browser route must include `test_lora_reference.py`, whose
+independent source-byte/shape/algebra assertions own the retired browser matrix.
+
+Use the existing finite owner map to classify known shared test modules before
+isolated-file rules. Backend fallback stays within backend; HTTP fallback stays
+within HTTP and keeps browser/build setup non-applicable. Regression assertions
+use independently inspected current imports/owners, fail on the audited selector,
+and pass after repair. Exercise the real selector/entrypoint commands and their
+failure propagation, then run the native LoRA TCP owner with absent and invalid
+supplied reference controls. Preserve truthful capability skips. Reconcile the
+final complete-diff plan to prior passing executable proof; this routing repair
+does not require another unchanged broad timing sample.
+
+The real shared-HTTP route also exposes a prerequisite: the independent TCP
+architecture semantic oracle needs Node 24's native TypeScript support, even
+when no browser is selected. Keep Node setup for that owner, while npm/Chromium,
+build and browser-server setup remain non-applicable. Add a native output/workflow
+regression covering report-only, architecture, shared HTTP and browser routes.
+
+## Revised portfolio — adopted decisions and final validation
+
+Python 3.14 validation uses 3.14.7 and the same locked PyTorch 2.14.0+cpu
+(the CPU-package guard passes); dependencies are installed in an owned temporary
+environment, never reinstalled into another checkout's environment.
+
+The executable target is `95059bbaac6f101f0c5baf9ed23e4bb7dd6cefd0`, based on
+`25a8d7c3be08e4e74383a988cef74feafeef8414`. The complete component target is
+`8378490db4105a7fff173646dd0786bbdf1f1821`; subsequent selector/CI edits preserve
+its exact UI/config/dependency contents and its complete 451-case selection.
+Routine acceptance was measured at `03884a3ef7a622ffd55effb03952fc2f62f4da13`;
+later executable changes are the backend CI manual Python matrix and the
+wheel harness import mode. Neither changes its selected files, command,
+UI/backend/API dependencies or routine execution. The complete primary backend
+target remains `799f703bcd4d4537eca20b312d46c581c4c260ca`: backend code/tests/config
+are byte-identical after the wheel-only repair. Report-only publication changes are reconciled by exact Git diff.
+Backend/API/UI production source and `docs/spec/**` are unchanged. The reusable
+`skills/test-quality/SKILL.md`, runner, dispatcher and canonical epic context are
+unchanged. The repository-specific testing reference records the new commands.
+
+| Worklist | Adopted change or no-change decision |
+| --- | --- |
+| 1 | Traces off in both routine configurations; native `--trace on` remains usable. The unchanged 1000×700 headed case passes with the same assertions: native wall 51.764 s before / 13.009 s after. This single scoped sample does not establish a global percentage. Invalid-reference diagnostics also produce a real trace ZIP with zero retries. |
+| 2 | Seven component files use explicit shape/overflow/fractional/DPR 2/narrow representatives. Complete native collection falls 520→451 (370/138/12→336/106/9 by desktop/narrow/native project); four churn transitions retain the real wheel/pinch/cell/lifetime bridge. Combination-specific and longer-churn defects outside those representatives are accepted coverage loss. |
+| 3 | Split product checks into five responsibility files with isolated per-test closures. Keep short real first-pixels and three-request two-card scientific proofs, one camera bridge, real network/state failure journeys and teardown. Retire overlapping integrated navigation/magnifier/shell/capture narratives; their exact risks and remaining owners are recorded in the ownership map. |
+| 4 | Routine production is 38 pairs (34 DPR 1 / 4 DPR 2); full is 53 (49/4), against 85 (59/26). Thus 32 full invocations retire and 15 remain extended. References lose redundant density replay; absent-reference skips are not counted as runnable savings. Invalid supplied and required-reference controls still fail with their original diagnostic. |
+| 5 | Keep nineteen native numerical inputs, seven independent cold endpoint representatives and exact cold/warm metadata+payload comparison once with recomputation forbidden. Retire twelve endpoint repetitions and two DONE-only dtype wrappers; exact F16/BF16 conversion bytes remain independently tested. Focused routine analysis/data: 90 passed, 19 CUDA skips, two extended deselections in 166.72 s. |
+| 6 | Actual test files and finite consumer groups select their native owners. Shared test modules reach their consumers before isolated-file rules; LoRA includes its independent TCP reference owner. HTTP-only edits avoid npm/browser/build/Chromium; the TCP architecture semantic oracle retains Node 24. Unknown/shared/deleted support is conservative, including real extended backend dependencies. Native orchestration/diff/empty/failure controls are updated by the audit-return evidence below. Ordinary new untagged cases stay routine. |
+| 7 | No service pooling: retained cold/cache/barrier/cancel/error/model-mutation cases need independent state. Historical eight-case startup is 63.149 s; a new reset framework has no demonstrated benefit after retiring duplicate journeys. No repeated fixture-copy campaign. |
+| 8 | Routine nested returns/remaps use three adversarial cycles; sixteen-cycle lifetime, large native pane/prompt, references and actual 2**24+1/Linux allocator proof remain extended at their original sizes. Three available production cases pass / twelve missing-local-reference skips in 69.198 s; sixteen cycles and original 1000×700 pane / forty-line 1178px prompt remain. Actual backend thresholds are included in the full primary and compatibility checks below. Deferred work is not eliminated work. |
+| 9 | Ruff/format/mypy and the optimized primary suite belong to 3.12. Ordinary main 3.14 runs eighteen isolated installed-wheel CLI/server/session/dtype-shape cases; runtime/dependency/packaging/unknown/manual scope selects full compatibility. Manual CI includes both versions. Python 3.12 isolated smoke: eighteen passes, 48.69 s native / 52.918 s envelope. Python 3.14 complete isolated wheel: 1,930 passes / twenty CUDA skips, 1,950 collected, 1022.353 s native / 1029.816 s envelope; default eighteen-case mode: eighteen passes, 56.12 s native / 63.254 s envelope. Imported package paths remain inside the private wheel environment and the CPU guard passes. Default exhaustive cross-version compatibility confidence is deliberately reduced. |
+| 10 | Independent API exact fixture drift and UI binding drift have one dedicated CI owner each. Local full commands retain both; integration `--main-ci` delegates their duplicated execution. Existing validator and generated-binding checks pass. Reject cross-workflow build caching for a build measured around 0.4 s. |
+| 11 | Transport-only production cases use headless Chromium with real TCP/WebGL. Native scrolling, camera, pointer/window, prompt/IME/focus and pixel cases stay headed. One SwiftShader production worker and two component workers remain; no renderer or GPU provisioning change. |
+| 12 | Retain the prior probe fast path and settled-frame batching; retired narratives remove repeated full observations. Keep the real populated-pixel barrier, exact scalar/upload/resource counters and compact timing attachments. No observer framework. |
+| 13 | Keep cheap independent numerical/protocol/security/API/exporter and real Git/lease/command checks after inspecting the remaining families. No deletion quota or mass mutation campaign. UI units remain 1,043; protocol fixtures remain 118 instance / 262 architecture / 132 wire, with 365 references resolved. |
+| 14 | Keep separate production static and development consumers and both configured density servers. Their independent purpose and small startup cost do not justify pooling/caching machinery. HTTP-only routes now omit all browser infrastructure. Additional static-server savings are unmeasured. |
+| 15 | Keep workflow identities, 25-minute limit, exact diff/head/base semantics, same-repository/least-privilege restrictions, epic-child local deferral and final aggregate gates. Use conditional setup for irrelevant owners; no passing-status fabrication, branch-rule/controller or runner change. |
+| 16 | Serialize heavy measurements on isolated snapshots/ports. Keep worker and production thread defaults; no speculative threading change or another issue's process cleanup. Native attempt-duration sums are host-work observations, not CPU seconds or elapsed pipeline time. |
+
+The compact [native case/project sets](issue-277-case-sets.json) record complete
+old/new production identities, the seven changed component sets and backend
+parameter/version dispositions. Native backend collection is 1,964→1,950, with
+1,948 routine and two actual extended tests. The 3.14 default has eighteen runtime
+cases; fuller affected/manual validation retains all 1,950.
+
+| Personally executed proof | Completed result / measured clock |
+| --- | --- |
+| Complete routine HTTP + production browser, one envelope | 66 logical HTTP passes / 60 subtest passes / 10 optional skips; 33 browser passes / five existing unsupported-fixture skips. Exit 0 in **561.084 s**, including selection/setup/build/discovery/teardown, within 900 s target and 1200 s limit. Native HTTP 189.277 s; browser 369.900 s / 366.281 s attempt sum. One complete changed-target attempt, no retries. |
+| Complete component browser | 451 passed, zero skips/failures/flakes/retries; 583.171 s native / 583.704 s envelope. Native attempt-duration sum 1,134.831 s across two workers; JSON omits hook breakdown, which is unavailable rather than zero. |
+| Complete primary backend, including real extended thresholds | 1,930 passed / twenty CUDA skips, 1,950 collected; both real extended tests pass. Native 974.20 s / measured envelope 975.073 s. |
+| Isolated installed-wheel runtime/full compatibility | Python 3.12 isolated smoke: eighteen passes, 48.69 s native / 52.918 s envelope. Python 3.14 complete isolated wheel: 1,930 passes / twenty CUDA skips, 1,950 collected, 1022.353 s native / 1029.816 s envelope; default eighteen-case mode: eighteen passes, 56.12 s native / 63.254 s envelope. Imported package paths remain inside the private wheel environment and the CPU guard passes. |
+| Affected extended production | Three available production cases pass / twelve missing-local-reference skips in 69.198 s; sixteen cycles and original 1000×700 pane / forty-line 1178px prompt remain. Actual backend thresholds are included in the full primary and compatibility checks below. |
+| UI/API fast checks | API binding drift, TypeScript, ESLint, all 1,043 units/58 files and build pass; independent API validation and exact fixture comparison pass. Backend lint/format (136 files) and mypy (111 files) pass. Unchanged checked contents/dependencies are reconciled to the final target. |
+| Selection and command controls | 32 methods / 60 subtests pass, including real native discovery, exact Git rename/deletion inputs, selected command failures and missing required groups. Their command stubs prove orchestration, not application behavior. |
+
+Across the 33 completed production timing attachments, native phases sum to
+39.920 s fixture generation, 207.045 s backend spawn-to-ready, 3.664 s browser
+setup, 107.924 s bodies and 5.894 s teardown. Generation may overlap startup;
+these are not additive elapsed phases or CPU seconds. Vite reports 227 ms compile
+time. The 1.907 s combined remainder outside native HTTP/browser clocks includes
+selection, lint, fresh npm/build startup and wrapper overhead.
+
+Routine timing includes selection, HTTP lint/checks, fresh build, discovery,
+server/browser setup, bodies and normal teardown. Dependency installation and
+checkout are outside that local clock; workflow setup/report headroom is separate. Routine plus affected production
+extended commands total 630.282 s. The earlier observed 35 s workflow overhead
+is historical, not a fresh end-to-end Actions measurement; cold dependency
+installation is unmeasured. The unchanged 25-minute ceiling has ample measured
+command headroom, but no product Actions success is inferred from local clocks.
+No complete baseline exists for a whole-pipeline percentage. The old
+component observation was 521 cases / 742.602 s native / 1,424.791 s attempt sum;
+its scope differs, so it cannot isolate the effects of trace removal and changed
+matrices. The three 1,500-second complete failures above remain failed evidence.
+
+Native JSON/JUnit, negative-control failures, logs/screenshots/trace and detailed
+phase attachments remain outside Git in `/tmp/issue-277-evidence/portfolio/`.
+No model files, tensor caches, large logs or traces are committed. All final passing validations finish normally and close only their owned processes/ports. CPU fixture
+success does not certify unavailable CUDA or complete local reference models.
+
+The initial 450/451 component run failed an unchanged camera setup race. A
+controlled delayed real Fit reproduces the same exact Back mismatch; awaiting
+actual Fit completion before the snapshot preserves every product assertion and
+passes all eighteen camera cases and the complete 451-case suite. An initial
+all-Fit diagnostic gate blocked a later command and is not used as regression
+proof. A Vite worker URL setup failure with symlinked dependencies is retained;
+private copied locked dependencies pass all 1,043 units without changing Vite.
+Reference setup failures initially lost their diagnostic during fixture teardown;
+the fixture now preserves the original exception while still cleaning resources.
+The extended-helper routing negative control fails before its correction and
+passes afterward. These repairs do not change production behavior or weaken
+expectations, deadlines, tolerances or retry policy.
+
+The first full installed-wheel 3.14 run failed cache competition before the
+production helper executed: pytest importlib naming made `tests.test_artifacts`
+unimportable to spawn. Its 594 passes / one failure and deliberate interruption
+at 236.600 s are retained, with remaining cases unvalidated on that attempt.
+Restoring native pytest imports preserves private wheel/location/CPU checks and
+all cache assertions. The real four-process competition passes (1 selected /
+1,949 deselected, 13.14 s); the repaired complete 1,950-case wheel run supplies
+final proof, with finalized JUnit. The two real extended tests pass on both
+Python versions.
+
+## First audit-return completed evidence
+
+The bounded routing repairs are validated at
+`1610d796297771b5a44ff628852bd11bf443d40a`, against unchanged integration
+`25a8d7c3be08e4e74383a988cef74feafeef8414`:
+
+- Six new regressions cover sixteen shared backend helper modules, actual shared
+  HTTP consumers, LoRA's independent TCP owner, command failure propagation and
+  Node-versus-browser prerequisites. The first five fail on the audited selector
+  (twenty assertion failures, including sixteen subtests); the Node control fails
+  before its repair (five assertions). All **38 selector/entrypoint methods** pass
+  after correction, including the existing real Git, discovery and failure guards.
+- The real shared-HTTP plan completes normally: **72 logical passes, 80 subtest
+  passes and ten unchanged capability skips**, 82 collected logical cases and
+  162 JUnit suite entries. Native JUnit wall is **191.031 s**; the complete selected
+  HTTP/lint/entrypoint envelope is **191.807 s**. Browser/build setup is explicitly
+  non-applicable. All owned TCP service processes have exited.
+- The native LoRA TCP owner reports one truthful skip with no reference supplied.
+  Supplying a nonexistent model root instead produces one failure, zero skips and
+  the original `FileNotFoundError`. This verifies prerequisite truth, not actual
+  full-model LoRA/QLoRA acceptance. Ruff/format and scoped diff checks pass.
+
+The first shared-HTTP execution at `ef4ac78eb50033753f9a9fb01e2fd91bd262d33a`
+is retained: one missing-Node setup failure, seventy logical passes and ten
+capability skips, normal exit 1 at **191.595 s**. The isolated shell lacked Node;
+inspection also found CI omitted Node setup for the selected independent TCP
+architecture semantic oracle. The corrected workflow provisions the existing
+Node 24 version for that owner without installing npm/Chromium or building UI.
+The repaired exact-target run above passes; no assertion or timeout changed.
+
+Complete final-diff selection resolves the same backend, HTTP, component and
+production-browser files/portfolios as the audited head. The redundant raw backend
+file plus `tests` entry now normalizes to `tests`; effective native targets are
+identical. Backend source/tests/config/dependencies, API, UI source/tests/config,
+the integration/wheel entrypoints and normative specifications are byte-identical
+to the audited head. Its passing primary/wheel, component and extended evidence
+therefore remains applicable; only changed routing/HTTP controls are freshly run.
+The **561.084 s** complete routine measurement remains explicitly tied to its
+earlier target, not a new timing sample of this repair. Six logical HTTP tests and
+twenty subtest invocations are added; no further coverage retirement or performance
+percentage is claimed. Final report-only publication is reconciled separately.
+
+Native reports, both negative-control logs, the missing-Node failure, final plans,
+source reconciliation and cleanup evidence remain outside Git under
+`/tmp/issue-277-evidence/audit-return/`. The prior failures and all unavailable
+reference/CUDA qualifications remain visible.
+
+## Cross-boundary and phase continuation — completed evidence
+
+The continuation starts at `83843e38e666151aeaa9837b839cfaf1ba1108a3`.
+An ad-hoc read-only inventory inspected 372 repository source/fixture files,
+ordinary and function-local Python imports, embedded preparation commands,
+dynamic CLM/Kev exporters, TypeScript imports and native JSON/HTML/oracle inputs.
+The static graph is an overapproximation: manually inspected CLI branches keep
+the ordinary tensor/tokenizer harness separate from architecture/polish fixtures.
+No test module was executed for discovery. Inventory artifacts stay outside Git.
+
+The final map classifies the 26 cross-boundary backend inputs and six integration
+support families before shared/leaf rules. It retains positively reviewed leaves
+(session operations, matrix zoom and HTTP report): 23 backend, 42 component,
+58 UI-unit and ten HTTP files. Unclassified existing, nested, deleted or renamed
+inputs remain conservative; a filename cannot establish isolation. Shared fixtures
+select their actual native family and applicable threshold owners, without adding
+full Python compatibility for every test-only edit.
+
+Focused regressions cover the issue's direct/transitive/embedded inputs,
+deterministic unions, new-existing/nested/deleted paths, shared HTTP plus reference
+browser consumers, architecture UI plus LoRA, effective reference/full promotion,
+extended-only routine non-applicability, distinct phase evidence, prerequisites and
+failure propagation. Expected targets come from inspected consumer imports and
+commands. The initial five new regression methods fail on the starting selector
+with 21 assertion failures for omitted consumers/incorrect LoRA routine execution;
+these are selector regressions, not native product proof. The extended table covers
+every currently classified backend input and all six integration support families.
+Command stubs establish orchestration and failure propagation only. Native proof
+and retained-evidence reconciliation are recorded below.
+
+The complete 26-input regression table also fails on `83843e3` with 26 intended
+omitted-consumer failures and no setup errors. Final selector/entrypoint controls
+at `fc58928d` report **48 logical passes**, with finalized native JUnit; Ruff/check,
+format (44 files), shell syntax, TypeScript and ESLint pass. The native production
+snapshot is `6e2bc6bfce8e78e3ce32770b98dec67183ac4c6a`; `fc58928d` changes only
+the cheap routing regression table relative to that snapshot.
+
+| Fresh native proof | Result | Native wall / command envelope |
+| --- | --- | --- |
+| Architecture, native-package, polish and LoRA TCP files, selected once as a union | 13 passes, eight absent-reference/explicit-local-gate skips; 21 logical cases. Real CLM/Kev exporters, adapted projection A/B bytes and the configured Kimi graph run through the production CLI/TCP. | 91.811 s JUnit / 92.532 s |
+| Architecture routine, both configured density projects | 13 passes, five existing unsupported-fixture skips; 18 pairs. Geometry, binding, progressive cancellation, stale response and resource/lifetime assertions are unchanged. | 155.255 s / 155.731 s |
+| Available production extended, existing DPR-1 owner | Three passes, twelve absent-reference skips; 15 pairs. Sixteen-cycle mounted lifetime, compact native shell and tokenizer divider proof execute. | 68.045 s / 68.610 s |
+| Native collection and effective phases | Before/after full identities are equal: 53 pairs. Routine 38 and extended 15 are disjoint and their union equals full. Required-reference promotion collects those same 53. LoRA routine is intentionally empty; its two extended cases remain selected. | Collection/control only, not product performance |
+| Temporary two-case native phase control | Routine, extended, full and diagnostic finalize separate JSON/output directories. Deliberate extended failure exits 1; the earlier routine JSON digest remains unchanged after failure/full/diagnostic. Explicit trace exists only in diagnostic artifacts. | Small report/trace contract fixture; no model/WebGL claim |
+
+The production routine JSON remains byte-identical after the extended execution;
+neither production phase creates a default trace. A named architecture input-failure
+control at the old head retains a trace; the same new default does not, and native
+`--trace on` produces one in the diagnostic directory. Both old/new controls retain
+the original missing-manifest error and an unchanged secondary timing-teardown
+error. They establish trace policy, not full local-model acceptance. Native LoRA
+extended without inputs produces two truthful skips; a supplied nonexistent root
+promotes to full and produces two original missing-input failures with zero skips.
+The application upload selects the owned root containing HTTP JUnit and all phase
+directories; command controls preserve nonzero build/HTTP/browser/later-phase exits.
+
+Two native controls exposed adjacent phase defects during implementation:
+project-level density grep replaced the global extended grep (19 collected pairs,
+including four ordinary replays), and workers reloaded configuration without the
+CLI trace argument (a diagnostic trace landed in routine artifacts). Intersecting
+the density/extended filters and propagating the resolved evidence phase repair
+those defects; their original reports remain outside Git. A first trace control
+used an anchored title filter and collected no tests; that setup failure is retained
+and is not counted as trace regression proof. The corrected native title control
+above reaches the actual input failure. No retry, assertion, tolerance or timeout
+was changed.
+
+Complete-diff reconciliation to `83843e3` selects identical effective native files:
+all backend tests, 42 component files, seven production files and complete HTTP.
+Backend source/tests/configuration/dependencies and wheel isolation, API/generator,
+UI source/units/component tests/configuration/locked dependencies and accepted
+specifications are unchanged. Their recorded passing primary/wheel (1,930 passes,
+20 CUDA skips), component (451 passes), UI-unit (1,043 passes) and API proof remain
+applicable. Acceptance phase configuration and architecture trace differ and have
+the fresh proof above; the ten additional logical HTTP routing/control methods
+are validated separately instead of repeating unchanged HTTP consumers.
+
+The historical **561.084 s** complete routine sample remains tied to its original
+revision. This continuation supplies scoped proof, not a new whole-pipeline timing
+sample; one of the two authorized complete routine attempts remains unused. No
+new retirement or measured savings percentage is claimed. Shared UI support and
+unknown inputs deliberately over-select relevant/full owners as a cost tradeoff.
+Unavailable complete references and CUDA remain uncertified, and final aggregate
+product CI remains mandatory. The four product workflows retain accepted epic-child
+CI deferral; applicable exact-head executor-routing CI is checked at publication.
+
+Finalized native JSON/JUnit, before/after collection identities, negative controls,
+original phase failures, timing/log/screenshot/trace evidence, source reconciliation
+and owned-process cleanup are retained under
+`/tmp/issue-277-evidence/closure-phases/`. All owned snapshot service/browser processes
+have exited. No model weights, caches, bulky reports or traces are committed.

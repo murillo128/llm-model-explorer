@@ -56,7 +56,7 @@ test('empty, loading and unavailable embeddings share integrated title/body card
   expect(await page.evaluate(() => window.embeddingHarness.auxiliary.length)).toBe(0);
 });
 
-for (const dpr of [1, 2]) test(`exact progressive rows, linked annotations and frozen editor at DPR ${dpr}`, { tag: '@responsive' }, async ({ page }) => {
+for (const dpr of [1, 2]) test(`exact progressive rows, linked annotations and frozen editor at DPR ${dpr}`, { tag: dpr === 2 ? '@responsive' : [] }, async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: page.viewportSize()!.width, height: page.viewportSize()!.height, deviceScaleFactor: dpr, mobile: false });
@@ -279,7 +279,7 @@ test('token hover and activation take over keyboard matrix inspection without mo
   })).toEqual(before);
 });
 
-for (const dpr of [1, 2]) test(`panel cameras and offscreen token reveal stay independent at DPR ${dpr}`, { tag: '@responsive' }, async ({ page }) => {
+for (const dpr of [1, 2]) test(`panel cameras and offscreen token reveal stay independent at DPR ${dpr}`, { tag: dpr === 1 ? '@responsive' : [] }, async ({ page }) => {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: page.viewportSize()!.width, height: page.viewportSize()!.height, deviceScaleFactor: dpr, mobile: false });
   const editor = await start(page);

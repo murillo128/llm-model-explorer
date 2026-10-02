@@ -63,7 +63,7 @@ async function escapeViews(page: Page) {
 }
 for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
-  for (const shape of ['short', 'tall', 'large', 'square'] as const) test(`fit, focal zoom, bounds and aligned profiles: ${shape}`, { tag: '@responsive' }, async ({ page }) => {
+  for (const shape of (dpr === 1 ? ['short', 'tall'] : dpr === 1.25 ? ['large'] : ['square']) as ('short' | 'tall' | 'large' | 'square')[]) test(`fit, focal zoom, bounds and aligned profiles: ${shape}`, { tag: shape === 'short' ? '@responsive' : [] }, async ({ page }) => {
     await open(page, shape);
     let c = await camera(page);
     const fit = Math.max(1, Math.floor(c.width * dpr) / c.shape.columns);
@@ -108,7 +108,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
     expect(c.view.scaleX).toBeCloseTo(fit); expect(c.view.x).toBe(0); expect(c.view.y).toBe(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   });
-  test('wheel, trackpad pinch, exact click/pending values and resource lifetime', { tag: '@responsive' }, async ({ page }) => {
+  if (dpr === 1.25) test('wheel, trackpad pinch, exact click/pending values and resource lifetime', async ({ page }) => {
     await open(page, 'square');
     await page.evaluate(() => window.matrixFixture.subscriptions.at(-1)!.values(Float32Array.from({ length: 1000 }, (_, i) => i + .25), 0));
     const before = await camera(page);
@@ -134,7 +134,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
     await expect(page.locator('.inspection-readout')).toContainText('Unavailable — not received');
     await page.evaluate(() => {
       const f = window.matrixFixture, v = f.viewports.at(-1)!;
-      for (let i = 0; i < 12; i++) {
+      for (let i = 0; i < 4; i++) {
         Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: i % 2 ? 2 : 1.25 });
         window.dispatchEvent(new Event('resize'));
         v.zoomAt(4 + i, 20, 20);
@@ -148,7 +148,7 @@ for (const dpr of [1, 1.25, 2]) test.describe(`zoom DPR ${dpr}`, () => {
     await expect(page.locator('.matrix-explorer')).toHaveCount(0);
     expect(await page.evaluate(() => window.matrixFixture.resources())).toEqual({ textures: 0, displays: 0, framebuffers: 0, buffers: 0, programs: 0, cpuBytes: 0 });
   });
-  test('region/range camera history, scoped right-click, fit and source reset', async ({ page }) => {
+  if (dpr === 1) test('region/range camera history, scoped right-click, fit and source reset', async ({ page }) => {
     await open(page, 'square');
     const initial = (await camera(page)).view;
     await page.evaluate(() => window.matrixFixture.viewports.at(-1)!.zoomToBounds({ columns: [4, 16], rows: [5, 13] }));

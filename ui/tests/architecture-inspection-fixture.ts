@@ -44,7 +44,7 @@ export function inspectionFixture(tensors: TensorDescriptor[], modelId: string, 
     const port = (id: string, direction: 'input' | 'output', shape: S['ArchitectureShape']): S['ArchitecturePort'] => ({ id, direction, label: id, shape });
     const provenance: S['ArchitectureProvenance'][] = [{ kind: 'description', source: 'synthetic-smollm2-lora' }];
     const operation = (id: string, label: string, name: string, ports: S['ArchitecturePort'][], parameterIds: string[] = [], formula?: string): S['ArchitectureLeafNode'] => ({
-      id, kind: 'operation', label, operation: name, parent_id: 'layer1', ports,
+      id, kind: 'operation', label, operation: name, parent_id: 'adapted-projection', ports,
       parameter_ids: parameterIds,
       references: [
         ...(parameterIds.map((parameter_id) => ({ kind: 'parameter' as const, parameter_id }))),
@@ -55,23 +55,37 @@ export function inspectionFixture(tensors: TensorDescriptor[], modelId: string, 
     });
     const a = operation('lora_A', 'LoRA A projection', 'linear', [port('x', 'input', flowShape), port('out', 'output', flowShape)], ['lora-a'], 'y = x Aᵀ');
     const b = operation('lora_B', 'LoRA B projection', 'linear', [port('x', 'input', flowShape), port('out', 'output', flowShape)], ['lora-b'], 'y = x Bᵀ');
-    const scale = operation('lora_scale', 'LoRA scale', 'scale', [port('x', 'input', flowShape), port('out', 'output', flowShape)], [], 'y = (alpha / r) * x');
+    const scale = operation('lora_scale', 'LoRA scale', 'scale', [port('x', 'input', flowShape), port('out', 'output', flowShape)], [], 'out = factor * x');
     scale.attributes = [{ name: 'factor', value: 2, provenance }];
     const add = operation('lora_add', 'LoRA residual', 'add', [port('base', 'input', flowShape), port('adapter', 'input', flowShape), port('out', 'output', flowShape)], [], 'y = base + adapter');
+    const projection: S['ArchitectureGroupNode'] = { id: 'adapted-projection', label: 'Composite projection', kind: 'group',
+      parent_id: layer.id, ports: [port('x', 'input', flowShape), port('out', 'output', flowShape)],
+      children: ['linear1', 'lora_A', 'lora_B', 'lora_scale', 'lora_add'], parameter_ids: [], references: [], attributes: [], provenance };
+    base.parent_id = projection.id;
+    graph.nodes.splice(graph.nodes.indexOf(base), 0, projection);
     graph.nodes.push(a, b, scale, add);
-    layer.children.push('lora_A', 'lora_B', 'lora_scale', 'lora_add');
-    graph.edges = graph.edges.filter((edge) => !(edge.source.node_id === 'linear1' && edge.target.node_id === 'layer1'));
+    layer.children = layer.children.map(id => id === base.id ? projection.id : id);
+    for (const [id, formula] of [['reshape', 'out = reshape(x, ...)'], ['transpose', 'out = transpose(x, ...)'],
+      ['softmax', 'out = softmax(x, axis=axis)']]) {
+      const record = operation(id!, id!, id!, [port('x', 'input', flowShape), port('out', 'output', flowShape)], [], formula);
+      record.parent_id = layer.id;
+      if (id === 'softmax') record.attributes = [{ name: 'axis', value: -1, provenance }];
+      graph.nodes.push(record); layer.children.push(record.id);
+    }
+    graph.edges = graph.edges.filter(edge => edge.source.node_id !== base.id && edge.target.node_id !== base.id);
     const edge = (id: string, source: string, sourcePort: string, target: string, targetPort: string): S['ArchitectureEdge'] => ({
       id, source: { node_id: source, port_id: sourcePort }, target: { node_id: target, port_id: targetPort }, kind: 'data', provenance,
     });
     graph.edges.push(
-      edge('lora-input-base', 'layer1', 'in', 'linear1', 'in'),
-      edge('lora-input-a', 'layer1', 'in', 'lora_A', 'x'),
+      edge('projection-input', 'layer1', 'in', projection.id, 'x'),
+      edge('lora-input-base', projection.id, 'x', 'linear1', 'in'),
+      edge('lora-input-a', projection.id, 'x', 'lora_A', 'x'),
       edge('lora-a-b', 'lora_A', 'out', 'lora_B', 'x'),
       edge('lora-b-scale', 'lora_B', 'out', 'lora_scale', 'x'),
       edge('lora-base-add', 'linear1', 'out', 'lora_add', 'base'),
       edge('lora-scale-add', 'lora_scale', 'out', 'lora_add', 'adapter'),
-      edge('lora-output', 'lora_add', 'out', 'layer1', 'out'),
+      edge('lora-output', 'lora_add', 'out', projection.id, 'out'),
+      edge('projection-output', projection.id, 'out', 'layer1', 'out'),
     );
   }
   if (modelId === 'lab/beta') {

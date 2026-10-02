@@ -58,16 +58,17 @@ serve development modules. CORS allows only the static origin and exposes
 ## CI ownership
 
 On `main`, Application acceptance runs `bash acceptance/check-integration.sh
---main-ci`: acceptance lint/format checks, the real HTTP suite, a production UI
-build from the same checkout, and the complete product browser selection: all
-cases at DPR 1 plus `@density` cases at DPR 2. It does not rerun backend
+--main-ci --plan validation-plan.json`: acceptance/selector lint/format checks,
+the selected real HTTP owners, a production UI build from the same checkout,
+and selected product browser files: all selected cases at DPR 1 plus `@density`
+cases at DPR 2. It does not rerun backend
 unit/type/lint checks, UI unit/type/lint or component-browser checks, or API fixture/binding validation. Those remain owned
-by `backend-ci.yml`, `ui-ci.yml`, and `api-contract.yml`, respectively, subject to
-their existing path filters. Their Python-version and browser-project coverage
+by `backend-ci.yml`, `ui-ci.yml`, and `api-contract.yml`, respectively, using the
+same conservative selector. Their Python-version and browser-project coverage
 is unchanged. The historical application job/check name is retained.
 
-PRs and epic integration branches still use `check-integration.sh` without
-arguments, including their contract/binding checks and DPR 1 product coverage.
+PRs use the selected plan without `--main-ci`, including their contract/binding
+checks and DPR 1 product coverage. Epic-child CI deferral remains in place.
 `check.sh` remains the standalone full local command: it runs every layer and
 produces the aggregate report. The lean main CI gate uploads HTTP JUnit and
 product browser evidence, not a duplicated component report. API-tool environment
@@ -77,8 +78,16 @@ responses are cached or mocked by this change.
 
 The entrypoint regression tests use command stubs solely to verify orchestration,
 including failure propagation; they do not replace application tests. Run them
-without application dependencies using `python -m unittest discover -s acceptance
--p test_ci_entrypoints.py`.
+with the existing API interpreter (PyYAML parses the workflow invocation) using
+`api/.venv/bin/python -m unittest discover -s acceptance -p test_ci_entrypoints.py`.
+
+See [validation routing](validation-routing.md) for the ownership table, complete
+changed-path/revision rules, commands and failure/fallback behavior. All product
+workflows inspect changes before conditional steps, including normative API specs,
+examples and shared configuration. `workflow_dispatch` selects full coverage;
+the final epic PR forces the complete mandatory routine portfolio plus affected
+extended proof. `check.sh` remains complete and independent from selection;
+`check-integration.sh --main-ci` without a plan remains complete integration.
 
 ## Per-case density ownership
 
@@ -86,14 +95,16 @@ without application dependencies using `python -m unittest discover -s acceptanc
 selects `@density` cases in `dpr2`. Add that native tag only for physical pixels,
 DPR-dependent geometry or a distinct density interaction. New untagged cases
 always run at DPR 1. Ordering, cancellation, provenance and package selection
-keep their real integration scenario once. Deliberate in-scenario DPR transitions
-remain active; the two initial densities retain opposite transition directions.
+keep their real integration scenario once. The explicit 1→2→1 transition remains
+active and checks notification delivery in both directions.
 See the [per-family ownership and density matrix](integration-test-ownership.md)
 for exact retained proofs and domain inputs moved to TCP/component-renderer owners.
 
-From `ui/`, `npm run test:acceptance -- --list` shows the full expanded selection;
-`--project=dpr1` shows the PR/epic selection. Full local/main execution uses both
-configured projects. Unavailable references remain explicit skips, and strict
+From `ui/`, `npm run test:acceptance -- --list` shows the routine selection;
+`LMEX_TEST_PORTFOLIO=full npm run test:acceptance -- --list` shows every non-retired
+case, and `LMEX_TEST_PORTFOLIO=extended` selects the extended cases. Routine and
+full local/main execution use both configured projects for their density tags.
+Unavailable references remain explicit skips, and strict
 reference mode still fails missing inputs in the base project. Fixture selection
 is never a substitute for actual-reference acceptance.
 

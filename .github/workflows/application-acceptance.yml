@@ -5,20 +5,8 @@ on:
     # Epic children validate their scoped change locally; the aggregate epic PR runs acceptance.
     branches-ignore:
       - 'codex/epic-issue-*'
-    paths:
-      - 'backend/**'
-      - 'ui/**'
-      - 'api/**'
-      - 'acceptance/**'
-      - '.github/workflows/application-acceptance.yml'
   push:
     branches: [main]
-    paths:
-      - 'backend/**'
-      - 'ui/**'
-      - 'api/**'
-      - 'acceptance/**'
-      - '.github/workflows/application-acceptance.yml'
   workflow_dispatch:
 
 permissions:
@@ -39,35 +27,36 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Select validation owners from exact revisions
+        id: plan
+        working-directory: .
+        run: python3 .github/scripts/validation_selector.py --github --output validation-plan.json --github-output "$GITHUB_OUTPUT" --summary "$GITHUB_STEP_SUMMARY"
       - uses: astral-sh/setup-uv@v6
+        if: steps.plan.outputs.integration == 'true'
         with:
           version: '0.12.13'
       - uses: actions/setup-node@v4
+        if: steps.plan.outputs.integration_node == 'true'
         with:
           node-version-file: ui/.nvmrc
       - name: Select isolated browser ports
+        if: steps.plan.outputs.integration_browser == 'true'
         shell: bash
         run: |
           base_port=$((20000 + (GITHUB_RUN_ID % 7000) * 6))
           echo "UI_TEST_PORT=$base_port" >> "$GITHUB_ENV"
       - name: Reuse persistent backend environment
+        if: steps.plan.outputs.integration == 'true'
         shell: bash
         run: |
           env_dir="${{ runner.tool_cache }}/llm-model-explorer/application/backend-python-3.12-${{ hashFiles('backend/uv.lock') }}"
           echo "UV_PROJECT_ENVIRONMENT=$env_dir" >> "$GITHUB_ENV"
           ln -s "$env_dir" backend/.venv
-      - run: uv sync --locked --project backend --python 3.12
-      - name: Reuse persistent API environment
-        if: github.ref != 'refs/heads/main'
-        shell: bash
-        run: |
-          env_dir="${{ runner.tool_cache }}/llm-model-explorer/application/api-python-3.12-${{ hashFiles('api/requirements.txt') }}"
-          if [ ! -x "$env_dir/bin/python" ]; then
-            uv venv "$env_dir" --python 3.12
-          fi
-          uv pip install --python "$env_dir/bin/python" -r api/requirements.txt
-          echo "LMEX_CONTRACT_PYTHON=$env_dir/bin/python" >> "$GITHUB_ENV"
+      - if: steps.plan.outputs.integration == 'true'
+        run: uv sync --locked --project backend --python 3.12
       - name: Restore locked node_modules
+        if: steps.plan.outputs.integration_browser == 'true'
         id: node-modules
         uses: actions/cache@v4
         with:
@@ -75,24 +64,24 @@ jobs:
             ui/node_modules
             ui/scripts/api-generator/node_modules
           key: ui-node-modules-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ui/.nvmrc', 'ui/package.json', 'ui/package-lock.json', 'ui/scripts/api-generator/package.json') }}
-      - if: steps.node-modules.outputs.cache-hit != 'true'
+      - if: steps.plan.outputs.integration_browser == 'true' && (steps.node-modules.outputs.cache-hit != 'true')
         run: npm ci --prefix ui
       - name: Ensure the locked Chromium build is available
+        if: steps.plan.outputs.integration_browser == 'true'
         run: cd ui && npx playwright install chromium
       - name: Run application acceptance
+        if: steps.plan.outputs.integration == 'true'
         shell: bash
         run: |
-          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-            # Component/API checks belong to their dedicated workflows.
-            bash acceptance/check-integration.sh --main-ci
-          else
-            bash acceptance/check-integration.sh
-          fi
+          # Independent API/generated checks belong to their exact-target workflows.
+          bash acceptance/check-integration.sh --routine --main-ci --plan validation-plan.json
+      - name: Run affected extended product proof
+        if: steps.plan.outputs.integration_extended == 'true'
+        run: python3 .github/scripts/validation_selector.py --plan validation-plan.json --run integration --main --extended
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: application-acceptance-evidence
           path: |
             ${{ env.LMEX_EVIDENCE_DIR }}/
-            ui/test-results/
           retention-days: 14

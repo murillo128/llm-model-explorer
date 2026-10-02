@@ -1,6 +1,6 @@
 # Production acceptance ownership and density selection
 
-Issue #276 compares the incoming integration snapshot
+The first table records issue #276 against the incoming integration snapshot
 `648e457c76ffa7633deedacb15b66d466e0c0b47` with the scoped changes below.
 This is test evidence, not a replacement product specification. #274's
 [retained domain owners](../ui/evidence/domain-test-ownership.md) and #275's
@@ -89,29 +89,44 @@ input. All rows retain DPR 1 unless the three input relocations above say otherw
 
 ## Architecture and package families
 
-These continue to use the production backend, real semantic graph/API decoder,
-layout worker and projection path. No native package is replaced by static JSON.
-No long scenario is combined or reduced in size/cycles: its retained production
-risk is not established by generic widget tests with simulated transport.
+Issue #277 consolidates repeated UI behavior by responsibility. Generic graph
+cases own gestures and presentation; native package/composition cases use the
+production CLI and real TCP, with physical Safetensors bytes as the independent
+numeric oracle. Actual-reference graph sizes, numeric browser bindings, modal
+cancellation and mounted lifetime cycles remain.
+
+Native product collection changes 93 to 85 pairs: DPR 1 is 59 and DPR 2 is 26.
+Removed: the seven deterministic `full graph, concrete bindings and logical
+weight modal` DPR-2 pairs and the DPR-1 CLM, Kev and adapted-hierarchy cases.
+Added: `production graph navigation preserves declared structure and retained
+UI state` at both densities. Three removed deterministic pairs already had
+unsupported-fixture skips; they are not runnable savings. Every actual-reference
+case/project pair remains unchanged. Three new mandatory TCP cases replace the
+package/composition producer and numeric proofs.
 
 | Family | Retained owner and integration risk | Density |
 | --- | --- | --- |
 | Precise model-owned load failure | Same `architecture.spec.ts` case; real duplicate-key sidecar becomes typed capability finding and exact safe API diagnostic in UI | 1: diagnostic/provenance binding |
 | Port labels/cable clearance/terminal emphasis | Same production case; generated geometry, real port/line pointer targets, exact emphasis, no numeric request/layout/camera change, resize/isolation | Both: constrained rasterized label and port/line hit targets; #270 regression retained |
-| Full graph/concrete bindings/logical modal: seven deterministic and seven actual-reference families | Same complete cases; actual graph/compact decoder, source conservation, layout/projection, native/decoded later-instance weights, unavailable binding and explorer restoration | Both: real port/line hits and native scientific inspection. All actual-reference/large MoE shapes and memory evidence remain unchanged |
+| Full graph/concrete bindings/logical modal: seven deterministic and seven actual-reference families | Real graph/compact decoder, source conservation, exhaustive projection/layout, native/decoded later-instance weights and unavailable binding | Deterministic bindings: 1; actual references: Both. All actual-reference/large MoE shapes and memory evidence remain unchanged |
+| Generic production graph navigation | One real-backend hybrid graph exercises each declared component variant, expansion/isolation, actual port/trunk hits, exact search identities, dimensions, title/body selection without requests, retained explorer state and collapse | Both: generic layout/pointer and retained UI state |
 | Kimi complete repeated experts; actual Kimi issue-178 expansion/router/expert; actual Qwen exhaustive detail | Same cases; full configured expert/graph size, far-instance culling/reachability and actual router/expert binding at representative widths | Both: readable rendered-scale targeting/culling and native reference weight inspection; existing prerequisite skips remain explicit |
 | Close during progressive data | Same three-cycle case; exact prefix, actual first render, modal cancellation and zero operations/readers/tasks/cache temporaries | 1: consumer/modal lifetime, while density/rendering is owned above |
 | Repeated nested return; extended mounted lifetime/teardown | Same eight-/sixteen-cycle cases and graph sizes; exact Back cameras/source records, layout-worker/WeakRef retention, GC and complete teardown | 1: same semantic layouts and cycle count; no device-pixel oracle. Size/lifetime proof is retained, not moved to a smaller fixture or optional job |
 | Isolated session replacement rejects late response | Same case delays actual backend graph; model/session replacement rejects stale graph/scope/selection | 1: generation fence |
 | Shared templates/distinct instance weights/cancellation | Same complete scenario; neutral structure cannot fetch values, concrete instances use distinct exact float32 values, cancel/remap maintains one canvas, eight switch cycles stay bounded | 1: binding and layout lifetime; numeric density/selection bridge remains above |
-| CLM configured head; Kev adapted hybrid projection/factor/pointer | Same `clm.spec.ts` / `kev.spec.ts` cases with fresh real native packages/backend and actual weight HTTP requests | 1: native export/admission/semantic binding; no density-specific assertion. Supplied reference roots still validate rather than silently fall back |
-| Adapted projections/hierarchy/formulas/A/B | Same `lora-hierarchy.spec.ts` case; exact children, ordinary expand/isolate/Back, source-backed formula/ports/scalars and A/B streams | 1: #269 hierarchy/formula/weight binding regression intact |
-| Actual LoRA and QLoRA references | Same two `lora-reference.spec.ts` cases; complete native target set, NF4 base and actual A/B inspection | 1: package/provenance/weight binding; absent prerequisites remain optional, supplied invalid roots fail |
+| CLM configured head; Kev adapted hybrid projection/factor/pointer | `acceptance/test_native_packages.py::test_exported_packages_bind_head_and_factor_values_over_tcp`, both inputs: fresh real export, graph admission, native exact IDs and float32 bytes read independently from Safetensors | TCP producer/binding. Generic card/inspection cases own expand, exact parameter dispatch, canvas and cleanup. Supplied reference roots still validate rather than silently fall back |
+| Adapted projections/hierarchy/formulas/A/B | `test_native_packages.py::test_adapted_projection_hierarchy_and_factor_values_over_tcp`: ordered children, source formulas/scalars/ports and exact native A/B bytes. `ui/tests/architecture-inspection.spec.ts::nested source groups retain supplied formulas, scalars, ports and distinct weights`: real UI expand/isolate/Back, visible formulas/factor=2/axis=-1, ports and distinct A/B dispatch | TCP composition plus generic browser presentation. #269 source and UI contracts retain separate owners |
+| Actual LoRA and QLoRA references | Same two `lora-reference.spec.ts` cases: actual A/B modal inspection and NF4 base selection. Exhaustive target/shape/algebra metadata stays in `acceptance/test_lora_reference.py` | 1: actual package/browser weight binding; absent prerequisites remain optional, supplied invalid roots fail |
 
 Generic gesture schedules/window navigation retain #274's literal oracles and
-actual component-browser bridges. Exhaustive production graph scenarios retain
-their complete assertions because model family, layout and concrete binding are
-independent integration risks; none is replaced with a generic widget success.
+actual component-browser bridges. `architecture-card-actions.spec.ts` and
+`architecture-inspection.spec.ts` own selection/camera/scope/no-request and exact
+modal dispatch; the generic production journey retains the live-boundary bridge.
+The numeric matrix no longer repeats those gestures per parameter or model.
+Full-size component stress keeps the larger dense 30-layer shape, hybrid 24-layer
+shape and independent 24+12 stacks; the same-generator dense 28-layer duplicate
+is removed. Fixture sizes and metadata used by other cases remain unchanged.
 
 ## Real transport contracts kept independently
 
@@ -233,3 +248,42 @@ The existing application/UI/backend/API workflows explicitly defer epic-child
 PRs targeting `codex/epic-issue-*`; the routing workflow has no changed applicable
 paths. Local scoped evidence supplies this child gate; the final aggregate epic
 PR still owes all applicable CI. No workflow or command orchestration was changed.
+
+## Revised portfolio — issue #277, 2026-10-02
+
+The expanded issue contract supersedes the earlier fixed-pair preservation policy.
+The former `product.spec.ts` is split into transport, scientific, native, bindings
+and tokenizer-layout specs. `product-harness.ts` supplies an automatic **per-test**
+fixture: each test owns its process, cache, timing and closures, including across
+files. No service pooling/reset framework is introduced.
+
+| Changed exact family | Disposition and remaining owner / explicit coverage loss |
+| --- | --- |
+| Progressive supertest, both densities | Compact real producer barrier, green source pixel, exact independent cell, mounted GPU upload limit and teardown/GC in `scientific.spec.ts`, once. Exhaustive luminosity/neighborhood/profile recoloring stays in `renderer.spec.ts`, matrix pixel and magnifier owners. Lost: full TCP navigation/pixel cross-combination in one long narrative. |
+| Two-card parity, both densities and 1178/1440 captures | One real three-request proof; both cards independently checked against the formula/count oracle, linked row and no reupload. Retire screenshot/empty-prompt/divider/gesture repeats; component tokenizer/layout owns those branches. Lost: complete two-card presentation on every width/DPR. |
+| `production matrix navigation…`, both densities; `polish magnifier follows edges…`, both densities | Low-value integrated combination retirement. Centering, zoom-selection, pixel alignment, adaptive placement/hysteresis/source replacement and renderer lifetimes remain native component owners. Production keeps real wheel/touch plus exact cell/ownership. Lost: simultaneous TCP/resize/source/DPR edge narrative. |
+| Three `architecture safety baseline…` widths | Low-value shell/presentation combination retirement. Generic production architecture navigation and component shell/controls remain. Lost: fake graph plus real numeric service shell comparison at all three widths. |
+| Four `polish inventory captures…` width×DPR invocations | Retire presentation repetitions; retain real streaming inventory preferences/mounted canvas once and native pane bridges. Lost: all 1178/1440 composed captures. |
+| Prompt pixel/history/IME, inventory preferences, camera, stale-generation, DPR-ordering | One density each. Preserve real screenshots/response barriers/IME debounce, held actual responses and explicit 1→2→1 notification ordering. Component/native owners retain physical rounding. |
+| Native pane 1000×700 / 390×640 | 390 routine at both densities; desktop retained extended once. All four overflow branches and independent aligned origins remain. Extra desktop DPR replay retired. |
+| Real tokenizer auto-size/manual split | 1178 retained extended, including unchanged forty-line prompt and native keyboard/touch/resize. 1440 presentation repetition retired. |
+| Qwen3/Qwen3.5 generic input binding and GPTQ/NVFP4 browser wrapper | Qwen3.5 plus unsupported-model recovery retained once. Qwen3 and packed-family repeats retire; actual decoder/source rows stay in TCP `test_polish.py` and backend owners. Lost: each family name exercised through the same browser dispatch narrative. |
+| Actual Base/architecture/LoRA references | Targeted extended, one density. Existing supplied-invalid/required-mode checks remain; absent capabilities are explicit skips, with no claimed runtime saving. |
+| Architecture eight-cycle nested return and eight template remaps | Three adversarial routine cycles, exact returned identity/camera/source records and warmed retention. Lost: longer repeated growth window in these routine cases; independent sixteen-cycle extended lifetime retains full size/teardown. |
+| Backend analysis endpoints, nineteen inputs | Seven cold serialization representatives; one independent exact cold/warm metadata/payload comparison forbids recomputation. Nineteen native numeric oracles remain. Retire twelve endpoint repetitions and two DONE-only F16/BF16 wrappers; exact converted byte owners remain in tensor-data tests. Lost: cross-dtype analysis artifact-count check and omitted numeric×HTTP combinations. |
+
+Retirements are authorized risk trades, not claims of identical coverage. Transport
+cancellation, surviving shared consumers, pre-/midstream failures, incomplete cache,
+stale-generation fencing, exact dispatch and native/scientific resource ownership
+retain real TCP/backend/browser owners. The cost report records native sets and
+validation. Full/manual includes every non-retired extended/reference case.
+
+The cross-boundary repair retains these owners in the selector: native LoRA/CLM/Kev
+fixture preparation selects real native-package TCP; dense/quantized/model/stream
+helper closure selects architecture/native-package/polish TCP plus architecture
+browser; shared network/reference support retains the architecture reference
+browser consumer. Architecture UI changes also select retained LoRA browser/TCP
+proof. See the [inspected closure and phase map](validation-routing.md).
+Extended-only LoRA routine non-applicability is a phase classification, not a
+capability skip or deletion. Reference promotion executes effective full once;
+distinct native reports preserve routine, extended, full and diagnostic evidence.

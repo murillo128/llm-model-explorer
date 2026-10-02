@@ -141,7 +141,7 @@ composite risks:
 | Real consumer/lifecycle, accidental checkpoint loading/network/fallback | Backend startup/cache and endpoints, exact binary bytes and embedding rows; runtime load/network traps, unavailable damaged inspection metadata/bindings, relocation/content invalidation | Same backend test |
 | Native selection/provenance and semantic interfaces | Sidecar-free export, reviewed source pin, explicit pooling/normalization/head/temperature/softmax edges and ports; unavailable mismatched metadata/inventory | Same backend test |
 | Packaged trust and computational constants | No model-supplied notice; source-backed epsilon, scale cap and candidate axis rendered on the operation | Focused Architecture Explorer/card-summary unit tests |
-| Production rendering/navigation | Select CLM, expand a projection group, inspect its real native matrix | `ui/acceptance/clm.spec.ts` |
+| Production package/graph/native values | Export CLM, admit its graph and stream the configured head with exact physical-source bytes | `acceptance/test_native_packages.py`, `clm` input; generic Architecture Explorer browser cases own rendering/navigation |
 
 Run focused checks from the repository root:
 
@@ -158,16 +158,14 @@ vocabulary-head inventory, and stops without numerical streams or a second
 startup. Omit the flag only when validating a changed tensor/tokenizer boundary;
 the original full stream/tokenizer/warm-cache campaign remains separately owned.
 
-The browser test uses the reduced deterministic package by default and the
+The TCP acceptance test uses the reduced deterministic package by default and the
 operator-selected complete package when `LMEX_CLM_REFERENCE_MODEL_ROOT` is set.
-Build the production UI before either run, using the repository's pinned Node
-environment and installed Playwright Chromium. On Linux the configured headed
-browser requires a working display, for example `xvfb-run -a`:
+Run it with the installed backend environment:
 
 ```sh
-(cd ui && npm run build && xvfb-run -a npm run test:acceptance -- clm.spec.ts --project=dpr1)
-(cd ui && LMEX_CLM_REFERENCE_MODEL_ROOT="$clm_work/models" \
-  xvfb-run -a npm run test:acceptance -- clm.spec.ts --project=dpr1)
+PYTHONPATH=backend/src:. HF_HUB_OFFLINE=1 backend/.venv/bin/python -m pytest acceptance/test_native_packages.py -k clm -q
+LMEX_CLM_REFERENCE_MODEL_ROOT="$clm_work/models" PYTHONPATH=backend/src:. \
+  HF_HUB_OFFLINE=1 backend/.venv/bin/python -m pytest acceptance/test_native_packages.py -k clm -q
 ```
 
 The reference run must be reported separately. See [acceptance evidence](evidence.md)

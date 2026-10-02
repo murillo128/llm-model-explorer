@@ -1,6 +1,6 @@
 import { findComponent, graphAction, graphPreference, viewOptions } from './architecture-controls';
 import { expect, test } from '@playwright/test';
-import { contractResponse, referenceFixture, references } from './architecture-fixtures';
+import { contractResponse, referenceFixture } from './architecture-fixtures';
 
 const harness = `http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/architecture.html`;
 test('nested expansion, instance identity, ports, dimensions, keyboard and camera restoration', async ({ page }, info) => {
@@ -80,22 +80,28 @@ test('safe labels and expressions remain inert; repeated unmount terminates work
   }
 });
 
-for (const reference of references) test(`full-size ${reference.name}: all instances, bounded document, layout and memory evidence`, async ({ page }, info) => {
+// Dense 28- and 30-layer graphs use the same generator and oracle. Keep the
+// larger dense shape, plus the independently different hybrid and two-stack shapes.
+for (const shape of [
+  { name: 'dense repeated stack', fixture: 'smollm2', stacks: [30] },
+  { name: 'hybrid repeated stack', fixture: 'qwen35', stacks: [24] },
+  { name: 'two independent stacks', fixture: 'vjepa2', stacks: [24, 12] },
+]) test(`full-size ${shape.name}: all instances, bounded document, layout and memory evidence`, async ({ page }, info) => {
   await page.goto(harness);
-  await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption(reference.name);
+  await page.getByRole('combobox', { name: 'Fixture', exact: true }).selectOption(shape.fixture);
   const graph = page.getByLabel('Architecture graph', { exact: true });
-  await expect(graph).toHaveAttribute('data-graph-id', `fixture-${reference.name}`);
+  await expect(graph).toHaveAttribute('data-graph-id', `fixture-${shape.fixture}`);
   const started = performance.now();
   await graphAction(page, 'Show all operations');
-  const fixture = referenceFixture(reference.name);
+  const fixture = referenceFixture(shape.fixture);
   await expect(graph).toHaveAttribute('data-visible-nodes', String(fixture.graph.nodes.length));
   const elapsed = performance.now() - started;
-  await findComponent(page, `layer-${reference.stacks.length - 1}-${reference.stacks.at(-1)! - 1}-op-31`);
+  await findComponent(page, `layer-${shape.stacks.length - 1}-${shape.stacks.at(-1)! - 1}-op-31`);
   await expect(page.getByRole('button', { name: 'Select full_attention operation 31', exact: true }).last()).toBeVisible();
   await expect(graph).toHaveAttribute('data-node-count', String(fixture.graph.nodes.length));
   const client = await page.context().newCDPSession(page);
   const heap = await client.send('Runtime.getHeapUsage');
-  const metrics = { fixture: reference.name, revision: reference.revision, viewport: page.viewportSize(), nodes: fixture.graph.nodes.length,
+  const metrics = { topology: shape.name, fixture: shape.fixture, viewport: page.viewportSize(), nodes: fixture.graph.nodes.length,
     edges: fixture.graph.edges.length, renderedNodes: await page.locator('.react-flow__node').count(), layoutMs: Number(await graph.getAttribute('data-layout-ms')), interactionMs: elapsed, heap };
   await info.attach('architecture-layout-memory', { body: JSON.stringify(metrics, null, 2), contentType: 'application/json' });
   console.log(JSON.stringify(metrics));

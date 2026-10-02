@@ -13,7 +13,7 @@ remain outside Git.
 | Primitive cards must have a closed port/parameter/scalar vocabulary | `backend/tests/test_operation_cards.py`: explicit expected formulas on materialized dense graphs and signatures across dense, hybrid and visual fixtures; `CardSummary.test.tsx` verifies exposed scalar names |
 | YARN scale must describe the configured computation | Existing DeepSeek graph regression checks the visible factor against a high-precision evaluation of the pinned source expression, `(1 + 0.1 * 0.707 * ln(40))² / sqrt(192)` |
 | Canonical formulas must preserve the historical operation-level contract | `acceptance/test_architecture.py` and the independent `semanticSnapshot` oracle compare all seven producer families against reviewed semantic fingerprints, including formulas |
-| Ordinary browser expansion and matrix inspection must consume the actual graph | `ui/acceptance/lora-hierarchy.spec.ts`: production backend and built UI, collapsed/expanded projection, isolated component/Back, reshape/transpose/softmax cards, and real A/B binary requests |
+| Composition and generic browser presentation must retain distinct proof | `acceptance/test_native_packages.py` checks production graph children/formulas/ports and independently sourced native A/B bytes; `ui/tests/architecture-inspection.spec.ts` checks nested expand/isolate/Back, visible formulas/scalars/ports and distinct A/B dispatch. Actual LoRA/QLoRA browser bindings remain in `ui/acceptance/lora-reference.spec.ts` |
 
 On baseline `98a279fd44a01fadde33dbb8bfa8c6ac2986fb84`, the focused hierarchy
 regression failed because the projection was a leaf, and the scale regression
@@ -72,11 +72,18 @@ Numeric artifact keys and tensor identities are unchanged. Model-owned definitio
 retain their authored formulas; unknown/composite operations retain source-specific
 descriptions.
 
-To reproduce the focused browser path, build `ui/`, then run from `ui/`:
+The historical focused browser scenario above was consolidated in #277. Run its
+production composition proof from the repository root:
 
 ```sh
-UI_TEST_PORT=42690 xvfb-run -a npm run test:acceptance -- lora-hierarchy.spec.ts --project=dpr1
+PYTHONPATH=backend/src:. HF_HUB_OFFLINE=1 backend/.venv/bin/python -m pytest acceptance/test_native_packages.py -k adapted_projection -q
 ```
 
 The optional `LMEX_LORA_REFERENCE_MODEL_ROOT` selects the existing local reference
 pair instead of the deterministic fixture. It reads local files only.
+
+For the generic presentation proof, build `ui/`, then run from `ui/`:
+
+```sh
+UI_TEST_PORT=42690 xvfb-run -a npm run test:browser -- architecture-inspection.spec.ts --grep 'nested source groups' --project=desktop
+```

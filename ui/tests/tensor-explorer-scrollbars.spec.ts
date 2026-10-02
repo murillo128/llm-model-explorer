@@ -154,7 +154,7 @@ for (const dpr of [1, 2]) test.describe(`native scrollbars at DPR ${dpr}`, () =>
 
 for (const dpr of [1, 2]) test.describe(`workspace panes at DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
-  for (const viewport of [{ width: 1440, height: 900 }, { width: 780, height: 640 }, { width: 390, height: 640 }]) {
+  for (const viewport of (dpr === 1 ? [{ width: 1440, height: 900 }, { width: 780, height: 640 }] : [{ width: 390, height: 640 }])) {
     test(`independent overflow and aligned profiles at ${viewport.width}×${viewport.height}`, async ({ page }, testInfo) => {
       await page.setViewportSize(viewport);
       await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html`);

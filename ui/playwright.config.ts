@@ -13,10 +13,13 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  ...(process.env.LMEX_TEST_PORTFOLIO === 'extended' ? { grep: /@extended/ } : {}),
+  ...((process.env.LMEX_TEST_PORTFOLIO ?? 'routine') === 'routine' ? { grepInvert: /@extended/ } : {}),
+  reporter: [['list'], ['json', { outputFile: 'test-results/browser.json' }]],
   use: {
     baseURL,
-    trace: 'retain-on-failure',
+    // Opt into a trace for a named diagnostic case with the native --trace on.
+    trace: 'off',
     screenshot: 'only-on-failure',
     // Use deterministic WebGL2 on CI and hosts without sandbox GPU access.
     launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },

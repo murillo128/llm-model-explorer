@@ -5,14 +5,8 @@ on:
     # Epic children validate their scoped change locally; the aggregate epic PR runs CI.
     branches-ignore:
       - 'codex/epic-issue-*'
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
   push:
     branches: [main]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
   workflow_dispatch:
 
 permissions:
@@ -28,7 +22,7 @@ jobs:
     runs-on: [self-hosted, codex]
     strategy:
       matrix:
-        python: ${{ github.ref == 'refs/heads/main' && fromJSON('["3.12","3.14"]') || fromJSON('["3.12"]') }}
+        python: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && fromJSON('["3.12","3.14"]') || fromJSON('["3.12"]') }}
     env:
       UV_PYTHON: ${{ matrix.python }}
     defaults:
@@ -38,32 +32,46 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Select validation owners from exact revisions
+        id: plan
+        working-directory: .
+        run: python3 .github/scripts/validation_selector.py --github --output validation-plan.json --github-output "$GITHUB_OUTPUT" --summary "$GITHUB_STEP_SUMMARY"
       - uses: astral-sh/setup-uv@v6
+        if: steps.plan.outputs.backend == 'true'
         with:
           version: '0.12.13'
       - name: Select persistent Python environment
+        if: steps.plan.outputs.backend == 'true'
         shell: bash
         run: echo "UV_PROJECT_ENVIRONMENT=${{ runner.tool_cache }}/llm-model-explorer/backend/python-${{ matrix.python }}-${{ hashFiles('backend/uv.lock') }}" >> "$GITHUB_ENV"
-      - run: uv sync --locked --python '${{ matrix.python }}'
-      - run: uv run --locked ruff check .
-      - run: uv run --locked ruff format --check .
-      - run: uv run --locked mypy
-      - run: uv run --locked pytest --durations=25
-      - name: Build and smoke-test the installed wheel outside the source tree
+      - if: steps.plan.outputs.backend == 'true'
+        run: uv sync --locked --python '${{ matrix.python }}'
+      - if: steps.plan.outputs.backend == 'true' && matrix.python == '3.12'
+        run: uv run --locked ruff check .
+      - if: steps.plan.outputs.backend == 'true' && matrix.python == '3.12'
+        run: uv run --locked ruff format --check .
+      - if: steps.plan.outputs.backend == 'true' && matrix.python == '3.12'
+        run: uv run --locked mypy
+      - name: Run selected primary backend portfolio
+        if: steps.plan.outputs.backend == 'true' && matrix.python == '3.12'
         run: |
-          uv build
-          backend_python="${UV_PROJECT_ENVIRONMENT}/bin/python"
-          uv pip install --python "$backend_python" --reinstall --no-deps dist/*.whl
-          cd "$RUNNER_TEMP"
-          "$backend_python" - <<'PY'
-          import importlib.util
-          import torch
-
-          for module in (
-              "llm_model_explorer",
-              "llm_model_explorer.app",
-              "llm_model_explorer.cli",
-          ):
-              assert importlib.util.find_spec(module) is not None, module
-          assert torch.version.cuda is None
-          PY
+          selected=$(python3 ../.github/scripts/validation_selector.py --plan ../validation-plan.json --backend-targets)
+          mapfile -t tests <<< "$selected"
+          if [ "${{ steps.plan.outputs.portfolio }}" = full ]; then
+            uv run --locked pytest "${tests[@]}" --durations=25
+          else
+            uv run --locked pytest "${tests[@]}" -m 'not extended' --durations=25
+            # Only tensor-analysis owns threshold/allocator checks today.
+            if [ "${{ steps.plan.outputs.backend_extended }}" = true ]; then
+              uv run --locked pytest tests/test_tensor_analysis.py -m extended --durations=10
+            fi
+          fi
+      - name: Build and smoke-test the installed wheel outside the source tree
+        if: steps.plan.outputs.backend == 'true'
+        run: |
+          wheel_args=()
+          if [ "${{ matrix.python }}" = 3.14 ] && [ "${{ steps.plan.outputs.compatibility_full }}" = true ]; then
+            wheel_args=(--full)
+          fi
+          bash ../acceptance/check-wheel.sh "${UV_PROJECT_ENVIRONMENT}/bin/python" "${wheel_args[@]}"
