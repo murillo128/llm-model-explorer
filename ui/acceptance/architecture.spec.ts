@@ -1238,10 +1238,17 @@ test('shared structure production [templates] neutral mode, distinct instance we
   const repetition = graph.repetitions[0]!;
   const outerId = `repeat:${repetition.id}:0:1`;
   const outer = page.locator(`.react-flow__node[data-id=${JSON.stringify(outerId)}]`);
-  if (!await outer.count()) {
-    await page.locator('.react-flow__node').first().locator('.architecture-expand').click();
+  const ancestors: string[] = [];
+  for (let node = graph.nodes.find((n) => n.id === repetition.instances[0]!.node_id); node?.parent_id;
+    node = graph.nodes.find((n) => n.id === node!.parent_id)) ancestors.unshift(node.parent_id);
+  for (const id of ancestors) {
+    const control = page.locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`).locator('.architecture-expand');
+    if (await control.getAttribute('aria-expanded') !== 'true') await control.click();
     await expect(canvas).toHaveAttribute('aria-busy', 'false');
   }
+  // Expansion preserves the readable camera; Fit brings the nested repetition
+  // into the viewport before React Flow mounts its interactive card.
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
   const requestsBeforeExpansion = observed.length;
   await outer.locator('.architecture-expand').click();
   await expect(canvas).toHaveAttribute('aria-busy', 'false');
