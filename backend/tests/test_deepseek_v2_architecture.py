@@ -5,7 +5,9 @@ from __future__ import annotations
 import builtins
 import copy
 import json
+import math
 import socket
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 from unittest.mock import Mock
@@ -31,6 +33,7 @@ from llm_model_explorer.architecture_analysis.deepseek_v2 import (
     supports,
 )
 from llm_model_explorer.architecture_analysis.validation import MAX_BYTES
+from llm_model_explorer.architecture_service import ArchitectureService
 from llm_model_explorer.tensor_source import ModelSource
 
 FIXTURE = json.loads(
@@ -569,3 +572,127 @@ def test_sampled_nf4_binding_and_missing_expert_are_localized() -> None:
         data.bindings.physical
     )
     assert len(serialize_graph(graph)) < MAX_BYTES
+
+
+def test_full_nf4_inventory_retains_layer_templates_within_response_budget() -> None:
+    # The pinned checkpoint quantizes every projection except embeddings, the
+    # vocabulary head and routers. Native-only/sample-packed fixtures miss the
+    # metadata cost of all 5,181 matrices and their five encoding companions.
+    data = inputs(REFERENCE)
+    physical = dict(data.bindings.physical)
+    numeric = {}
+    expected = expected_parameters(REFERENCE)
+    for index, (name, dimensions) in enumerate(expected.items()):
+        tensor_id = f"{index:064x}"  # Match real inventory ID lengths in the byte budget.
+        packed = (
+            len(dimensions) == 2
+            and name not in {"model.embed_tokens.weight", "lm_head.weight"}
+            and not name.endswith(".mlp.gate.weight")
+        )
+        if packed:
+            count = math.prod(dimensions)
+            blocks = (count + 63) // 64
+            records = {
+                "": ("U8", [(count + 1) // 2, 1]),
+                ".absmax": ("U8", [blocks]),
+                ".quant_map": ("F32", [16]),
+                ".nested_absmax": ("F32", [(blocks + 255) // 256]),
+                ".nested_quant_map": ("F32", [256]),
+                ".quant_state.bitsandbytes__nf4": ("U8", [172]),
+            }
+            for suffix, (dtype, dimensions_in_storage) in records.items():
+                storage_name = name + suffix
+                physical[storage_name] = r.ArchitectureStorage(
+                    name=storage_name, dtype=dtype, shape=dimensions_in_storage
+                )
+        numeric[tensor_id] = NumericTensor(
+            tensor_id,
+            name,
+            dimensions,
+            "U8" if packed else "BF16",
+            "bnb-nf4-dq" if packed else "safetensors",
+        )
+    assert len(physical) == 31_196  # Pinned two-shard header/index count.
+    data = replace(data, bindings=replace(data.bindings, physical=physical, numeric=numeric))
+    model_id = "basicv8vc/DeepSeek-V2-Lite-bnb-4bit@bnb-nf4-dq"
+    result = registry().analyze(data, byte_limit=ArchitectureService.response_budget(model_id))
+    assert result.status == "complete", result
+    graph = result.graph
+    assert graph is not None
+    assert not any(d.code == "templates_omitted" for d in graph.diagnostics)
+    families = {t.component_role: t for t in graph.templates or []}
+    assert len(families["attention"].instances) == 27
+    assert len(families["layer"].instances) == 26
+    assert sum(len(f.instances) for f in graph.compact_components or []) == 26 * 64
+    assert {p.name for p in graph.parameters} == set(expected)
+    assert {s.name for p in graph.parameters for s in p.storage} == set(physical)
+    by_name = {t.name: t for t in numeric.values()}
+    for parameter in graph.parameters:
+        tensor = by_name[parameter.name]
+        assert parameter.inspection == r.ArchitectureAvailableInspection(
+            status="available", tensor_id=tensor.id
+        )
+        assert parameter.logical_shape == [
+            r.ArchitectureConstantDimension(kind="constant", value=d) for d in tensor.shape
+        ]
+        assert {p.source for p in parameter.provenance if p.kind == "storage"} == {
+            s.name for s in parameter.storage
+        }
+
+    fields_by_parameter = {
+        "model.embed_tokens.weight": {"hidden_size", "vocab_size"},
+        "lm_head.weight": {"hidden_size", "vocab_size"},
+        "model.norm.weight": {"hidden_size"},
+        "model.layers.0.input_layernorm.weight": {"hidden_size"},
+        "model.layers.0.post_attention_layernorm.weight": {"hidden_size"},
+        "model.layers.0.self_attn.q_proj.weight": {
+            "hidden_size",
+            "num_attention_heads",
+            "qk_nope_head_dim",
+            "qk_rope_head_dim",
+        },
+        "model.layers.0.self_attn.kv_a_proj_with_mqa.weight": {
+            "hidden_size",
+            "kv_lora_rank",
+            "qk_rope_head_dim",
+        },
+        "model.layers.0.self_attn.kv_a_layernorm.weight": {"kv_lora_rank"},
+        "model.layers.0.self_attn.kv_b_proj.weight": {
+            "kv_lora_rank",
+            "num_attention_heads",
+            "qk_nope_head_dim",
+            "v_head_dim",
+        },
+        "model.layers.0.self_attn.o_proj.weight": {
+            "hidden_size",
+            "num_attention_heads",
+            "v_head_dim",
+        },
+        "model.layers.1.mlp.gate.weight": {"hidden_size", "n_routed_experts"},
+        "model.layers.0.mlp.gate_proj.weight": {"hidden_size", "intermediate_size"},
+        "model.layers.1.mlp.experts.0.up_proj.weight": {"hidden_size", "moe_intermediate_size"},
+        "model.layers.26.mlp.shared_experts.down_proj.weight": {
+            "hidden_size",
+            "moe_intermediate_size",
+            "n_shared_experts",
+        },
+    }
+    parameters = {p.name: p for p in graph.parameters}
+    for name, fields in fields_by_parameter.items():
+        parameter = parameters[name]
+        if parameter.binding == "quantized":
+            fields = fields | {"quantization_config"}
+        assert {p.source for p in parameter.provenance if p.kind == "configuration"} == {
+            "config.json#/" + field for field in fields
+        }, name
+        assert any(
+            p.kind == "description"
+            and p.source == PRODUCER.description
+            and p.revision == PRODUCER.revision
+            for p in parameter.provenance
+        )
+
+    encoded = serialize_graph(graph)
+    envelope = ArchitectureService._prefix(model_id) + encoded + b"}"
+    assert len(envelope) <= MAX_BYTES
+    assert parse_graph(json.loads(encoded), data.bindings) == graph

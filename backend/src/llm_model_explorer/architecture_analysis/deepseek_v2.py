@@ -14,7 +14,7 @@ from .semantic import operation_role
 from .validation import require
 
 SOURCE_REVISION = "slowfastai/DeepSeek-V2-Lite-bnb-4bit@9fc357346aeba67950a34a86f3520fc276ca2daf"
-PRODUCER = Producer("deepseek-v2-lite", "4", SOURCE_REVISION)
+PRODUCER = Producer("deepseek-v2-lite", "5", SOURCE_REVISION)
 
 REFERENCE = {
     "model_type": "deepseek_v2",
@@ -253,6 +253,44 @@ def supports(inputs: AnalysisInput) -> bool:
     return checked(inputs.configuration) is not None
 
 
+def parameter_shape_fields(name: str) -> tuple[str, ...]:
+    """Configuration evidence for parameters authored by ``parameter_shapes``.
+
+    Do not attach every model option to every weight: on the full NF4 checkpoint
+    that redundant metadata crowds out the verified layer correspondences.
+    """
+    module = name.rsplit(".", 2)[-2]
+    if module in {"gate_proj", "up_proj", "down_proj"}:
+        if ".shared_experts." in name:
+            return ("hidden_size", "moe_intermediate_size", "n_shared_experts")
+        if ".experts." in name:
+            return ("hidden_size", "moe_intermediate_size")
+        return ("hidden_size", "intermediate_size")
+    return {
+        "embed_tokens": ("hidden_size", "vocab_size"),
+        "lm_head": ("hidden_size", "vocab_size"),
+        "norm": ("hidden_size",),
+        "input_layernorm": ("hidden_size",),
+        "post_attention_layernorm": ("hidden_size",),
+        "q_proj": (
+            "hidden_size",
+            "num_attention_heads",
+            "qk_nope_head_dim",
+            "qk_rope_head_dim",
+        ),
+        "kv_a_proj_with_mqa": ("hidden_size", "kv_lora_rank", "qk_rope_head_dim"),
+        "kv_a_layernorm": ("kv_lora_rank",),
+        "kv_b_proj": (
+            "kv_lora_rank",
+            "num_attention_heads",
+            "qk_nope_head_dim",
+            "v_head_dim",
+        ),
+        "o_proj": ("hidden_size", "num_attention_heads", "v_head_dim"),
+        "gate": ("hidden_size", "n_routed_experts"),
+    }[module]
+
+
 def shape(*dimensions: int | str | r.ArchitectureDimension) -> r.ArchitectureShape:
     result: list[r.ArchitectureDimension] = []
     for dimension in dimensions:
@@ -440,19 +478,10 @@ class DeepseekGraph:
             )
 
         parameter_id = self.b.record_id("parameter", name)
-        provenance = self.provenance(
-            "hidden_size",
-            "intermediate_size",
-            "vocab_size",
-            "num_hidden_layers",
-            "num_attention_heads",
-            "qk_nope_head_dim",
-            "qk_rope_head_dim",
-            "kv_lora_rank",
-            "moe_intermediate_size",
-            "n_routed_experts",
-            "quantization_config",
-        ) + [
+        fields = parameter_shape_fields(name)
+        if binding == "quantized":
+            fields += ("quantization_config",)
+        provenance = self.provenance(*fields) + [
             r.ArchitectureProvenance(kind="storage", source=item.name) for item in parameter_storage
         ]
         self.b.add_parameter(
