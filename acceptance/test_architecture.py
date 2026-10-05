@@ -139,7 +139,7 @@ def test_all_descriptions_over_tcp_readonly_cold_warm_and_logical_values(tmp_pat
         for family, counts in {
             "smollm2": [2],
             "qwen3": [2],
-            "qwen35": [2],
+            "qwen35": [4],
             "vjepa2": [2, 1],
         }.items():
             prefix, inventory, body = inspect_graph(service, family)

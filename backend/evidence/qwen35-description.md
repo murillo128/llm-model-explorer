@@ -270,3 +270,9 @@ concrete decoder-transition checks after the authorized removal of absent cache
 bookkeeping. Kimi production TCP and the complete 15-row grouping acceptance pass
 together in 137.7 seconds. No CI deadline, response limit or validation gate was
 increased or bypassed.
+
+The cold/warm TCP fixture assertion now expects the authored four-layer Qwen3.5
+stack used by the browser proof. The isolated CI-entrypoint case includes both
+architecture and native-package TCP owners introduced by the family matrix,
+while still rejecting npm/browser commands. Both corrections and the existing
+entrypoint/routing cases pass together: 49 tests and 120 subtests.
