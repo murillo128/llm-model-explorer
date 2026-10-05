@@ -1,7 +1,7 @@
 import type { ProjectedNode } from './projection';
 
 /** Presentation selection is local view state, never a fabricated source ID. */
-export const cardSelection = (node: ProjectedNode) => node.record?.id ?? node.id;
+export const cardSelection = (node: ProjectedNode) => node.shared ? node.id : node.record?.id ?? node.id;
 
 export const cardExpandable = (node: ProjectedNode) => node.kind === 'group' && Boolean(
   node.record?.kind === 'group' && node.record.children.length && (node.componentCount ?? node.record.children.length) ||
@@ -15,7 +15,7 @@ export function cardNavigation(node: ProjectedNode, activeRoot: string | undefin
   const target = node.presentation === 'mlp' ? node.id
     : node.record && ['group', 'operation'].includes(node.record.kind) ? node.record.id : undefined;
   const action = target && target === activeRoot ? 'View in model' : 'Explore component';
-  const reason = structureOnly ? 'Choose a concrete instance to view in model.'
+  const reason = structureOnly || node.shared ? 'Choose a concrete instance to view in model.'
     : !target ? 'This presentation has no component navigation target.' : undefined;
   return { action, target: reason ? undefined : target, reason };
 }

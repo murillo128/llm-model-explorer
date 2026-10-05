@@ -62,3 +62,37 @@ export function makeVjepaBrowserFixture(): Graph {
     family('predictor', 12, 'attention'), family('predictor', 12, 'mlp')];
   return graph;
 }
+
+/** Three independently specified serial layers with three distinct shared signals. */
+export function makeIndexedFixture(count: 1 | 3 = 3): Graph {
+  const indices = count === 1 ? [0] : [0, 1, 2];
+  const shape = [{ kind: 'constant' as const, value: 4 }];
+  const ports = (names: string[]) => names.map((id) => ({ id, label: id, direction: id === 'out' ? 'output' as const : 'input' as const, shape }));
+  const provenance = [{ kind: 'description' as const, source: 'indexed-fixture', revision: '1' }];
+  const graph: Graph = { graph_id: 'indexed-fixture', scope: 'language_model', coverage: 'complete', symbols: [], diagnostics: [],
+    nodes: [{ id: 'model', kind: 'group', label: 'Model', ports: [], children: ['input', 'cos', 'sin', 'mask', ...indices.map((i) => `layer-${i}`), 'result'], parameter_ids: [], references: [], attributes: [], provenance }],
+    edges: [], parameters: [], repetitions: [{ id: 'layers', parent_id: 'model', label: 'Decoder layers', instances: indices.map((index) => ({ index, node_id: `layer-${index}`, variant: 'dense' })) }] };
+  const edge = (id: string, source: string, sourcePort: string, target: string, targetPort: string) => graph.edges.push({ id, source: { node_id: source, port_id: sourcePort }, target: { node_id: target, port_id: targetPort }, kind: 'data', provenance });
+  for (const id of ['input', 'cos', 'sin', 'mask']) graph.nodes.push({ id, parent_id: 'model', kind: 'input', label: id, operation: 'symbolic', ports: ports(['out']), parameter_ids: [], references: [], attributes: [], provenance });
+  graph.nodes.push({ id: 'result', parent_id: 'model', kind: 'output', label: 'Result', operation: 'result', ports: ports(['x']), parameter_ids: [], references: [], attributes: [], provenance });
+  for (const index of indices) {
+    const id = `layer-${index}`;
+    graph.nodes.push({ id, parent_id: 'model', kind: 'group', label: `Layer ${index}`, ports: ports(['x', 'cos', 'sin', 'mask', 'out']), children: [`${id}.op`], parameter_ids: [], references: [], attributes: [{ name: 'semantic_role', value: 'layer', provenance }], provenance });
+    graph.nodes.push({ id: `${id}.op`, parent_id: id, kind: 'operation', label: 'Transform', operation: 'transform', formula: 'out = transform(x, cos, sin, mask; weight)', ports: ports(['x', 'cos', 'sin', 'mask', 'out']), parameter_ids: [`weight-${index}`], references: [], attributes: [], provenance });
+    graph.parameters.push({ id: `weight-${index}`, name: `layers.${index}.weight`, logical_shape: shape, binding: 'native', storage: [{ name: `layers.${index}.weight`, dtype: 'float32', shape: [4] }], inspection: { status: 'available', tensor_id: `tensor-${index}` }, provenance });
+    for (const port of ['x', 'cos', 'sin', 'mask']) edge(`${id}.${port}`, id, port, `${id}.op`, port);
+    edge(`${id}.out`, `${id}.op`, 'out', id, 'out');
+    for (const port of ['cos', 'sin', 'mask']) edge(`${port}-${index}`, port, 'out', id, port);
+  }
+  edge('entry', 'input', 'out', 'layer-0', 'x');
+  if (count === 3) { edge('next-0', 'layer-0', 'out', 'layer-1', 'x'); edge('next-1', 'layer-1', 'out', 'layer-2', 'x'); }
+  edge('exit', `layer-${count - 1}`, 'out', 'result', 'x');
+  graph.templates = count === 1 ? [] : [{ id: 'whole-layer', label: 'Decoder Layer', component_role: 'layer', revision: '1', provenance,
+    instances: indices.map((index) => ({ node_id: `layer-${index}`,
+      nodes: [{ role: 'root', node_id: `layer-${index}` }, { role: 'op', node_id: `layer-${index}.op` }],
+      ports: ['root', 'op'].flatMap((role) => ['x', 'cos', 'sin', 'mask', 'out'].map((port_id) => ({ role: `${role}.${port_id}`, node_id: `layer-${index}${role === 'op' ? '.op' : ''}`, port_id }))),
+      edges: ['x', 'cos', 'sin', 'mask', 'out'].map((role) => ({ role, edge_id: `layer-${index}.${role}` })),
+      parameters: [{ role: 'weight', parameter_id: `weight-${index}` }],
+    })) }];
+  return graph;
+}

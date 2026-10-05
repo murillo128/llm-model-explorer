@@ -28,7 +28,7 @@ from .validation import (
 if TYPE_CHECKING:
     from ..tensor_source import PeftLoraComposition, PhysicalTensor, TensorDescriptor
 
-ANALYZER_REVISION = "static-graph-core-4"
+ANALYZER_REVISION = "static-graph-core-5"
 Scope = Literal["language_model", "visual_encoder_predictor", "model_defined"]
 
 
@@ -208,7 +208,7 @@ class GraphBuilder:
         collection.append(copy)
 
     def begin_template(
-        self, key: str, base: str, family: str, role: Literal["attention", "mlp"]
+        self, key: str, base: str, family: str, role: Literal["attention", "mlp", "layer"]
     ) -> None:
         self.templates.begin(self.record_id("node", key), base, family, role)
 
@@ -240,6 +240,43 @@ class GraphBuilder:
     def add_repetition(self, repetition: r.ArchitectureRepetition) -> str:
         self._append(self._repetitions, repetition)
         return repetition.id
+
+    def add_layer_repetition(self, repetition: r.ArchitectureRepetition) -> str:
+        """Explicit producer opt-in for a layer-depth stack, never expert routing."""
+        members = {i.node_id for i in repetition.instances}
+        nodes = {node.id: node for node in self._nodes}
+
+        def known_port_shapes(root: str) -> bool:
+            pending = [root]
+            while pending:
+                node = nodes[pending.pop()]
+                if any(
+                    p.shape is None or any(d.kind == "unknown" for d in p.shape) for p in node.ports
+                ):
+                    return False
+                if node.kind == "group":
+                    pending.extend(node.children)
+            return True
+
+        for position, node in enumerate(self._nodes):
+            if node.id not in members:
+                continue
+            key = self.templates.keys.get(node.id)
+            if key is None:
+                continue
+            # Some native layer interfaces deliberately expose opaque state or
+            # routed collections with unknown rank. They are ordinary graph
+            # records, not candidates for exact Shared shape correspondence.
+            if known_port_shapes(node.id):
+                self.templates.begin(node.id, key, repetition.label, "layer")
+            attributes = [a for a in node.attributes if a.name != "semantic_role"]
+            attributes.append(
+                r.ArchitectureAttribute(
+                    name="semantic_role", value="layer", provenance=self.producer.provenance()
+                )
+            )
+            self._nodes[position] = node.model_copy(update={"attributes": attributes})
+        return self.add_repetition(repetition)
 
     def add_symbol(self, name: str, meaning: str) -> None:
         require(all(s.name != name for s in self._symbols), "Duplicate shape symbol.")

@@ -409,11 +409,15 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     if (node.presentation === 'model') {
       onInspect?.({ modelId, sessionId, graphId: graph.graph_id, trigger, boundary: { kind: 'boundary', owner: interfaces.outer, endpoints: [] } }); return;
     }
+    if (node.shared && node.record) {
+      onInspect?.({ modelId, sessionId, graphId: graph.graph_id, node: node.record, trigger,
+        structureOnly: { label: node.label, role: node.shared.nodeRole } }); return;
+    }
     if (node.record) nativeInspect(records.get(node.record.id)!, trigger);
     else setInspection({ nodeId: node.id, trigger });
   });
   const matrix = useCanvasCallback((node: ProjectedNode, parameterId: string, trigger: HTMLElement) => {
-    if (shared && !concreteInstance) return;
+    if (node.shared || shared && !concreteInstance) return;
     const record = node.record && records.get(node.record.id);
     if (!record || !ownParameters(record, parameters).some((p) => p.id === parameterId && p.inspection.status === 'available')) return;
     setInspection(null);
@@ -467,6 +471,9 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const selectPort = useCanvasCallback((endpoint: { node_id: string; port_id: string }) => {
     const node = projected.get(endpoint.node_id), port = node?.ports.find((p) => p.id === endpoint.port_id);
     if (!node || !port) return;
+    if (port.templatePort && node.shared) {
+      selectBoundary({ kind: 'boundary', owner: { kind: 'presentation', id: node.id }, endpoints: [], templatePort: port.templatePort }); return;
+    }
     if (port.templatePort && template && anchorInstance) {
       const boundary = bindTemplatePortSelection(graph, template, anchorInstance, concreteInstance, port.templatePort);
       if (boundary) selectBoundary(boundary);
@@ -500,7 +507,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const cardDimensions = Boolean(result.options?.dimensions);
   const nodes = useMemo<CanvasNode[]>(() => (result.layout?.boxes ?? []).map((box) => {
     const record = projected.get(box.id)!;
-    const summary = cardSummary(record.record, parameters);
+    const summary = cardSummary(record.record, parameters, record.symbolicParameters);
     const raised = new Set((portsByNode.get(box.id) ?? []).filter((port) => port.label.raised).map((port) => port.portId));
     const subtitle = record.summary?.replaceAll('linear attention', 'linear').replaceAll('full attention', 'full') ?? variants.get(record.id)?.replace(/^Instance \d+ · /, '') ?? '';
     return { id: box.id, type: 'architecture', position: { x: box.x, y: box.y },
@@ -582,7 +589,8 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   const selectedRecord = selected ? records.get(selected) : undefined;
   const selectedCard = selected ? [...projected.values()].find((node) => cardSelection(node) === selected) : undefined;
   const selectedEdge = result.layout?.projection.edges.find((e) => e.id === pinned);
-  const eligibleTemplate = !shared && selectedRecord ? graph.templates?.find((t) => t.instances.some((i) => i.nodes.some((m) => m.node_id === selectedRecord.id))) : undefined;
+  const inlineTemplate = selectedCard?.shared ? graph.templates?.find((t) => t.id === selectedCard.shared!.templateId) : undefined;
+  const eligibleTemplate = inlineTemplate ?? (!shared && selectedRecord ? graph.templates?.find((t) => t.instances.some((i) => i.nodes.some((m) => m.node_id === selectedRecord.id))) : undefined);
   const eligibleInstance = eligibleTemplate?.instances.find((i) => i.nodes.some((m) => m.node_id === selectedRecord?.id));
   const centerInLayout = (id: string) => {
     // The requested reveal/center owns the next layout's camera, even while
@@ -637,6 +645,10 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     if (view.boundary) {
       // Model-wide search targets source interfaces even while the canvas shows
       // a neutral template. Only an actual template port has common metadata.
+      const inline = projected.get(view.boundary.owner.id);
+      if (inline?.shared && inline.record) {
+        onInspect?.({ modelId, sessionId, graphId: graph.graph_id, trigger, node: inline.record, structureOnly: { label: inline.label, role: view.boundary.templatePort?.portRole ?? inline.shared.nodeRole } }); return;
+      }
       const common = view.boundary.templatePort && shared && !concreteInstance && template && anchorInstance;
       const node = common ? [...projected.values()].find((n) => n.record?.id === view.boundary!.owner.id)?.record : undefined;
       const role = common ? anchorInstance.nodes.find((m) => m.node_id === view.boundary!.owner.id)?.role : undefined;
@@ -644,6 +656,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
         ...(node ? { node } : {}), ...(common ? { structureOnly: { label: template.label, role: view.boundary.templatePort?.portRole ?? role ?? 'interface' } } : {}) });
     }
     else if (selectedEdge) setInspection({ edgeId: selectedEdge.id, trigger });
+    else if (selectedCard?.shared) inspect(selectedCard, trigger);
     else if (selectedRecord) nativeInspect(selectedRecord, trigger);
   });
   const centerEdge = useCanvasCallback(() => {
@@ -657,7 +670,7 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     else selectComponent(view, null);
   });
   const exploreSelected = useCanvasCallback(() => { if (selected) isolate(selected); });
-  const shareSelected = useCanvasCallback(() => { if (eligibleTemplate && eligibleInstance) openShared(eligibleTemplate.id, eligibleInstance.node_id); });
+  const shareSelected = useCanvasCallback(() => { if (inlineTemplate) openShared(inlineTemplate.id); else if (eligibleTemplate && eligibleInstance) openShared(eligibleTemplate.id, eligibleInstance.node_id); });
   const navigate = useCanvasCallback((item: NavigationItem) => {
     if (shared && item.id === template?.id) return;
     if (item.kind === 'stack') exploreStack(item.id);
@@ -714,12 +727,15 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
     label: `${projected.get(selectedEdge.source.node_id)?.label ?? 'Source'} → ${projected.get(selectedEdge.target.node_id)?.label ?? 'Destination'}`,
     detail: `${selectedEdge.source.port_id} → ${selectedEdge.target.port_id} · ${selectedEdge.originalEdgeIds.join(', ')}`,
     inspect: inspectSelected, center: centerEdge, clear: clearSelection,
+  } : selectedCard?.shared ? {
+    edge: false, label: selectedCard.label, detail: 'Verified common operation; choose an instance for weights.',
+    shared: shareSelected, inspect: inspectSelected, center: centerDerived, clear: clearSelection,
   } : selectedRecord ? {
     edge: false, nodeId: selectedRecord.id,
     label: commonSelection ? [...projected.values()].find((n) => n.record?.id === selectedRecord.id)?.label ?? template?.label ?? 'Shared operation' :
       displayLabel({ id: selectedRecord.id, kind: selectedRecord.kind, label: selectedRecord.label, record: selectedRecord, sourceIds: [selectedRecord.id], ports: [], expanded: false }, graph),
     detail: commonSelection ? 'Verified common operation; choose an instance for weights.' : `${selectedRecord.label} · ${selectedRecord.id}`,
-    shared: eligibleTemplate && eligibleInstance ? shareSelected : undefined,
+    shared: eligibleTemplate && (eligibleInstance || inlineTemplate) ? shareSelected : undefined,
     inspect: onInspect && (!shared || commonSelection || insideBrowserScope(selectedRecord.id)) ? inspectSelected : undefined,
     center: centerSelected,
     viewInModel: options.scope && !commonSelection ? viewSelectionInModel : undefined,

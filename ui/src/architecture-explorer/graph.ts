@@ -6,6 +6,7 @@ import { projectionOptions } from './scope-navigation';
 import { sharedContext, type SharedStructure } from './shared-structure';
 import { interfaceIndex, interfaceSelection } from './interfaces';
 import type { BoundarySelection } from './interfaces';
+import { indexedNodeId, indexedStacks } from './indexed-repetition';
 import { overviewExpansion } from './overview';
 
 export type Graph = components['schemas']['ArchitectureGraph'];
@@ -90,6 +91,11 @@ export class GraphViews {
     this.views.delete(key); this.views.set(key, view);
     while (this.views.size > 8) this.views.delete(this.views.keys().next().value!);
     const ids = new Set(graph.nodes.map((n) => n.id));
+    const indexed = indexedStacks(graph);
+    const indexedIds = new Set([...indexed].flatMap(([repetitionId, stack]) => [
+      `repeat:${repetitionId}:0:${stack.instances.length - 1}`,
+      ...stack.instances[0]!.nodes.map((n) => indexedNodeId(repetitionId, n.node_id)),
+    ]));
     const interfaces = interfaceIndex(graph);
     const declaration = view.selected && interfaces.declarations.get(view.selected)?.[0];
     if (declaration) { view.boundary = interfaceSelection(declaration); view.selected = declaration.owner.kind === 'source' ? declaration.owner.id : null; view.edge = null; }
@@ -99,7 +105,7 @@ export class GraphViews {
     if (view.boundary && !view.boundary.endpoints.every((p) => graph.nodes.some((n) => n.id === p.node_id && n.ports.some((port) => port.id === p.port_id)))) view.boundary = undefined;
     if (view.boundary?.templatePort) {
       const target = view.boundary.templatePort, template = graph.templates?.find((t) => t.id === target.templateId);
-      if (view.shared?.templateId !== target.templateId || !template?.instances.every((instance) =>
+      if ((view.shared?.templateId !== target.templateId && !indexedIds.has(view.boundary.owner.id)) || !template?.instances.every((instance) =>
         instance.nodes.some((n) => n.role === target.nodeRole && ids.has(n.node_id)) && instance.ports.some((p) => p.role === target.portRole &&
           graph.nodes.some((n) => n.id === p.node_id && n.ports.some((port) => port.id === p.port_id))))) {
         view.boundary = undefined; view.notice = 'Shared interface correspondence changed; the port selection was cleared.';
@@ -107,7 +113,7 @@ export class GraphViews {
     }
     view.browser.families = view.browser.families.filter((id) => graph.templates?.some((t) => t.id === id));
     if (!graph.templates?.some((t) => t.id === view.browser.selectedFamily)) view.browser.selectedFamily = null;
-    const expanded = view.expanded.filter((id) => interfaces.eligible(id) && (ids.has(id) || id.startsWith('mlp:') && ids.has(id.slice(4))));
+    const expanded = view.expanded.filter((id) => interfaces.eligible(id) && (indexedIds.has(id) || ids.has(id) || id.startsWith('mlp:') && ids.has(id.slice(4))));
     if (expanded.length !== view.expanded.length) view.expanded = expanded;
     const repetitions = Object.entries(view.repetitions).filter(([id]) => graph.repetitions.some((r) => r.id === id));
     if (repetitions.length !== Object.keys(view.repetitions).length) view.repetitions = Object.fromEntries(repetitions);
@@ -133,7 +139,7 @@ export class GraphViews {
     }
     // A card selection may name a local repetition/context presentation. Retain
     // it across remounts only while that exact presentation still exists.
-    if (view.selected && !ids.has(view.selected) && !(view.selected.startsWith('mlp:') && ids.has(view.selected.slice(4))) &&
+    if (view.selected && !ids.has(view.selected) && !indexedIds.has(view.selected) && !(view.selected.startsWith('mlp:') && ids.has(view.selected.slice(4))) &&
       !projectGraph(graph, projectionOptions(view)).nodes.some((node) => node.id === view.selected)) view.selected = null;
     return view;
   }

@@ -842,7 +842,7 @@ export interface components {
             id: components["schemas"]["ArchitectureId"];
             label: components["schemas"]["ArchitectureName"];
             /** @enum {string} */
-            component_role: "attention" | "mlp";
+            component_role: "attention" | "mlp" | "layer";
             revision: components["schemas"]["ArchitectureName"];
             provenance: components["schemas"]["ArchitectureProvenance"][];
             instances: components["schemas"]["ArchitectureTemplateInstance"][];

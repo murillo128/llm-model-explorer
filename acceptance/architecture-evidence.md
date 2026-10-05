@@ -122,3 +122,19 @@ inspection. Both compact and expanded views retain the entire backend graph;
 viewport culling limits rendered DOM elements. Large Qwen embedding inspection
 scenarios took minutes on software WebGL during the initial run; graph packing
 times are not claims about the cost of transferring or inspecting those weights.
+
+## Indexed Shared layer fixture (#292)
+
+The existing `shared structure production` browser scenario now exercises a
+native two-layer dense producer through the built UI and real backend. It checks
+all five outer/inner boundary route endpoints, the return outside the collapsed
+and expanded inner card, pointer/focus inspection, source-free neutral roles,
+explicit instance 1 binding, and the existing distinct-weight streaming and
+cancellation oracle. No model download or full-reference claim is involved.
+
+[Collapsed layer](evidence/architecture-indexed/indexed-layer-collapsed.png),
+[expanded layer](evidence/architecture-indexed/indexed-layer-expanded.png), and
+[geometry receipt](evidence/architecture-indexed/geometry.json) retain the compact
+Chromium DPR1 observation. Reproduce with the native production acceptance
+configuration and `--grep 'shared structure production'`; the PR records exact
+revision validation and selected CI results.

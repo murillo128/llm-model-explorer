@@ -1297,7 +1297,7 @@ class Glm4MoeLiteGraph(DeepseekGraph):
             },
             fields=("architectures", "model_type", "num_hidden_layers", "num_nextn_predict_layers"),
         )
-        self.b.add_repetition(
+        self.b.add_layer_repetition(
             r.ArchitectureRepetition(
                 id=self.b.record_id("repetition", "model.layers"),
                 parent_id=self.nid("model"),

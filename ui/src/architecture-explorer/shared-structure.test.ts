@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
-import { makeTemplateFixture } from '../../tests/architecture-template-fixture';
+import { toggleComponent } from "./component-actions";
+import { makeIndexedFixture, makeTemplateFixture } from '../../tests/architecture-template-fixture';
 import { validateArchitecture } from '../api/architecture-validation';
 import { layoutGraph } from './auto-layout';
 import { GraphViews } from './graph';
@@ -131,4 +132,107 @@ it('clears stale shared port roles on restoration instead of selecting another p
   const restored = views.get('fixture', changed);
   expect(restored.boundary).toBeUndefined(); expect(restored.selected).toBeNull(); expect(restored.shared?.instanceId).toBeNull();
   expect(restored.notice).toContain('port selection was cleared');
+});
+
+it('expands one neutral indexed layer with exact first/next/last provenance and indexed local roles', async () => {
+  const graph = makeIndexedFixture(), before = structuredClone(graph);
+  const view = new GraphViews().get('indexed', graph);
+  view.update({ expanded: ['model'] });
+  const outer = projectGraph(graph, projectionOptions(view)).nodes.find((n) => n.presentation === 'repetition')!;
+  toggleComponent(view, graph, outer, 2);
+  const projection = projectGraph(graph, projectionOptions(view));
+  const inner = projection.nodes.find((n) => n.shared)!;
+  expect(inner.label).toBe('Decoder Layer[i]'); expect(inner.sourceIds).toEqual([]);
+  expect(projection.nodes.find((n) => n.id === outer.id)?.expanded).toBe(true);
+  expect(projection.nodes.filter((n) => n.shared)).toHaveLength(1);
+  const relation = (kind: string) => projection.edges.filter((e) => e.relationship?.kind === kind);
+  expect(relation('entry')[0]!.paths.map((p) => p.map((e) => e.id))).toEqual([['entry']]);
+  expect(relation('return')[0]!.paths.map((p) => p.map((e) => e.id))).toEqual([['next-0'], ['next-1']]);
+  expect(relation('exit')[0]!.paths.map((p) => p.map((e) => e.id))).toEqual([['exit']]);
+  expect(relation('invariant').map((e) => e.paths.map((p) => p.map((e) => e.id)))).toEqual([
+    [['cos-0'], ['cos-1'], ['cos-2']], [['sin-0'], ['sin-1'], ['sin-2']], [['mask-0'], ['mask-1'], ['mask-2']],
+  ]);
+  expect(inner.record?.formula).toBe('out[i] = layer[i](x[i], cos, sin, mask)');
+  expect(inner.ports.map((p) => p.label)).toEqual(['x[i]', 'cos', 'sin', 'mask', 'out[i]']);
+  toggleComponent(view, graph, inner, 2);
+  const expanded = projectGraph(graph, projectionOptions(view));
+  const operation = expanded.nodes.find((n) => n.shared?.nodeRole === 'op')!;
+  expect(operation.record?.formula).toBe('out[i] = transform(x[i], cos, sin, mask; weight[i])');
+  expect(operation.symbolicParameters).toEqual([{ role: 'weight', label: 'weight[i]', shape: [{ kind: 'constant', value: 4 }] }]);
+  expect(operation.record?.parameter_ids).toEqual([]);
+  expect(graph).toEqual(before);
+  const layout = await layoutGraph(graph, projectionOptions(view));
+  const loop = layout.projection.edges.find((e) => e.relationship?.kind === 'return')!;
+  const route = layout.routes.find((r) => r.id === loop.id)!;
+  const box = layout.boxes.find((b) => b.id === inner.id)!;
+  expect(route.sections.flat().some((p) => p.y < box.absoluteY)).toBe(true);
+  for (const points of route.sections) for (const p of points) expect(p.x <= box.absoluteX || p.x >= box.absoluteX + box.width || p.y < box.absoluteY).toBe(true);
+  toggleComponent(view, graph, projection.nodes.find((n) => n.id === outer.id)!, 2);
+  expect(view.expanded).toContain(inner.id);
+  toggleComponent(view, graph, outer, 2);
+  expect(projectGraph(graph, projectionOptions(view)).nodes.find((n) => n.id === inner.id)?.expanded).toBe(true);
+});
+
+it.each(['broken', 'bypass', 'variant', 'nonconsecutive', 'absent', 'singleton', 'context', 'mixed-kind'] as const)('keeps a truthful window for %s stacks', (change) => {
+  const graph = makeIndexedFixture(change === 'singleton' ? 1 : 3);
+  if (change === 'broken') graph.edges = graph.edges.filter((e) => e.id !== 'next-1');
+  if (change === 'bypass') graph.edges.push({ ...graph.edges.find((e) => e.id === 'next-0')!, id: 'bypass', target: { node_id: 'layer-2', port_id: 'x' } });
+  if (change === 'variant') graph.repetitions[0]!.instances[1]!.variant = 'different';
+  if (change === 'nonconsecutive') graph.templates![0]!.instances.splice(1, 1);
+  if (change === 'context') {
+    graph.nodes.push({ ...graph.nodes.find((n) => n.id === 'mask')!, id: 'other-mask', kind: 'context' });
+    const root = graph.nodes[0]!; if (root.kind === 'group') root.children.push('other-mask');
+    const edge = graph.edges.find((e) => e.id === 'mask-1')!;
+    edge.source = { node_id: 'other-mask', port_id: 'out' }; edge.kind = 'context';
+  }
+  if (change === 'mixed-kind') graph.edges.find((e) => e.id === 'mask-1')!.kind = 'context';
+  if (change === 'absent') delete graph.templates;
+  const view = new GraphViews().get('fixture', graph); view.update({ expanded: ['model'] });
+  const outer = projectGraph(graph, projectionOptions(view)).nodes.find((n) => n.presentation === 'repetition')!;
+  toggleComponent(view, graph, outer, 2);
+  expect(view.repetitions.layers).toEqual({ start: 0, count: 2 });
+  expect(projectGraph(graph, projectionOptions(view)).edges.every((e) => !e.relationship)).toBe(true);
+});
+
+
+it.each([false, true])('expands a valid unused invariant interface with showUnused=%s', (showUnused) => {
+  const graph = makeIndexedFixture();
+  // Keep the declared layer input and external signal, but no operation consumes it.
+  graph.edges = graph.edges.filter((e) => !['layer-0.mask', 'layer-1.mask', 'layer-2.mask'].includes(e.id));
+  for (const node of graph.nodes) if (node.kind === 'operation') {
+    node.ports = node.ports.filter((p) => p.id !== 'mask');
+    node.formula = 'out = transform(x, cos, sin; weight)';
+  }
+  for (const instance of graph.templates![0]!.instances) {
+    instance.ports = instance.ports.filter((p) => p.role !== 'op.mask');
+    instance.edges = instance.edges.filter((e) => e.role !== 'mask');
+  }
+  validateArchitecture({ model_id: 'fixture', status: 'available', diagnostics: [], graph }, { modelId: 'fixture' });
+  const view = new GraphViews().get('fixture', graph);
+  view.update({ expanded: ['model'], showUnused });
+  const outer = projectGraph(graph, projectionOptions(view)).nodes.find((n) => n.presentation === 'repetition')!;
+  toggleComponent(view, graph, outer, 2);
+  const projection = projectGraph(graph, projectionOptions(view));
+  if (showUnused) {
+    expect(projection.nodes.find((n) => n.id === outer.id)?.expanded).toBe(true);
+    expect(projection.nodes.filter((n) => n.shared)).toHaveLength(1);
+    expect(projection.edges.find((e) => e.relationship?.kind === 'invariant' && e.relationship.portRole === 'root.mask')!
+      .paths.map((p) => p.map((e) => e.id))).toEqual([['mask-0'], ['mask-1'], ['mask-2']]);
+  } else {
+    expect(view.repetitions.layers).toEqual({ start: 0, count: 2 });
+    expect(projection.nodes.map((n) => n.id)).toEqual(expect.arrayContaining(['layer-0', 'layer-1']));
+    expect(projection.nodes.some((n) => n.shared)).toBe(false);
+    expect(projection.filteredEdgeIds).toEqual(expect.arrayContaining(['mask-0', 'mask-1', 'mask-2']));
+  }
+});
+
+it('keeps mathematical indices and genuine aliased weights unindexed in neutral operations', () => {
+  const graph = makeIndexedFixture();
+  for (const n of graph.nodes) if (n.kind === 'operation') n.formula = 'out = x[j] + x + weight';
+  for (const index of [1, 2]) graph.parameters[index] = { ...graph.parameters[index]!, binding: 'alias',
+    alias_of: 'weight-0', storage: [], inspection: { status: 'available', tensor_id: 'tensor-0' } };
+  const projection = projectGraph(graph, { expanded: ['model', 'repeat:layers:0:2', 'indexed:layers:layer-0'] });
+  const operation = projection.nodes.find((n) => n.shared?.nodeRole === 'op')!;
+  expect(operation.record?.formula).toBe('out[i] = x[j] + x[i] + weight');
+  expect(operation.symbolicParameters?.[0]?.label).toBe('weight');
 });

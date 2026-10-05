@@ -243,3 +243,17 @@ For the new families, the selected model/config revisions in [product scope](../
 | compressed-tensors packed int weights and bit order | [`compressed-tensors` `base.py` and `helpers.py` at `4a696625b7ada2cb857c75f67ce02dc56b381323`](https://github.com/vllm-project/compressed-tensors/tree/4a696625b7ada2cb857c75f67ce02dc56b381323/src/compressed_tensors/compressors/pack_quantized) |
 
 The relevant HF Transformers sources for `llama`, `qwen3`, `qwen3_5`, `vjepa2`, `deepseek_v2`, and `glm4_moe_lite` are the `configuration_*` and `modeling_*` files at the reviewed Transformers revision above where applicable; use their pinned file paths, not a moving `main` branch. These sources and selected checkpoint files are evidence for bounded descriptions, not a guarantee of installed-library support. Implementation evidence must retain exact reviewed revisions and applicable licenses when reusing code.
+
+## Whole-layer Shared correspondence
+
+Layer-depth producers annotate genuine layer groups with `semantic_role: layer`
+and collect complete node/port/internal-edge/parameter correspondences, independently
+of any nested Attention/MLP families. Exact ordered containment, formulas,
+attributes, shapes, directed edges and alias relationships remain required.
+Annotations do not change source computation or replace concrete instances.
+Homogeneous dense, encoder and predictor stacks may therefore supply an indexed
+presentation; structural variants retain separate families. Serial eligibility
+also requires the actual external wiring, verified by the presentation consumer.
+Optional metadata uses the existing bounded omission/diagnostic policy and normal
+producer/schema cache invalidation. Model-owned definitions declare their own
+complete correspondence; external directories remain read-only.

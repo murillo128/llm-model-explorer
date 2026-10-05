@@ -59,7 +59,7 @@ def test_imports_attention_and_mlp_with_exact_nonzero_bindings() -> None:
     graph = result.graph
     assert graph is not None
     validate_graph(graph, inventory().bindings)
-    assert [t.label for t in graph.templates] == ["Dense attention", "GELU MLP"]
+    assert [t.label for t in graph.templates] == ["Dense attention", "GELU MLP", "Encoder layer"]
     assert [i.index for i in graph.repetitions[0].instances] == [0, 1]
     params = {p.id: p for p in graph.parameters}
     attention = graph.templates[0]
@@ -70,10 +70,16 @@ def test_imports_attention_and_mlp_with_exact_nonzero_bindings() -> None:
             parameter = mapped[f"{projection}.weight"]
             assert parameter.name == f"blocks.{layer}.attn.{projection}.weight"
             assert parameter.inspection.tensor_id == f"tensor-{layer}-attn.{projection}"
+    layer = graph.templates[2]
+    assert layer.component_role == "layer"
+    assert len(layer.instances[1].nodes) == 13
+    mapped = {p.role: params[p.parameter_id] for p in layer.instances[1].parameters}
+    assert mapped["attention-q.weight"].inspection.tensor_id == "tensor-1-attn.q"
+    assert attention.instances[1].node_id in {n.node_id for n in layer.instances[1].nodes}
     assert graph.scope == "model_defined"
     notice = next(n for n in graph.nodes if n.label == "Model-supplied definition")
     assert {a.name: a.value for a in notice.attributes}["semantic_verification"] == "not_verified"
-    assert all(t.revision == "shared-example-v1" for t in graph.templates)
+    assert all(t.revision == "shared-example-v2" for t in graph.templates)
     assert all("not verified" in t.provenance[0].rule for t in graph.templates)
     local = {n["id"] for n in document()["nodes"]}
     assert not local.intersection(n.id for n in graph.nodes)
@@ -248,6 +254,7 @@ def test_nonconsecutive_repetition_and_sibling_order() -> None:
         and e["target"]["node_id"] not in {"layer-a", "layer-b"}
     ]
     value["repetitions"] = []
+    value["templates"] = value["templates"][:2]  # Removed layer roots have no declaration.
     assert analyze(value).status == "complete"
 
 
@@ -295,8 +302,8 @@ def test_budget_does_not_hide_invalid_templates(caplog: pytest.LogCaptureFixture
 def test_producer_revision_invalidates_prior_model_defined_cache() -> None:
     definition = parse_definition(EXAMPLE.read_bytes())
     current = producer_for(definition)
-    old = replace(current, revision="2")
-    assert current.revision == "3"
+    old = replace(current, revision="3")
+    assert current.revision == "4"
     assert current.graph_id("unchanged-checkpoint", "model_defined") != old.graph_id(
         "unchanged-checkpoint", "model_defined"
     )
@@ -318,6 +325,8 @@ def test_shared_import_is_metadata_only(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_separate_key_value_state_ports_and_edges_survive_mapping() -> None:
     value = document()
+    # This case authors only the attention state mapping.
+    value["templates"] = value["templates"][:2]
     for tag, instance in zip(("a", "b"), value["templates"][0]["instances"], strict=True):
         root = next(n for n in value["nodes"] if n["id"] == f"{tag}-attention")
         for branch in ("key", "value"):

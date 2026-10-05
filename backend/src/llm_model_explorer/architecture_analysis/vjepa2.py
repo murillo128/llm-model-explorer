@@ -505,7 +505,7 @@ class _Graph:
                     node_id=self.nid(key), index=i, variant="vjepa2_rope_block"
                 )
             )
-        self.b.add_repetition(
+        self.b.add_layer_repetition(
             r.ArchitectureRepetition(
                 id=self.b.record_id("repetition", stack),
                 parent_id=self.nid(stack),

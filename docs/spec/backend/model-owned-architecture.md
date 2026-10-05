@@ -71,10 +71,10 @@ environment, but Explorer does not import or execute checkpoint Python.
 `templates` is an additive, optional version-1 extension. Existing definitions
 without it remain valid. Readers predating this extension reject the new field;
 update Explorer before using it. The model-defined producer revision is bumped
-so old prepared artifacts cannot conceal the new import behavior. The HTTP graph
-contract is unchanged.
+so old prepared artifacts cannot conceal the new import behavior. The additive `layer` role keeps definition schema version 1; older readers
+reject this new enum member. API and definition consumers evolve together.
 
-Each family declares `id`, `label`, `component_role` (`attention` or `mlp`), and
+Each family declares `id`, `label`, `component_role` (`attention`, `mlp`, or `layer`), and
 at least two ordered `instances`. Each instance declares its source group
 `node_id` plus four exhaustive role-mapping arrays:
 
@@ -88,7 +88,7 @@ These are file-local references. The importer maps each reference to its own
 runtime record, never to the first instance's weights. Family `revision` and
 `provenance` are backend-assigned and cannot be supplied by the author. Root
 groups declare `attributes: [{"name": "semantic_role", "value": "attention"}]`
-or the equivalent `mlp` role. Grouping never implies weight tying.
+or the equivalent `mlp` or `layer` role. Grouping never implies weight tying.
 
 The same conservative correspondence validator used for packaged descriptions
 checks full closure, unique roles/targets, source scope/order, ordered containment,

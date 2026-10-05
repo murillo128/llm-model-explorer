@@ -85,7 +85,7 @@ Existing `templates` remain optional presentation annotations over the reconstru
 `ArchitectureGraph.templates` is optional; absence and `[]` mean no verified
 families. It annotates the complete ordinary graph without replacing any source
 record, requiring expansion, or adding an endpoint. Each closed record has an
-opaque graph-scoped `id`, `label`, `component_role` (`attention` or `mlp`),
+opaque graph-scoped `id`, `label`, `component_role` (`attention`, `mlp`, or `layer`),
 definition `revision`, reviewed description `provenance`, and at least two ordered
 `instances`. Template IDs share the graph's record-identity namespace.
 
@@ -94,7 +94,9 @@ Each instance names its source group `node_id` and four role-mapping arrays:
 `edges` entries `{role, edge_id}`, and `parameters` entries
 `{role, parameter_id}`. Roles are bounded local identifiers, unique per category;
 targets are also unique per category. Members of a family have identical role
-sets. A source component occurs in at most one family. Roles are neither tensor
+sets. A source component root occurs in at most one family. A whole-layer closure may
+contain separately rooted Attention/MLP families; that containment overlap is
+not duplicate computation. Roles are neither tensor
 IDs nor expressions, routes or instructions.
 
 Node mappings cover the group itself and its complete descendant closure; port

@@ -65,7 +65,7 @@ def test_shared_cold_warm_cache_and_nonzero_tensor_values(
         assert warm.lookup(warm_catalogue.pin("shared")) == cold
         forbidden.assert_not_called()
     graph = json.loads(cold)["graph"]
-    assert [t["component_role"] for t in graph["templates"]] == ["attention", "mlp"]
+    assert [t["component_role"] for t in graph["templates"]] == ["attention", "mlp", "layer"]
     parameters = {p["id"]: p for p in graph["parameters"]}
     instance = graph["templates"][0]["instances"][1]
     q_id = next(p["parameter_id"] for p in instance["parameters"] if p["role"] == "q.weight")
@@ -123,7 +123,7 @@ def test_http_publishes_model_supplied_shared_families(settings: Settings) -> No
         response = client.get(f"/sessions/{created.json()['id']}/architecture")
         assert response.status_code == 200
         graph = response.json()["graph"]
-        assert graph["scope"] == "model_defined" and len(graph["templates"]) == 2
+        assert graph["scope"] == "model_defined" and len(graph["templates"]) == 3
         assert len(graph["repetitions"][0]["instances"]) == 2
         assert "x-operation-id" not in response.headers
         assert response.headers["cache-control"] == "no-store"

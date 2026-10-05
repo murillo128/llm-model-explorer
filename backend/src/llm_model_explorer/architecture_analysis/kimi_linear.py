@@ -1620,7 +1620,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
             },
             fields=("architectures", "model_type", "num_hidden_layers", "mla_use_nope"),
         )
-        self.b.add_repetition(
+        self.b.add_layer_repetition(
             r.ArchitectureRepetition(
                 id=self.b.record_id("repetition", "model.layers"),
                 parent_id=self.nid("model"),

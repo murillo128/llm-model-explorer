@@ -67,7 +67,7 @@ class DefinitionTemplate(r.Record):
 
     id: r.ArchitectureId
     label: r.ArchitectureName
-    component_role: Literal["attention", "mlp"]
+    component_role: Literal["attention", "mlp", "layer"]
     instances: Annotated[list[r.ArchitectureTemplateInstance], Field(min_length=2)]
 
 

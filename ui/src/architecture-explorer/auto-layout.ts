@@ -59,6 +59,8 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
   const started = performance.now();
   if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
   const projection = projectGraph(graph, options);
+  const layoutProjection = { ...projection, edges: projection.edges.filter((e) => e.relationship?.kind !== 'return') };
+  const indexedContainers = new Set(projection.nodes.filter((n) => n.shared && n.parentId && !projection.nodes.find((p) => p.id === n.parentId)?.shared).map((n) => n.parentId));
   const projectedNodes = new Map(projection.nodes.map((node) => [node.id, node]));
   const descendant = (id: string, ancestor: string) => {
     for (let node = projectedNodes.get(id); node?.parentId; node = projectedNodes.get(node.parentId)) {
@@ -80,7 +82,7 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
   const metricsByNode = new Map<string, ReturnType<typeof cardMetrics>>();
   for (const [index, node] of projection.nodes.entries()) {
     const raised = new Set(node.ports.filter((port) => raisedPorts.has(endpointKey({ node_id: node.id, port_id: port.id }))).map((port) => port.id));
-    const metrics = cardMetrics(node, cardSummary(node.record, parameters), Boolean(options.dimensions), annotated.has(node.id), raised);
+    const metrics = cardMetrics(node, cardSummary(node.record, parameters, node.symbolicParameters), Boolean(options.dimensions), annotated.has(node.id), raised);
     metricsByNode.set(node.id, metrics);
     const id = `node-${index}`;
     sourceIds.set(id, node.id);
@@ -102,7 +104,8 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
         layoutOptions: { 'elk.port.side': side === 'left' ? 'WEST' : 'EAST', 'elk.port.index': String(p) } };
     });
     const height = metrics.height;
-    const gutter = (direction: 'input' | 'output') => Math.max(24, 20 + metrics.portLabelWidth[direction]);
+    const indexed = indexedContainers.has(node.id);
+    const gutter = (direction: 'input' | 'output') => Math.max(24, 20 + metrics.portLabelWidth[direction]) + (indexed ? 80 : 0);
     elkNodes.set(node.id, {
       id, width: metrics.width, height, ports,
       ...(node.expanded ? { children: [] } : {}),
@@ -112,7 +115,7 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
         'elk.spacing.portPort': String(metrics.portGap),
         // Boundary rows occupy side gutters, not a duplicate band above children.
         // Owned parameters/constants still reserve their actual summary height.
-        'elk.padding': `[top=${metrics.headerHeight + 16},left=${gutter('input')},bottom=${24 + (bottomSpace.get(node.id) ?? 0)},right=${gutter('output')}]`,
+        'elk.padding': `[top=${metrics.headerHeight + (indexed ? 80 : 16)},left=${gutter('input')},bottom=${24 + (bottomSpace.get(node.id) ?? 0)},right=${gutter('output')}]`,
         'elk.spacing.portsSurrounding': `[top=${metrics.headerHeight},left=0,bottom=16,right=0]`,
       },
     });
@@ -136,6 +139,7 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
   const portShapes = new Map(projection.nodes.flatMap((node) => node.ports.map((port) =>
     [endpointKey({ node_id: node.id, port_id: port.id }), port.shape] as const)));
   for (const [index, edge] of projection.edges.entries()) {
+    if (edge.relationship?.kind === 'return') continue;
     const source = endpoints.get(endpointKey(edge.source)), target = endpoints.get(endpointKey(edge.target));
     if (!source || !target) throw new Error('A visible connection has no exact port. Collapse groups and retry.');
     const id = `edge-${index}`;
@@ -167,7 +171,7 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
   const abort = () => { if (!nodeAdapter) engine.terminateWorker(); };
   signal?.addEventListener('abort', abort, { once: true });
   try {
-    const repeated = await layoutRepeatedInteriors(graph, projection, elkNodes, root, engine, signal);
+    const repeated = await layoutRepeatedInteriors(graph, layoutProjection, elkNodes, root, engine, signal);
     stubs = repeated.stubs;
     laidOut = await engine.layout(root);
     repeated.restore(laidOut);
@@ -257,7 +261,7 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
     }
     route.junctions.push(...stub.route.junctions);
   }
-  if (routes.length !== projection.edges.length || new Set(routes.map((route) => route.id)).size !== projection.edges.length)
+  if (routes.length !== layoutProjection.edges.length || new Set(routes.map((route) => route.id)).size !== layoutProjection.edges.length)
     throw new Error('Layout did not route every connection. Collapse groups and retry.');
   const byEndpoint = new Map(ports.map((p) => [endpointKey({ node_id: p.nodeId, port_id: p.portId }), p]));
   const byRoute = new Map(routes.map((route) => [route.id, route]));
@@ -265,7 +269,7 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
   // ELK reports section points and compound port positions through different
   // floating-point addition paths. Share the exact endpoint coordinates with
   // the rendered terminal and the route after ELK's port ordering.
-  for (const edge of projection.edges) {
+  for (const edge of layoutProjection.edges) {
     const route = byRoute.get(edge.id)!;
     for (const endpoint of [edge.source, edge.target]) {
       const port = byEndpoint.get(endpointKey(endpoint))!;
@@ -275,7 +279,17 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
       }
     }
   }
-  const widthGrowth = regularizeBoundaryRows(projection, boxes, ports, routes, metricsByNode);
+  const widthGrowth = regularizeBoundaryRows(layoutProjection, boxes, ports, routes, metricsByNode);
+  for (const edge of projection.edges.filter((e) => e.relationship?.kind === 'return')) {
+    const source = byEndpoint.get(endpointKey(edge.source))!, target = byEndpoint.get(endpointKey(edge.target))!;
+    const inner = boxes.find((b) => b.id === edge.source.node_id)!;
+    const right = inner.absoluteX + inner.width + 48, left = inner.absoluteX - 48, top = inner.absoluteY - 32;
+    routes.push({ id: edge.id, junctions: [], sections: [[
+      { x: source.absoluteX, y: source.absoluteY }, { x: right, y: source.absoluteY },
+      { x: right, y: top }, { x: left, y: top }, { x: left, y: target.absoluteY },
+      { x: target.absoluteX, y: target.absoluteY },
+    ]] });
+  }
   assertProtectedRoutes(projection, ports, routes, boxes);
   const represented = new Set([...projection.edges.flatMap((edge) => edge.originalEdgeIds), ...(projection.boundaryPaths ?? []).flat().map((e) => e.id)]);
   return { boxes, ports, routes, projection, edgeIds: graph.edges.filter((edge) => represented.has(edge.id)).map((edge) => edge.id),
