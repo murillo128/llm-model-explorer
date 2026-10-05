@@ -195,6 +195,37 @@ it.each(['broken', 'bypass', 'variant', 'nonconsecutive', 'absent', 'singleton',
 });
 
 
+it.each([false, true])('expands a valid unused invariant interface with showUnused=%s', (showUnused) => {
+  const graph = makeIndexedFixture();
+  // Keep the declared layer input and external signal, but no operation consumes it.
+  graph.edges = graph.edges.filter((e) => !['layer-0.mask', 'layer-1.mask', 'layer-2.mask'].includes(e.id));
+  for (const node of graph.nodes) if (node.kind === 'operation') {
+    node.ports = node.ports.filter((p) => p.id !== 'mask');
+    node.formula = 'out = transform(x, cos, sin; weight)';
+  }
+  for (const instance of graph.templates![0]!.instances) {
+    instance.ports = instance.ports.filter((p) => p.role !== 'op.mask');
+    instance.edges = instance.edges.filter((e) => e.role !== 'mask');
+  }
+  validateArchitecture({ model_id: 'fixture', status: 'available', diagnostics: [], graph }, { modelId: 'fixture' });
+  const view = new GraphViews().get('fixture', graph);
+  view.update({ expanded: ['model'], showUnused });
+  const outer = projectGraph(graph, projectionOptions(view)).nodes.find((n) => n.presentation === 'repetition')!;
+  toggleComponent(view, graph, outer, 2);
+  const projection = projectGraph(graph, projectionOptions(view));
+  if (showUnused) {
+    expect(projection.nodes.find((n) => n.id === outer.id)?.expanded).toBe(true);
+    expect(projection.nodes.filter((n) => n.shared)).toHaveLength(1);
+    expect(projection.edges.find((e) => e.relationship?.kind === 'invariant' && e.relationship.portRole === 'root.mask')!
+      .paths.map((p) => p.map((e) => e.id))).toEqual([['mask-0'], ['mask-1'], ['mask-2']]);
+  } else {
+    expect(view.repetitions.layers).toEqual({ start: 0, count: 2 });
+    expect(projection.nodes.map((n) => n.id)).toEqual(expect.arrayContaining(['layer-0', 'layer-1']));
+    expect(projection.nodes.some((n) => n.shared)).toBe(false);
+    expect(projection.filteredEdgeIds).toEqual(expect.arrayContaining(['mask-0', 'mask-1', 'mask-2']));
+  }
+});
+
 it('keeps mathematical indices and genuine aliased weights unindexed in neutral operations', () => {
   const graph = makeIndexedFixture();
   for (const n of graph.nodes) if (n.kind === 'operation') n.formula = 'out = x[j] + x + weight';

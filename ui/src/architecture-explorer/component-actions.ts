@@ -1,6 +1,6 @@
 import type { Graph, GraphView } from './graph';
 import type { ProjectedNode } from './projection';
-import { indexedStacks } from './indexed-repetition';
+import { indexedBoundaryPorts, indexedStacks } from './indexed-repetition';
 import { cardExpandable } from './card-actions';
 
 /** Shared canvas/navigator actions. Neither selection nor hiding a descendant reveals it. */
@@ -23,7 +23,7 @@ export function toggleComponent(view: GraphView, graph: Graph, node: ProjectedNo
     if (!repetition || start < 0) return;
     let parent = graph.nodes.find((n) => n.id === repetition.parent_id);
     while (parent) { expanded.add(parent.id); parent = graph.nodes.find((n) => n.id === parent?.parent_id); }
-    if (node.presentation === 'repetition' && indexedStacks(graph).has(repetition.id)) {
+    if (node.presentation === 'repetition' && indexedBoundaryPorts(node, indexedStacks(graph).get(repetition.id))) {
       if (expanded.has(node.id)) expanded.delete(node.id); else expanded.add(node.id);
       view.update({ ...detail, expansionAnchor: node.id, expanded: [...expanded], exhaustive: false,
         focus: repetition.parent_id, activeStack: repetition.id, stateScope: undefined });

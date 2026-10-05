@@ -415,6 +415,12 @@ segments, template/port roles and instance indices for connection inspection.
 Entry/return apply at different indices; exit occurs only after the last layer.
 Aggregate evidence does not select a numeric instance.
 
+When current interface filters hide a boundary port required by the indexed
+view, expansion opens the ordinary concrete window. Action eligibility and
+projection must use the same visible-boundary check; a valid unused interface
+must never turn expansion into a no-op. Showing unused interfaces can make the
+indexed view available again.
+
 Outer aliases use the actual first/last indices. Inner ports and local formula
 symbols use `[i]`; shared inputs, constants, existing mathematical indices and
 tied parameters remain unchanged. Use a bounded symbol/role-aware display

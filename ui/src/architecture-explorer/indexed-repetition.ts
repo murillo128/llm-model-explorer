@@ -1,5 +1,5 @@
 import type { Graph, GraphNode } from './graph';
-import type { Endpoint, ProjectedEdge, Projection, ProjectionOptions } from './projection';
+import type { Endpoint, ProjectedEdge, ProjectedNode, Projection, ProjectionOptions } from './projection';
 import { endpointKey, projectGraph } from './projection';
 import { commonNode, templateGraph } from './shared-structure';
 import type { Template } from './shared-structure';
@@ -154,6 +154,18 @@ function indexedRecord(node: GraphNode, stack: IndexedStack, root: boolean): Gra
     ...(root ? { formula: `${node.ports.find((p) => p.id === stack.output)!.label}[i] = layer[i](${node.ports.filter((p) => p.direction === 'input').map((p) => invariant.has(p.id) ? p.label : `${p.label}[i]`).join(', ')})` } : {}) };
 }
 
+/** Actions and projection must agree on whether the current interface filter
+ * leaves every required handle available. Otherwise expansion uses a window. */
+export function indexedBoundaryPorts(outer: ProjectedNode, stack: IndexedStack | undefined) {
+  if (!stack || outer.presentation !== 'repetition') return;
+  const roots = new Set(stack.instances.map((i) => i.node_id));
+  const portFor = (port: string, direction: 'input' | 'output') => outer.ports.find((p) => p.direction === direction && p.endpoints.some((e) =>
+    roots.has(e.node_id) && e.port_id === port));
+  const input = portFor(stack.input, 'input'), output = portFor(stack.output, 'output');
+  if (!input || !output || stack.invariants.some((p) => !portFor(p.port, 'input'))) return;
+  return { input, output, portFor };
+}
+
 /** Compose two existing projections; the source graph stays concrete and immutable. */
 export function projectIndexedRepetitions(graph: Graph, base: Projection, options: ProjectionOptions): Projection {
   if (options.exhaustive || options.stateScope) return base;
@@ -163,14 +175,12 @@ export function projectIndexedRepetitions(graph: Graph, base: Projection, option
   for (const outer of [...base.nodes]) {
     if (outer.presentation !== 'repetition' || !options.expanded.includes(outer.id)) continue;
     const stack = eligible.get(outer.repetitionId!);
-    if (!stack) continue;
+    const boundary = indexedBoundaryPorts(outer, stack);
+    if (!stack || !boundary) continue;
+    const { input, output, portFor } = boundary;
     const repetition = graph.repetitions.find((r) => r.id === outer.repetitionId)!;
     const anchor = stack.instances[0]!;
     const id = (source: string) => indexedNodeId(repetition.id, source);
-    const portFor = (port: string, direction: 'input' | 'output') => outer.ports.find((p) => p.direction === direction && p.endpoints.some((e) =>
-      stack.instances.some((i) => i.node_id === e.node_id) && e.port_id === port));
-    const input = portFor(stack.input, 'input'), output = portFor(stack.output, 'output');
-    if (!input || !output || stack.invariants.some((p) => !portFor(p.port, 'input'))) continue;
     const anchorEdgeRoles = new Map(anchor.edges.map((e) => [e.edge_id, e.role]));
     const instanceEdges = stack.instances.map((instance) => new Map(instance.edges.map((e) => [e.role, sourceEdges.get(e.edge_id)!])));
     const local = projectGraph(templateGraph(graph, anchor), { expanded: anchor.nodes.filter((n) => options.expanded.includes(id(n.node_id))).map((n) => n.node_id),
