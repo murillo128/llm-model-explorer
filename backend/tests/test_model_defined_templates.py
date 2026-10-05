@@ -86,6 +86,65 @@ def test_imports_attention_and_mlp_with_exact_nonzero_bindings() -> None:
     assert graph.document() == analyze().graph.document()
 
 
+def test_imports_explicit_symbol_and_side_state_correspondence() -> None:
+    value = document()
+    nodes = {n["id"]: n for n in value["nodes"]}
+    bindings = []
+    layer_template = value["templates"][2]
+    for index, instance in enumerate(layer_template["instances"]):
+        root = nodes[instance["node_id"]]
+        instance["symbols"] = [{"role": "sequence", "name": "N"}]
+        output = next(p for p in root["ports"] if p["id"] == "out")
+        root["ports"].append({**output, "id": "state", "label": "state"})
+        instance["ports"].append({"role": "root.state", "node_id": root["id"], "port_id": "state"})
+        forward = next(
+            e for e in value["edges"] if e["target"] == {"node_id": root["id"], "port_id": "out"}
+        )
+        edge_id = f"state-forward-{index}"
+        value["edges"].append(
+            {
+                **forward,
+                "id": edge_id,
+                "kind": "state",
+                "target": {"node_id": root["id"], "port_id": "state"},
+            }
+        )
+        instance["edges"].append({"role": "state-forward", "edge_id": edge_id})
+        sink = f"state-sink-{index}"
+        value["nodes"].append(
+            {
+                "id": sink,
+                "parent_id": "stack",
+                "kind": "state",
+                "label": sink,
+                "ports": [{**output, "direction": "input"}],
+            }
+        )
+        nodes["stack"]["children"].append(sink)
+        endpoint = {"node_id": sink, "port_id": "out"}
+        value["edges"].append(
+            {
+                "id": f"state-side-{index}",
+                "kind": "state",
+                "source": {"node_id": root["id"], "port_id": "state"},
+                "target": endpoint,
+            }
+        )
+        bindings.append({"index": index, "endpoint": endpoint})
+    value["repetitions"][0]["side_ports"] = [
+        {"port_id": "state", "direction": "output", "bindings": bindings}
+    ]
+    result = analyze(value)
+    assert result.graph is not None, result.diagnostics
+    graph = result.graph
+    assert graph.templates[2].instances[1].symbols[0].name == "N"
+    side = graph.repetitions[0].side_ports[0]
+    for index, binding in enumerate(side.bindings):
+        sink = next(n for n in graph.nodes if n.label == f"state-sink-{index}")
+        assert binding.index == index and binding.endpoint.node_id == sink.id
+        assert sink.id != f"state-sink-{index}"
+
+
 def test_absence_and_empty_templates_preserve_the_ordinary_graph() -> None:
     value = document()
     del value["templates"]
@@ -302,8 +361,8 @@ def test_budget_does_not_hide_invalid_templates(caplog: pytest.LogCaptureFixture
 def test_producer_revision_invalidates_prior_model_defined_cache() -> None:
     definition = parse_definition(EXAMPLE.read_bytes())
     current = producer_for(definition)
-    old = replace(current, revision="4")
-    assert current.revision == "5"
+    old = replace(current, revision="5")
+    assert current.revision == "6"
     assert current.graph_id("unchanged-checkpoint", "model_defined") != old.graph_id(
         "unchanged-checkpoint", "model_defined"
     )

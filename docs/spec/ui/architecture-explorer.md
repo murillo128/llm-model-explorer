@@ -396,15 +396,22 @@ Use the existing renderer, cancellable layout worker and connection-hit behavior
 
 For a homogeneous serial repetition whose complete instances belong to one
 verified `layer` family, the first expansion retains its existing container and
-shows one neutral `Layer[i]`. That layer expands into the common operations.
+shows one neutral `Layer[i]`. A mixed repetition first shows ordered maximal
+compatible contiguous ranges and explicit exceptional single layers. Each
+repeated range expands to its neutral layer with real first/last indices; never
+join nonconsecutive members across intervening variants. Layer[i] expands into
+the common operations, including layer-local state and nested components.
 Explicit instance/window and exhaustive controls remain available. Expansion
 uses the ordinary shared controller, keyboard/double-click rules and component
 anchor; collapse preserves nested choices and valid selection.
 
 Eligibility verifies mapped inter-instance paths and every external dependency,
-not repetition order alone. Missing correspondence, heterogeneous/nonconsecutive
-members, bypasses, non-serial wiring or unrepresentable per-instance state/context
-retain the ordinary window. A singleton never has a return.
+not repetition order alone. Missing correspondence, bypasses, non-serial wiring
+or unverified per-instance state/context retain the ordinary window for the
+affected range. A singleton never has a return. Internal state does not disable
+indexing. Exactly one proved data output/input pair carries activation; additional
+state inputs/outputs require the API's per-index side correspondence and retain
+separate relationships, source references and real handles.
 
 Presentation relationships have a separate typed discriminator, never a source
 edge kind: entry uses the first instance's exact incoming path; return retains
@@ -415,11 +422,10 @@ segments, template/port roles and instance indices for connection inspection.
 Entry/return apply at different indices; exit occurs only after the last layer.
 Aggregate evidence does not select a numeric instance.
 
-When current interface filters hide a boundary port required by the indexed
-view, expansion opens the ordinary concrete window. Action eligibility and
-projection must use the same visible-boundary check; a valid unused interface
-must never turn expansion into a no-op. Showing unused interfaces can make the
-indexed view available again.
+Action eligibility and projection use the same visible carry-boundary check.
+Unused optional interfaces do not disable a verified range or require fake
+consumers. Preserve their declared/filtered provenance under ordinary default
+filters; Show unused interfaces changes visibility, not depth eligibility.
 
 Outer aliases use the actual first/last indices. Inner ports and local formula
 symbols use `[i]`; shared inputs, constants, existing mathematical indices and
@@ -720,3 +726,11 @@ overview; its three siblings remain visible. Apply the existing readable-fit
 threshold and bounded collapsed fallback to the resulting actual bounds. Ordinary
 collapse/reopen and indexed Decoder expansion preserve both return owners, source
 weights and inspection. Explore component can isolate the original model alone.
+
+
+Family preparation does not add another presentation Model wrapper around
+Generation. Disconnected visual/auxiliary context remains independently
+inspectable. Visible bounds include only the actual compact bodies and their
+attached return/bypass/state gutters; hidden copies and collapsed state helpers
+do not reserve space. Model, Shared and repetition actions use the same range
+correspondence and require explicit concrete selection for numerical inspection.

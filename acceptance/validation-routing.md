@@ -30,14 +30,15 @@ Native target unions are deterministic and deduplicated; `tests` dominates narro
 backend file selections. Known test-only fixture routes retain ordinary Python
 compatibility scope; unknown impact remains conservative.
 The application workflow installs Node when browsers or the independent TCP
-architecture semantic oracle require it. HTTP-only plans still omit npm,
+architecture semantic oracle require it. The family projection oracle uses Node 24 type transformation and local resolution, with no npm dependency. HTTP-only plans still omit npm,
 Chromium, UI build and browser servers.
 
 ## Inspected cross-boundary fixture families
 
 | Input family | Confirmed consumers and selected consequence |
 | --- | --- |
-| `test_lora_architecture.py`, CLM/Kev fixture builders | Native-package preparation imports/embedded Python commands, including dynamically loaded example exporters. Backend plus `test_native_packages.py`; no browser acquired for these Python-only fixture inputs. |
+| `test_lora_architecture.py`, CLM/Kev fixture builders and export test helpers | Native-package preparation and registered-family projection exports import these helpers. Backend plus `test_native_packages.py` and `test_architecture.py`; no browser acquired for these Python-only fixture inputs. |
+| DeepSeek and GLM metadata helpers | Both feed the registered-family projection oracle. DeepSeek also feeds the production browser metadata adapter; GLM selects architecture TCP only. |
 | Dense/quantized fixtures, `test_quantized_models`, `test_models`, `test_tensor_data`, `test_streaming`, `test_operations`, `test_lmex`, `cache_helpers` | Dense configuration/storage, import-time helper chain and independent packed oracles feed architecture/native packages and HTTP polish. Backend plus architecture browser/TCP, native packages, polish and the retained LoRA TCP oracle; affected backend thresholds remain selected. |
 | Kimi helper/reference JSON and `kimi_linear_fixture.py` | The adapter's function-local `compressed_expert_inputs` import serves architecture HTTP and browser. Select architecture routine/extended proof at its existing sizes and capability limits. |
 | Grouping preparation, dense/Qwen/V-JEPA test metadata and fixture JSON | Producer export preparation and independently reviewed Node semantic fingerprints; architecture HTTP/browser family. The semantic JSON and TypeScript oracle remain actual inputs. |

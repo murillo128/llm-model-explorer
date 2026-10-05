@@ -6,7 +6,7 @@ import { projectionOptions } from './scope-navigation';
 import { sharedContext, type SharedStructure } from './shared-structure';
 import { interfaceIndex, interfaceSelection } from './interfaces';
 import type { BoundarySelection } from './interfaces';
-import { indexedNodeId, indexedStacks } from './indexed-repetition';
+import { depthRanges, indexedNodeId, indexedStacks } from './indexed-repetition';
 import { overviewExpansion } from './overview';
 
 export type Graph = components['schemas']['ArchitectureGraph'];
@@ -94,8 +94,13 @@ export class GraphViews {
     const indexed = indexedStacks(graph);
     const indexedIds = new Set([...indexed].flatMap(([repetitionId, stack]) => [
       `repeat:${repetitionId}:0:${stack.instances.length - 1}`,
+      `repeat:${repetitionId}`,
       ...stack.instances[0]!.nodes.map((n) => indexedNodeId(repetitionId, n.node_id)),
     ]));
+    for (const repetition of graph.repetitions) {
+      indexedIds.add(`repeat:${repetition.id}:0:${repetition.instances.length - 1}`);
+      for (const range of depthRanges(graph, repetition)) indexedIds.add(`repeat:${range.id}`);
+    }
     const interfaces = interfaceIndex(graph);
     const declaration = view.selected && interfaces.declarations.get(view.selected)?.[0];
     if (declaration) { view.boundary = interfaceSelection(declaration); view.selected = declaration.owner.kind === 'source' ? declaration.owner.id : null; view.edge = null; }
@@ -139,7 +144,7 @@ export class GraphViews {
     }
     // A card selection may name a local repetition/context presentation. Retain
     // it across remounts only while that exact presentation still exists.
-    if (view.selected && !ids.has(view.selected) && !indexedIds.has(view.selected) && !(view.selected.startsWith('mlp:') && ids.has(view.selected.slice(4))) &&
+    if (view.selected && !ids.has(view.selected) && !(view.selected.startsWith('mlp:') && ids.has(view.selected.slice(4))) &&
       !projectGraph(graph, projectionOptions(view)).nodes.some((node) => node.id === view.selected)) view.selected = null;
     return view;
   }

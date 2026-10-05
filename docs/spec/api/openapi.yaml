@@ -1688,6 +1688,30 @@ components:
           $ref: '#/components/schemas/SafeInteger'
         variant:
           $ref: '#/components/schemas/ArchitectureId'
+    ArchitectureIndexedSideBinding:
+      type: object
+      additionalProperties: false
+      required: [index, endpoint]
+      properties:
+        index:
+          $ref: '#/components/schemas/SafeInteger'
+        endpoint:
+          $ref: '#/components/schemas/ArchitectureEndpoint'
+    ArchitectureIndexedSidePort:
+      type: object
+      additionalProperties: false
+      required: [port_id, direction, bindings]
+      properties:
+        port_id:
+          $ref: '#/components/schemas/ArchitectureId'
+        direction:
+          type: string
+          enum: [input, output]
+        bindings:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureIndexedSideBinding'
     ArchitectureRepetition:
       type: object
       additionalProperties: false
@@ -1697,6 +1721,11 @@ components:
       - label
       - instances
       properties:
+        side_ports:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureIndexedSidePort'
         id:
           $ref: '#/components/schemas/ArchitectureId'
         parent_id:
@@ -1935,11 +1964,25 @@ components:
           $ref: '#/components/schemas/ArchitectureId'
         parameter_id:
           $ref: '#/components/schemas/ArchitectureId'
+    ArchitectureTemplateSymbolRole:
+      type: object
+      additionalProperties: false
+      required: [role, name]
+      properties:
+        role:
+          $ref: '#/components/schemas/ArchitectureId'
+        name:
+          $ref: '#/components/schemas/ArchitectureName'
     ArchitectureTemplateInstance:
       type: object
       additionalProperties: false
       required: [node_id, nodes, ports, edges, parameters]
       properties:
+        symbols:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureTemplateSymbolRole'
         node_id:
           $ref: '#/components/schemas/ArchitectureId'
         nodes:

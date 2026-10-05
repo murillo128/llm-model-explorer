@@ -29,7 +29,9 @@ const componentsOf = (graph: Graph) => graph.nodes.filter((node) => !['input', '
   !(node.kind === 'context' && !node.ports.length && node.references.some((r) => r.kind === 'tokenizer')));
 const visibleCount = (graph: Graph) => {
   const nodes = componentsOf(graph), roots = nodes.filter((n) => !n.parent_id);
-  return nodes.length + (roots.length === 1 && roots[0]!.kind === 'group' ? 0 : 1);
+  // Native Generation owns its boundary; disconnected context adds no wrapper.
+  const generation = roots.some((n) => n.attributes.some((a) => a.name === 'semantic_role' && a.value === 'autoregressive_generation'));
+  return nodes.length + (generation || roots.length === 1 && roots[0]!.kind === 'group' ? 0 : 1);
 };
 
 const repo = fileURLToPath(new URL('../../', import.meta.url));
@@ -376,7 +378,7 @@ test.beforeEach(async ({ page }, info) => {
   timing = new HarnessTiming();
   const family = /\[(\w+)\]/.exec(info.title)?.[1] ?? 'qwen35';
   const reference = info.title.startsWith('complete local reference');
-  if (!reference && ['deepseek_v2', 'glm4_moe_lite'].includes(family)) {
+  if (!reference && family === 'glm4_moe_lite') {
     test.skip(true, `${family} has no deterministic local checkpoint fixture; actual-reference coverage owns this family`);
   }
   if (!reference && family === 'kimi_linear') {
@@ -405,8 +407,8 @@ test.beforeEach(async ({ page }, info) => {
     args = ['-m', 'llm_model_explorer', '--model-root', selected.model_root, '--cache-dir', join(root, 'cache'), '--port', String(port), '--cors-origin', origin];
   } else {
     const fixtureStarted = performance.now();
-    if (family === 'kimi_linear') {
-      execFileSync(python, ['-m', 'acceptance.kimi_linear_fixture', join(root, 'models')], { cwd: repo });
+    if (['kimi_linear', 'deepseek_v2'].includes(family)) {
+      execFileSync(python, ['-m', 'acceptance.kimi_linear_fixture', join(root, 'models'), '--family', family], { cwd: repo });
     } else {
       execFileSync(python, ['-m', 'acceptance.architecture_fixtures', join(root, 'models'), ...(family === 'templates' ? ['--templates'] : [])], { cwd: repo });
     }
@@ -416,7 +418,7 @@ test.beforeEach(async ({ page }, info) => {
     timing.fixtureGenerationMs = performance.now() - fixtureStarted;
     modelId = family;
     args = ['-m', 'acceptance.server', '--root', root, '--port', String(port), '--origin', origin,
-      ...(family === 'kimi_linear' ? ['--kimi-architecture-fixture'] : [])];
+      ...(['kimi_linear', 'deepseek_v2'].includes(family) ? ['--kimi-architecture-fixture'] : [])];
   }
   timing.spawned = performance.now();
   service = spawn(python, args, { cwd: repo, env: { ...process.env, HF_HUB_OFFLINE: '1', TOKENIZERS_PARALLELISM: 'false' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -424,7 +426,7 @@ test.beforeEach(async ({ page }, info) => {
   await expect.poll(async () => {
     if (service.exitCode !== null) throw new Error(log);
     try { return (await fetch(`${backend}/models`)).status; } catch { return 0; }
-  }, { timeout: reference ? 300_000 : 30_000 }).toBe(200);
+  }, { timeout: reference || family === 'deepseek_v2' ? 300_000 : 30_000 }).toBe(200);
   timing.ready = performance.now();
   if (!reference) {
     const response = await fetch(`${backend}/models`);
@@ -619,6 +621,7 @@ test('production graph navigation preserves declared structure and retained UI s
   const parameter = graph.parameters.find(p => p.inspection.status === 'available' && p.logical_shape?.length === 2)!;
   const node = graph.nodes.find(n => n.parameter_ids.includes(parameter.id))!;
   await findComponent(page, node.id);
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
   const card = page.locator(`.react-flow__node[data-id=${JSON.stringify(node.id)}]`);
   const camera = await page.locator('.react-flow__viewport').getAttribute('style');
   const count = await canvas.getAttribute('data-layout-count'), scope = await canvas.getAttribute('data-scope-id');
@@ -640,7 +643,19 @@ test('production graph navigation preserves declared structure and retained UI s
   await viewOptions(page); await expect(page.getByLabel('Show dimensions')).toBeChecked();
   await page.keyboard.press('Escape');
   await graphAction(page, 'Collapse all');
-  await expect(canvas).toHaveAttribute('data-visible-nodes', '1');
+  // Generation is the outer owner; Qwen's two unrelated context records stay
+  // explicit instead of introducing another Model wrapper around all three.
+  await expect(canvas).toHaveAttribute('data-visible-nodes', '3');
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const generation = graph.nodes.find((n) => n.attributes.some((a) =>
+    a.name === 'semantic_role' && a.value === 'autoregressive_generation'))!;
+  const generationCard = page.locator(`.react-flow__node[data-id=${JSON.stringify(generation.id)}]`);
+  await expect(generationCard.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'false');
+  for (const label of ['visual components context only', 'auxiliary mtp weights unused by reviewed language path']) {
+    const context = graph.nodes.find((n) => n.kind === 'context' && n.label === label)!;
+    await expect(page.locator(`.react-flow__node[data-id=${JSON.stringify(context.id)}]`)).toBeAttached();
+  }
+  await expect(page.locator('.react-flow__node[data-id="presentation:model"]')).toHaveCount(0);
   for (const node of graph.nodes.filter(n => ['input', 'output'].includes(n.kind))) {
     await expect(page.locator(`.architecture-browser-row[data-node-id=${JSON.stringify(node.id)}]`)).toHaveCount(0);
   }
@@ -651,8 +666,8 @@ test('production graph navigation preserves declared structure and retained UI s
 for (const reference of [false, true]) for (const family of [
   'smollm2', 'qwen3', 'qwen35', 'vjepa2', 'deepseek_v2', 'glm4_moe_lite', 'kimi_linear',
 ]) {
-  test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] full graph, concrete bindings and logical weight modal`, { tag: reference ? '@extended' : [] }, async ({ page }, info) => {
-    test.setTimeout(reference && family === 'kimi_linear' ? 900_000 : reference ? 600_000 : 90_000);
+  test(`${reference ? 'complete local reference' : 'deterministic production'} [${family}] ${!reference && family === 'deepseek_v2' ? 'compact generation, depth and binding metadata' : 'full graph, concrete bindings and logical weight modal'}`, { tag: reference ? '@extended' : [] }, async ({ page }, info) => {
+    test.setTimeout(reference && family === 'kimi_linear' ? 900_000 : reference || family === 'deepseek_v2' ? 600_000 : 90_000);
     const graph = expandCompactGraph(await selectGraph(page));
     expect(graph.coverage).toBe('complete');
     const actualMoeReference = reference && ['deepseek_v2', 'glm4_moe_lite', 'kimi_linear'].includes(family);
@@ -697,9 +712,10 @@ for (const reference of [false, true]) for (const family of [
       assertTraceability(graph, projectGraph(graph, { expanded }));
     }
     const canvas = page.getByLabel('Architecture graph', { exact: true });
-    if (!reference && family === 'smollm2') {
+    if (!reference && ['smollm2', 'qwen35', 'deepseek_v2'].includes(family)) {
       const generation = graph.nodes.find((n) => n.attributes.some((a) => a.name === 'semantic_role' && a.value === 'autoregressive_generation'))!;
       expect(generation).toBeTruthy();
+      await expect(page.locator('.react-flow__node[data-id="presentation:model"]')).toHaveCount(0);
       const prepare = graph.nodes.find((n) => n.operation === 'generation_prepare_inputs')!;
       const append = graph.nodes.find((n) => n.operation === 'generation_append_token')!;
       const model = graph.nodes.find((n) => n.parent_id === generation.id && n.kind === 'group')!;
@@ -744,9 +760,64 @@ for (const reference of [false, true]) for (const family of [
         expect(receipt.last[axis]).toBeCloseTo(receipt.target[axis], 0);
       }
       await info.attach('generation-route-receipt', { body: JSON.stringify({ graph: graph.graph_id, modelId: model.id, ...receipt }), contentType: 'application/json' });
+      if (family !== 'smollm2') {
+        const repetition = graph.repetitions.find((r) => r.instances.some((i) => i.variant === 'linear_attention' || i.variant === 'dense'))!;
+        const outerId = `repeat:${repetition.id}:${repetition.instances[0]!.index}:${repetition.instances.at(-1)!.index}`;
+        await open(outerId);
+        await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+        const first = family === 'qwen35' ? 0 : 1, last = family === 'qwen35' ? 2 : 26;
+        const rangeId = `repeat:${repetition.id}:${first}:${last}`;
+        await open(rangeId);
+        await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+        const innerId = `indexed:${repetition.id}:${first}:${last}:${repetition.instances[first]!.node_id}`;
+        await expect(card(innerId)).toHaveCount(1);
+        const depth = page.locator(`.architecture-connection[data-edge-id=${JSON.stringify(`${rangeId}:return:x`)}]`);
+        await expect(depth).toHaveCount(1);
+        await open(innerId);
+        await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+        const geometry = await depth.evaluate((element, innerId) => {
+          const body = document.querySelector(`.react-flow__node[data-id="${innerId}"]`)!.getBoundingClientRect();
+          const paths = [...element.querySelectorAll<SVGPathElement>('.architecture-edge-line')];
+          const points = paths.flatMap((path) => Array.from({ length: 101 }, (_, i) => {
+            const p = path.getPointAtLength(path.getTotalLength() * i / 100).matrixTransform(path.getScreenCTM()!);
+            return { x: p.x, y: p.y };
+          }));
+          const port = (side: string) => {
+            const node = element.getAttribute(`data-${side}-node`), id = element.getAttribute(`data-${side}-port`);
+            const box = document.querySelector(`.architecture-port[data-node-id="${node}"][data-port-id="${id}"]`)!.getBoundingClientRect();
+            return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+          };
+          return { body: body.toJSON(), points, source: port('source'), target: port('target'),
+            edges: JSON.parse(element.getAttribute('data-original-edge-ids')!),
+            crosses: points.some((p) => p.x > body.left + 1 && p.x < body.right - 1 && p.y > body.top + 1 && p.y < body.bottom - 1) };
+        }, innerId);
+        expect(geometry.crosses).toBe(false);
+        expect(geometry.edges).toHaveLength(last - first);
+        for (const axis of ['x', 'y'] as const) {
+          expect(geometry.points[0]![axis]).toBeCloseTo(geometry.source[axis], 0);
+          expect(geometry.points.at(-1)![axis]).toBeCloseTo(geometry.target[axis], 0);
+        }
+        await depth.focus(); await expect(depth).toHaveAttribute('data-emphasized', 'true');
+        await depth.press('Enter');
+        await expect(page.getByRole('dialog', { name: 'Connection inspection' })).toContainText(`${last - first} ordered inter-layer transitions`);
+        await page.keyboard.press('Escape');
+        await info.attach('family-depth-geometry', { body: JSON.stringify(geometry), contentType: 'application/json' });
+        await recordGraph(page, info, 'generation-compact-depth', graph);
+        await card(innerId).locator('.architecture-expand').click();
+        await expect(canvas).toHaveAttribute('aria-busy', 'false');
+      }
       const originalViewport = page.viewportSize()!;
       await page.setViewportSize({ width: 3800, height: 1000 });
       await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+      const fitted = await card(generation.id).evaluate((element) => {
+        const body = element.getBoundingClientRect();
+        const viewport = document.querySelector('.architecture-flow')!.getBoundingClientRect();
+        return { body: body.toJSON(), viewport: viewport.toJSON() };
+      });
+      expect(fitted.body.left).toBeGreaterThanOrEqual(fitted.viewport.left);
+      expect(fitted.body.right).toBeLessThanOrEqual(fitted.viewport.right);
+      expect(fitted.body.top).toBeGreaterThanOrEqual(fitted.viewport.top);
+      expect(fitted.body.bottom).toBeLessThanOrEqual(fitted.viewport.bottom);
       const screenshot = info.outputPath('native-generation.png');
       await page.screenshot({ path: screenshot }); await info.attach('native-generation', { path: screenshot, contentType: 'image/png' });
       await page.setViewportSize(originalViewport);
@@ -757,6 +828,13 @@ for (const reference of [false, true]) for (const family of [
       await expect(route(prepare.id, 'tokens', append.id)).toHaveCount(1);
       await expect(route(append.id, 'updated', prepare.id)).toHaveCount(1);
       expect(observed.slice(requests)).toEqual([]);
+    }
+    if (!reference && family === 'deepseek_v2') {
+      // The existing inert metadata shell proves the actual static producer and
+      // built consumer. Numeric reference inspection remains in its reference scenario.
+      expect(graph.parameters.some((p) => p.name === 'model.layers.26.mlp.experts.0.gate_proj.weight')).toBe(true);
+      expect(observed.some((p) => /\/data$/.test(p))).toBe(false);
+      return;
     }
     await recordGraph(page, info, 'compact-graph', graph);
     await graphAction(page, 'Show all operations');

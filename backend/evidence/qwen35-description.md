@@ -145,3 +145,140 @@ The local run reused `/tmp/issue-43-venv` with `PYTHONPATH=src` to resolve this
 worktree. API validation uses its separate `api/requirements.txt` environment.
 Final PR-head CI and integration freshness are recorded on the PR, rather than
 hard-coding mutable final commit identities here.
+
+## Full-sequence generation invocation (#296)
+
+The same pinned `modeling_qwen3_5.py` was read as inert source for this change.
+`Qwen3_5TextModel.forward` (1256–1298) constructs no DynamicCache when
+`use_cache=False, past_key_values=None`. For an unpadded text sequence, its text
+and three THW axes use positions 0..T-1; this graph exposes the three rotary axes
+and separate attention/current-sequence padding masks, each [B,T]. Causal masking
+stays inside attention. `Qwen3_5Attention.forward` (799–800) skips cache update;
+current keys/values directly feed attention. `Qwen3_5GatedDeltaNet.forward`
+(562–647) takes the full convolution branch, uses kernel-width-minus-one zero-valued left padding and passes
+`initial_state=None` to the delta rule. The reviewed fallback (406–409) initializes
+that recurrence to zeros. No convolution or KV bank is carried between calls;
+within-call DeltaNet recurrence remains explicit. The native vocabulary head is
+inside the single-pass boundary and retains its exact tied parameter binding.
+The low-level Graph helper retains its cached branch for its existing Kev owner.
+
+Validation ownership and independent expectations: the existing native producer
+case owns THW/mask shapes, initialization and vocabulary binding; the existing
+Shared/projection owner covers maximal contiguous mixed ranges, default filters,
+source transitions and nonzero instance identity; the existing Qwen3.5 production
+browser scenario owns visible routes, expansion anchors and bounds. Expected
+values come from the pinned source above and the explicit layer sequence, not
+new producer output. The new generation regression failed at baseline 856e55c
+because the preparation node was absent, then passed with the producer change.
+The second rendered owner is the existing deterministic DeepSeek scenario.
+
+
+## Shipped-family adoption evidence (#296)
+
+The earlier mathematical review describes the retained cached component; the
+native registry now chooses the full-sequence invocation above. The registered
+family export and actual TypeScript projection/action check passed all 15 fixed
+rows, with ordinary interface filters. The expected family list and intervals
+are authored independently of producer opt-in. No model weights are read by
+that matrix; CLM/Kev and LoRA use existing tiny package fixtures.
+
+| Existing path | Generation | Observed indexed depth |
+| --- | --- | --- |
+| Llama / SmolLM2 semantic path | Yes | 0–1 |
+| Qwen3 GPTQ dense | Yes | 0–1 |
+| Qwen3.5 24-layer hybrid | Yes | 0–2, 4–6, 8–10, 12–14, 16–18, 20–22; intervening full layers explicit |
+| DeepSeek-V2-Lite 27 layers | Yes | 1–26; dense layer 0 explicit |
+| GLM4-MoE-Lite 47 layers | Yes | 1–46; dense layer 0 explicit |
+| Kimi Linear 27 layers | Yes | 1–2, 4–6, 8–10, 12–14, 16–18, 20–22, 24–25; MLA boundaries explicit |
+| CLM | Not applicable: decision graph | Independent encoder stacks 0–1 and 0–1 |
+| Kev | Not applicable: decision graph | Hybrid backbone 0–2; full layer 3 explicit |
+| V-JEPA2 | Not applicable: visual graph | Independent encoder and predictor 0–1; existing singleton test retained |
+| SmolLM2 LoRA | Yes | 0–1, exact instance bindings retained |
+| Qwen3 native LoRA and GPTQ LoRA | Yes for both | 0–1 for both |
+| Owned linear / Shared / generation definitions | Only authored generation | None / 0–1 / none (true singleton) |
+
+The primary test owners are the native producer cases for initialization/shapes,
+`shared-structure.test.ts` for mixed ranges, typed state paths and concrete
+identity, the existing grouping TCP test for the table above, and the existing
+Qwen3.5/DeepSeek browser scenarios for geometry and actions. The independently
+reviewed seven-case operation fingerprint oracle passes without refreshing its
+golden; its hybrid row retains the cached component used by Kev, while the new
+matrix explicitly exercises native Qwen3.5 Generation. The mixed-range UI
+regression failed on the original baseline (no ranges instead of the ordered
+expected intervals), then passed. Wrong state bindings, wrong indices, unknown
+symbols and malformed per-call initialization remain rejecting controls.
+
+Observed local checks:
+
+- `npm run check --prefix ui`: 1,089 tests, generated contract, typecheck, lint,
+  production build passed.
+- `api/validate_contract.py`: 271 architecture cases, 118 instances, 132 wire
+  fixtures and 373 resolved references passed. Backend imported oracle: 255
+  cases passed.
+- Native DeepSeek and GLM complete semantic/binding/32-MiB checks passed;
+  Kimi complete metadata/no-model-execution check and 49 Qwen/template checks
+  passed. No response/construction limit was increased.
+- Existing importer/cache/service owners: 147 tests passed on the first run;
+  the old fixed revision expectation was updated from 5 to 6, and all 40
+  importer tests then passed, including explicit symbol and side-state remapping.
+- Ruff, mypy (113 files), and 24 validation-selector tests passed.
+- All 18 camera browser cases passed at desktop/narrow widths after updating
+  the manual-Fit probe to await its actual `setViewport` commit. The original
+  CI run passed 346 other browser cases but exposed this stale `fitView` wait;
+  camera readiness, cancellation and stale-completion assertions are unchanged.
+- Existing grouping acceptance test passed (96 s), including all 15 producer
+  rows through real projection. Node 24 `--experimental-transform-types` avoids
+  adding npm/browser setup to HTTP-only validation.
+- Built Qwen3.5 browser scenario passed (17.7 s), including logical weight modal;
+  DeepSeek metadata scenario passed (2.5 min). Both prove default compact depth,
+  Generation bypass/return, exact route attachments, return outside expanded
+  bodies, inspection, collapse/reopen, and full visible Fit bounds. DeepSeek's
+  inert shell proves graph/binding metadata, not numerical model output.
+
+Retained visual evidence: [Qwen3.5 generation](../../acceptance/evidence/generation/qwen35.png),
+[DeepSeek generation](../../acceptance/evidence/generation/deepseek_v2.png),
+[Qwen3.5 expanded depth](../../acceptance/evidence/architecture-indexed/qwen35.png),
+and [DeepSeek expanded depth](../../acceptance/evidence/architecture-indexed/deepseek_v2.png).
+Sibling JSON files contain measured route geometry and original edge IDs.
+The Linux browser run used Xvfb and Mesa EGL software rendering.
+
+Cache identity changes are `static-graph-core-7`, `exact-component-roles-3`,
+generation preparation revision 2, model-defined revision 6, and native
+Qwen3.5/DeepSeek/GLM/Kimi revisions 3/4/3/5, with the generated schema fingerprint.
+Existing semantic-revision invalidation, cold/warm startup and GET-never-generates
+checks passed. Artifacts remain disposable and immutable; no cache was edited.
+This is static-description and deterministic fixture acceptance, not full local
+reference-model or numerical-generation acceptance.
+
+
+The first broad CI run identified additional stale expectations and one bounded
+metadata issue. Qwen/Kimi revision assertions now track the required bumps;
+Qwen state ownership separately exercises native no-cache and retained cached
+components. Optional Shared mappings are charged after lossless compaction and
+retained only as complete families, with layer correspondence prioritized.
+Existing 25,000,000-byte expert reconstruction/NF4 tests pass without changing
+their limit or exact-binding negative controls (14 focused cases passed).
+Twenty template tests also pass, including exact ordinary-graph and array-separator
+boundaries for both construction and response budgets. Default family outcomes
+remain positive in the real producer-to-consumer matrix.
+
+The TCP privacy assertion formerly searched for `str(None)` when no explicit
+model-root override was supplied; Kimi's source-backed `cache=None` text caused a
+false assertion with a huge response diagnostic. It now checks the actual fixture
+model path. The obsolete cached-edge-count threshold is replaced with all 26
+concrete decoder-transition checks after the authorized removal of absent cache
+bookkeeping. Kimi production TCP and the complete 15-row grouping acceptance pass
+together in 137.7 seconds. No CI deadline, response limit or validation gate was
+increased or bypassed.
+
+The cold/warm TCP fixture assertion now expects the authored four-layer Qwen3.5
+stack used by the browser proof. The isolated CI-entrypoint case includes both
+architecture and native-package TCP owners introduced by the family matrix,
+while still rejecting npm/browser commands. Both corrections and the existing
+entrypoint/routing cases pass together: 49 tests and 120 subtests.
+
+The retained-navigation browser check now verifies the collapsed Generation and
+both exact Qwen context records, with no redundant Model wrapper. It waits for
+navigation layout readiness before measuring selection-only stability; the
+unchanged camera/layout/retained-state guards and new collapsed identities pass
+at both DPR 1 and DPR 2 (41.6 seconds).

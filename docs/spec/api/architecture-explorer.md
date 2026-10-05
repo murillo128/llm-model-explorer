@@ -111,7 +111,12 @@ Under that correspondence require identical ordered containment, operation kinds
 operation identifiers, formulas, descriptions, complete attribute values, port
 identifiers/directions/shapes, directed edge kinds/endpoints, ordered node parameter
 roles and logical shapes. Preserve internal alias relationships. Symbolic names
-and meanings are graph-local and must agree; unknown ranks, dimensions, operation
+and meanings are graph-local. Optional per-instance `symbols` entries
+`{role, name}` establish a bijection for declared, used local dimensions; every
+concrete name remains recoverable. Unmapped symbols must agree literally.
+A root `layer_index` or `sequence_index` equal to its typed repetition index may
+normalize as instance identity; other attributes remain computational.
+For all shapes, unknown ranks, dimensions, operation
 metadata, or diagnosed component nodes cannot establish equivalence. Physical
 bindings, availability, tensor values, source IDs/module paths, and external
 neighbors may differ. No numeric values are read or compared. Malformed published
@@ -171,9 +176,17 @@ label `token_ids[T]`, including the prompt). Labels are not selectors.
 Three ordinary operations declare matching `operation` and `semantic_role`:
 `generation_prepare_inputs`, `generation_greedy_next_token`, and
 `generation_append_token`. Stable ports are respectively
-`sequence` → `tokens, positions, mask`; `logits` → `token`; and
-`sequence, token` → `updated`. The model ports are
-`tokens, positions, mask` → `logits`. Under the unpadded full-sequence convention,
+`sequence` → the prepared ports; `logits` → `token`; and
+`sequence, token` → `updated`. The model consumes exactly those prepared ports
+and returns `logits`. The finite preparation `convention` selects:
+
+- `unpadded_full_sequence`: `tokens, positions, mask`;
+- `qwen35_text_full_sequence`: `tokens, positions, mask, current_mask`, with
+  positions [3,B,T] and both distinct padding masks [B,T];
+- `kimi_full_sequence`: `tokens, mask, current_mask`, with causal mask [B,1,S,S]
+  and current-sequence padding mask [B,S], without a position port.
+
+Under the unpadded full-sequence convention,
 current IDs and positions are [B,S], the causal mask is [B,1,S,S], logits are
 [B,S,V], the selected vocabulary ID is [B,1], and appended IDs are [B,S+1].
 Argmax selects the last sequence position and vocabulary axis with keepdims;
@@ -205,3 +218,13 @@ ranks or lengths at normal producer/import/cache boundaries. External sidecars
 remain author-controlled. Undeclared graphs retain their ordinary interpretation.
 The browser consumes validated correspondence rather than reproducing backend
 semantic validation. Formula text and symbolic expressions remain inert.
+
+
+Repetitions may declare optional `side_ports`: each record contains `port_id`,
+`direction` and ordered `bindings` of `{index, endpoint}`. Bindings cover exactly
+the repetition's typed indices, name distinct external endpoints, and agree with
+real `state` edges to/from the corresponding layer port. They describe indexed
+state, never activation recurrence or an invariant value. Layer-owned selection
+and gather/scatter operations remain ordinary graph records. Concrete source
+endpoints and role correspondence permit inspection and reject swapped K/V or
+layer bindings. Absent correspondence does not authorize inferred side paths.

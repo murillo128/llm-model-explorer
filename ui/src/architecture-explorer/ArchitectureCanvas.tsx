@@ -1,6 +1,6 @@
 import { memo, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
+import { getViewportForBounds, Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import type { ReactNode } from 'react';
 import type { Node, NodeProps } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -548,9 +548,10 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
   });
   const fit = useCanvasCallback(() => {
     cancelCamera();
-    let focusNodes: CanvasNode[] | undefined;
-    if (!options.scope && focusId && boxes.has(focusId)) focusNodes = flow.getNodes().filter((n) => n.id === focusId);
-    void flow.fitView({ ...(focusNodes?.length ? { nodes: focusNodes } : {}), padding: 0.1, minZoom: 0.00001, maxZoom: 1 });
+    const container = flowContainer.current;
+    if (result.layout && container?.clientWidth && container.clientHeight)
+      void flow.setViewport(getViewportForBounds(visibleBounds(result.layout), container.clientWidth,
+        container.clientHeight, 0.00001, 1, 0.1));
   });
   const edges = useMemo<ConnectionEdge[]>(() => (result.layout?.projection.edges ?? []).map((edge) => ({
     id: edge.id, source: edge.source.node_id, target: edge.target.node_id, sourceHandle: `source:${edge.source.port_id}`,

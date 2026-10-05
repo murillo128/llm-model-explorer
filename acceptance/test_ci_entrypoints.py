@@ -400,15 +400,19 @@ class CiEntrypointsTest(unittest.TestCase):
         node_step = next(step for step in steps if step.get("uses") == "actions/setup-node@v4")
         self.assertEqual(node_step["if"], "steps.plan.outputs.integration_node == 'true'")
 
-    def test_native_package_input_keeps_python_only_real_tcp_command(self):
-        (self.root / "acceptance/test_native_packages.py").touch()
+    def test_native_package_input_keeps_browser_free_real_tcp_command(self):
+        for name in ("architecture", "native_packages"):
+            (self.root / f"acceptance/test_{name}.py").touch()
         plan = self.plan("backend/tests/test_lora_architecture.py")
         result, commands = self.run_gate("--routine", "--main-ci", "--plan", str(plan))
         self.assertEqual(result.returncode, 0, result.stderr)
         selected = next(
             command for command in commands if command[:3] == ["python", "-m", "pytest"]
         )
-        self.assertEqual(selected[3], "acceptance/test_native_packages.py")
+        self.assertEqual(
+            selected[3:5],
+            ["acceptance/test_architecture.py", "acceptance/test_native_packages.py"],
+        )
         self.assertFalse(any(command[0] in {"npm", "xvfb-run"} for command in commands))
 
     def run_extended(self, plan, fail=None):

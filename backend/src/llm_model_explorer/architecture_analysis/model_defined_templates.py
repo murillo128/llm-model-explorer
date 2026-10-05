@@ -25,6 +25,7 @@ def _bind_instance(
 
     return r.ArchitectureTemplateInstance(
         node_id=local("node", instance.node_id),
+        **({"symbols": instance.symbols} if instance.symbols is not None else {}),
         nodes=[
             r.ArchitectureTemplateNodeRole(role=m.role, node_id=local("node", m.node_id))
             for m in instance.nodes

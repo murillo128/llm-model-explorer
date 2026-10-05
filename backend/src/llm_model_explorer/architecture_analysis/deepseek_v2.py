@@ -9,11 +9,12 @@ from typing import Any, Literal
 
 from . import records as r
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
+from .generation import GenerationInterface
 from .semantic import operation_role
 from .validation import require
 
 SOURCE_REVISION = "slowfastai/DeepSeek-V2-Lite-bnb-4bit@9fc357346aeba67950a34a86f3520fc276ca2daf"
-PRODUCER = Producer("deepseek-v2-lite", "3", SOURCE_REVISION)
+PRODUCER = Producer("deepseek-v2-lite", "4", SOURCE_REVISION)
 
 REFERENCE = {
     "model_type": "deepseek_v2",
@@ -1240,6 +1241,7 @@ class DeepseekGraph:
         instances: list[r.ArchitectureRepetitionInstance] = []
         for index in range(experts):
             count_symbol = f"R{int(layer.rsplit('.', 1)[-1])}_{index}"
+            self.b.templates.symbol_roles[count_symbol] = f"{key}.routed_tokens.{index}"
             self.b.add_symbol(
                 count_symbol,
                 f"Symbolic token positions routed to expert {index} in {layer}; not computed.",
@@ -1278,10 +1280,10 @@ class DeepseekGraph:
                 )
             )
 
-        scatter_inputs: dict[str, Value] = {
-            "expert_values": Value(weighted_values[0].node, weighted_values[0].port, None),
-            "token_positions": Value(token_positions[0].node, token_positions[0].port, None),
-        }
+        # Each ragged expert result has its own known-rank input and exact count symbol.
+        # No universal unknown-rank collection erases the per-expert correspondence.
+        scatter_inputs = {f"values_{i}": value for i, value in enumerate(weighted_values)}
+        scatter_inputs.update({f"positions_{i}": value for i, value in enumerate(token_positions)})
         scatter = self.node(
             key + ".routed_scatter_sum",
             "weighted_scatter_sum",
@@ -1290,24 +1292,8 @@ class DeepseekGraph:
             parent=key,
             attributes={"top_k": float(top_k), "reduction": "sum at original token positions"},
             fields=("num_experts_per_tok",),
-            formula=(
-                "scatter-add every selected, weighted expert result to its symbolic "
-                "source token position"
-            ),
+            formula="scatter-add each values_e at positions_e for every declared expert e",
         )["out"]
-        # The scatter ports collect every expert; repeated edges retain each identity.
-        for expert_value in weighted_values[1:]:
-            self.link(
-                Value(expert_value.node, expert_value.port, None),
-                key + ".routed_scatter_sum",
-                "expert_values",
-            )
-        for position_value in token_positions[1:]:
-            self.link(
-                Value(position_value.node, position_value.port, None),
-                key + ".routed_scatter_sum",
-                "token_positions",
-            )
 
         shared = self.shared_mlp(layer, Value(key, "x", x.shape), hidden)
         combined = self.op(
@@ -1639,6 +1625,10 @@ class DeepseekGraph:
 
 
 def build(inputs: AnalysisInput, builder: GraphBuilder) -> None:
+    builder.invocation = "deepseek"
+    builder.generation = GenerationInterface(
+        "model", "input_ids", "position_ids", "attention_mask", "logits", boundary=True
+    )
     configuration = checked(inputs.configuration)
     require(configuration is not None, "Unsupported DeepSeek-V2 configuration.")
     assert configuration is not None

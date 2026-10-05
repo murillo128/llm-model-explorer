@@ -305,9 +305,11 @@ def test_complete_graph_preserves_every_layer_expert_and_latent_path(
     denied.assert_not_called()
     assert result.status == "complete", result
     assert result.graph is not None
-    graph = result.graph
+    from llm_model_explorer.architecture_analysis.compact import expand_graph
+
+    assert serialized_size(result.graph.document(), MAX_BYTES) < MAX_BYTES
+    graph = expand_graph(result.graph)
     assert graph.coverage == "complete"
-    assert serialized_size(graph.document(), MAX_BYTES) < MAX_BYTES
 
     expected = expected_parameters(REFERENCE)
     parameters = {parameter.name: parameter for parameter in graph.parameters}
@@ -353,8 +355,14 @@ def test_complete_graph_preserves_every_layer_expert_and_latent_path(
     assert isinstance(rotary_shape[-1], r.ArchitectureConstantDimension)
     assert non_rotary_shape[-1].value == 192
     assert rotary_shape[-1].value == 64
-    assert by_key["model.layers.1.self_attn.kv_latent_cache_update"].operation == "state_concat"
-    assert by_key["model.layers.1.self_attn.rotary_key_cache_update"].operation == "state_concat"
+    assert not any(
+        n.operation in {"select_layer_state", "state_concat", "stack_layer_states"}
+        for n in graph.nodes
+    )
+    assert {p.id for p in by_key["model"].ports} == {"tokens", "positions", "mask", "logits"}
+    assert {a.name: a.value for a in by_key["model"].attributes}[
+        "invocation"
+    ] == "full_sequence_use_cache_false_past_none"
     assert by_key["model.layers.1.self_attn.attention_softmax"].operation == "softmax"
     assert by_key["model.layers.1.self_attn.o_proj"].operation == "linear"
     assert by_key["model.layers.1.attention_residual"].operation == "add"

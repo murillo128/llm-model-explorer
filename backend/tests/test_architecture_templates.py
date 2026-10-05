@@ -138,12 +138,13 @@ def test_unverified_candidates_are_omitted_without_downgrading_coverage(change: 
     assert [t.component_role for t in graph.templates or []] == ["mlp"]
 
 
-def test_optional_budget_exhaustion_retains_exact_ordinary_graph() -> None:
+@pytest.mark.parametrize("budget", ["byte_limit", "response_limit"])
+def test_optional_budget_exhaustion_retains_exact_ordinary_graph(budget: str) -> None:
     _, inputs, registry = cases()[0]
     with patch.object(ComponentTemplates, "annotate", side_effect=lambda graph, _: graph):
         ordinary = build(inputs, registry).finish()
     builder = build(inputs, registry)
-    builder.byte_limit = serialized_size(ordinary.document())
+    setattr(builder, budget, serialized_size(ordinary.document()))
     actual = builder.finish()
     assert actual.document() == ordinary.document()
     assert actual.coverage == "complete"
@@ -168,7 +169,8 @@ def test_singletons_remain_ordinary_components() -> None:
     assert graph.coverage == "complete"
 
 
-def test_multiple_template_array_separator_budget_boundaries() -> None:
+@pytest.mark.parametrize("budget", ["byte_limit", "response_limit"])
+def test_multiple_template_array_separator_budget_boundaries(budget: str) -> None:
     _, inputs, registry = cases()[0]
     complete = build(inputs, registry).finish()
     assert len(complete.templates or []) == 3
@@ -177,12 +179,14 @@ def test_multiple_template_array_separator_budget_boundaries() -> None:
     # At every boundary an ordinary graph must remain usable and within budget.
     for limit in range(full_size - 4, full_size + 2):
         builder = build(inputs, registry)
-        builder.byte_limit = limit
+        setattr(builder, budget, limit)
         actual = builder.finish()
         assert actual.coverage == complete.coverage
         assert actual.nodes == complete.nodes and actual.edges == complete.edges
         assert actual.parameters == complete.parameters
         assert serialized_size(actual.document()) <= limit
+        if budget == "response_limit":
+            assert any(t.component_role == "layer" for t in actual.templates or [])
         if limit >= full_size:
             assert actual.templates == complete.templates
 
@@ -211,3 +215,49 @@ def test_whole_layer_closure_keeps_nested_families_and_exact_roles() -> None:
     assert roles["input_layernorm.weight"] == "model.layers.1.input_layernorm.weight"
     assert "component.x~input_layernorm.x" in {e.role for e in layer.edges}
     assert nodes[layer.node_id].parameter_ids == []
+
+
+def test_hybrid_generation_uses_text_thw_and_distinct_current_masks() -> None:
+    _, inputs, registry = next(case for case in cases() if case[0] == "hybrid")
+    graph = build(inputs, registry).finish()
+    prepare = next((n for n in graph.nodes if n.operation == "generation_prepare_inputs"), None)
+    assert prepare is not None, "The native Qwen3.5 producer must deliver Generation"
+    shapes = {p.id: p.shape for p in prepare.ports}
+    batch = r.ArchitectureSymbolDimension(kind="symbol", name="B")
+    length = r.ArchitectureSymbolDimension(kind="symbol", name="T")
+    assert shapes["tokens"] == [batch, length]
+    assert shapes["positions"] == [
+        r.ArchitectureConstantDimension(kind="constant", value=3),
+        batch,
+        length,
+    ]
+    assert shapes["mask"] == shapes["current_mask"] == [batch, length]
+    select = next(n for n in graph.nodes if n.operation == "generation_greedy_next_token")
+    assert select.ports[0].shape is not None
+    assert select.ports[0].shape[:2] == [batch, length]
+    from llm_model_explorer.architecture_analysis.generation import validate_generation
+    from llm_model_explorer.architecture_analysis.validation import GraphError
+
+    initializer = next(n for n in graph.nodes if n.operation == "initial_delta_state")
+    for value in ("carry_previous_call", "absent_per_call"):
+        malformed = graph.model_copy(
+            update={
+                "nodes": [
+                    n.model_copy(
+                        update={
+                            "attributes": [
+                                a.model_copy(update={"value": value})
+                                if a.name == "initialization"
+                                else a
+                                for a in n.attributes
+                            ]
+                        }
+                    )
+                    if n.id == initializer.id
+                    else n
+                    for n in graph.nodes
+                ]
+            }
+        )
+        with pytest.raises(GraphError, match="initializer"):
+            validate_generation(malformed)

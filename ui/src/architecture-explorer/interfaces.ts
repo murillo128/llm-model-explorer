@@ -64,7 +64,10 @@ function buildInterfaceIndex(graph: Graph) {
   const roots = graph.nodes.filter((n) => !n.parent_id && !tools.has(n.id) && !declarations.has(n.id));
   let modelId = 'presentation:model';
   while (records.has(modelId)) modelId += ':model';
-  const outer: BoundaryOwner = roots.length === 1 && roots[0]!.kind === 'group'
+  const generationRoot = generation.length === 1 && roots.some((n) => n.id === generation[0]!.owner.id) &&
+    roots.every((n) => n.id === generation[0]!.owner.id || n.kind === 'context' && !n.ports.length && !incident.get(n.id)?.length)
+    ? generation[0]!.owner : undefined;
+  const outer: BoundaryOwner = generationRoot ? { kind: 'source', id: generationRoot.id } : roots.length === 1 && roots[0]!.kind === 'group'
     ? { kind: 'source', id: roots[0]!.id } : { kind: 'model', id: modelId };
   const signals = new Map<string, ModelInterface[]>();
   for (const interfaces of declarations.values()) for (const item of interfaces) {
@@ -130,7 +133,9 @@ function buildInterfaceIndex(graph: Graph) {
   const generationStates = new Set(generation.map((p) => p.state.id));
   const eligible = (id: string) => !declarations.has(id) && !tools.has(id) && !generationStates.has(id);
   const finalRoots = graph.nodes.filter((n) => !n.parent_id && eligible(n.id));
-  const finalOuter: BoundaryOwner = finalRoots.length === 1 && finalRoots[0]!.kind === 'group'
+  const finalOuter: BoundaryOwner = generationRoot && finalRoots.every((n) =>
+    n.id === generationRoot.id || n.kind === 'context' && !n.ports.length && !incident.get(n.id)?.length)
+    ? { kind: 'source', id: generationRoot.id } : finalRoots.length === 1 && finalRoots[0]!.kind === 'group'
     ? { kind: 'source', id: finalRoots[0]!.id } : { kind: 'model', id: modelId };
   for (const item of interfaces) if (!item.node.parent_id) {
     item.owner = finalOuter; item.ownerPorts = item.ownerPorts.filter((p) => p.node_id === finalOuter.id);

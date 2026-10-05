@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import defaultdict
 from collections.abc import Iterable
 from typing import Any
@@ -32,6 +33,9 @@ class TemplateIndex:
             instance.node_id: (rep.id, position)
             for rep in graph.repetitions
             for position, instance in enumerate(rep.instances)
+        }
+        self.instance_indices = {
+            i.node_id: i.index for rep in graph.repetitions for i in rep.instances
         }
         self.order: dict[str, tuple[str | None, int]] = {}
         pending: list[tuple[str, tuple[str, int] | None]] = [
@@ -106,11 +110,55 @@ class TemplateIndex:
             "Incomplete or foreign template parameters.",
         )
 
+        symbol_roles = {s.name: s.role for s in instance.symbols or []}
+        require(len(symbol_roles) == len(instance.symbols or []), "Duplicate template symbol.")
+        unique(instance.symbols or [], "role")
+        declared = {s.name for s in self.graph.symbols}
+        require(set(symbol_roles) <= declared, "Unknown template symbol.")
+        used_symbols = {
+            name
+            for value in [
+                *[p.shape for node_id in members for p in self.nodes[node_id].ports],
+                *[self.parameters[p].logical_shape for p in expected_parameters],
+            ]
+            if value is not None
+            for d in value
+            for name in (
+                [d.name]
+                if isinstance(d, r.ArchitectureSymbolDimension)
+                else d.symbols
+                if isinstance(d, r.ArchitectureExpressionDimension)
+                else []
+            )
+        }
+        require(set(symbol_roles) <= used_symbols, "Unused template symbol correspondence.")
+
+        def symbol_identity(name: str) -> list[str]:
+            return ["role", symbol_roles[name]] if name in symbol_roles else ["name", name]
+
+        def symbol_text(text: str) -> list[Any]:
+            return [
+                symbol_identity(part) if re.fullmatch(r"[A-Za-z_]\w*", part) else ["text", part]
+                for part in re.split(r"([A-Za-z_]\w*)", text)
+                if part
+            ]
+
         def shape(value: r.ArchitectureShape) -> Any:
             require(value is not None, "Unknown template rank.")
             assert value is not None
             require(all(d.kind != "unknown" for d in value), "Unknown template dimension.")
-            return [d.document() for d in value]
+            return [
+                {"kind": "symbol", "identity": symbol_identity(d.name)}
+                if isinstance(d, r.ArchitectureSymbolDimension)
+                else {
+                    "kind": "expression",
+                    "text": symbol_text(d.text),
+                    "symbols": [symbol_identity(v) for v in d.symbols],
+                }
+                if isinstance(d, r.ArchitectureExpressionDimension)
+                else d.document()
+                for d in value
+            ]
 
         signatures: dict[str, Any] = {"root": node_roles[instance.node_id]}
         ns: dict[str, Any] = {}
@@ -146,7 +194,16 @@ class TemplateIndex:
                     for ref in node.references
                     if ref.kind == "parameter"
                 ],
-                "attributes": {name: a.value for name, a in attributes.items()},
+                "attributes": {
+                    name: (
+                        "instance.index"
+                        if node_id == instance.node_id
+                        and name in {"sequence_index", "layer_index"}
+                        and a.value == self.instance_indices.get(node_id)
+                        else a.value
+                    )
+                    for name, a in attributes.items()
+                },
             }
         signatures["nodes"] = ns
         signatures["ports"] = {

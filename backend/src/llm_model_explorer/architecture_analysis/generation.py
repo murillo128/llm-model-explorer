@@ -22,9 +22,14 @@ class GenerationInterface:
 
     model: str
     tokens: str
-    positions: str
+    positions: str | None
     mask: str
     logits: str
+    current_mask: str | None = None
+    convention: Literal[
+        "unpadded_full_sequence", "qwen35_text_full_sequence", "kimi_full_sequence"
+    ] = "unpadded_full_sequence"
+    boundary: bool = False
 
 
 def wrap_generation(
@@ -38,11 +43,27 @@ def wrap_generation(
     model = nodes[nid(interface.model)]
     require(isinstance(model, r.ArchitectureGroupNode), "Generation requires a model group.")
     assert isinstance(model, r.ArchitectureGroupNode)
-    declarations = [
-        nodes[nid(key)]
-        for key in (interface.tokens, interface.positions, interface.mask, interface.logits)
-    ]
-    ids, positions, mask, logits = [n.ports[0].shape for n in declarations]
+    bindings = {
+        role: key
+        for role, key in {
+            "tokens": interface.tokens,
+            "positions": interface.positions,
+            "mask": interface.mask,
+            "logits": interface.logits,
+            "current_mask": interface.current_mask,
+        }.items()
+        if key is not None
+    }
+    declarations = (
+        {} if interface.boundary else {role: nodes[nid(key)] for role, key in bindings.items()}
+    )
+    shapes = (
+        {role: next(p.shape for p in model.ports if p.id == key) for role, key in bindings.items()}
+        if interface.boundary
+        else {role: node.ports[0].shape for role, node in declarations.items()}
+    )
+    ids, logits = shapes["tokens"], shapes["logits"]
+    prepared = {role: shape for role, shape in shapes.items() if role != "logits"}
     require(ids is not None and len(ids) == 2, "Generation requires rank-two token IDs.")
     assert ids is not None
     length = ids[1]
@@ -63,7 +84,7 @@ def wrap_generation(
         r.ArchitectureProvenance(
             kind="description",
             source="greedy-no-cache-generation",
-            revision="1",
+            revision="2",
             rule=(
                 "Chosen explanatory policy: unpadded single sequence, full-sequence calls; "
                 "not checkpoint generation defaults."
@@ -82,6 +103,14 @@ def wrap_generation(
     ) -> r.ArchitecturePort:
         return r.ArchitecturePort(id=id, label=label, direction=direction, shape=shape)
 
+    labels = {
+        role: "token_ids"
+        if role == "tokens"
+        else "causal_mask"
+        if role == "mask" and interface.convention != "qwen35_text_full_sequence"
+        else role
+        for role in prepared
+    }
     generation = nid("generation")
     state = nid("generation.sequence")
     prepare = nid("generation.prepare")
@@ -130,20 +159,35 @@ def wrap_generation(
             kind="operation",
             label="Prepare inputs",
             operation=PREPARE,
-            formula="token_ids[t], positions[t], causal_mask[t] = prepare_inputs(token_ids[t])",
+            formula=", ".join(f"{labels[role]}[t]" for role in prepared)
+            + " = prepare_inputs(token_ids[t])",
             description=(
                 "Preserve the entire integer sequence; derive integer positions 0..S-1 and "
                 "the additive causal mask [B,1,S,S] for this full no-cache call."
+                if interface.convention == "unpadded_full_sequence"
+                else "Preserve the entire integer sequence. "
+                + (
+                    "Derive text THW positions by repeating 0..T-1 on three axes, an all-valid "
+                    "attention padding mask and a separate current-sequence padding mask. "
+                    "The model derives causal attention internally; no prior KV cache."
+                    if interface.convention == "qwen35_text_full_sequence"
+                    else "Derive the additive causal mask and independent all-valid padding mask. "
+                    "KDA starts with absent convolution/recurrent cache; MLA has no prior KV. "
+                    "This reviewed MLA path uses no positional encoding."
+                    if interface.convention == "kimi_full_sequence"
+                    else "Derive integer positions 0..S-1 and the additive causal mask [B,1,S,S]."
+                )
             ),
             ports=[
                 port("sequence", "token_ids[t]", ids),
-                port("tokens", "token_ids[t]", ids, "output"),
-                port("positions", "positions[t]", positions, "output"),
-                port("mask", "causal_mask[t]", mask, "output"),
+                *[
+                    port(role, f"{labels[role]}[t]", shape, "output")
+                    for role, shape in prepared.items()
+                ],
             ],
             attributes=[
                 attr("semantic_role", PREPARE),
-                attr("convention", "unpadded_full_sequence"),
+                attr("convention", interface.convention),
             ],
             parameter_ids=[],
             references=[],
@@ -189,14 +233,13 @@ def wrap_generation(
     ]
     # Passive interface declarations become actual ports. Neural operations and
     # all original edge identities remain, including every layer/adapter binding.
-    removed = {n.id for n in declarations}
-    boundary = dict(
-        zip([n.id for n in declarations], ["tokens", "positions", "mask", "logits"], strict=True)
+    removed = {n.id for n in declarations.values()}
+    boundary = {node.id: role for role, node in declarations.items()}
+    boundary_ports = (
+        {key: role for role, key in bindings.items()} if interface.boundary else {"out": "logits"}
     )
     model_ports = [
-        port("tokens", "token_ids", ids),
-        port("positions", "positions", positions),
-        port("mask", "causal_mask", mask),
+        *[port(role, labels[role], shape) for role, shape in prepared.items()],
         port("logits", "logits", logits, "output"),
     ]
     for node in graph.nodes:
@@ -218,14 +261,16 @@ def wrap_generation(
             return (
                 r.ArchitectureEndpoint(node_id=model.id, port_id=boundary[ep.node_id])
                 if ep.node_id in removed
+                else r.ArchitectureEndpoint(node_id=model.id, port_id=boundary_ports[ep.port_id])
+                if ep.node_id == model.id and ep.port_id in boundary_ports
                 else ep
             )
 
-        edges.append(
-            edge.model_copy(
-                update={"source": endpoint(edge.source), "target": endpoint(edge.target)}
-            )
-        )
+        source, target = endpoint(edge.source), endpoint(edge.target)
+        # Existing true group forwarding already crosses this passive declaration.
+        if source == target:
+            continue
+        edges.append(edge.model_copy(update={"source": source, "target": target}))
 
     def connect(
         source: str, sp: str, target: str, tp: str, kind: Literal["data", "state"] = "data"
@@ -242,7 +287,7 @@ def wrap_generation(
 
     connect(generation, "prompt_ids", state, "initial")
     connect(state, "current", prepare, "sequence", "state")
-    for role in ("tokens", "positions", "mask"):
+    for role in prepared:
         connect(prepare, role, model.id, role)
     connect(model.id, "logits", select, "logits")
     connect(prepare, "tokens", append, "sequence")
@@ -314,21 +359,28 @@ def validate_generation(graph: r.ArchitectureGraph) -> None:
         )
         model = model_nodes[0]
         recognized.add(state.id)
+        convention = attributes(prepare).get("convention")
+        require(
+            convention
+            in {"unpadded_full_sequence", "qwen35_text_full_sequence", "kimi_full_sequence"},
+            "Unsupported generation preparation convention.",
+        )
+        prepared_roles = ["tokens", "positions", "mask"]
+        if convention == "qwen35_text_full_sequence":
+            prepared_roles.append("current_mask")
+        elif convention == "kimi_full_sequence":
+            prepared_roles = ["tokens", "mask", "current_mask"]
         expected_ports = {
             owner.id: {"prompt_ids": "input", "token_ids": "output"},
             state.id: {"initial": "input", "current": "output", "next": "input", "final": "output"},
             prepare.id: {
                 "sequence": "input",
-                "tokens": "output",
-                "positions": "output",
-                "mask": "output",
+                **dict.fromkeys(prepared_roles, "output"),
             },
             select.id: {"logits": "input", "token": "output"},
             append.id: {"sequence": "input", "token": "input", "updated": "output"},
             model.id: {
-                "tokens": "input",
-                "positions": "input",
-                "mask": "input",
+                **dict.fromkeys(prepared_roles, "input"),
                 "logits": "output",
             },
         }
@@ -387,23 +439,60 @@ def validate_generation(graph: r.ArchitectureGraph) -> None:
             logits is not None and len(logits) == 3 and logits[:2] == current,
             "Generation requires full-sequence vocabulary logits.",
         )
-        require(
-            ports[prepare.id]["positions"].shape == current
-            and ports[prepare.id]["mask"].shape
-            == [
+        expected_shapes = {
+            "positions": current,
+            "mask": [
                 current[0],
                 r.ArchitectureConstantDimension(kind="constant", value=1),
                 current[1],
                 current[1],
             ],
+        }
+        if convention == "qwen35_text_full_sequence":
+            expected_shapes = {
+                "positions": [r.ArchitectureConstantDimension(kind="constant", value=3), *current],
+                "mask": current,
+                "current_mask": current,
+            }
+        elif convention == "kimi_full_sequence":
+            expected_shapes.pop("positions")
+            expected_shapes["current_mask"] = current
+        require(
+            all(ports[prepare.id][role].shape == shape for role, shape in expected_shapes.items()),
             "Unsupported generation position/mask convention.",
         )
+        pending = [model.id]
+        while pending:
+            member = nodes[pending.pop()]
+            if isinstance(member, r.ArchitectureGroupNode):
+                pending.extend(member.children)
+            attrs = attributes(member)
+            initializers = {
+                "initial_delta_state": "zeros_per_call",
+                "short_convolution": "absent_per_call",
+                "kda_delta_state_update": "absent_per_call",
+            }
+            if member.operation in initializers:
+                require(
+                    attrs.get("initialization") == initializers[member.operation],
+                    "Generation initializer disagrees with reviewed invocation.",
+                )
+            require(
+                member.operation
+                not in {
+                    "prior_kv",
+                    "prior_delta_state",
+                    "prior_convolution_state",
+                    "state_concat",
+                    "select_layer_state",
+                    "stack_layer_states",
+                },
+                "Generation contains conditional cross-call cache bookkeeping.",
+            )
         expected_edges = {
             (owner.id, "prompt_ids", state.id, "initial", "data"),
             (state.id, "current", prepare.id, "sequence", "state"),
-            (prepare.id, "tokens", model.id, "tokens", "data"),
-            (prepare.id, "positions", model.id, "positions", "data"),
-            (prepare.id, "mask", model.id, "mask", "data"),
+            *((prepare.id, role, model.id, role, "data") for role in prepared_roles),
             (model.id, "logits", select.id, "logits", "data"),
             (prepare.id, "tokens", append.id, "sequence", "data"),
             (select.id, "token", append.id, "token", "data"),

@@ -737,7 +737,18 @@ export interface components {
             index: components["schemas"]["SafeInteger"];
             variant: components["schemas"]["ArchitectureId"];
         };
+        ArchitectureIndexedSideBinding: {
+            index: components["schemas"]["SafeInteger"];
+            endpoint: components["schemas"]["ArchitectureEndpoint"];
+        };
+        ArchitectureIndexedSidePort: {
+            port_id: components["schemas"]["ArchitectureId"];
+            /** @enum {string} */
+            direction: "input" | "output";
+            bindings: components["schemas"]["ArchitectureIndexedSideBinding"][];
+        };
         ArchitectureRepetition: {
+            side_ports?: components["schemas"]["ArchitectureIndexedSidePort"][];
             id: components["schemas"]["ArchitectureId"];
             parent_id: components["schemas"]["ArchitectureId"];
             label: components["schemas"]["ArchitectureName"];
@@ -831,7 +842,12 @@ export interface components {
             role: components["schemas"]["ArchitectureId"];
             parameter_id: components["schemas"]["ArchitectureId"];
         };
+        ArchitectureTemplateSymbolRole: {
+            role: components["schemas"]["ArchitectureId"];
+            name: components["schemas"]["ArchitectureName"];
+        };
         ArchitectureTemplateInstance: {
+            symbols?: components["schemas"]["ArchitectureTemplateSymbolRole"][];
             node_id: components["schemas"]["ArchitectureId"];
             nodes: components["schemas"]["ArchitectureTemplateNodeRole"][];
             ports: components["schemas"]["ArchitectureTemplatePortRole"][];

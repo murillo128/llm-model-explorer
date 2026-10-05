@@ -1,5 +1,5 @@
 import { projectGeneration } from './generation';
-import { projectIndexedRepetitions } from './indexed-repetition';
+import { depthRanges, projectIndexedRepetitions } from './indexed-repetition';
 import type { components } from '../api/generated/types';
 import type { Graph, GraphNode } from './graph';
 import { deriveMlpGroups } from './derived-groups';
@@ -32,7 +32,7 @@ export interface ProjectedEdge {
   /** Each path is ordered from the original source to original destination.
    * Shared forwarding prefixes may occur in genuine fan-out paths. */
   paths: SourceEdge[][]; originalEdgeIds: string[];
-  relationship?: { owner: 'repetition'; kind: 'entry' | 'return' | 'exit' | 'invariant'; repetitionId: string; templateId: string;
+  relationship?: { owner: 'repetition'; kind: 'entry' | 'return' | 'exit' | 'invariant' | 'side-input' | 'side-output'; repetitionId: string; templateId: string;
     portRole: string; instances: { nodeId: string; index: number }[] } |
     { owner: 'generation'; kind: 'entry' | 'return' | 'exit'; groupId: string; stateId: string; phase: 'initial' | 'next' | 'final' };
 }
@@ -116,10 +116,28 @@ function projectSourceGraph(graph: Graph, options: ProjectionOptions): Projectio
     }
   }
   function add(n: ProjectedNode) { nodes.push(n); visible.set(n.id, n); }
-  function visit(id: string, parentId?: string) {
+  function visit(id: string, parentId?: string, concrete = false) {
     const record = records.get(id)!;
     const repetition = instanceRepetition.get(id);
-    if (repetition && !exhaustive && id !== scope?.id) {
+    if (repetition && !concrete && !exhaustive && id !== scope?.id) {
+      const ranges = depthRanges(graph, repetition);
+      const outerId = `repeat:${repetition.id}:0:${repetition.instances.length - 1}`;
+      if (ranges.length > 1 && expanded.has(outerId) && !options.repetitions?.[repetition.id]) {
+        if (added.has(outerId)) return;
+        added.add(outerId);
+        add({ id: outerId, ...(parentId ? { parentId } : {}), kind: 'group',
+          label: `${repetition.label} ×${repetition.instances.length}`, sourceIds: [], ports: [], expanded: true,
+          presentation: 'repetition', repetitionId: repetition.id, instances: repetition.instances, summary: variantSummary(repetition.instances) });
+        for (const range of ranges) {
+          if (range.instances.length === 1) { visit(range.instances[0]!.node_id, outerId, true); continue; }
+          const n: ProjectedNode = { id: `repeat:${range.id}`, parentId: outerId, kind: 'group',
+            label: `Layers ${range.instances[0]!.index}–${range.instances.at(-1)!.index}`,
+            sourceIds: range.instances.map((i) => i.node_id), ports: [], expanded: false, presentation: 'repetition',
+            repetitionId: repetition.id, instances: range.instances, summary: variantSummary(range.instances) };
+          add(n); for (const instance of range.instances) assign(instance.node_id, n);
+        }
+        return;
+      }
       const window = options.repetitions?.[repetition.id];
       const selected = repetition.instances.map((i) => expanded.has(i.node_id));
       const start = Math.max(0, Math.min(repetition.instances.length - 1, Math.trunc(window?.start ?? 0)));

@@ -25,11 +25,11 @@ def exporter() -> ModuleType:
     return module
 
 
-def fixture(root: Path) -> tuple[Path, Path, dict[str, Any]]:
+def fixture(root: Path, *, repeated: bool = False) -> tuple[Path, Path, dict[str, Any]]:
     base, kev = root / "base", root.parent / "upstream-kev"
     base.mkdir(parents=True)
     kev.mkdir()
-    config = {
+    config: dict[str, Any] = {
         "model_type": "qwen3_5",
         "architectures": ["Qwen3_5ForConditionalGeneration"],
         "_name_or_path": "Qwen/Qwen3.5-0.8B-Base",
@@ -70,6 +70,9 @@ def fixture(root: Path) -> tuple[Path, Path, dict[str, Any]]:
             },
         },
     }
+    if repeated:
+        config["text_config"]["num_hidden_layers"] = 4
+        config["text_config"]["layer_types"] = ["linear_attention"] * 3 + ["full_attention"]
     (base / "config.json").write_text(json.dumps(config))
     dimensions = {PREFIX + ".embed_tokens.weight": (8, 4), PREFIX + ".norm.weight": (4,)}
     for i in range(2):
@@ -115,6 +118,17 @@ def fixture(root: Path) -> tuple[Path, Path, dict[str, Any]]:
             }.items()
         }
     )
+    if repeated:
+        original = dict(dimensions)
+        dimensions = {k: v for k, v in original.items() if ".layers." not in k}
+        for index, source in enumerate([0, 0, 0, 1]):
+            dimensions.update(
+                {
+                    k.replace(f".layers.{source}.", f".layers.{index}."): v
+                    for k, v in original.items()
+                    if f".layers.{source}." in k
+                }
+            )
     native = {
         name: ((torch.arange(math_product(dims)) % 17 - 8) / 16).reshape(dims).to(torch.bfloat16)
         for name, dims in dimensions.items()
@@ -165,6 +179,17 @@ def fixture(root: Path) -> tuple[Path, Path, dict[str, Any]]:
             b[1, 1] = 4
         factors["base_model.model." + name + ".lora_A.weight"] = a
         factors["base_model.model." + name + ".lora_B.weight"] = b
+    if repeated:
+        original_factors = factors
+        factors = {}
+        for index, source in enumerate([0, 0, 0, 1]):
+            factors.update(
+                {
+                    k.replace(f".layers.{source}.", f".layers.{index}."): v.clone()
+                    for k, v in original_factors.items()
+                    if f".layers.{source}." in k
+                }
+            )
     save_file(factors, str(kev / "adapter_model.safetensors"))
     payload = {
         "base": "Qwen/Qwen3.5-0.8B-Base",

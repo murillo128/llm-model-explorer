@@ -86,13 +86,17 @@ must still pass; a common name never proves correspondence.
 
 Keep this metadata path removable. A singleton or unverified candidate remains an
 ordinary component, and optional budget exhaustion cannot consume source graph
-records or downgrade mathematical coverage. Construction and validation use one
+records or downgrade mathematical coverage. Charge optional mappings against the
+final response budget after lossless wire compaction. Retain whole families,
+prioritizing layer correspondence when an explicitly smaller budget cannot fit
+all annotations. Required shipped-family views remain available under the normal
+response budget. Construction and validation use one
 bounded graph index and component-local mappings, not another full checkpoint or
 graph. Never read weights, execute operations or infer weight equality to decide
 a family. Parameter bindings and logical tensor identities stay attached to the
 real instance, including verified aliases and unavailable inspections.
 
-The current annotation definition is `exact-component-roles-1`. The analyzer core
+The current annotation definition is `exact-component-roles-3`. The analyzer core
 revision and generated graph-schema revision invalidate structured startup cache
 entries; numeric artifact keys and logical tensor identities are unchanged.
 
@@ -251,8 +255,13 @@ and collect complete node/port/internal-edge/parameter correspondences, independ
 of any nested Attention/MLP families. Exact ordered containment, formulas,
 attributes, shapes, directed edges and alias relationships remain required.
 Annotations do not change source computation or replace concrete instances.
-Homogeneous dense, encoder and predictor stacks may therefore supply an indexed
-presentation; structural variants retain separate families. Serial eligibility
+All supported repeated layer paths, including hybrid, MoE, decision and visual
+backbones, supply applicable indexed presentations. Structural variants retain
+separate families and maximal compatible contiguous depth ranges. Root identity
+attributes `layer_index`/`sequence_index` may normalize only against the actual
+typed repetition index. Explicit template symbol-role mappings normalize local
+dynamic dimensions, retain their exact concrete names and never normalize unknown
+rank or computational constants. Serial eligibility
 also requires the actual external wiring, verified by the presentation consumer.
 Optional metadata uses the existing bounded omission/diagnostic policy and normal
 producer/schema cache invalidation. Model-owned definitions declare their own
@@ -268,17 +277,30 @@ layer correspondence, parameter bindings and weight inspection. Passive source
 I/O declarations may be materialized as truthful model boundary ports, retaining
 original dependency IDs and real forwarding; they are not neural operations.
 
-The packaged dense Llama/SmolLM2 and Qwen3 descriptions, including supported LoRA
-compositions, use the unpadded full-sequence convention. Preparation preserves
+The packaged dense Llama/SmolLM2, Qwen3, DeepSeek and GLM descriptions, including
+supported LoRA compositions, use the unpadded full-sequence convention. Preparation preserves
 integer IDs [B,S], derives integer positions [B,S], and an additive causal mask
 [B,1,S,S]. Greedy selection takes the last sequence position, argmax over vocabulary
 with keepdims, yielding one integer ID [B,1]. Append concatenates along sequence.
 This is a chosen explanatory policy, not a checkpoint generation default. No
 forward/generate call, numerical result, EOS ID or token budget is inferred.
 
+Qwen3.5 uses text THW positions [3,B,T], separate attention and current-sequence
+padding masks [B,T], and its real vocabulary head inside the single-pass model.
+Its reviewed no-cache branch has causal convolution with zero-valued left padding of kernel_size−1,
+zero per-call DeltaNet initialization and no prior KV concatenation. DeepSeek
+and GLM specialize `use_cache=false`, absent past state: current keys/values or
+latent/rotary values feed attention directly with full-sequence key length S;
+conditional bank selection/update/return bookkeeping is not executed. Kimi has
+causal and current-sequence masks, no positional input on the reviewed MLA path,
+and absent convolution/KDA initial cache per call. Within-call causal recurrence
+and all neural parameters remain explicit. Existing Kev branch-local cache detail
+remains owned by its decision backbone; CLM, Kev and V-JEPA do not acquire token
+generation.
+
 Each invocation uses the complete current sequence without cross-step cache
-reuse. State-dependent or conditioning interfaces require reviewed initialization
-and full-sequence conventions before adoption; vocabulary-head metadata alone
-is insufficient. Preserve non-generation graphs and all decision/visual interfaces.
+reuse. Source-backed preparation and initializer conventions are finite and
+validated; no mandatory unbound prior bank is hidden by presentation. Preserve
+non-generation graphs and all decision/visual interfaces.
 Semantic-validator and producer revisions participate in ordinary startup cache
 invalidation. Retrieval and canvas actions never regenerate artifacts.

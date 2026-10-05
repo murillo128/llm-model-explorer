@@ -121,7 +121,8 @@ def test_both_interiors_and_order() -> None:
         assert linked(g, p + ".mlp.multiply", p + ".mlp.down_proj")
         assert linked(g, p + ".mlp.down_proj", p + ".mlp_residual", target_port="branch")
     assert linked(g, PREFIX + ".layers.1", PREFIX + ".norm")
-    assert linked(g, PREFIX, "lm_head")
+    assert linked(g, PREFIX + ".norm", "lm_head")
+    assert node(g, "lm_head").parent_id == node(g, PREFIX).id
 
 
 def test_full_attention_connections_and_gate_regions() -> None:
@@ -144,9 +145,8 @@ def test_full_attention_connections_and_gate_regions() -> None:
         ("causal_mask", "softmax", "out", "x"),
         ("softmax", "weighted_values", "out", "probabilities"),
         ("repeat_value", "weighted_values", "out", "value"),
-        ("key_transpose", "kv_concat", "out", "key"),
-        ("prior_kv", "kv_concat", "key_state", "prior_key_state"),
-        ("kv_concat", "next_kv", "value_state", "value_state"),
+        ("key_transpose", "repeat_key", "out", "x"),
+        ("value_heads", "repeat_value", "out", "x"),
     ]:
         assert linked(g, p + "." + source, p + "." + target, sp, tp), (source, target)
     params = {v.name: v for v in g.parameters}
@@ -169,8 +169,6 @@ def test_linear_attention_connections_shapes_and_states() -> None:
         ("padding_mask", "in_proj_qkv", "out", "x"),
         ("in_proj_qkv", "conv_transpose", "out", "x"),
         ("conv_transpose", "conv1d", "out", "x"),
-        ("prior_conv", "conv1d", "out", "prior_state"),
-        ("conv1d", "next_conv", "next_state", "state"),
         ("conv1d", "conv_silu", "out", "x"),
         ("conv_silu", "conv_to_sequence", "out", "x"),
         ("conv_to_sequence", "qkv_split", "out", "x"),
@@ -184,7 +182,6 @@ def test_linear_attention_connections_shapes_and_states() -> None:
         ("output_gate", "merge_heads", "out", "x"),
         ("merge_heads", "out_proj", "out", "x"),
         ("prior_recurrent", "delta_rule", "out", "prior_state"),
-        ("delta_rule", "next_recurrent", "next_state", "state"),
         ("beta", "delta_rule", "out", "beta"),
         ("decay", "delta_rule", "out", "log_decay"),
         ("qkv_split", "delta_rule", "value", "value"),
@@ -204,10 +201,22 @@ def test_linear_attention_connections_shapes_and_states() -> None:
     ]
     assert "exp(g_t)" in (node(g, p + ".delta_rule").formula or "")
     assert "softplus(a + dt_bias)" in (node(g, p + ".decay").formula or "")
-    state_ids = {
-        node(g, p + "." + x).id
-        for x in ["prior_recurrent", "prior_conv", "next_recurrent", "next_conv"]
-    }
+    assert {a.name: a.value for a in node(g, p + ".prior_recurrent").attributes}[
+        "initialization"
+    ] == "zeros_per_call"
+    assert {a.name: a.value for a in node(g, p + ".conv1d").attributes}["left_padding"] == 3
+    assert not any(
+        n.operation
+        in {
+            "prior_convolution_state",
+            "next_convolution_state",
+            "next_delta_state",
+            "prior_kv",
+            "next_kv",
+        }
+        for n in g.nodes
+    )
+    state_ids = {node(g, p + "." + x).id for x in ["prior_recurrent"]}
     assert all(
         e.kind == "state"
         for e in g.edges

@@ -49,6 +49,32 @@ def test_grouping_preserves_the_accepted_operation_level_contract(tmp_path):
         text=True,
     )
     assert "PASS: 7 reviewed cases" in checked.stdout
+    subprocess.run(
+        [
+            sys.executable,
+            str(repo / "backend/tests/architecture_grouping_cases.py"),
+            str(tmp_path / "families"),
+            "--families",
+        ],
+        cwd=repo,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    consumed = subprocess.run(
+        [
+            "node",
+            "--experimental-transform-types",
+            str(repo / "ui/scripts/check-architecture-families.mjs"),
+            str(tmp_path / "families"),
+        ],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "PASS kev:" in consumed.stdout and "PASS kimi:" in consumed.stdout
 
 
 def inspect_graph(service, model_id, *, validate_inventory=True):
@@ -68,7 +94,8 @@ def inspect_graph(service, model_id, *, validate_inventory=True):
     assert response.status_code == 200, response.text
     assert response.headers["cache-control"] == "no-store"
     assert "x-operation-id" not in response.headers
-    assert str(service.model_root) not in response.text
+    model_root = service.model_root or service.root / "models"
+    assert str(model_root.resolve()) not in response.text
     body = response.json()
     if validate_inventory:
         validate_architecture(
@@ -112,7 +139,7 @@ def test_all_descriptions_over_tcp_readonly_cold_warm_and_logical_values(tmp_pat
         for family, counts in {
             "smollm2": [2],
             "qwen3": [2],
-            "qwen35": [2],
+            "qwen35": [4],
             "vjepa2": [2, 1],
         }.items():
             prefix, inventory, body = inspect_graph(service, family)
@@ -254,7 +281,23 @@ def test_kimi_linear_complete_expert_graph_over_production_tcp(tmp_path):
         )
         assert len({node["id"] for node in expanded["nodes"]}) == len(expanded["nodes"])
         assert len(expanded["nodes"]) > 7000
-        assert len(expanded["edges"]) > 2000
+        # No-cache specialization removes bank bookkeeping, never depth transitions.
+        decoder = next(rep for rep in graph["repetitions"] if len(rep["instances"]) == 27)
+        layers = decoder["instances"]
+        assert [layer["index"] for layer in layers] == list(range(27))
+        connections = {
+            (
+                edge["source"]["node_id"],
+                edge["source"]["port_id"],
+                edge["target"]["node_id"],
+                edge["target"]["port_id"],
+            )
+            for edge in expanded["edges"]
+        }
+        assert all(
+            (previous["node_id"], "out", current["node_id"], "x") in connections
+            for previous, current in zip(layers[:-1], layers[1:], strict=True)
+        )
         assert inventory["coverage"] == "complete"
 
         response = service.client.get(prefix + "/architecture")

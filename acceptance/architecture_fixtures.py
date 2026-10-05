@@ -144,6 +144,20 @@ def generate(root):
         sys.path.pop(0)
     for family in ("qwen35", "vjepa2"):
         fixture = json.loads((FIXTURES / f"{family}-tiny.json").read_text())
+        if family == "qwen35":
+            cfg = fixture["configuration"]["text_config"]
+            cfg["num_hidden_layers"] = 4
+            cfg["layer_types"] = ["linear_attention"] * 3 + ["full_attention"]
+            original = fixture["storage"]
+            fixture["storage"] = {k: v for k, v in original.items() if ".layers." not in k}
+            for index, source in enumerate([0, 0, 0, 1]):
+                fixture["storage"].update(
+                    {
+                        k.replace(f".layers.{source}.", f".layers.{index}."): v
+                        for k, v in original.items()
+                        if f".layers.{source}." in k
+                    }
+                )
         write_checkpoint(root / family, fixture["configuration"], fixture["storage"])
 
 

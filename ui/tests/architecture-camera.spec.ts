@@ -122,11 +122,11 @@ for (const target of ['selected', 'connection'] as const) {
     // Keep the connection within the retained viewport when shared-scope
     // geometry replaces the overview; selection and the pending camera oracle stay exact.
     if (target === 'connection') {
-      const completed = await page.evaluate(() => window.cameraProbe.events.filter((e) => e.event === 'fitView completed').length);
+      const completed = await page.evaluate(() => window.cameraProbe.events.filter((e) => e.event === 'setViewport completed').length);
       await graphAction(page, 'Fit view');
-      // Manual Fit queues a renderer frame without reopening initialization.
+      // Manual Fit commits the viewport computed from visible bodies and gutters.
       // Snapshot its committed camera, not the still-ready preceding viewport.
-      await expect.poll(() => page.evaluate(() => window.cameraProbe.events.filter((e) => e.event === 'fitView completed').length)).toBe(completed + 1);
+      await expect.poll(() => page.evaluate(() => window.cameraProbe.events.filter((e) => e.event === 'setViewport completed').length)).toBe(completed + 1);
       await ready(page);
     }
     const previous = await sample(page);

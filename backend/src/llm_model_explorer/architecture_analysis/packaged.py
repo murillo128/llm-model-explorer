@@ -26,6 +26,11 @@ def publish_definition(definition: dict[str, Any], builder: GraphBuilder) -> Non
         )
         for p in definition["parameters"]
     }
+    for parameter in definition["parameters"]:
+        if "semantic_key" in parameter:
+            builder.templates.parameter_keys[parameter_ids[parameter["id"]]] = parameter[
+                "semantic_key"
+            ]
     node_ids = {n["id"]: builder.record_id("node", n["id"]) for n in definition["nodes"]}
     for original in definition["nodes"]:
         node = dict(original)
@@ -80,4 +85,21 @@ def publish_definition(definition: dict[str, Any], builder: GraphBuilder) -> Non
         repetition["instances"] = [
             {**i, "node_id": node_ids[i["node_id"]]} for i in repetition["instances"]
         ]
+        if "side_ports" in repetition:
+            repetition["side_ports"] = [
+                {
+                    **side,
+                    "bindings": [
+                        {
+                            **binding,
+                            "endpoint": {
+                                **binding["endpoint"],
+                                "node_id": node_ids[binding["endpoint"]["node_id"]],
+                            },
+                        }
+                        for binding in side["bindings"]
+                    ],
+                }
+                for side in repetition["side_ports"]
+            ]
         builder.add_repetition(r.ArchitectureRepetition.model_validate(repetition))

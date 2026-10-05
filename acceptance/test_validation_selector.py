@@ -231,13 +231,25 @@ class SelectionTest(unittest.TestCase):
 
     def test_cross_boundary_fixture_closure_selects_actual_native_consumers(self):
         cases = [
+            *[
+                (
+                    f"backend/tests/{name}.py",
+                    {"acceptance/test_native_packages.py", "acceptance/test_architecture.py"},
+                    set(),
+                )
+                for name in (
+                    "test_lora_architecture",
+                    "clm_fixtures",
+                    "kev_fixtures",
+                    "test_clm_export",
+                    "test_kev_export",
+                )
+            ],
             (
-                "backend/tests/test_lora_architecture.py",
-                {"acceptance/test_native_packages.py"},
+                "backend/tests/test_glm4_moe_lite_architecture.py",
+                {"acceptance/test_architecture.py"},
                 set(),
             ),
-            ("backend/tests/clm_fixtures.py", {"acceptance/test_native_packages.py"}, set()),
-            ("backend/tests/kev_fixtures.py", {"acceptance/test_native_packages.py"}, set()),
             *[
                 (
                     f"backend/tests/{name}",
@@ -248,6 +260,7 @@ class SelectionTest(unittest.TestCase):
                     "architecture_assertions.py",
                     "architecture_grouping_cases.py",
                     "test_dense_architecture.py",
+                    "test_deepseek_v2_architecture.py",
                     "test_kimi_linear_architecture.py",
                     "test_qwen35_architecture.py",
                     "test_vjepa2_architecture.py",

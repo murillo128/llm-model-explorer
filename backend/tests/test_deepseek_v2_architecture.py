@@ -350,7 +350,10 @@ def test_complete_native_graph_has_mla_moe_and_every_concrete_instance(
 
     monkeypatch.setattr(builtins, "__import__", guarded_import)
 
-    graph = graph_for(data)
+    from llm_model_explorer.architecture_analysis.compact import expand_graph
+
+    wire = graph_for(data)
+    graph = expand_graph(wire)
     denied.assert_not_called()
     assert graph.coverage == "complete"
     assert len(graph.parameters) == len(expected) == 5291
@@ -411,8 +414,7 @@ def test_complete_native_graph_has_mla_moe_and_every_concrete_instance(
         (attention + ".k_rope", attention + ".k_pe_repeat", "out", "x"),
         (attention + ".kv_b_split", attention + ".key_recombine", "key_non_rotary", "non_rotary"),
         (attention + ".k_pe_repeat", attention + ".key_recombine", "out", "rotary"),
-        (attention + ".key_recombine", attention + ".key_cache_update", "out", "current_key"),
-        (attention + ".key_cache_update", attention + ".key_transpose", "out", "x"),
+        (attention + ".key_recombine", attention + ".key_transpose", "out", "x"),
         (attention + ".weighted_values", attention + ".output_transpose", "out", "x"),
         (attention + ".output_transpose", attention + ".merge_heads", "out", "x"),
         (attention + ".merge_heads", attention + ".o_proj", "out", "x"),
@@ -481,7 +483,7 @@ def test_complete_native_graph_has_mla_moe_and_every_concrete_instance(
         (moe + ".dispatch.0", moe + ".experts.0", "tokens", "x"),
         (moe + ".experts.0.swiglu_mlp", moe + ".experts.0.routing_weight", "out", "expert_values"),
         (moe + ".experts.0.routing_weight", moe + ".experts.0", "out", "out"),
-        (moe + ".experts.0", moe + ".routed_scatter_sum", "out", "expert_values"),
+        (moe + ".experts.0", moe + ".routed_scatter_sum", "out", "values_0"),
         (moe + ".routed_scatter_sum", moe + ".shared_routed_add", "out", "routed"),
         (moe + ".shared_experts", moe + ".shared_routed_add", "out", "shared"),
         (moe + ".shared_routed_add", moe, "out", "out"),
@@ -500,21 +502,25 @@ def test_complete_native_graph_has_mla_moe_and_every_concrete_instance(
     root = node(data, graph, "model")
     assert isinstance(root, r.ArchitectureGroupNode)
     assert {port.id for port in root.ports if port.direction == "input"} == {
-        "input_ids",
-        "position_ids",
-        "attention_mask",
-        "past_key_values_key",
-        "past_key_values_value",
+        "tokens",
+        "positions",
+        "mask",
     }
-    assert {port.id for port in root.ports if port.direction == "output"} == {
-        "logits",
-        "next_key_values_key",
-        "next_key_values_value",
-    }
-    prior_key = next(port for port in root.ports if port.id == "past_key_values_key")
-    assert prior_key.shape is not None
-    assert isinstance(prior_key.shape[0], r.ArchitectureConstantDimension)
-    assert prior_key.shape[0].value == 27
+    assert {port.id for port in root.ports if port.direction == "output"} == {"logits"}
+    assert not any(
+        n.operation in {"select_layer_state", "state_concat", "stack_layer_states"}
+        for n in graph.nodes
+    )
+    assert {a.name: a.value for a in root.attributes}[
+        "invocation"
+    ] == "full_sequence_use_cache_false_past_none"
+    prepare = next(n for n in graph.nodes if n.operation == "generation_prepare_inputs")
+    assert next(p for p in prepare.ports if p.id == "mask").shape == [
+        r.ArchitectureSymbolDimension(kind="symbol", name="B"),
+        r.ArchitectureConstantDimension(kind="constant", value=1),
+        r.ArchitectureSymbolDimension(kind="symbol", name="S"),
+        r.ArchitectureSymbolDimension(kind="symbol", name="S"),
+    ]
     assert any(
         isinstance(reference, r.ArchitectureTokenizerReference)
         for entry in graph.nodes
@@ -533,9 +539,9 @@ def test_complete_native_graph_has_mla_moe_and_every_concrete_instance(
     assert len(attention_templates) == 1
     assert len(attention_templates[0].instances) == 27
     assert not any(diagnostic.code == "templates_omitted" for diagnostic in graph.diagnostics)
-    encoded = serialize_graph(graph)
+    encoded = serialize_graph(wire)
     assert len(encoded) < MAX_BYTES
-    assert parse_graph(graph.document(), data.bindings) == graph
+    assert expand_graph(parse_graph(wire.document(), data.bindings)) == graph
 
 
 def test_sampled_nf4_binding_and_missing_expert_are_localized() -> None:
