@@ -222,6 +222,10 @@ Observed local checks:
   the old fixed revision expectation was updated from 5 to 6, and all 40
   importer tests then passed, including explicit symbol and side-state remapping.
 - Ruff, mypy (113 files), and 24 validation-selector tests passed.
+- All 18 camera browser cases passed at desktop/narrow widths after updating
+  the manual-Fit probe to await its actual `setViewport` commit. The original
+  CI run passed 346 other browser cases but exposed this stale `fitView` wait;
+  camera readiness, cancellation and stale-completion assertions are unchanged.
 - Existing grouping acceptance test passed (96 s), including all 15 producer
   rows through real projection. Node 24 `--experimental-transform-types` avoids
   adding npm/browser setup to HTTP-only validation.
