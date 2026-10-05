@@ -1973,7 +1973,7 @@ components:
           $ref: '#/components/schemas/ArchitectureName'
         component_role:
           type: string
-          enum: [attention, mlp]
+          enum: [attention, mlp, layer]
         revision:
           $ref: '#/components/schemas/ArchitectureName'
         provenance:

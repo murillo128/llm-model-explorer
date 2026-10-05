@@ -89,6 +89,11 @@ export function ConnectionInspection({ graph, edge, node, trigger, onClose, insp
     <div className="architecture-connection-details">
       {edge && structure && <><p>{structure.source} · {edge.source.port_id} → {structure.target} · {edge.target.port_id}</p>
         <p>Verified common {edge.kind} dependency. Choose an instance for its source references.</p></>}
+      {edge?.relationship && <p>{edge.relationship.kind === 'entry'
+        ? `Initial entry: only instance ${edge.relationship.instances[0]!.index}.`
+        : edge.relationship.kind === 'exit' ? `Final exit: only after instance ${edge.relationship.instances.at(-1)!.index}.`
+        : edge.relationship.kind === 'return' ? `Next layer: ${edge.target.port_id}[i+1] = ${edge.source.port_id}[i], ${edge.relationship.instances[0]!.index} ≤ i < ${edge.relationship.instances.at(-1)!.index}. ${edge.paths.length} ordered inter-layer transitions; no same-instance feedback.`
+        : 'Invariant input: one verified signal with every represented instance consumer.'} No concrete instance is selected by this relationship.</p>}
       {edge && !structure && <>
         <p>{edge.kind} · {edge.paths.length} source {edge.paths.length === 1 ? 'path' : 'paths'} · direction →</p>
         {edge.paths.map((path, i) => <details key={i} open={edge.paths.length === 1}>

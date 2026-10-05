@@ -22507,6 +22507,539 @@
       ]
     },
     {
+      "name": "template-whole-layer-with-nested-attention",
+      "base": "template_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "templates"
+          ],
+          "value": [
+            {
+              "id": "shared_attention",
+              "label": "Attention",
+              "component_role": "attention",
+              "revision": "1",
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ],
+              "instances": [
+                {
+                  "node_id": "attention0",
+                  "nodes": [
+                    {
+                      "role": "component",
+                      "node_id": "attention0"
+                    },
+                    {
+                      "role": "q",
+                      "node_id": "q0"
+                    },
+                    {
+                      "role": "k",
+                      "node_id": "k0"
+                    },
+                    {
+                      "role": "dot",
+                      "node_id": "dot0"
+                    }
+                  ],
+                  "ports": [
+                    {
+                      "role": "component.x",
+                      "node_id": "attention0",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "component.out",
+                      "node_id": "attention0",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "q.x",
+                      "node_id": "q0",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "q.out",
+                      "node_id": "q0",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "k.x",
+                      "node_id": "k0",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "k.out",
+                      "node_id": "k0",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "dot.q",
+                      "node_id": "dot0",
+                      "port_id": "q"
+                    },
+                    {
+                      "role": "dot.k",
+                      "node_id": "dot0",
+                      "port_id": "k"
+                    },
+                    {
+                      "role": "dot.out",
+                      "node_id": "dot0",
+                      "port_id": "out"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "role": "q_input",
+                      "edge_id": "q_input0"
+                    },
+                    {
+                      "role": "k_input",
+                      "edge_id": "k_input0"
+                    },
+                    {
+                      "role": "q_dot",
+                      "edge_id": "q_dot0"
+                    },
+                    {
+                      "role": "k_dot",
+                      "edge_id": "k_dot0"
+                    },
+                    {
+                      "role": "result",
+                      "edge_id": "result0"
+                    }
+                  ],
+                  "parameters": [
+                    {
+                      "role": "q.weight",
+                      "parameter_id": "qweight0"
+                    },
+                    {
+                      "role": "k.weight",
+                      "parameter_id": "kweight0"
+                    }
+                  ]
+                },
+                {
+                  "node_id": "attention2",
+                  "nodes": [
+                    {
+                      "role": "component",
+                      "node_id": "attention2"
+                    },
+                    {
+                      "role": "q",
+                      "node_id": "q2"
+                    },
+                    {
+                      "role": "k",
+                      "node_id": "k2"
+                    },
+                    {
+                      "role": "dot",
+                      "node_id": "dot2"
+                    }
+                  ],
+                  "ports": [
+                    {
+                      "role": "component.x",
+                      "node_id": "attention2",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "component.out",
+                      "node_id": "attention2",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "q.x",
+                      "node_id": "q2",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "q.out",
+                      "node_id": "q2",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "k.x",
+                      "node_id": "k2",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "k.out",
+                      "node_id": "k2",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "dot.q",
+                      "node_id": "dot2",
+                      "port_id": "q"
+                    },
+                    {
+                      "role": "dot.k",
+                      "node_id": "dot2",
+                      "port_id": "k"
+                    },
+                    {
+                      "role": "dot.out",
+                      "node_id": "dot2",
+                      "port_id": "out"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "role": "q_input",
+                      "edge_id": "q_input2"
+                    },
+                    {
+                      "role": "k_input",
+                      "edge_id": "k_input2"
+                    },
+                    {
+                      "role": "q_dot",
+                      "edge_id": "q_dot2"
+                    },
+                    {
+                      "role": "k_dot",
+                      "edge_id": "k_dot2"
+                    },
+                    {
+                      "role": "result",
+                      "edge_id": "result2"
+                    }
+                  ],
+                  "parameters": [
+                    {
+                      "role": "q.weight",
+                      "parameter_id": "qweight2"
+                    },
+                    {
+                      "role": "k.weight",
+                      "parameter_id": "kweight2"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "shared_layer",
+              "label": "Layer",
+              "component_role": "layer",
+              "revision": "1",
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ],
+              "instances": [
+                {
+                  "node_id": "layer0",
+                  "nodes": [
+                    {
+                      "role": "layer",
+                      "node_id": "layer0"
+                    },
+                    {
+                      "role": "component",
+                      "node_id": "attention0"
+                    },
+                    {
+                      "role": "q",
+                      "node_id": "q0"
+                    },
+                    {
+                      "role": "k",
+                      "node_id": "k0"
+                    },
+                    {
+                      "role": "dot",
+                      "node_id": "dot0"
+                    }
+                  ],
+                  "ports": [
+                    {
+                      "role": "layer.x",
+                      "node_id": "layer0",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "layer.out",
+                      "node_id": "layer0",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "component.x",
+                      "node_id": "attention0",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "component.out",
+                      "node_id": "attention0",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "q.x",
+                      "node_id": "q0",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "q.out",
+                      "node_id": "q0",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "k.x",
+                      "node_id": "k0",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "k.out",
+                      "node_id": "k0",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "dot.q",
+                      "node_id": "dot0",
+                      "port_id": "q"
+                    },
+                    {
+                      "role": "dot.k",
+                      "node_id": "dot0",
+                      "port_id": "k"
+                    },
+                    {
+                      "role": "dot.out",
+                      "node_id": "dot0",
+                      "port_id": "out"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "role": "input",
+                      "edge_id": "input0"
+                    },
+                    {
+                      "role": "output",
+                      "edge_id": "output0"
+                    },
+                    {
+                      "role": "q_input",
+                      "edge_id": "q_input0"
+                    },
+                    {
+                      "role": "k_input",
+                      "edge_id": "k_input0"
+                    },
+                    {
+                      "role": "q_dot",
+                      "edge_id": "q_dot0"
+                    },
+                    {
+                      "role": "k_dot",
+                      "edge_id": "k_dot0"
+                    },
+                    {
+                      "role": "result",
+                      "edge_id": "result0"
+                    }
+                  ],
+                  "parameters": [
+                    {
+                      "role": "q.weight",
+                      "parameter_id": "qweight0"
+                    },
+                    {
+                      "role": "k.weight",
+                      "parameter_id": "kweight0"
+                    }
+                  ]
+                },
+                {
+                  "node_id": "layer2",
+                  "nodes": [
+                    {
+                      "role": "layer",
+                      "node_id": "layer2"
+                    },
+                    {
+                      "role": "component",
+                      "node_id": "attention2"
+                    },
+                    {
+                      "role": "q",
+                      "node_id": "q2"
+                    },
+                    {
+                      "role": "k",
+                      "node_id": "k2"
+                    },
+                    {
+                      "role": "dot",
+                      "node_id": "dot2"
+                    }
+                  ],
+                  "ports": [
+                    {
+                      "role": "layer.x",
+                      "node_id": "layer2",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "layer.out",
+                      "node_id": "layer2",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "component.x",
+                      "node_id": "attention2",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "component.out",
+                      "node_id": "attention2",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "q.x",
+                      "node_id": "q2",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "q.out",
+                      "node_id": "q2",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "k.x",
+                      "node_id": "k2",
+                      "port_id": "x"
+                    },
+                    {
+                      "role": "k.out",
+                      "node_id": "k2",
+                      "port_id": "out"
+                    },
+                    {
+                      "role": "dot.q",
+                      "node_id": "dot2",
+                      "port_id": "q"
+                    },
+                    {
+                      "role": "dot.k",
+                      "node_id": "dot2",
+                      "port_id": "k"
+                    },
+                    {
+                      "role": "dot.out",
+                      "node_id": "dot2",
+                      "port_id": "out"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "role": "input",
+                      "edge_id": "input2"
+                    },
+                    {
+                      "role": "output",
+                      "edge_id": "output2"
+                    },
+                    {
+                      "role": "q_input",
+                      "edge_id": "q_input2"
+                    },
+                    {
+                      "role": "k_input",
+                      "edge_id": "k_input2"
+                    },
+                    {
+                      "role": "q_dot",
+                      "edge_id": "q_dot2"
+                    },
+                    {
+                      "role": "k_dot",
+                      "edge_id": "k_dot2"
+                    },
+                    {
+                      "role": "result",
+                      "edge_id": "result2"
+                    }
+                  ],
+                  "parameters": [
+                    {
+                      "role": "q.weight",
+                      "parameter_id": "qweight2"
+                    },
+                    {
+                      "role": "k.weight",
+                      "parameter_id": "kweight2"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "attributes"
+          ],
+          "value": [
+            {
+              "name": "semantic_role",
+              "value": "layer",
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "6",
+            "attributes"
+          ],
+          "value": [
+            {
+              "name": "semantic_role",
+              "value": "layer",
+              "provenance": [
+                {
+                  "kind": "description",
+                  "source": "independent-attention-fixture",
+                  "revision": "1"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "context_edits": [],
+      "schema_valid": true
+    },
+    {
       "name": "template-verified-nonconsecutive",
       "base": "template_response",
       "edits": [],

@@ -307,6 +307,17 @@ def test_smollm2_lora_branches_bind_real_factors_and_preserve_base(
         assert composed.storage == parameter.storage
         assert composed.inspection == parameter.inspection
 
+    layer_templates = [t for t in graph.templates or () if t.component_role == "layer"]
+    assert any(len(t.instances) == 2 for t in layer_templates)
+    for template in layer_templates:
+        for instance in template.instances:
+            mapped = {m.node_id for m in instance.nodes}
+            layer_targets = [target for target in targets if nodes[target].id in mapped]
+            assert all(
+                nodes[target + suffix].id in mapped
+                for target in layer_targets
+                for suffix in (".base", ".lora_A", ".lora_B", ".lora_scale", ".lora_add")
+            )
     attention_templates = [t for t in graph.templates or () if t.component_role == "attention"]
     assert attention_templates
     assert any(len(template.instances) == 2 for template in attention_templates)

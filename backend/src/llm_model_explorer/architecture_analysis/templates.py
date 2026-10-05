@@ -19,7 +19,7 @@ from .validation import GraphError, serialized_size
 if TYPE_CHECKING:
     from .core import GraphBuilder
 
-REVISION = "exact-component-roles-1"
+REVISION = "exact-component-roles-2"
 LOG = logging.getLogger(__name__)
 
 
@@ -28,7 +28,7 @@ class Candidate:
     node_id: str
     base: str
     family: str
-    role: Literal["attention", "mlp"]
+    role: Literal["attention", "mlp", "layer"]
     nodes: list[r.ArchitectureTemplateNodeRole] = field(default_factory=list)
     parameters: dict[str, str] = field(default_factory=dict)
     valid: bool = True
@@ -37,11 +37,10 @@ class Candidate:
 class ComponentTemplates:
     def __init__(self) -> None:
         self.candidates: dict[str, Candidate] = {}
-        self.owners: dict[str, Candidate] = {}
-        self.pending: dict[str, list[tuple[r.ArchitectureNode, str | None]]] = defaultdict(list)
+        self.keys: dict[str, str | None] = {}
 
     def begin(
-        self, node_id: str, base: str, family: str, role: Literal["attention", "mlp"]
+        self, node_id: str, base: str, family: str, role: Literal["attention", "mlp", "layer"]
     ) -> None:
         self.candidates[node_id] = Candidate(node_id, base + ".", family, role)
 
@@ -51,32 +50,32 @@ class ComponentTemplates:
         key: str | None,
         parameters: dict[str, r.ArchitectureParameter],
     ) -> None:
-        candidate = (
-            self.candidates.get(node.id)
-            or self.candidates.get(node.parent_id or "")
-            or self.owners.get(node.parent_id or "")
-        )
-        if candidate is None:
-            # Producers can close a nested group after its children. Follow the
-            # authored containment once that parent is observed, never tensor paths.
-            if self.candidates and node.parent_id is not None:
-                self.pending[node.parent_id].append((node, key))
-            return
-        self.owners[node.id] = candidate
-        if key is None or (node.id != candidate.node_id and not key.startswith(candidate.base)):
-            candidate.valid = False
-            return
-        role = "component" if node.id == candidate.node_id else key.removeprefix(candidate.base)
-        try:
+        self.keys[node.id] = key
+
+    def collect(self, candidate: Candidate, index: TemplateIndex) -> None:
+        # Each declared root owns its complete closure independently. This also
+        # handles producers that close parents after their children, and preserves
+        # nested Attention/MLP families inside a whole-layer family.
+        pending = [candidate.node_id]
+        while pending:
+            node = index.nodes[pending.pop()]
+            key = self.keys.get(node.id)
+            if key is None or (node.id != candidate.node_id and not key.startswith(candidate.base)):
+                candidate.valid = False
+                return
+            role = "component" if node.id == candidate.node_id else key.removeprefix(candidate.base)
             candidate.nodes.append(r.ArchitectureTemplateNodeRole(role=role, node_id=node.id))
-            for parameter_id in node.parameter_ids:
-                name = parameters[parameter_id].name
+            parameter_ids = dict.fromkeys(
+                [
+                    *node.parameter_ids,
+                    *(ref.parameter_id for ref in node.references if ref.kind == "parameter"),
+                ]
+            )
+            for parameter_id in parameter_ids:
+                name = index.parameters[parameter_id].name
                 if name.startswith(candidate.base):
                     candidate.parameters[parameter_id] = name.removeprefix(candidate.base)
                 elif name.startswith("__peft__."):
-                    # Adapter-qualified names carry the repeated base module after
-                    # the adapter identity. Normalize only that reviewed target
-                    # suffix so repeated LoRA components can use ordinary templates.
                     qualified = name.removeprefix("__peft__.")
                     marker = qualified.find(candidate.base)
                     if marker > 0 and qualified[marker - 1] == ".":
@@ -87,11 +86,8 @@ class ComponentTemplates:
                         candidate.valid = False
                 else:
                     candidate.valid = False
-        except (ValueError, KeyError):
-            # Invalid optional role metadata never invalidates an ordinary source record.
-            candidate.valid = False
-        for child, child_key in self.pending.pop(node.id, []):
-            self.observe(child, child_key, parameters)
+            if node.kind == "group":
+                pending.extend(reversed(node.children))
 
     def annotate(self, graph: r.ArchitectureGraph, builder: GraphBuilder) -> r.ArchitectureGraph:
         if not self.candidates:
@@ -106,6 +102,9 @@ class ComponentTemplates:
         remaining -= len(',"templates":[]')
         for candidate in self.candidates.values():
             try:
+                candidate.nodes.clear()
+                candidate.parameters.clear()
+                self.collect(candidate, index)
                 if not candidate.valid:
                     raise GraphError("invalid_graph", "Unverified authored component roles.")
                 roles = {n.node_id: n.role for n in candidate.nodes}

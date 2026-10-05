@@ -46,6 +46,10 @@ def test_native_clm_selection_without_sidecar(
     graph = response["graph"]
     assert graph["scope"] == "language_model" and graph["coverage"] == "complete"
     assert graph["diagnostics"] == []
+    layer_families = [t for t in graph.get("templates", []) if t["component_role"] == "layer"]
+    assert len(layer_families) == 2  # Independent state/candidate encoder scopes.
+    assert [len(t["instances"]) for t in layer_families] == [2, 2]
+
     payload_access.assert_not_called()
     assert any(
         p["source"] == "clm-inspection"

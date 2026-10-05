@@ -28,14 +28,14 @@ const scalarAttributes: Record<string, readonly string[]> = {
   encoder_normalize: ['epsilon', 'axis'], l2_normalize: ['epsilon', 'axis'],
   exp_clamp: ['maximum'], softmax: ['axis'], gelu: ['approximate'],
 };
-export function cardSummary(node: GraphNode | undefined, parameters: ReadonlyMap<string, Parameter>) {
+export function cardSummary(node: GraphNode | undefined, parameters: ReadonlyMap<string, Parameter>, symbolicParameters: ProjectedNode['symbolicParameters'] = []) {
   // A published factor is the compact computational vocabulary. Alpha/rank may
   // remain provenance on that card; explicit source expressions without a factor
   // retain their declared scalars (including the native Kev projection/pointer).
   const scalarNames = node?.operation === 'scale' && node.attributes.some((a) => a.name === 'factor')
     ? ['factor'] : scalarAttributes[node?.operation ?? ''] ?? [];
   return {
-    formula: node?.formula,
+    formula: node?.formula, symbolicParameters,
     parameters: node ? ownParameters(node, parameters) : [],
     constants: node?.attributes.filter((a) => scalarNames.includes(a.name) &&
       !Array.isArray(a.value)) ?? [],
@@ -69,14 +69,14 @@ export function cardMetrics(node: ProjectedNode, summary: CardSummary, dimension
   })) as Record<string, { width: number; height: number; top: number; clearance: number; raised: boolean }>;
   const portLabelWidth = (direction: 'input' | 'output') => Math.max(0, ...node.ports.filter((p) => p.direction === direction)
     .map((p) => portLabels[p.id]!.width));
-  const height = Math.max(84, metadataTop + Math.min(summaryLimit, summary.parameters.length) * rowHeight +
+  const height = Math.max(84, metadataTop + Math.min(summaryLimit, summary.parameters.length + summary.symbolicParameters.length) * rowHeight +
     (summary.parameters.length > summaryLimit ? 26 : 0) + summary.constants.length * 24 + 10);
-  const contentWidth = summary.formula || summary.parameters.length || summary.constants.length || dimensions ? summaryWidth : 180;
+  const contentWidth = summary.formula || summary.parameters.length || summary.symbolicParameters.length || summary.constants.length || dimensions ? summaryWidth : 180;
   // Opposite-side names share each row. Reserve both rectangles on ordinary
   // operation cards as well as interface containers, including truncated names.
   const width = Math.max(contentWidth, portLabelWidth('input') + portLabelWidth('output') + 48);
   return { width,
-    height, headerHeight: summary.parameters.length || summary.constants.length ? height : Math.max(64, portStart),
+    height, headerHeight: summary.parameters.length || summary.symbolicParameters.length || summary.constants.length ? height : Math.max(64, portStart),
     portStart, portGap, minimumPortGap: labelHeight + 20, metadataTop, rowHeight, portLabels,
     portLabelWidth: { input: portLabelWidth('input'), output: portLabelWidth('output') } };
 }

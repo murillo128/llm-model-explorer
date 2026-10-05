@@ -1170,6 +1170,107 @@ test.describe('Extended mounted lifetime without persistent element handles', { 
 
 test('shared structure production [templates] neutral mode, distinct instance weights and cancellation preserve one canvas', async ({ page }, info) => {
   const graph = await selectGraph(page), canvas = page.getByLabel('Architecture graph', { exact: true });
+  const layer = graph.templates!.find((t) => t.component_role === 'layer')!;
+  expect(layer.instances).toHaveLength(2);
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  const repetition = graph.repetitions[0]!;
+  const outerId = `repeat:${repetition.id}:0:1`;
+  const outer = page.locator(`.react-flow__node[data-id=${JSON.stringify(outerId)}]`);
+  if (!await outer.count()) {
+    await page.locator('.react-flow__node').first().locator('.architecture-expand').click();
+    await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  }
+  const requestsBeforeExpansion = observed.length;
+  await outer.locator('.architecture-expand').click();
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const innerId = `indexed:${repetition.id}:${layer.instances[0]!.node_id}`;
+  const inner = page.locator(`.react-flow__node[data-id=${JSON.stringify(innerId)}]`);
+  await expect(inner.locator('.architecture-node-label')).toHaveText('Decoder Layer[i]');
+  await expect(outer).toHaveCount(1);
+  const loop = page.locator(`.architecture-connection[data-edge-id=${JSON.stringify(`${outerId}:return:x`)}]`);
+  const receipt = async () => loop.evaluate((element, ids) => {
+    const bounds = (id: string) => {
+      const r = document.querySelector(`.react-flow__node[data-id="${id}"]`)!.getBoundingClientRect();
+      return { x: r.x, y: r.y, right: r.right, bottom: r.bottom };
+    };
+    const inner = bounds(ids.innerId), outer = bounds(ids.outerId);
+    const paths = Array.from(element.querySelectorAll<SVGPathElement>('.architecture-edge-line'));
+    const points = paths.flatMap((path) => Array.from({ length: 101 }, (_, i) => {
+      const point = path.getPointAtLength(path.getTotalLength() * i / 100);
+      return new DOMPoint(point.x, point.y).matrixTransform(path.getScreenCTM()!);
+    })).map((p) => ({ x: p.x, y: p.y }));
+    const port = (side: 'source' | 'target', edge: Element = element) => {
+      const node = edge.getAttribute(`data-${side}-node`)!, id = edge.getAttribute(`data-${side}-port`)!;
+      const r = document.querySelector(`.architecture-port[data-node-id=${JSON.stringify(node)}][data-port-id=${JSON.stringify(id)}]`)!.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    };
+    return { inner, outer, points, source: port('source'), target: port('target'),
+      originalEdges: JSON.parse(element.getAttribute('data-original-edge-ids')!),
+      boundaryConnections: Array.from(document.querySelectorAll('.architecture-connection')).filter((e) =>
+        e.getAttribute('data-source-node') === ids.outerId && e.getAttribute('data-target-node') === ids.innerId ||
+        e.getAttribute('data-source-node') === ids.innerId && e.getAttribute('data-target-node') === ids.outerId).map((edge) => {
+        const paths = edge.querySelectorAll<SVGPathElement>('.architecture-edge-line');
+        const endpoint = (path: SVGPathElement, distance: number) => {
+          const p = path.getPointAtLength(distance), screen = new DOMPoint(p.x, p.y).matrixTransform(path.getScreenCTM()!);
+          return { x: screen.x, y: screen.y };
+        };
+        return { source: port('source', edge), target: port('target', edge),
+          start: endpoint(paths[0]!, 0), end: endpoint(paths[paths.length - 1]!, paths[paths.length - 1]!.getTotalLength()) };
+      }) };
+  }, { innerId, outerId });
+  const assertReturn = async () => {
+    const value = await receipt();
+    expect(value.boundaryConnections).toHaveLength(5);
+    for (const edge of value.boundaryConnections) for (const [p, expected] of [[edge.start, edge.source], [edge.end, edge.target]]) {
+      expect(p!.x).toBeCloseTo(expected!.x, 0); expect(p!.y).toBeCloseTo(expected!.y, 0);
+    }
+    const transitions = graph.edges.filter((e) => e.source.node_id === layer.instances[0]!.node_id && e.target.node_id === layer.instances[1]!.node_id).map((e) => e.id);
+    expect(value.originalEdges).toEqual(transitions);
+    for (const [p, expected] of [[value.points[0]!, value.source], [value.points.at(-1)!, value.target]]) {
+      expect(p!.x).toBeCloseTo(expected!.x, 0); expect(p!.y).toBeCloseTo(expected!.y, 0);
+    }
+    for (const p of value.points) {
+      expect(p.x <= value.inner.x + 0.1 || p.x >= value.inner.right - 0.1 || p.y < value.inner.y).toBe(true);
+      expect(p.x).toBeGreaterThanOrEqual(value.outer.x); expect(p.x).toBeLessThanOrEqual(value.outer.right);
+      expect(p.y).toBeGreaterThanOrEqual(value.outer.y); expect(p.y).toBeLessThanOrEqual(value.outer.bottom);
+    }
+    return value;
+  };
+  await assertReturn();
+  await recordGraph(page, info, 'indexed-layer-collapsed', graph);
+  await inner.locator('.architecture-expand').click();
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const geometry = await assertReturn();
+  await expect(page.locator('.architecture-tensor-name').filter({ hasText: 'weight[i]' }).first()).toBeVisible();
+  await expect(page.locator('.react-flow__node[data-id^="indexed:"] .architecture-matrix-action')).toHaveCount(0);
+  expect(observed.slice(requestsBeforeExpansion)).toEqual([]);
+  await expect(async () => {
+    const current = await receipt();
+    const upper = current.points.filter((p) => Math.abs(p.y - Math.min(...current.points.map((v) => v.y))) < 0.1);
+    const point = upper[Math.floor(upper.length / 2)]!;
+    await page.mouse.move(point.x, point.y);
+    await expect(loop).toHaveAttribute('data-emphasized', 'true', { timeout: 500 });
+  }).toPass();
+  await loop.focus();
+  await expect(loop).toHaveAttribute('data-emphasized', 'true');
+  await loop.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'Connection inspection' })).toContainText('1 ordered inter-layer transitions');
+  await page.keyboard.press('Escape');
+  await info.attach('indexed-layer-geometry', { body: JSON.stringify(geometry), contentType: 'application/json' });
+  await recordGraph(page, info, 'indexed-layer-expanded', graph);
+  await inner.locator('.architecture-node-label').click();
+  await page.getByLabel('Graph selection', { exact: true }).getByRole('button', { name: 'Explore structure', exact: true }).click();
+  await expect(page.getByLabel('Shared structure instance', { exact: true })).toHaveValue('');
+  await page.getByLabel('Shared structure instance', { exact: true }).selectOption(layer.instances[1]!.node_id);
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const concreteQ = graph.parameters.find((p) => p.name === 'model.layers.1.self_attn.q_proj.weight')!;
+  await expect(page.getByRole('button', { name: `Inspect matrix ${concreteQ.name}`, exact: true })).toBeAttached();
+  await graphAction(page, 'Model overview');
   const template = graph.templates!.find((t) => t.component_role === 'attention')!;
   expect(template.instances).toHaveLength(2);
   const [first, second] = template.instances;

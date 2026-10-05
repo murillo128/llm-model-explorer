@@ -1,3 +1,4 @@
+import { projectIndexedRepetitions } from './indexed-repetition';
 import type { components } from '../api/generated/types';
 import type { Graph, GraphNode } from './graph';
 import { deriveMlpGroups } from './derived-groups';
@@ -19,7 +20,9 @@ export interface ProjectedPort {
 export interface ProjectedNode {
   id: string; parentId?: string; kind: GraphNode['kind']; label: string;
   sourceIds: string[]; record?: GraphNode; ports: ProjectedPort[]; expanded: boolean;
-  presentation?: 'repetition' | 'range' | 'mlp' | 'external' | 'model'; repetitionId?: string;
+  presentation?: 'repetition' | 'range' | 'mlp' | 'external' | 'model' | 'shared'; repetitionId?: string;
+  shared?: { templateId: string; anchorId: string; nodeRole: string };
+  symbolicParameters?: { role: string; label: string; shape: SourcePort['shape'] }[];
   componentCount?: number;
   instances?: Graph['repetitions'][number]['instances']; summary?: string;
 }
@@ -28,6 +31,8 @@ export interface ProjectedEdge {
   /** Each path is ordered from the original source to original destination.
    * Shared forwarding prefixes may occur in genuine fan-out paths. */
   paths: SourceEdge[][]; originalEdgeIds: string[];
+  relationship?: { kind: 'entry' | 'return' | 'exit' | 'invariant'; repetitionId: string; templateId: string;
+    portRole: string; instances: { nodeId: string; index: number }[] };
 }
 export interface ProjectionOptions {
   expanded: string[];
@@ -76,7 +81,7 @@ export function variantSummary(instances: Graph['repetitions'][number]['instance
  * remain untouched. Only group interfaces are transparent; computations stop
  * traversal, even when two operation ports have the same shape or label. */
 export function projectGraph(graph: Graph, options: ProjectionOptions): Projection {
-  return projectInterfaces(graph, projectSourceGraph(graph, options), options);
+  return projectIndexedRepetitions(graph, projectInterfaces(graph, projectSourceGraph(graph, options), options), options);
 }
 
 function projectSourceGraph(graph: Graph, options: ProjectionOptions): Projection {

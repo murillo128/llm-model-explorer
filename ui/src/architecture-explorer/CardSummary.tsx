@@ -38,6 +38,10 @@ export function CardParameters({ node, summary, dimensions, top, inspect, matrix
     {summary.parameters.length > summaryLimit && <button className="architecture-more-parameters"
       aria-label={`Inspect ${summary.parameters.length - summaryLimit} more tensors of ${node.label}`}
       onClick={(event) => inspect(event.currentTarget)}>+{summary.parameters.length - summaryLimit} more</button>}
+    {summary.symbolicParameters.slice(0, summaryLimit).map((parameter) => <div className="architecture-tensor-row" key={parameter.role}>
+      <span className="architecture-tensor-name"><SummaryText text={parameter.label} fullText={`${parameter.role} · Choose a concrete Shared instance to inspect values.`} />
+        {dimensions && <SummaryText className="architecture-card-shape" text={formatShape(parameter.shape)} />}</span>
+    </div>)}
     {summary.constants.map((a, index) => <div className="architecture-constant" key={`${a.name}:${index}`}>
       <SummaryText text={`${a.name} = ${a.value === null ? 'unknown' : String(a.value)}`} />
     </div>)}

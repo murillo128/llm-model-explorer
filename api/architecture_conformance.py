@@ -508,6 +508,20 @@ def template_cases():
                           schema_valid=name not in {'null','singleton','missing-provenance'}))
     def set_(path, value):
         return dict(path=('graph/'+path).split('/'),value=value)
+    layers = []
+    for i, instance in zip((0, 2), instances):
+        layer = f'layer{i}'
+        layers.append(dict(node_id=layer,
+            nodes=[dict(role='layer', node_id=layer), *deepcopy(instance['nodes'])],
+            ports=[dict(role='layer.'+port, node_id=layer, port_id=port) for port in ('x', 'out')] + deepcopy(instance['ports']),
+            edges=[dict(role=role, edge_id=f'{role}{i}') for role in ('input', 'output')] + deepcopy(instance['edges']),
+            parameters=deepcopy(instance['parameters'])))
+    layer_template = dict(id='shared_layer', label='Layer', component_role='layer', revision='1',
+                          provenance=provenance, instances=layers)
+    case('whole-layer-with-nested-attention', [
+        set_('templates', [*graph['templates'], layer_template]),
+        *[set_(f'nodes/{next(at for at,n in enumerate(nodes) if n["id"] == f"layer{i}")}/attributes',
+               [attr('semantic_role', 'layer')]) for i in (0, 2)]], True)
     case('verified-nonconsecutive',valid=True)
     case('absent', [dict(path=['graph','templates'],delete=True)],True)
     case('empty', [set_('templates',[])],True)

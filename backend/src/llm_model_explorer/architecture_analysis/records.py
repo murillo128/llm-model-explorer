@@ -3,7 +3,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_REVISION = "6d4f6ea778590ff68d919adb59962eb97951240df7b521b3ca08c4846fd68b88"
+SCHEMA_REVISION = "995cf6d1903869f0f55db3f0bee1e0011050dc44923eff08f0514edbc3245572"
 
 
 class Record(BaseModel):
@@ -301,7 +301,7 @@ class ArchitectureTemplateInstance(Record):
 class ArchitectureTemplate(Record):
     id: ArchitectureId
     label: ArchitectureName
-    component_role: Literal["attention", "mlp"]
+    component_role: Literal["attention", "mlp", "layer"]
     revision: ArchitectureName
     provenance: Annotated[list[ArchitectureProvenance], Field(min_length=1, max_length=33554432)]
     instances: Annotated[

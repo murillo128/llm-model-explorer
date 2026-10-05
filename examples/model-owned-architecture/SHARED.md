@@ -7,7 +7,8 @@ parameter-name discovery is required. Q, K, V and the output projection have
 independent tensors in each layer.
 
 The graph's `repetitions` declares the layer window. Its `templates` declares the
-attention and MLP Shared families. These are repeated **structures**, not tied
+whole-layer, attention and MLP Shared families. Expanding the serial repetition
+shows one neutral Encoder Layer[i], which can expand into its common operations. These are repeated **structures**, not tied
 weights. All concrete nodes, ports, edges and parameters remain present.
 
 Generate an inspectable checkpoint from the repository root, in an environment
@@ -40,7 +41,7 @@ shutil.copyfile("examples/model-owned-architecture/shared-architecture.json", ou
 ```
 
 Restart the backend, select the checkpoint, and open Architecture Explorer.
-Under Model, navigate the encoder layer repetition. Under Shared, open Dense
+Under Model, expand the encoder layer repetition, then expand Encoder Layer[i]. Under Shared, open Dense
 attention or GELU MLP, inspect structure without selecting weights, then select
 instance 1. Its matrices contain twos; instance 0 contains ones. This makes an
 incorrect first-instance binding easy to detect. These are synthetic values,

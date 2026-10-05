@@ -54,7 +54,18 @@ def publish_definition(definition: dict[str, Any], builder: GraphBuilder) -> Non
             node["parent_id"] = node_ids[node["parent_id"]]
         if "children" in node:
             node["children"] = [node_ids[c] for c in node["children"]]
-        builder.add_node(nodes.validate_python(node))
+        semantic_key = next(
+            (
+                p["source"]
+                for p in original.get("provenance", [])
+                if p.get("rule") == "Semantic source key in the reviewed packaged description"
+            ),
+            key,
+        )
+        builder.add_node(nodes.validate_python(node), semantic_key=semantic_key)
+        role = next((a["value"] for a in node["attributes"] if a["name"] == "semantic_role"), None)
+        if role in ("layer", "attention", "mlp") and node["kind"] == "group":
+            builder.templates.begin(node["id"], semantic_key, role, role)
     for original in definition["edges"]:
         edge = dict(original)
         edge["id"] = builder.record_id("edge", edge["id"])

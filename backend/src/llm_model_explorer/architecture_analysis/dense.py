@@ -867,7 +867,7 @@ class DenseGraph:
         )
         self.edge(output, logits)
         self.group("model", None, [])
-        b.add_repetition(
+        b.add_layer_repetition(
             r.ArchitectureRepetition(
                 id=b.record_id("repetition", "layers"),
                 parent_id=self.nid("model"),

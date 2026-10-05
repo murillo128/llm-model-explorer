@@ -911,7 +911,7 @@ def build(inputs: AnalysisInput, b: GraphBuilder) -> None:
         parameters=("lm_head.weight",),
     )
     g.node("logits", "vocabulary_logits", {"x": logits}, {}, kind="output")
-    b.add_repetition(
+    b.add_layer_repetition(
         r.ArchitectureRepetition(
             id=b.record_id("repetition", "decoder_layers"),
             parent_id=g.nid(PREFIX),

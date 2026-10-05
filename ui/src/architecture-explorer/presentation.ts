@@ -4,6 +4,7 @@ import { semanticRole } from './semantic-role';
 
 /** Labels are presentation aliases; inspection always receives the original record. */
 export function displayLabel(node: ProjectedNode, graph: Graph): string {
+  if (node.shared) return node.label;
   if (node.presentation === 'mlp') return 'MLP';
   if (node.instances) {
     if (node.presentation === 'range') return node.label;

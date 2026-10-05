@@ -364,7 +364,7 @@ layout worker and connection algorithms.
 A received template annotation offers **Explore structure** from its selected
 concrete component members and from families in the browser’s **Shared** list. This remains an optional isolated view on the same canvas.
 Ordinary overview, exhaustive access, isolation, routing and numerical inspection
-remain independent of template metadata. No frontend pattern matching establishes
+remain available without template metadata. No frontend pattern matching establishes
 equivalence; the API's validated exact role mappings are authoritative.
 
 Entry from a selected component retains its concrete instance and selected
@@ -391,6 +391,45 @@ navigation state, not graph/geometry copies. A graph replacement clears stale
 shared correspondence with an explanation. A shared-view preparation/layout
 failure offers recovery to ordinary exploration, which remains fully available.
 Use the existing renderer, cancellable layout worker and connection-hit behavior.
+
+## Indexed serial repetitions
+
+For a homogeneous serial repetition whose complete instances belong to one
+verified `layer` family, the first expansion retains its existing container and
+shows one neutral `Layer[i]`. That layer expands into the common operations.
+Explicit instance/window and exhaustive controls remain available. Expansion
+uses the ordinary shared controller, keyboard/double-click rules and component
+anchor; collapse preserves nested choices and valid selection.
+
+Eligibility verifies mapped inter-instance paths and every external dependency,
+not repetition order alone. Missing correspondence, heterogeneous/nonconsecutive
+members, bypasses, non-serial wiring or unrepresentable per-instance state/context
+retain the ordinary window. A singleton never has a return.
+
+Presentation relationships have a separate typed discriminator, never a source
+edge kind: entry uses the first instance's exact incoming path; return retains
+the N−1 distinct ordered successor paths and means `x[i+1] = out[i]`; exit uses
+the final instance's outgoing paths. Each invariant input has its own relationship
+with every represented consumer. Preserve exact edge IDs, endpoints, forwarding
+segments, template/port roles and instance indices for connection inspection.
+Entry/return apply at different indices; exit occurs only after the last layer.
+Aggregate evidence does not select a numeric instance.
+
+Outer aliases use the actual first/last indices. Inner ports and local formula
+symbols use `[i]`; shared inputs, constants, existing mathematical indices and
+tied parameters remain unchanged. Use a bounded symbol/role-aware display
+transformation; source formulas and parameter names remain concrete. Symbolic
+parameter rows belong only to the operations that consume them, have no numeric
+action, and require an explicit instance through the existing Shared selection
+workflow for exact tensor inspection. Switching instances or graphs preserves
+the existing inspection lifetime guards.
+
+Connect outer and inner ports individually. Reserve side and upper gutters for
+the return, attached to the real output/input handles, outside the entire inner
+card (including expanded children) and inside the repetition container. Preserve
+label clearance, boundary-row alignment, hover/focus and connection inspection.
+Do not add a source wrapper, loop-controller operation, shared-input box or
+executable/token-generation loop.
 
 ## Automatic layout and directional routing
 

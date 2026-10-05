@@ -44,12 +44,16 @@ def test_annotations_preserve_every_ordinary_record_and_exact_parameter(
         for instance in template.instances:
             group_key = semantic_key(nodes[instance.node_id])
             # The V-JEPA description intentionally owns siblings of its module prefix.
-            base = group_key.rsplit(".", 1)[0] if name.startswith("visual") else group_key
+            base = (
+                group_key.rsplit(".", 1)[0]
+                if name.startswith("visual") and template.component_role != "layer"
+                else group_key
+            )
             mapped = {m.role: m.parameter_id for m in instance.parameters}
             assert mapped
             for role, parameter_id in mapped.items():
                 assert parameters[parameter_id].name == base + "." + role
-            if not name.startswith("visual"):
+            if not name.startswith("visual") and template.component_role != "layer":
                 projection = next(
                     m for m in instance.nodes if m.role in {"q_proj", "gate_proj", "in_proj_qkv"}
                 )
@@ -122,8 +126,7 @@ def test_unverified_candidates_are_omitted_without_downgrading_coverage(change: 
         if semantic_key(node) != "model.layers.1.self_attn.q_proj":
             continue
         if change == "missing-role":
-            candidate = builder.templates.candidates[node.parent_id or ""]
-            candidate.nodes[:] = [m for m in candidate.nodes if m.node_id != node.id]
+            builder.templates.keys[node.id] = None
         elif change == "formula":
             builder._nodes[position] = node.model_copy(update={"formula": "W x"})
         else:
@@ -168,7 +171,7 @@ def test_singletons_remain_ordinary_components() -> None:
 def test_multiple_template_array_separator_budget_boundaries() -> None:
     _, inputs, registry = cases()[0]
     complete = build(inputs, registry).finish()
-    assert len(complete.templates or []) == 2
+    assert len(complete.templates or []) == 3
     full_size = serialized_size(complete.document())
     # Independent serialization counts the enclosing array's separators too.
     # At every boundary an ordinary graph must remain usable and within budget.
@@ -182,3 +185,29 @@ def test_multiple_template_array_separator_budget_boundaries() -> None:
         assert serialized_size(actual.document()) <= limit
         if limit >= full_size:
             assert actual.templates == complete.templates
+
+
+def test_whole_layer_closure_keeps_nested_families_and_exact_roles() -> None:
+    _, inputs, registry = cases()[0]
+    graph = build(inputs, registry).finish()
+    families = {t.component_role: t for t in graph.templates or []}
+    assert set(families) == {"layer", "attention", "mlp"}
+    layer = families["layer"].instances[1]
+    nodes = {n.id: n for n in graph.nodes}
+    parameters = {p.id: p for p in graph.parameters}
+    assert semantic_key(nodes[layer.node_id]) == "model.layers.1"
+    mapped = {m.role: m.node_id for m in layer.nodes}
+    assert mapped["self_attn"] == families["attention"].instances[1].node_id
+    assert mapped["mlp"] == families["mlp"].instances[1].node_id
+    assert {p.role for p in layer.ports if p.node_id == layer.node_id} == {
+        "component.x",
+        "component.cos",
+        "component.sin",
+        "component.mask",
+        "component.out",
+    }
+    roles = {m.role: parameters[m.parameter_id].name for m in layer.parameters}
+    assert roles["self_attn.q_proj.weight"] == "model.layers.1.self_attn.q_proj.weight"
+    assert roles["input_layernorm.weight"] == "model.layers.1.input_layernorm.weight"
+    assert "component.x~input_layernorm.x" in {e.role for e in layer.edges}
+    assert nodes[layer.node_id].parameter_ids == []
