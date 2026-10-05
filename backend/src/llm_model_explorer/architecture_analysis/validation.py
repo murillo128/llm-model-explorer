@@ -309,6 +309,11 @@ def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
             require(node.id in child_positions[node.parent_id], "Parent and child disagree.")
     terminals(nodes, "parent_id")
     aliases = terminals(params, "alias_of")
+    state_connections = {
+        (e.source.node_id, e.source.port_id, e.target.node_id, e.target.port_id)
+        for e in graph.edges
+        if e.kind == "state"
+    }
     for rep in graph.repetitions:
         require(rep.parent_id in child_positions, "Repetition parent must be a group.")
         unique(rep.instances, "node_id")
@@ -324,6 +329,31 @@ def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
             )
             positions.append(child_positions[rep.parent_id][instance.node_id])
         require(positions == sorted(positions), "Repetition disagrees with parent order.")
+        unique(rep.side_ports or [], "port_id")
+        roots = {i.node_id for i in rep.instances}
+        for side in rep.side_ports or []:
+            require([b.index for b in side.bindings] == indices, "Indexed side binding indices.")
+            endpoints = [(b.endpoint.node_id, b.endpoint.port_id) for b in side.bindings]
+            require(
+                len(set(endpoints)) == len(endpoints), "Indexed side bindings must be distinct."
+            )
+            for instance, binding in zip(rep.instances, side.bindings, strict=True):
+                side_port = ports[instance.node_id].get(side.port_id)
+                require(
+                    side_port is not None and side_port.direction == side.direction,
+                    "Indexed side port direction.",
+                )
+                ep = binding.endpoint
+                require(
+                    ep.node_id not in roots, "Indexed state cannot carry another layer activation."
+                )
+                local = (instance.node_id, side.port_id)
+                remote = (ep.node_id, ep.port_id)
+                connection = (*remote, *local) if side.direction == "input" else (*local, *remote)
+                require(
+                    connection in state_connections,
+                    "Indexed side binding disagrees with state edge.",
+                )
 
     for edge in graph.edges:
         for ep in (edge.source, edge.target):

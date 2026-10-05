@@ -187,7 +187,10 @@ CROSS_BOUNDARY_BACKEND = {
         "network:test_polish.py",
         "network:test_lora_reference.py",
     ),
-    "backend/tests/clm_fixtures.py": ("network:test_native_packages.py",),
+    "backend/tests/clm_fixtures.py": (
+        "network:test_native_packages.py",
+        "network:test_architecture.py",
+    ),
     "backend/tests/dense_fixtures.py": (
         "architecture",
         "network:test_polish.py",
@@ -209,12 +212,25 @@ CROSS_BOUNDARY_BACKEND = {
     "backend/tests/fixtures/qwen35-tiny.json": ("architecture",),
     "backend/tests/fixtures/vjepa2-reference.json": ("architecture",),
     "backend/tests/fixtures/vjepa2-tiny.json": ("architecture",),
-    "backend/tests/kev_fixtures.py": ("network:test_native_packages.py",),
+    "backend/tests/kev_fixtures.py": (
+        "network:test_native_packages.py",
+        "network:test_architecture.py",
+    ),
     "backend/tests/quantized_oracles.py": (
         "architecture",
         "network:test_polish.py",
         "network:test_lora_reference.py",
     ),
+    "backend/tests/test_clm_export.py": (
+        "network:test_native_packages.py",
+        "network:test_architecture.py",
+    ),
+    "backend/tests/test_kev_export.py": (
+        "network:test_native_packages.py",
+        "network:test_architecture.py",
+    ),
+    "backend/tests/test_deepseek_v2_architecture.py": ("architecture",),
+    "backend/tests/test_glm4_moe_lite_architecture.py": ("network:test_architecture.py",),
     "backend/tests/test_dense_architecture.py": ("architecture",),
     "backend/tests/test_kimi_linear_architecture.py": ("architecture",),
     "backend/tests/test_lmex.py": (
@@ -222,7 +238,10 @@ CROSS_BOUNDARY_BACKEND = {
         "network:test_polish.py",
         "network:test_lora_reference.py",
     ),
-    "backend/tests/test_lora_architecture.py": ("network:test_native_packages.py",),
+    "backend/tests/test_lora_architecture.py": (
+        "network:test_native_packages.py",
+        "network:test_architecture.py",
+    ),
     "backend/tests/test_models.py": (
         "architecture",
         "network:test_polish.py",

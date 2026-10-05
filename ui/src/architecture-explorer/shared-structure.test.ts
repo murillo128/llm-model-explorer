@@ -167,11 +167,10 @@ it('expands one neutral indexed layer with exact first/next/last provenance and 
   expect(projectGraph(graph, projectionOptions(view)).nodes.find((n) => n.id === inner.id)?.expanded).toBe(true);
 });
 
-it.each(['broken', 'bypass', 'variant', 'nonconsecutive', 'absent', 'singleton', 'context', 'mixed-kind'] as const)('keeps a truthful window for %s stacks', (change) => {
+it.each(['broken', 'bypass', 'nonconsecutive', 'absent', 'singleton', 'context', 'mixed-kind'] as const)('keeps a truthful window for %s stacks', (change) => {
   const graph = makeIndexedFixture(change === 'singleton' ? 1 : 3);
   if (change === 'broken') graph.edges = graph.edges.filter((e) => e.id !== 'next-1');
   if (change === 'bypass') graph.edges.push({ ...graph.edges.find((e) => e.id === 'next-0')!, id: 'bypass', target: { node_id: 'layer-2', port_id: 'x' } });
-  if (change === 'variant') graph.repetitions[0]!.instances[1]!.variant = 'different';
   if (change === 'nonconsecutive') graph.templates![0]!.instances.splice(1, 1);
   if (change === 'context') {
     graph.nodes.push({ ...graph.nodes.find((n) => n.id === 'mask')!, id: 'other-mask', kind: 'context' });
@@ -184,15 +183,17 @@ it.each(['broken', 'bypass', 'variant', 'nonconsecutive', 'absent', 'singleton',
   const view = new GraphViews().get('fixture', graph); view.update({ expanded: ['model'] });
   const outer = projectGraph(graph, projectionOptions(view)).nodes.find((n) => n.presentation === 'repetition')!;
   toggleComponent(view, graph, outer, 2);
-  expect(view.repetitions.layers).toEqual({ start: 0, count: 2 });
+  if (change !== 'nonconsecutive') expect(view.repetitions.layers).toEqual({ start: 0, count: 2 });
   expect(projectGraph(graph, projectionOptions(view)).edges.every((e) => !e.relationship)).toBe(true);
 });
 
 
-it.each([false, true])('expands a valid unused invariant interface with showUnused=%s', (showUnused) => {
+it.each([{ showUnused: false, bound: true }, { showUnused: true, bound: true },
+  { showUnused: false, bound: false }, { showUnused: true, bound: false }])('expands an unused optional interface (%j)', ({ showUnused, bound }) => {
   const graph = makeIndexedFixture();
   // Keep the declared layer input and external signal, but no operation consumes it.
   graph.edges = graph.edges.filter((e) => !['layer-0.mask', 'layer-1.mask', 'layer-2.mask'].includes(e.id));
+  if (!bound) graph.edges = graph.edges.filter((e) => !['mask-0', 'mask-1', 'mask-2'].includes(e.id));
   for (const node of graph.nodes) if (node.kind === 'operation') {
     node.ports = node.ports.filter((p) => p.id !== 'mask');
     node.formula = 'out = transform(x, cos, sin; weight)';
@@ -207,16 +208,14 @@ it.each([false, true])('expands a valid unused invariant interface with showUnus
   const outer = projectGraph(graph, projectionOptions(view)).nodes.find((n) => n.presentation === 'repetition')!;
   toggleComponent(view, graph, outer, 2);
   const projection = projectGraph(graph, projectionOptions(view));
-  if (showUnused) {
-    expect(projection.nodes.find((n) => n.id === outer.id)?.expanded).toBe(true);
-    expect(projection.nodes.filter((n) => n.shared)).toHaveLength(1);
+  expect(projection.nodes.find((n) => n.id === outer.id)?.expanded).toBe(true);
+  expect(projection.nodes.filter((n) => n.shared)).toHaveLength(1);
+  if (showUnused && bound) {
     expect(projection.edges.find((e) => e.relationship?.kind === 'invariant' && e.relationship.portRole === 'root.mask')!
       .paths.map((p) => p.map((e) => e.id))).toEqual([['mask-0'], ['mask-1'], ['mask-2']]);
-  } else {
-    expect(view.repetitions.layers).toEqual({ start: 0, count: 2 });
-    expect(projection.nodes.map((n) => n.id)).toEqual(expect.arrayContaining(['layer-0', 'layer-1']));
-    expect(projection.nodes.some((n) => n.shared)).toBe(false);
-    expect(projection.filteredEdgeIds).toEqual(expect.arrayContaining(['mask-0', 'mask-1', 'mask-2']));
+  } else if (!showUnused) {
+    if (bound) expect(projection.filteredEdgeIds).toEqual(expect.arrayContaining(['mask-0', 'mask-1', 'mask-2']));
+    expect(projection.nodes.find((n) => n.shared)?.ports.some((p) => p.id === 'mask')).toBe(false);
   }
 });
 
@@ -254,4 +253,102 @@ it.each(['repetition', 'generation'] as const)('routes the %s return around its 
     const port = layout.ports.find((p) => p.nodeId === endpoint.node_id && p.portId === endpoint.port_id)!;
     expect(point).toEqual({ x: port.absoluteX, y: port.absoluteY });
   }
+});
+
+
+it('decomposes a mixed stack into maximal ordered ranges and retains internal state', () => {
+  const graph = makeIndexedFixture(6);
+  graph.repetitions[0]!.instances.forEach((i, at) => { i.variant = at === 2 ? 'full' : 'linear'; });
+  // Internal state is part of the exact mapped layer body; it never becomes an invariant input.
+  for (const instance of graph.templates![0]!.instances) {
+    const operation = graph.nodes.find((n) => n.id === instance.nodes.find((m) => m.role === 'op')!.node_id)!;
+    operation.kind = 'state';
+  }
+  const view = new GraphViews().get('hybrid', graph); view.update({ expanded: ['model'] });
+  const outer = projectGraph(graph, projectionOptions(view)).nodes.find((n) => n.presentation === 'repetition')!;
+  toggleComponent(view, graph, outer, 2);
+  let projection = projectGraph(graph, projectionOptions(view));
+  const ranges = projection.nodes.filter((n) => n.parentId === outer.id);
+  expect(ranges.map((n) => n.instances?.map((i) => i.index) ?? n.sourceIds)).toEqual([[0, 1], ['layer-2'], [3, 4, 5]]);
+  for (const range of ranges.filter((n) => n.presentation === 'repetition')) toggleComponent(view, graph, range, 2);
+  projection = projectGraph(graph, projectionOptions(view));
+  expect(projection.nodes.filter((n) => n.shared)).toHaveLength(2);
+  const returns = projection.edges.filter((e) => e.relationship?.kind === 'return');
+  expect(returns.map((e) => e.paths.flat().map((p) => p.id))).toEqual([['next-0'], ['next-3', 'next-4']]);
+  expect(returns.map((e) => e.relationship?.owner === 'repetition' && e.relationship.instances.map((i) => i.index)))
+    .toEqual([[0, 1], [3, 4, 5]]);
+});
+
+
+it.each([false, true])('proves indexed side outputs independently of activation (swapped=%s)', (swapped) => {
+  const graph = makeIndexedFixture(4);
+  graph.repetitions[0]!.instances[0]!.variant = 'dense';
+  for (const i of graph.repetitions[0]!.instances.slice(1)) i.variant = 'moe';
+  const shape = [{ kind: 'constant' as const, value: 4 }];
+  const provenance = graph.nodes[0]!.provenance;
+  const bankShape = [{ kind: 'constant' as const, value: 4 }, ...shape];
+  graph.nodes.push({ id: 'prior-bank', parent_id: 'model', kind: 'state', operation: 'prior_state_bank',
+    label: 'Prior state bank', ports: [{ id: 'out', label: 'out', direction: 'output', shape: bankShape }],
+    attributes: [], parameter_ids: [], references: [], provenance });
+  const bank = { ...graph.nodes.find((n) => n.id === 'result')!, id: 'next-bank',
+    ports: [0, 1, 2, 3].flatMap((i) => ['key', 'value'].map((role) => ({
+      id: `${role}-${i}`, label: `${role}-${i}`, direction: 'input' as const, shape }))) };
+  graph.nodes.push(bank);
+  const model = graph.nodes[0]!; if (model.kind === 'group') model.children.push(bank.id, 'prior-bank');
+  graph.repetitions[0]!.side_ports = ['key', 'value'].map((role) => ({
+    port_id: `next_${role}`, direction: 'output', bindings: [0, 1, 2, 3].map((index) => ({
+      index, endpoint: { node_id: bank.id, port_id: `${role}-${index}` } })) }));
+  for (const instance of graph.templates![0]!.instances) {
+    const i = Number(instance.node_id.split('-')[1]);
+    const root = graph.nodes.find((n) => n.id === instance.node_id)!;
+    const op = graph.nodes.find((n) => n.id === `${root.id}.op`)!;
+    // Exact forwarding gives the formerly interleaved selector its truthful
+    // layer ownership. Its source array position is deliberately before the root.
+    root.attributes.push({ name: 'layer_index', value: i, provenance });
+    root.ports.push({ id: 'bank', label: 'bank', direction: 'input', shape: bankShape });
+    op.ports.push({ id: 'prior', label: 'prior', direction: 'input', shape });
+    const selector = { id: `select-${i}`, parent_id: root.id, kind: 'operation' as const,
+      operation: 'select_layer_state', label: 'Select layer state', formula: 'out = bank[owner.layer_index]',
+      ports: [{ id: 'bank', label: 'bank', direction: 'input' as const, shape: bankShape },
+        { id: 'out', label: 'out', direction: 'output' as const, shape }],
+      attributes: [], parameter_ids: [], references: [], provenance };
+    graph.nodes.splice(graph.nodes.indexOf(root), 0, selector);
+    if (root.kind === 'group') root.children.unshift(selector.id);
+    instance.nodes.push({ role: 'selector', node_id: selector.id });
+    instance.ports.push({ role: 'root.bank', node_id: root.id, port_id: 'bank' },
+      { role: 'op.prior', node_id: op.id, port_id: 'prior' },
+      ...selector.ports.map((p) => ({ role: `selector.${p.id}`, node_id: selector.id, port_id: p.id })));
+    graph.edges.push({ id: `bank-${i}`, source: { node_id: 'prior-bank', port_id: 'out' },
+      target: { node_id: root.id, port_id: 'bank' }, kind: 'state', provenance });
+    for (const [role, source, sourcePort, target, targetPort] of [
+      ['bank-forward', root.id, 'bank', selector.id, 'bank'], ['selected-state', selector.id, 'out', op.id, 'prior'],
+    ]) {
+      graph.edges.push({ id: `${role}-${i}`, source: { node_id: source!, port_id: sourcePort! },
+        target: { node_id: target!, port_id: targetPort! }, kind: 'state', provenance });
+      instance.edges.push({ role: role!, edge_id: `${role}-${i}` });
+    }
+    op.kind = 'state';
+    for (const role of ['key', 'value']) {
+      const port = `next_${role}`;
+      for (const [node, nodeRole] of [[root, 'root'], [op, 'op']] as const) {
+        node.ports.push({ id: port, label: port, direction: 'output', shape });
+        instance.ports.push({ role: `${nodeRole}.${port}`, node_id: node.id, port_id: port });
+      }
+      const id = `${root.id}.${port}`;
+      graph.edges.push({ id, source: { node_id: op.id, port_id: port }, target: { node_id: root.id, port_id: port }, kind: 'state', provenance });
+      instance.edges.push({ role: port, edge_id: id });
+      graph.edges.push({ id: `${role}-bank-${i}`, source: { node_id: root.id, port_id: port },
+        target: { node_id: bank.id, port_id: `${swapped && i === 2 ? role === 'key' ? 'value' : 'key' : role}-${i}` }, kind: 'state', provenance });
+    }
+  }
+  const projection = projectGraph(graph, { expanded: ['model', 'repeat:layers:0:3', 'repeat:layers:1:3'] });
+  const returns = projection.edges.filter((e) => e.relationship?.kind === 'return');
+  if (swapped) { expect(returns).toHaveLength(0); return; }
+  expect(returns.map((e) => e.originalEdgeIds)).toEqual([['next-1', 'next-2']]);
+  expect(projection.edges.filter((e) => e.relationship?.kind === 'side-output').map((e) => e.originalEdgeIds))
+    .toEqual([['key-bank-1', 'key-bank-2', 'key-bank-3'], ['value-bank-1', 'value-bank-2', 'value-bank-3']]);
+  expect(projection.nodes.find((n) => n.shared)?.record?.formula)
+    .toBe('out[i], next_key[i], next_value[i] = layer[i](x[i], cos, sin, mask, bank)');
+  expect(projection.nodes.some((n) => n.sourceIds.some((id) => id.startsWith('select-')))).toBe(false);
+  expect(projection.nodes.find((n) => n.shared)?.record?.attributes.find((a) => a.name === 'layer_index')?.value).toBe('i');
 });

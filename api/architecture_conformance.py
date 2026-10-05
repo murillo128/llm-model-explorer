@@ -263,6 +263,20 @@ def validate_architecture(value, context=None, *, validate_storage=True):
             positions.append(parent['children'].index(n['id']))
         require(positions == sorted(positions), 'repetition parent order')
 
+        side_ports = unique(r.get('side_ports', []), 'port_id')
+        for side in side_ports.values():
+            require([b['index'] for b in side['bindings']] == indices, 'side index correspondence')
+            pairs = [(b['endpoint']['node_id'], b['endpoint']['port_id']) for b in side['bindings']]
+            require(len(set(pairs)) == len(pairs), 'distinct indexed state')
+            for instance, endpoint in zip(r['instances'], pairs):
+                own = (instance['node_id'], side['port_id'])
+                require(own[1] in ports.get(own[0], {}) and ports[own[0]][own[1]]['direction'] == side['direction'], 'side direction')
+                expected = (endpoint, own) if side['direction'] == 'input' else (own, endpoint)
+                require(any(e['kind'] == 'state' and
+                    ((e['source']['node_id'], e['source']['port_id']),
+                     (e['target']['node_id'], e['target']['port_id'])) == expected
+                    for e in graph['edges']), 'side state binding')
+
     for e in graph['edges']:
         endpoints = []
         for key in ('source', 'target'):
@@ -419,10 +433,27 @@ def validate_templates(graph):
             require(set(wr) == {pid for ident in members for pid in nodes[ident]['parameter_ids']} |
                     {ref['parameter_id'] for ident in members for ref in nodes[ident]['references']
                      if ref['kind'] == 'parameter'}, 'template parameter coverage')
+            local_symbols = {v['name']: v['role'] for v in instance.get('symbols', [])}
+            require(len(local_symbols) == len(instance.get('symbols', [])), 'unique local symbols')
+            unique(instance.get('symbols', []), 'role')
+            require(set(local_symbols) <= {v['name'] for v in graph['symbols']}, 'declared local symbols')
+            def symbolic(name):
+                return ('instance', local_symbols[name]) if name in local_symbols else ('global', name)
             def known_shape(shape):
                 require(shape is not None and all(d['kind'] != 'unknown' for d in shape),
                         'unknown template shape')
-                return shape
+                result = []
+                for dimension in shape:
+                    if dimension['kind'] == 'symbol':
+                        result.append(('symbol', symbolic(dimension['name'])))
+                    elif dimension['kind'] == 'expression':
+                        import re
+                        tokens = re.split(r'([A-Za-z_]\w*)', dimension['text'])
+                        result.append(('expression', [symbolic(t) if re.fullmatch(r'[A-Za-z_]\w*', t) else t for t in tokens],
+                            [symbolic(t) for t in dimension['symbols']]))
+                    else:
+                        result.append(dimension)
+                return result
             normal = {'root': nr[root], 'nodes': {}, 'ports': {}, 'edges': {}, 'parameters': {}}
             for ident in members:
                 n = nodes[ident]
@@ -437,7 +468,9 @@ def validate_templates(graph):
                     nr.get(n.get('parent_id')), [nr[c] for c in n.get('children', [])],
                     [pr[(ident, p['id'])] for p in n['ports']], [wr[p] for p in n['parameter_ids']],
                     [wr[r['parameter_id']] for r in n['references'] if r['kind'] == 'parameter'],
-                    {name: a['value'] for name, a in attributes.items()}]
+                    {name: ('instance.index',) if ident == root and name in ('sequence_index', 'layer_index') and
+                     any(i['node_id'] == root and i['index'] == a['value'] for rep in graph['repetitions'] for i in rep['instances'])
+                     else a['value'] for name, a in attributes.items()}]
                 for p in n['ports']:
                     normal['ports'][pr[(ident, p['id'])]] = [nr[ident], p['id'], p['direction'], known_shape(p['shape'])]
             for eid, role in er.items():
@@ -522,6 +555,37 @@ def template_cases():
         set_('templates', [*graph['templates'], layer_template]),
         *[set_(f'nodes/{next(at for at,n in enumerate(nodes) if n["id"] == f"layer{i}")}/attributes',
                [attr('semantic_role', 'layer')]) for i in (0, 2)]], True)
+    identity_edits = [set_('templates', [*graph['templates'], layer_template]),
+        *[set_(f'nodes/{next(at for at,n in enumerate(nodes) if n["id"] == f"layer{i}")}/attributes',
+               [attr('semantic_role', 'layer'), attr('layer_index', i)]) for i in (0, 2)]]
+    case('typed-layer-indices', identity_edits, True)
+    index2 = next(at for at,n in enumerate(nodes) if n['id'] == 'layer2')
+    case('wrong-layer-index', [*identity_edits, set_(f'nodes/{index2}/attributes/1/value', 1)])
+    symbolic_edits = [set_('symbols', [dict(name=f'R{i}', meaning='Reviewed local width') for i in (0, 2)]),
+        *[set_(f'parameters/{at}/logical_shape', [dict(kind='symbol',name=f'R{i}'), dims[1]]) for at,i in ((0,0),(2,2))],
+        *[set_(f'templates/0/instances/{at}/symbols', [dict(role='width',name=f'R{i}')]) for at,i in enumerate((0,2))]]
+    case('explicit-local-symbols', symbolic_edits, True)
+    case('wrong-local-symbol-role', [*symbolic_edits, set_('templates/0/instances/1/symbols/0/role','different')])
+    case('unknown-local-symbol', [*symbolic_edits, set_('templates/0/instances/1/symbols/0/name','missing')])
+    # Real external state slots are bound to typed layer indices; same-shaped K/V
+    # cannot be interchanged merely because each layer still has a state edge.
+    side_nodes, side_edges = deepcopy(nodes), deepcopy(edges)
+    side_nodes[0]['children'].append('bank')
+    side_nodes.append(node('bank', 'state', 'root', operation='collect_layer_state',
+        ports=ports(*[(f'{role}{i}', 'input') for i in (0,2) for role in ('key','value')])))
+    side_ports = []
+    for role in ('key', 'value'):
+        side_ports.append(dict(port_id=role, direction='output', bindings=[
+            dict(index=i, endpoint=dict(node_id='bank', port_id=f'{role}{i}')) for i in (0,2)]))
+        for i in (0,2):
+            layer = next(n for n in side_nodes if n['id'] == f'layer{i}')
+            layer['ports'].extend(ports((role, 'output')))
+            side_edges.append(dict(id=f'state-{role}-{i}', source=dict(node_id=f'layer{i}',port_id=role),
+                target=dict(node_id='bank',port_id=f'{role}{i}'),kind='state',provenance=provenance))
+    state_edits = [set_('nodes', side_nodes), set_('edges', side_edges), set_('repetitions/0/side_ports', side_ports)]
+    case('indexed-side-state', state_edits, True)
+    case('swapped-side-state', [*state_edits, set_(f'edges/{len(side_edges)-1}/target/port_id','key2')])
+    case('wrong-side-index', [*state_edits, set_('repetitions/0/side_ports/0/bindings/1/index',1)])
     case('verified-nonconsecutive',valid=True)
     case('absent', [dict(path=['graph','templates'],delete=True)],True)
     case('empty', [set_('templates',[])],True)

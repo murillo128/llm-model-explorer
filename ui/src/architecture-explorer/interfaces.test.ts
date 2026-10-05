@@ -206,6 +206,11 @@ it('projects generation phases without a visible state or a continuous cross-pha
     if (expanded.includes('model')) expect(projection.nodes.find((n) => n.id === 'neural')!.record!.parameter_ids).toEqual(['weight']);
   }
   expect(semanticSnapshot(graph)).toEqual(before);
+  const nativeContext: typeof graph = { ...graph, nodes: [...graph.nodes,
+    { id: 'visual', kind: 'context', label: 'Visual context', ports: [], parameter_ids: [], references: [], provenance: [], attributes: [] }] };
+  const native = projectGraph(nativeContext, { expanded: ['generation', 'model'] });
+  expect(native.nodes.some((n) => n.presentation === 'model')).toBe(false);
+  expect(native.nodes.find((n) => n.id === 'visual')).toBeTruthy();
   const authoredGraph: typeof graph = { ...graph, scope: 'model_defined', nodes: [...graph.nodes,
     { id: 'origin', kind: 'context', label: 'Model-supplied definition', ports: [], parameter_ids: [], references: [], provenance: [],
       attributes: [{ name: 'definition_origin', value: 'model', provenance: [] }] }] };

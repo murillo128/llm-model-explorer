@@ -64,8 +64,8 @@ export function makeVjepaBrowserFixture(): Graph {
 }
 
 /** Three independently specified serial layers with three distinct shared signals. */
-export function makeIndexedFixture(count: 1 | 3 = 3): Graph {
-  const indices = count === 1 ? [0] : [0, 1, 2];
+export function makeIndexedFixture(count: number = 3): Graph {
+  const indices = Array.from({ length: count }, (_, i) => i);
   const shape = [{ kind: 'constant' as const, value: 4 }];
   const ports = (names: string[]) => names.map((id) => ({ id, label: id, direction: id === 'out' ? 'output' as const : 'input' as const, shape }));
   const provenance = [{ kind: 'description' as const, source: 'indexed-fixture', revision: '1' }];
@@ -85,7 +85,7 @@ export function makeIndexedFixture(count: 1 | 3 = 3): Graph {
     for (const port of ['cos', 'sin', 'mask']) edge(`${port}-${index}`, port, 'out', id, port);
   }
   edge('entry', 'input', 'out', 'layer-0', 'x');
-  if (count === 3) { edge('next-0', 'layer-0', 'out', 'layer-1', 'x'); edge('next-1', 'layer-1', 'out', 'layer-2', 'x'); }
+  for (let i = 0; i < count - 1; i++) edge(`next-${i}`, `layer-${i}`, 'out', `layer-${i + 1}`, 'x');
   edge('exit', `layer-${count - 1}`, 'out', 'result', 'x');
   graph.templates = count === 1 ? [] : [{ id: 'whole-layer', label: 'Decoder Layer', component_role: 'layer', revision: '1', provenance,
     instances: indices.map((index) => ({ node_id: `layer-${index}`,

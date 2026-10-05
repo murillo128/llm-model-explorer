@@ -14,11 +14,12 @@ from ..model_files import ModelError
 from ..quantized_inventory import encoding, nvfp4_storage_names
 from . import records as r
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
+from .generation import GenerationInterface
 from .semantic import operation_role, role_attribute, source_key
 from .validation import require
 
 PRODUCER = Producer(
-    "transformers-qwen35-nvfp4", "2", "transformers/2cba19507be799b7bef247ca6c1c4708bf881b5b"
+    "transformers-qwen35-nvfp4", "3", "transformers/2cba19507be799b7bef247ca6c1c4708bf881b5b"
 )
 PREFIX = "model.language_model"
 # Require explicit structural dimensions; do not transplant another size's defaults.
@@ -266,8 +267,9 @@ class Value:
 class Graph:
     """Description-local notation, emitting all records through the bounded core."""
 
-    def __init__(self, b: GraphBuilder, c: dict[str, Any]):
+    def __init__(self, b: GraphBuilder, c: dict[str, Any], *, no_cache: bool = False):
         self.b, self.c = b, c
+        self.no_cache = no_cache
         self.children: dict[str, list[str]] = {}
         self.parameters: dict[str, str] = {}
         numeric_by_name = {tensor.name: tensor for tensor in b.inputs.bindings.numeric.values()}
@@ -527,6 +529,7 @@ class Graph:
 
 def full_attention(g: Graph, p: str, x: Value, positions: Value, mask: Value) -> Value:
     c = g.c
+    key_length = "T" if g.no_cache else "K"
     h = c["hidden_size"]
     nh = c["num_attention_heads"]
     nk = c["num_key_value_heads"]
@@ -590,29 +593,36 @@ def full_attention(g: Graph, p: str, x: Value, positions: Value, mask: Value) ->
             shape("B", heads_n, "T", d),
             parent=p,
         )
-    # Symbolic prior/next KV dependencies, not a captured cache or executed timeline.
-    state = g.node(
-        p + ".prior_kv",
-        "prior_kv",
-        {},
-        {"key_state": shape("B", nk, "P", d), "value_state": shape("B", nk, "P", d)},
-        kind="state",
-        parent=p,
-    )
-    joined = g.node(
-        p + ".kv_concat",
-        "concatenate_prior_kv",
-        {"key": rotary["key"], "value": value, **{"prior_" + k: v for k, v in state.items()}},
-        {"key_state": shape("B", nk, "K", d), "value_state": shape("B", nk, "K", d)},
-        parent=p,
-        attributes={"key_length": "K = P + T; P may be zero"},
-    )
-    g.node(p + ".next_kv", "next_kv", joined, {}, kind="state", parent=p)
+    if g.no_cache:
+        # Qwen3_5Attention skips cache.update when past_key_values is None.
+        joined = {"key_state": rotary["key"], "value_state": value}
+    else:
+        # Symbolic prior/next KV dependencies, not a captured cache or executed timeline.
+        state = g.node(
+            p + ".prior_kv",
+            "prior_kv",
+            {},
+            {"key_state": shape("B", nk, "P", d), "value_state": shape("B", nk, "P", d)},
+            kind="state",
+            parent=p,
+        )
+        joined = g.node(
+            p + ".kv_concat",
+            "concatenate_prior_kv",
+            {"key": rotary["key"], "value": value, **{"prior_" + k: v for k, v in state.items()}},
+            {
+                "key_state": shape("B", nk, key_length, d),
+                "value_state": shape("B", nk, key_length, d),
+            },
+            parent=p,
+            attributes={"key_length": "K = P + T; P may be zero"},
+        )
+        g.node(p + ".next_kv", "next_kv", joined, {}, kind="state", parent=p)
     k = g.op(
         p + ".repeat_key",
         "repeat_kv_heads",
         {"x": joined["key_state"]},
-        shape("B", nh, "K", d),
+        shape("B", nh, key_length, d),
         parent=p,
         attributes={"groups": nh // nk},
     )
@@ -620,7 +630,7 @@ def full_attention(g: Graph, p: str, x: Value, positions: Value, mask: Value) ->
         p + ".repeat_value",
         "repeat_kv_heads",
         {"x": joined["value_state"]},
-        shape("B", nh, "K", d),
+        shape("B", nh, key_length, d),
         parent=p,
         attributes={"groups": nh // nk},
     )
@@ -628,14 +638,14 @@ def full_attention(g: Graph, p: str, x: Value, positions: Value, mask: Value) ->
         p + ".key_matrix_transpose",
         "transpose_last_axes",
         {"x": k},
-        shape("B", nh, d, "K"),
+        shape("B", nh, d, key_length),
         parent=p,
     )
     scores = g.op(
         p + ".scores",
         "scaled_query_key_product",
         {"query": rotary["query"], "key": kt},
-        shape("B", nh, "T", "K"),
+        shape("B", nh, "T", key_length),
         parent=p,
         formula="Q @ transpose(K) / sqrt(head_dim)",
     )
@@ -688,33 +698,51 @@ def linear_attention(g: Graph, p: str, x: Value, mask: Value) -> Value:
     a = g.linear(p + ".in_proj_a", x, nv, p)
     b = g.linear(p + ".in_proj_b", x, nv, p)
     trans = g.op(p + ".conv_transpose", "transpose", {"x": qkv}, shape("B", width, "T"), parent=p)
-    prior = g.op(
-        p + ".prior_conv",
-        "prior_convolution_state",
-        {},
-        shape("B", width, c["linear_conv_kernel_dim"]),
-        kind="state",
-        parent=p,
-    )
-    conv = g.node(
-        p + ".conv1d",
-        "causal_depthwise_convolution",
-        {"x": trans, "prior_state": prior},
-        {"out": trans.shape, "next_state": prior.shape},
-        parent=p,
-        parameters=(p + ".conv1d.weight",),
-        attributes={"kernel_size": c["linear_conv_kernel_dim"], "groups": width, "bias": False},
-        formula="Causal local mixing of projected QKV; retain newest kernel-width inputs as "
-        "symbolic next state.",
-    )
-    g.node(
-        p + ".next_conv",
-        "next_convolution_state",
-        {"state": conv["next_state"]},
-        {},
-        kind="state",
-        parent=p,
-    )
+    if g.no_cache:
+        # Full-sequence causal convolution uses zero left padding, not a prior cache.
+        conv = g.node(
+            p + ".conv1d",
+            "causal_depthwise_convolution",
+            {"x": trans},
+            {"out": trans.shape},
+            parent=p,
+            parameters=(p + ".conv1d.weight",),
+            attributes={
+                "kernel_size": c["linear_conv_kernel_dim"],
+                "groups": width,
+                "bias": False,
+                "left_padding": c["linear_conv_kernel_dim"] - 1,
+            },
+            formula="out = causal_conv1d(x, weight)",
+        )
+    else:
+        prior = g.op(
+            p + ".prior_conv",
+            "prior_convolution_state",
+            {},
+            shape("B", width, c["linear_conv_kernel_dim"]),
+            kind="state",
+            parent=p,
+        )
+        conv = g.node(
+            p + ".conv1d",
+            "causal_depthwise_convolution",
+            {"x": trans, "prior_state": prior},
+            {"out": trans.shape, "next_state": prior.shape},
+            parent=p,
+            parameters=(p + ".conv1d.weight",),
+            attributes={"kernel_size": c["linear_conv_kernel_dim"], "groups": width, "bias": False},
+            formula="Causal local mixing of projected QKV; retain newest kernel-width inputs as "
+            "symbolic next state.",
+        )
+        g.node(
+            p + ".next_conv",
+            "next_convolution_state",
+            {"state": conv["next_state"]},
+            {},
+            kind="state",
+            parent=p,
+        )
     activated = g.op(p + ".conv_silu", "silu", {"x": conv["out"]}, trans.shape, parent=p)
     mixed = g.op(
         p + ".conv_to_sequence", "transpose", {"x": activated}, shape("B", "T", width), parent=p
@@ -770,9 +798,10 @@ def linear_attention(g: Graph, p: str, x: Value, mask: Value) -> Value:
     )
     prior = g.op(
         p + ".prior_recurrent",
-        "prior_delta_state",
+        "initial_delta_state" if g.no_cache else "prior_delta_state",
         {},
         shape("B", nv, dk, dv),
+        attributes={"initialization": "zeros_per_call"} if g.no_cache else {},
         kind="state",
         parent=p,
     )
@@ -780,19 +809,20 @@ def linear_attention(g: Graph, p: str, x: Value, mask: Value) -> Value:
         p + ".delta_rule",
         "gated_delta_rule",
         dict(qk, value=branches["value"], beta=beta, log_decay=decay, prior_state=prior),
-        {"out": shape("B", "T", nv, dv), "next_state": prior.shape},
+        {"out": shape("B", "T", nv, dv), **({} if g.no_cache else {"next_state": prior.shape})},
         parent=p,
         formula="D = exp(g_t) * S_prev; delta = beta_t * (v_t - k_t^T D); S_next = D + k_t "
         "delta^T; y_t = q_t^T S_next. Symbolic algorithm, not an executed recurrence.",
     )
-    g.node(
-        p + ".next_recurrent",
-        "next_delta_state",
-        {"state": update["next_state"]},
-        {},
-        kind="state",
-        parent=p,
-    )
+    if not g.no_cache:
+        g.node(
+            p + ".next_recurrent",
+            "next_delta_state",
+            {"state": update["next_state"]},
+            {},
+            kind="state",
+            parent=p,
+        )
     norm = g.norm(p + ".norm", update["out"], p, centered=False)
     z = g.op(p + ".z_heads", "reshape", {"x": z}, norm.shape, parent=p)
     gate = g.op(p + ".z_silu", "silu", {"x": z}, z.shape, parent=p)
@@ -805,7 +835,7 @@ def linear_attention(g: Graph, p: str, x: Value, mask: Value) -> Value:
     )
 
 
-def build(inputs: AnalysisInput, b: GraphBuilder) -> None:
+def build_single_pass(inputs: AnalysisInput, b: GraphBuilder, *, no_cache: bool = False) -> None:
     c = configuration(inputs)
     require(c is not None, "Unsupported Qwen3.5 configuration.")
     assert c is not None
@@ -816,11 +846,13 @@ def build(inputs: AnalysisInput, b: GraphBuilder) -> None:
         ("K", "Total key sequence P + T"),
     ]:
         b.add_symbol(symbol, meaning)
-    g = Graph(b, c)
+    g = Graph(b, c, no_cache=no_cache)
     h = c["hidden_size"]
     tokens = g.op("token_ids", "symbolic_token_ids", {}, shape("B", "T"), kind="input")
     positions = g.op("positions", "symbolic_thw_positions", {}, shape(3, "B", "T"), kind="input")
-    mask = g.op("mask", "symbolic_padding_mask", {}, shape("B", "K"), kind="input")
+    mask = g.op(
+        "mask", "symbolic_padding_mask", {}, shape("B", "T" if no_cache else "K"), kind="input"
+    )
     # Linear path receives a current-sequence padding mask, separate from KV mask.
     current_mask = g.op(
         "current_mask", "current_sequence_padding_mask", {}, shape("B", "T"), kind="input"
@@ -902,14 +934,18 @@ def build(inputs: AnalysisInput, b: GraphBuilder) -> None:
             r.ArchitectureRepetitionInstance(node_id=g.nid(p), index=i, variant=variant)
         )
     final = g.norm(PREFIX + ".norm", x, PREFIX)
-    x = g.end(PREFIX, root_inputs, final)
+    if not no_cache:
+        final = g.end(PREFIX, root_inputs, final)
     logits = g.op(
         "lm_head",
         "linear",
-        {"x": x},
+        {"x": final},
         shape("B", "T", c["vocab_size"]),
+        parent=PREFIX if no_cache else None,
         parameters=("lm_head.weight",),
     )
+    if no_cache:
+        logits = g.end(PREFIX, root_inputs, logits, role="model")
     g.node("logits", "vocabulary_logits", {"x": logits}, {}, kind="output")
     b.add_layer_repetition(
         r.ArchitectureRepetition(
@@ -918,6 +954,19 @@ def build(inputs: AnalysisInput, b: GraphBuilder) -> None:
             label="Configured hybrid decoder layers",
             instances=instances,
         )
+    )
+
+
+def build(inputs: AnalysisInput, b: GraphBuilder) -> None:
+    build_single_pass(inputs, b, no_cache=True)
+    b.generation = GenerationInterface(
+        model=PREFIX,
+        tokens="token_ids",
+        positions="positions",
+        mask="mask",
+        logits="logits",
+        current_mask="current_mask",
+        convention="qwen35_text_full_sequence",
     )
 
 

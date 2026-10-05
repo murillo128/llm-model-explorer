@@ -75,3 +75,14 @@ acceptance. The integrated-reference issue still owns local model admission,
 content fingerprint, complete physical inventory, runtime/cache/browser
 acceptance and associated environment measurements. No inference correctness,
 numerical equivalence or universal DeepSeek-family coverage is claimed.
+
+## Full-sequence generation invocation (#296)
+
+At the already pinned `modeling_deepseek.py` revision, `DeepseekV2Model.forward`
+(1485–1518) uses zero prior length when `use_cache=False, past_key_values=None`;
+positions are 0..S-1 and eager additive masking has [B,1,S,S]. Attention's cache
+update is conditional on a non-null cache. The static invocation specializes away
+cache selection/concatenation/return bookkeeping and forwards the exact current
+key/value producers to attention. It creates no fictitious empty bank. Neural
+MLA, RoPE, router and expert computations and parameter bindings remain. The
+retained low-level description remains the source of the cached component detail.

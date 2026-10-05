@@ -13,7 +13,7 @@ from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder,
 from .kev_config import SOURCE_REVISION, backbone_inputs, configuration
 from .packaged import publish_definition
 from .qwen35 import PRODUCER as QWEN_PRODUCER
-from .qwen35 import build as build_qwen
+from .qwen35 import build_single_pass as build_qwen
 from .qwen35 import configuration as qwen_configuration
 from .validation import require
 
@@ -366,6 +366,7 @@ def architecture(inputs: AnalysisInput, cfg: dict[str, Any]) -> dict[str, Any]:
     )
     d.edge("pointer", "probabilities")
     # Turn each adapted operation into a navigable group with exact additive math.
+    parameter_keys: dict[str, str] = {}
     for module, pair in factors.items():
         n = next(
             n
@@ -397,8 +398,16 @@ def architecture(inputs: AnalysisInput, cfg: dict[str, Any]) -> dict[str, Any]:
         n["references"] = []
         n.pop("operation", None)
         n.pop("formula", None)
+        base["provenance"] = [
+            {**p, "source": key + ".base"}
+            if p.get("rule") == "Semantic source key in the reviewed packaged description"
+            else p
+            for p in base.get("provenance", [])
+        ]
         d.nodes.append(base)
         a, bb = ("kev.lora." + pair[f] for f in ("A", "B"))
+        parameter_keys[a] = key + ".lora_A.weight"
+        parameter_keys[bb] = key + ".lora_B.weight"
         middle = inp[:-1] + shape(adapter["r"])
         d.op(
             key + ".A",
@@ -466,6 +475,7 @@ def architecture(inputs: AnalysisInput, cfg: dict[str, Any]) -> dict[str, Any]:
                 "id": name,
                 "name": name,
                 "shape": shape(*dims),
+                **({"semantic_key": parameter_keys[name]} if name in parameter_keys else {}),
                 "provenance": [p.document() for p in QWEN_PRODUCER.provenance()]
                 if not name.startswith("kev.")
                 else [],

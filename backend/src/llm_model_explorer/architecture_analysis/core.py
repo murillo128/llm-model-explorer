@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from . import records as r
 from .generation import GenerationInterface, wrap_generation
+from .invocation import Invocation, no_cache_invocation
 from .operations import primitive_formula
 from .templates import ComponentTemplates
 from .validation import (
@@ -29,7 +30,7 @@ from .validation import (
 if TYPE_CHECKING:
     from ..tensor_source import PeftLoraComposition, PhysicalTensor, TensorDescriptor
 
-ANALYZER_REVISION = "static-graph-core-6"
+ANALYZER_REVISION = "static-graph-core-7"
 Scope = Literal["language_model", "visual_encoder_predictor", "model_defined"]
 
 
@@ -192,6 +193,7 @@ class GraphBuilder:
         self._partial = False
         self.templates = ComponentTemplates()
         self.generation: GenerationInterface | None = None
+        self.invocation: Invocation | None = None
         self._parameter_by_id: dict[str, r.ArchitectureParameter] = {}
 
     def record_id(self, kind: str, key: str) -> str:
@@ -246,31 +248,13 @@ class GraphBuilder:
     def add_layer_repetition(self, repetition: r.ArchitectureRepetition) -> str:
         """Explicit producer opt-in for a layer-depth stack, never expert routing."""
         members = {i.node_id for i in repetition.instances}
-        nodes = {node.id: node for node in self._nodes}
-
-        def known_port_shapes(root: str) -> bool:
-            pending = [root]
-            while pending:
-                node = nodes[pending.pop()]
-                if any(
-                    p.shape is None or any(d.kind == "unknown" for d in p.shape) for p in node.ports
-                ):
-                    return False
-                if node.kind == "group":
-                    pending.extend(node.children)
-            return True
-
         for position, node in enumerate(self._nodes):
             if node.id not in members:
                 continue
             key = self.templates.keys.get(node.id)
             if key is None:
                 continue
-            # Some native layer interfaces deliberately expose opaque state or
-            # routed collections with unknown rank. They are ordinary graph
-            # records, not candidates for exact Shared shape correspondence.
-            if known_port_shapes(node.id):
-                self.templates.begin(node.id, key, repetition.label, "layer")
+            self.templates.begin(node.id, key, repetition.label, "layer")
             attributes = [a for a in node.attributes if a.name != "semantic_role"]
             attributes.append(
                 r.ArchitectureAttribute(
@@ -446,6 +430,8 @@ class GraphBuilder:
             parameters=self._parameters,
             diagnostics=self._diagnostics,
         )
+        if self.invocation is not None:
+            graph = no_cache_invocation(graph, self, self.invocation)
         if self.generation is not None:
             graph = wrap_generation(graph, self, self.generation)
         serialized_size(graph.document(), self.byte_limit)

@@ -496,13 +496,22 @@ def test_complete_graph_preserves_kda_mla_moe_identity_and_budget(
                 data, graph, compaction_key, "token_indices", padding_key, "token_indices"
             )
             assert has_edge(data, graph, padding_key, "out", attention_key, "out")
-            assert any(port.id == "next_recurrent_state" for port in attention.ports)
+            assert not any(port.id.startswith(("prior_", "next_")) for port in attention.ports)
+            assert {a.name: a.value for a in update.attributes}[
+                "initialization"
+            ] == "absent_per_call"
+            for branch in ("q", "k", "v"):
+                conv = graph_node(data, graph, attention_key + f".{branch}_conv1d")
+                assert {a.name: a.value for a in conv.attributes}[
+                    "initialization"
+                ] == "absent_per_call"
+                assert not any(port.id in {"prior_state", "next_state"} for port in conv.ports)
         else:
             assert (
                 graph_node(data, graph, attention_key + ".kv_a_layernorm").operation == "rms_norm"
             )
             assert graph_node(data, graph, attention_key + ".softmax").operation == "softmax"
-            assert any(port.id == "next_key_state" for port in attention.ports)
+            assert not any(port.id.startswith(("prior_", "next_")) for port in attention.ports)
 
         if index == 0:
             assert graph_node(data, graph, "model.layers.0.mlp.gate_proj").operation == "linear"
@@ -535,6 +544,12 @@ def test_complete_graph_preserves_kda_mla_moe_identity_and_budget(
                 graph_node(data, graph, moe_key + ".shared_experts.gate_proj").operation == "linear"
             )
 
+    prepare = next(n for n in graph.nodes if n.operation == "generation_prepare_inputs")
+    assert {p.id for p in prepare.ports} == {"sequence", "tokens", "mask", "current_mask"}
+    assert not any(
+        n.operation in {"select_layer_state", "state_concat", "stack_layer_states"}
+        for n in graph.nodes
+    )
     assert graph_node(data, graph, "model.norm").operation == "rms_norm"
     assert graph_node(data, graph, "lm_head").operation == "linear"
     assert not graph.diagnostics

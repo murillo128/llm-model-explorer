@@ -142,3 +142,15 @@ The deterministic test replays these three header records and the actual native
 inventory pattern; it failed with `invalid_graph` under revision `2` and passes
 under revision `3`. This establishes structural binding for the pinned checkpoint;
 numeric streaming and production-browser acceptance remain separate checks.
+
+## Full-sequence generation invocation (#296)
+
+The same pinned Moonshot source hash above was verified for this change.
+`KimiModel.forward` (889–932) creates KimiDynamicCache only with use_cache enabled.
+With `use_cache=False, past_key_values=None`, KDA starts with absent Q/K/V
+convolution caches and absent recurrent initial state (458–480, 498–510); the
+internal delta recurrence and its computed final state remain, but no state is
+carried into another model call. MLA skips cache.update with no prior cache.
+The producer's reviewed `mla_use_nope` path has no positional encoding; generation
+therefore prepares a causal mask and an independent padding mask, without adding
+a fake position input. Only accumulated token IDs traverse the generation return.

@@ -44,7 +44,7 @@ class ModelDefinedProducer(Producer):
 
 
 def producer_for(definition: ModelDefinition) -> Producer:
-    return ModelDefinedProducer("model-defined-json", "5", definition.architecture_revision)
+    return ModelDefinedProducer("model-defined-json", "6", definition.architecture_revision)
 
 
 def _pointer(parts: tuple[str | int, ...]) -> str:
@@ -556,6 +556,33 @@ def build_definition(
                 id=local("repetition", repetition.id),
                 parent_id=local("node", repetition.parent_id),
                 label=repetition.label,
+                **(
+                    {
+                        "side_ports": [
+                            side.model_copy(
+                                update={
+                                    "bindings": [
+                                        binding.model_copy(
+                                            update={
+                                                "endpoint": binding.endpoint.model_copy(
+                                                    update={
+                                                        "node_id": local(
+                                                            "node", binding.endpoint.node_id
+                                                        )
+                                                    }
+                                                )
+                                            }
+                                        )
+                                        for binding in side.bindings
+                                    ]
+                                }
+                            )
+                            for side in repetition.side_ports
+                        ]
+                    }
+                    if repetition.side_ports is not None
+                    else {}
+                ),
                 instances=[
                     r.ArchitectureRepetitionInstance(
                         node_id=local("node", instance.node_id),

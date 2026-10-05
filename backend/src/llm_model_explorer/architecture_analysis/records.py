@@ -3,7 +3,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_REVISION = "995cf6d1903869f0f55db3f0bee1e0011050dc44923eff08f0514edbc3245572"
+SCHEMA_REVISION = "b6e6ed4a6763f15e677d954ea9fbc0db70ece384e0055168b2dd87a6effdd3b9"
 
 
 class Record(BaseModel):
@@ -177,6 +177,17 @@ class ArchitectureEdge(Record):
     label: ArchitectureName | None = None
 
 
+class ArchitectureIndexedSideBinding(Record):
+    index: SafeInteger
+    endpoint: ArchitectureEndpoint
+
+
+class ArchitectureIndexedSidePort(Record):
+    port_id: ArchitectureId
+    direction: Literal["input", "output"]
+    bindings: Annotated[list[ArchitectureIndexedSideBinding], Field(max_length=33554432)]
+
+
 class ArchitectureRepetitionInstance(Record):
     node_id: ArchitectureId
     index: SafeInteger
@@ -184,6 +195,9 @@ class ArchitectureRepetitionInstance(Record):
 
 
 class ArchitectureRepetition(Record):
+    side_ports: Annotated[list[ArchitectureIndexedSidePort], Field(max_length=33554432)] | None = (
+        None
+    )
     id: ArchitectureId
     parent_id: ArchitectureId
     label: ArchitectureName
@@ -269,6 +283,11 @@ class ArchitectureDiagnostic(Record):
     parameter_id: ArchitectureId | None = None
 
 
+class ArchitectureTemplateSymbolRole(Record):
+    role: ArchitectureId
+    name: ArchitectureName
+
+
 class ArchitectureTemplateNodeRole(Record):
     role: ArchitectureId
     node_id: ArchitectureId
@@ -291,6 +310,9 @@ class ArchitectureTemplateParameterRole(Record):
 
 
 class ArchitectureTemplateInstance(Record):
+    symbols: Annotated[list[ArchitectureTemplateSymbolRole], Field(max_length=33554432)] | None = (
+        None
+    )
     node_id: ArchitectureId
     nodes: Annotated[list[ArchitectureTemplateNodeRole], Field(max_length=33554432)]
     ports: Annotated[list[ArchitectureTemplatePortRole], Field(max_length=33554432)]

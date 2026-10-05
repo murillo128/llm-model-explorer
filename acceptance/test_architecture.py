@@ -49,6 +49,32 @@ def test_grouping_preserves_the_accepted_operation_level_contract(tmp_path):
         text=True,
     )
     assert "PASS: 7 reviewed cases" in checked.stdout
+    subprocess.run(
+        [
+            sys.executable,
+            str(repo / "backend/tests/architecture_grouping_cases.py"),
+            str(tmp_path / "families"),
+            "--families",
+        ],
+        cwd=repo,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    consumed = subprocess.run(
+        [
+            "node",
+            "--experimental-transform-types",
+            str(repo / "ui/scripts/check-architecture-families.mjs"),
+            str(tmp_path / "families"),
+        ],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "PASS kev:" in consumed.stdout and "PASS kimi:" in consumed.stdout
 
 
 def inspect_graph(service, model_id, *, validate_inventory=True):

@@ -81,3 +81,16 @@ construction cannot load a model, call model execution, trace it, or connect to
 the network. Actual local checkpoint admission and integrated acceptance remain
 the responsibility of issue #178; this description does not claim that those
 large weights were opened or validated here.
+
+## Full-sequence generation invocation (#296)
+
+The pinned Transformers implementation's `Glm4MoeLiteModel.forward` (623–656)
+constructs DynamicCache only with `use_cache=True`; no-cache positions start at
+zero. `Glm4MoeLiteAttention.forward` (343–344) updates compressed latent/rotary
+cache only when present. With `use_cache=False, past_key_values=None`, current
+normalized latent and current rotated key feed expansion directly. The static
+specialization removes only the absent bank selection/concatenation/return path,
+uses [B,1,S,S] masking and preserves MLA and routed/shared expert computation.
+Stacked gate/up storage names remain on exact parameter storage bindings; the
+component annotation records the storage arrangement rather than duplicating a
+layer-specific storage path as a computational attribute.

@@ -19,7 +19,7 @@ from .validation import GraphError, serialized_size
 if TYPE_CHECKING:
     from .core import GraphBuilder
 
-REVISION = "exact-component-roles-2"
+REVISION = "exact-component-roles-3"
 LOG = logging.getLogger(__name__)
 
 
@@ -38,6 +38,8 @@ class ComponentTemplates:
     def __init__(self) -> None:
         self.candidates: dict[str, Candidate] = {}
         self.keys: dict[str, str | None] = {}
+        self.symbol_roles: dict[str, str] = {}
+        self.parameter_keys: dict[str, str] = {}
 
     def begin(
         self, node_id: str, base: str, family: str, role: Literal["attention", "mlp", "layer"]
@@ -72,7 +74,7 @@ class ComponentTemplates:
                 ]
             )
             for parameter_id in parameter_ids:
-                name = index.parameters[parameter_id].name
+                name = self.parameter_keys.get(parameter_id, index.parameters[parameter_id].name)
                 if name.startswith(candidate.base):
                     candidate.parameters[parameter_id] = name.removeprefix(candidate.base)
                 elif name.startswith("__peft__."):
@@ -140,6 +142,13 @@ class ComponentTemplates:
                 ]
                 instance = r.ArchitectureTemplateInstance(
                     node_id=candidate.node_id,
+                    symbols=[
+                        r.ArchitectureTemplateSymbolRole(
+                            role=key.removeprefix(candidate.base), name=name
+                        )
+                        for name, key in self.symbol_roles.items()
+                        if key.startswith(candidate.base)
+                    ],
                     nodes=candidate.nodes,
                     ports=ports,
                     edges=edges,

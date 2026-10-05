@@ -9,6 +9,7 @@ from typing import Any
 from . import records as r
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
 from .deepseek_v2 import Value, _expression, shape
+from .generation import GenerationInterface
 from .glm4_moe_lite import Glm4MoeLiteGraph
 from .validation import require
 
@@ -20,7 +21,7 @@ SOURCE_REVISION = (
     + "; cyankiwi/Kimi-Linear-48B-A3B-Instruct-AWQ-4bit/config.json@"
     + CONFIG_REVISION
 )
-PRODUCER = Producer("kimi-linear-kda-mla-moe", "4", SOURCE_REVISION)
+PRODUCER = Producer("kimi-linear-kda-mla-moe", "5", SOURCE_REVISION)
 ARCHITECTURE = "KimiLinearForCausalLM"
 MODEL_TYPE = "kimi_linear"
 
@@ -1187,7 +1188,7 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
                 "expert_count": float(count),
                 "top_k": float(top_k),
                 "selection_is_runtime_data": True,
-                "expert_instances": key + ".experts.0.." + str(count - 1),
+                "expert_instances": "experts.0.." + str(count - 1) + " relative to this MoE",
             },
             fields=("num_experts", "num_experts_per_token"),
             formula=(
@@ -1651,6 +1652,17 @@ class KimiLinearGraph(Glm4MoeLiteGraph):
 
 
 def build(inputs: AnalysisInput, builder: GraphBuilder) -> None:
+    builder.invocation = "kimi"
+    builder.generation = GenerationInterface(
+        "model",
+        "input_ids",
+        None,
+        "causal_mask",
+        "logits",
+        current_mask="padding_mask",
+        convention="kimi_full_sequence",
+        boundary=True,
+    )
     configuration = checked(inputs.configuration)
     require(configuration is not None, "Unsupported Kimi Linear configuration.")
     assert configuration is not None

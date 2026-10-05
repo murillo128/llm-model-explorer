@@ -84,6 +84,8 @@ at least two ordered `instances`. Each instance declares its source group
 - `parameters`: `{role, parameter_id}` for all referenced logical parameters,
   including parameter resource references.
 
+Instances may additionally declare explicit local `symbols` correspondence, and repetitions may declare indexed `side_ports`, as defined by the [API correspondence contract](../api/architecture-explorer.md). The importer preserves their file-local identities and typed indices; it does not infer these declarations.
+
 These are file-local references. The importer maps each reference to its own
 runtime record, never to the first instance's weights. Family `revision` and
 `provenance` are backend-assigned and cannot be supplied by the author. Root

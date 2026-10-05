@@ -9,13 +9,14 @@ from typing import Any
 from . import records as r
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
 from .deepseek_v2 import DeepseekGraph, Value, shape
+from .generation import GenerationInterface
 from .validation import require
 
 SOURCE_REVISION = (
     "huggingface/transformers@c8b81b63232be35ab1774dd3cabbf499d8b9808f; "
     "cyankiwi/GLM-4.7-Flash-AWQ-4bit@25624b53414e585bcf7dcb9584667c3106c6089b"
 )
-PRODUCER = Producer("glm4-moe-lite", "2", SOURCE_REVISION)
+PRODUCER = Producer("glm4-moe-lite", "3", SOURCE_REVISION)
 ARCHITECTURE = "Glm4MoeLiteForCausalLM"
 MODEL_TYPE = "glm4_moe_lite"
 
@@ -892,8 +893,8 @@ class Glm4MoeLiteGraph(DeepseekGraph):
                         name="routing_is_symbolic", value=True, provenance=self.provenance()
                     ),
                     r.ArchitectureAttribute(
-                        name="gate_up_storage",
-                        value=layer + ".mlp.experts.gate_up_proj",
+                        name="stacked_gate_up_storage",
+                        value=True,
                         provenance=self.provenance("moe_intermediate_size"),
                     ),
                     self.role_attribute("mlp"),
@@ -1034,6 +1035,7 @@ class Glm4MoeLiteGraph(DeepseekGraph):
         layer_index = int(layer.rsplit(".", 1)[-1])
         for expert in range(experts):
             count_symbol = f"R{layer_index}_{expert}"
+            self.b.templates.symbol_roles[count_symbol] = f"{key}.routed_tokens.{expert}"
             self.b.add_symbol(
                 count_symbol,
                 f"Symbolic number of token positions routed to expert {expert} in {layer}; "
@@ -1051,10 +1053,10 @@ class Glm4MoeLiteGraph(DeepseekGraph):
                 )
             )
 
-        scatter_inputs = {
-            "expert_values": Value(outputs[0].node, outputs[0].port, None),
-            "token_positions": Value(positions[0].node, positions[0].port, None),
-        }
+        # Each ragged expert result has its own known-rank input and exact count symbol.
+        # No universal unknown-rank collection erases the per-expert correspondence.
+        scatter_inputs = {f"values_{i}": value for i, value in enumerate(outputs)}
+        scatter_inputs.update({f"positions_{i}": value for i, value in enumerate(positions)})
         routed = self.node(
             key + ".routed_scatter_sum",
             "weighted_scatter_sum",
@@ -1063,19 +1065,8 @@ class Glm4MoeLiteGraph(DeepseekGraph):
             parent=key,
             attributes={"top_k": float(top_k), "reduction": "sum at original token positions"},
             fields=("num_experts_per_tok",),
-            formula="scatter-add all selected weighted expert results to symbolic source positions",
+            formula="scatter-add each values_e at positions_e for every declared expert e",
         )["out"]
-        for expert_output, position in zip(outputs[1:], positions[1:], strict=True):
-            self.link(
-                Value(expert_output.node, expert_output.port, None),
-                key + ".routed_scatter_sum",
-                "expert_values",
-            )
-            self.link(
-                Value(position.node, position.port, None),
-                key + ".routed_scatter_sum",
-                "token_positions",
-            )
 
         shared = self.shared_mlp(layer, Value(key, "x", x.shape), hidden)
         combined = self.op(
@@ -1343,6 +1334,10 @@ def _expr(text: str, *symbols: str) -> r.ArchitectureExpressionDimension:
 
 
 def build(inputs: AnalysisInput, builder: GraphBuilder) -> None:
+    builder.invocation = "glm"
+    builder.generation = GenerationInterface(
+        "model", "input_ids", "position_ids", "attention_mask", "logits", boundary=True
+    )
     configuration = checked(inputs.configuration)
     require(configuration is not None, "Unsupported GLM-4.7-Flash configuration.")
     assert configuration is not None
