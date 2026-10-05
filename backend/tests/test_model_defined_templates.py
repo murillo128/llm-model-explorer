@@ -302,8 +302,8 @@ def test_budget_does_not_hide_invalid_templates(caplog: pytest.LogCaptureFixture
 def test_producer_revision_invalidates_prior_model_defined_cache() -> None:
     definition = parse_definition(EXAMPLE.read_bytes())
     current = producer_for(definition)
-    old = replace(current, revision="3")
-    assert current.revision == "4"
+    old = replace(current, revision="4")
+    assert current.revision == "5"
     assert current.graph_id("unchanged-checkpoint", "model_defined") != old.graph_id(
         "unchanged-checkpoint", "model_defined"
     )

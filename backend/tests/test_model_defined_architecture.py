@@ -286,3 +286,47 @@ def test_author_cannot_inject_runtime_parameter_metadata(extra: str) -> None:
     value["parameters"][0][extra] = "untrusted"
     with pytest.raises(GraphError):
         definition(value)
+
+
+def test_authored_generation_example_and_invalid_phase_dependencies() -> None:
+    # Reviewed small Llama-shaped example, independent of producer construction
+    # at test time. This crosses the actual definition parser/importer boundary.
+    value = json.loads(
+        (ROOT / "examples/model-owned-architecture/generation-architecture.json").read_text()
+    )
+    from dense_fixtures import small_config, small_storage
+    from test_dense_architecture import metadata
+
+    config = small_config(False)
+    config["num_hidden_layers"] = 1
+    storage = [item for item in small_storage(False) if not item[0].startswith("model.layers.1.")]
+    storage.append(("lm_head.weight", "F32", [16, 12]))
+    data = metadata(config, storage)
+    result = analyze_definition(definition(value), data)
+    assert result.status == "complete", result.diagnostics
+    assert result.graph is not None
+    state = next(n for n in result.graph.nodes if n.operation == "generation_sequence_state")
+    assert state.kind == "state"
+    assert {p.id for p in state.ports} == {"initial", "current", "next", "final"}
+    assert next(n for n in result.graph.nodes if n.label == "Generation").kind == "group"
+    assert {p.name for p in result.graph.parameters} == {name for name, _, _ in storage}
+
+    malformed = copy.deepcopy(value)
+    sequence = next(n for n in malformed["nodes"] if n["id"] == "sequence")
+    sequence["ports"][2]["shape"] = sequence["ports"][1]["shape"]
+    bad = analyze_definition(definition(malformed), data)
+    assert bad.status == "unavailable"
+    assert bad.diagnostics[0].code == "graph_invalid"
+
+    missing = copy.deepcopy(value)
+    missing["edges"] = [
+        e
+        for e in missing["edges"]
+        if not (
+            e["source"] == {"node_id": "prepare", "port_id": "tokens"}
+            and e["target"] == {"node_id": "append", "port_id": "sequence"}
+        )
+    ]
+    bad = analyze_definition(definition(missing), data)
+    assert bad.status == "unavailable"
+    assert bad.diagnostics[0].code == "graph_invalid"

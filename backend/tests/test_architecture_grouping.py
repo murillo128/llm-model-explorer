@@ -31,7 +31,7 @@ def test_reviewed_groups_and_revision(
     name: str, inputs: AnalysisInput, registry: DescriptionRegistry
 ) -> None:
     selected = registry.select(inputs)
-    expected_revision = "4" if name in {"llama", "qwen3", "llama-bias", "llama-partial"} else "2"
+    expected_revision = "5" if name in {"llama", "qwen3", "llama-bias", "llama-partial"} else "2"
     assert selected is not None and selected.producer.revision == expected_revision
     result = registry.analyze(inputs)
     graph = result.graph
@@ -142,7 +142,11 @@ def test_reviewed_groups_and_revision(
     # The navigation annotation is optional; absence does not change computational coverage.
     legacy = graph.model_copy(deep=True, update={"templates": []})
     for node in legacy.nodes:
-        node.attributes[:] = [a for a in node.attributes if a.name != "semantic_role"]
+        node.attributes[:] = [
+            a
+            for a in node.attributes
+            if not (a.name == "semantic_role" and a.value in {"attention", "mlp", "layer"})
+        ]
     validate_graph(legacy, inputs.bindings)
     assert legacy.coverage == graph.coverage
 

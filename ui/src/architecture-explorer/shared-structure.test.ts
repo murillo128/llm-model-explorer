@@ -161,12 +161,6 @@ it('expands one neutral indexed layer with exact first/next/last provenance and 
   expect(operation.symbolicParameters).toEqual([{ role: 'weight', label: 'weight[i]', shape: [{ kind: 'constant', value: 4 }] }]);
   expect(operation.record?.parameter_ids).toEqual([]);
   expect(graph).toEqual(before);
-  const layout = await layoutGraph(graph, projectionOptions(view));
-  const loop = layout.projection.edges.find((e) => e.relationship?.kind === 'return')!;
-  const route = layout.routes.find((r) => r.id === loop.id)!;
-  const box = layout.boxes.find((b) => b.id === inner.id)!;
-  expect(route.sections.flat().some((p) => p.y < box.absoluteY)).toBe(true);
-  for (const points of route.sections) for (const p of points) expect(p.x <= box.absoluteX || p.x >= box.absoluteX + box.width || p.y < box.absoluteY).toBe(true);
   toggleComponent(view, graph, projection.nodes.find((n) => n.id === outer.id)!, 2);
   expect(view.expanded).toContain(inner.id);
   toggleComponent(view, graph, outer, 2);
@@ -235,4 +229,29 @@ it('keeps mathematical indices and genuine aliased weights unindexed in neutral 
   const operation = projection.nodes.find((n) => n.shared?.nodeRole === 'op')!;
   expect(operation.record?.formula).toBe('out[i] = x[j] + x[i] + weight');
   expect(operation.symbolicParameters?.[0]?.label).toBe('weight');
+});
+
+
+it.each(['repetition', 'generation'] as const)('routes the %s return around its contents with attached endpoints', async (owner) => {
+  const { generationFixture } = await import('../../tests/architecture-generation-fixture');
+  const graph = owner === 'generation' ? generationFixture() : makeIndexedFixture();
+  const expanded = owner === 'generation' ? ['generation', 'model'] : ['model', 'repeat:layers:0:2', 'indexed:layers:layer-0'];
+  const layout = await layoutGraph(graph, { expanded });
+  const loop = layout.projection.edges.find((e) => e.relationship?.owner === owner && e.relationship.kind === 'return')!;
+  const route = layout.routes.find((r) => r.id === loop.id)!;
+  const inner = layout.boxes.find((b) => b.id === (owner === 'generation' ? 'model' : loop.source.node_id))!;
+  const outer = layout.boxes.find((b) => b.id === inner.parentId)!;
+  const points = route.sections.flat();
+  expect(points.some((p) => owner === 'generation' ? p.y > inner.absoluteY + inner.height : p.y < inner.absoluteY)).toBe(true);
+  for (const p of points) {
+    expect(p.x <= inner.absoluteX || p.x >= inner.absoluteX + inner.width || p.y < inner.absoluteY || p.y > inner.absoluteY + inner.height).toBe(true);
+    expect(p.x).toBeGreaterThanOrEqual(outer.absoluteX);
+    expect(p.x).toBeLessThanOrEqual(outer.absoluteX + outer.width);
+    expect(p.y).toBeGreaterThanOrEqual(outer.absoluteY);
+    expect(p.y).toBeLessThanOrEqual(outer.absoluteY + outer.height);
+  }
+  for (const [endpoint, point] of [[loop.source, points[0]!], [loop.target, points.at(-1)!]] as const) {
+    const port = layout.ports.find((p) => p.nodeId === endpoint.node_id && p.portId === endpoint.port_id)!;
+    expect(point).toEqual({ x: port.absoluteX, y: port.absoluteY });
+  }
 });

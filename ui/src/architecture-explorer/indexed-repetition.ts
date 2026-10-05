@@ -210,7 +210,7 @@ export function projectIndexedRepetitions(graph: Graph, base: Projection, option
     }
     function relationship(kind: NonNullable<ProjectedEdge['relationship']>['kind'], source: Endpoint, target: Endpoint, paths: Edge[][], port: string) {
       base.edges.push({ id: `${outer.id}:${kind}:${port}`, source, target, kind: paths[0]![0]!.kind, paths,
-        originalEdgeIds: [...new Set(paths.flat().map((e) => e.id))], relationship: { kind, repetitionId: repetition.id, templateId: stack!.template.id,
+        originalEdgeIds: [...new Set(paths.flat().map((e) => e.id))], relationship: { owner: 'repetition', kind, repetitionId: repetition.id, templateId: stack!.template.id,
           portRole: anchor.ports.find((p) => p.node_id === anchor.node_id && p.port_id === port)!.role,
           instances: repetition.instances.map((i) => ({ nodeId: i.node_id, index: i.index })) } });
     }

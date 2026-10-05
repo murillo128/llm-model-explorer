@@ -209,6 +209,7 @@ def test_smollm2_lora_branches_bind_real_factors_and_preserve_base(
     assert (
         analyze(composite_source)[1] == graph
     )  # Group/interior IDs and template roles are deterministic.
+    assert any(n.operation == "generation_append_token" for n in graph.nodes)
     nodes = semantic_nodes(graph)
     edges = semantic_edges(graph)
     targets = [

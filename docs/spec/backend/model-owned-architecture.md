@@ -168,3 +168,15 @@ bounds, read-only operation, safe diagnostics, mutation/cache behavior, and the
 absence of model construction, tracing, code execution and payload reads during
 analysis. Existing packaged descriptions and tensor/tokenizer workflows remain
 regression gates. Successful static checks are not inference-correctness claims.
+
+## Authored generation context
+
+Definitions can explicitly adopt the finite
+[generation pattern](../api/architecture-explorer.md#autoregressive-generation-pattern)
+using existing version-1 records. The loader validates its contextual semantics;
+it neither infers the pattern from labels/vocabulary weights nor rewrites external
+sidecars. Malformed declared state phases or a missing full-sequence bypass fail
+normal import without packaged fallback. Explanatory policy provenance remains
+model-supplied, not a claim about checkpoint runtime defaults. The
+[small generation example](../../../examples/model-owned-architecture/generation-architecture.json)
+shows a single decoder model with one shared set of weight identities.

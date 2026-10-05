@@ -10,6 +10,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from . import records as r
+from .generation import GenerationInterface, wrap_generation
 from .operations import primitive_formula
 from .templates import ComponentTemplates
 from .validation import (
@@ -28,7 +29,7 @@ from .validation import (
 if TYPE_CHECKING:
     from ..tensor_source import PeftLoraComposition, PhysicalTensor, TensorDescriptor
 
-ANALYZER_REVISION = "static-graph-core-5"
+ANALYZER_REVISION = "static-graph-core-6"
 Scope = Literal["language_model", "visual_encoder_predictor", "model_defined"]
 
 
@@ -190,6 +191,7 @@ class GraphBuilder:
         self._diagnostics: list[r.ArchitectureDiagnostic] = []
         self._partial = False
         self.templates = ComponentTemplates()
+        self.generation: GenerationInterface | None = None
         self._parameter_by_id: dict[str, r.ArchitectureParameter] = {}
 
     def record_id(self, kind: str, key: str) -> str:
@@ -444,6 +446,8 @@ class GraphBuilder:
             parameters=self._parameters,
             diagnostics=self._diagnostics,
         )
+        if self.generation is not None:
+            graph = wrap_generation(graph, self, self.generation)
         serialized_size(graph.document(), self.byte_limit)
         validate_graph(graph, self.inputs.bindings)
         graph = self.templates.annotate(graph, self)

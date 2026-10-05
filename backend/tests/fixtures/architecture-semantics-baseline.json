@@ -5,48 +5,48 @@
     "llama": {
       "scope": "8f1d50b7b02f17a8a49d2c21f595cc9f07adffe6a2ddcaeff424be3a5f542319",
       "coverage": "575951db5c63b1e721c1f8f9aefb547ca834245433e7561dc8204a3a18427aae",
-      "symbols": "5930162100d3c2b35d6fa71975ff7c6cad7d2db659e029a5103c55558db4fe63",
+      "symbols": "5848b7b8c63f5dc351cb84a382d140e0b0e84276c79da022aa8b4cd0c8c8b275",
       "diagnostics": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "nodes": "e657d6e29e34c5c05bb07bdf7853fd853852f9ba186238f27744dd1babce4c7f",
+      "nodes": "1e84b0508491aa50c292a359dd3e6258727de582284e17b6b996c3a4d002bf5c",
       "groupBindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "interfaces": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "wires": "b70c9c1c0fdb3ede18eb5d7045808c0590f2f7abda431bfba8885854089c9ca6",
+      "interfaces": "a0044231500e555f0cac294bcec1f34e1e47b018032de8fbd8f668d313c87d6b",
+      "wires": "2bc9f54211dbb1a383d7ba45bd75993809da1e3b5b513ea8795855fddfb808e0",
       "repetitions": "456cd5074aadd111a0a0682b3b49a5a239bd535e280ff4f47c9dd6c50db382a2",
       "parameters": "b649f158106f13ebcd014a9627a9002eec14dfc18f408a3924d48a6f3e254feb"
     },
     "qwen3": {
       "scope": "8f1d50b7b02f17a8a49d2c21f595cc9f07adffe6a2ddcaeff424be3a5f542319",
       "coverage": "575951db5c63b1e721c1f8f9aefb547ca834245433e7561dc8204a3a18427aae",
-      "symbols": "5930162100d3c2b35d6fa71975ff7c6cad7d2db659e029a5103c55558db4fe63",
+      "symbols": "5848b7b8c63f5dc351cb84a382d140e0b0e84276c79da022aa8b4cd0c8c8b275",
       "diagnostics": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "nodes": "bdd80c1d5799216f2bdbf0ecd202ebee495e6caf0b7e7a506dfee46019ea8643",
+      "nodes": "802c7f528c21425a342a3098e66559d1b3b8740fe0ace315b5122e12cfc77ce4",
       "groupBindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "interfaces": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "wires": "6f9ab3400b84a772b4dc0ce2ebdc36fe794764d2c24e7613ed2b2bda0ab0c44a",
+      "interfaces": "a0044231500e555f0cac294bcec1f34e1e47b018032de8fbd8f668d313c87d6b",
+      "wires": "f38e8011b721eec277413f8c6ab11ce887a9893c1a554383422a363aade92e5a",
       "repetitions": "ed47f7e0641689004f6f0add485f949261f638e093d720b2b7b63a33ddf46f9b",
       "parameters": "01e1f9d84fef106adab75c73c0c8d610151feb346fd2952a734195cb02f427e1"
     },
     "llama-bias": {
       "scope": "8f1d50b7b02f17a8a49d2c21f595cc9f07adffe6a2ddcaeff424be3a5f542319",
       "coverage": "575951db5c63b1e721c1f8f9aefb547ca834245433e7561dc8204a3a18427aae",
-      "symbols": "5930162100d3c2b35d6fa71975ff7c6cad7d2db659e029a5103c55558db4fe63",
+      "symbols": "5848b7b8c63f5dc351cb84a382d140e0b0e84276c79da022aa8b4cd0c8c8b275",
       "diagnostics": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "nodes": "c3cd75f38eaac7645918253e7bc392138e243b3ffdc2e3707285985330a5035a",
+      "nodes": "eccd767a0df3a38850026d4a59476212460b143591af361ceecd42d1e475416e",
       "groupBindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "interfaces": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "wires": "b70c9c1c0fdb3ede18eb5d7045808c0590f2f7abda431bfba8885854089c9ca6",
+      "interfaces": "a0044231500e555f0cac294bcec1f34e1e47b018032de8fbd8f668d313c87d6b",
+      "wires": "2bc9f54211dbb1a383d7ba45bd75993809da1e3b5b513ea8795855fddfb808e0",
       "repetitions": "456cd5074aadd111a0a0682b3b49a5a239bd535e280ff4f47c9dd6c50db382a2",
       "parameters": "0fc2cef7b0c9c5f75ddcb1c0d57412566952152460d274c8ebd223132a20a76f"
     },
     "llama-partial": {
       "scope": "8f1d50b7b02f17a8a49d2c21f595cc9f07adffe6a2ddcaeff424be3a5f542319",
       "coverage": "8ac24611cfe47c129e37108bc6adc6843c4fe8fb9c37c27fac8a1835ba660307",
-      "symbols": "5930162100d3c2b35d6fa71975ff7c6cad7d2db659e029a5103c55558db4fe63",
+      "symbols": "5848b7b8c63f5dc351cb84a382d140e0b0e84276c79da022aa8b4cd0c8c8b275",
       "diagnostics": "91ede523ed060a69d77aff5632575164d49365830c128f5169a8a9edf7757e16",
-      "nodes": "3c123ad69612ad84f70b2deb13f325890090f2bcdef03994b53c4c2ca9ad11a1",
+      "nodes": "62254f2a4f8417664792ff118d05ddb2294eb4ffc89500d744a3a72f42667189",
       "groupBindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "interfaces": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "wires": "b70c9c1c0fdb3ede18eb5d7045808c0590f2f7abda431bfba8885854089c9ca6",
+      "interfaces": "a0044231500e555f0cac294bcec1f34e1e47b018032de8fbd8f668d313c87d6b",
+      "wires": "2bc9f54211dbb1a383d7ba45bd75993809da1e3b5b513ea8795855fddfb808e0",
       "repetitions": "456cd5074aadd111a0a0682b3b49a5a239bd535e280ff4f47c9dd6c50db382a2",
       "parameters": "2af1ef7f25640805951280d841da31d68b2c1b28c6e35e4e0fc72495c7a693a0"
     },
@@ -86,5 +86,6 @@
       "repetitions": "4c480017325bc4a8ca1d6f35a7055561929ac6a10ea43d52134326342aefab27",
       "parameters": "bfd3e213a22c378708041a7a6b1a966b981391a5736ab4b4eab43d632325d991"
     }
-  }
+  },
+  "generation_contract": "issue-294: explicit no-cache outer orchestration; four passive dense declarations become model ports; all common neural records, internal dependencies, parameters and repetitions independently compared unchanged"
 }

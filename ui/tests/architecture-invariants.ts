@@ -134,11 +134,27 @@ export function assertTraceability(graph: Graph, projected: Projection, exhausti
     assert(edge.paths.length > 0);
     for (const path of edge.paths) {
       assert(path.length > 0);
-      assert(source!.endpoints.some((end) => key(end) === key(path[0]!.source)));
-      assert(target!.endpoints.some((end) => key(end) === key(path.at(-1)!.target)));
-      assert.equal(edge.kind, path.some((item) => item.kind === 'state') ? 'state' : path[0]!.kind);
+      if (edge.relationship?.owner === 'generation') {
+        const state = sourceNodes.get(edge.relationship.stateId)!;
+        assert.equal(state.kind, 'state'); assert.equal(state.operation, 'generation_sequence_state');
+        assert.equal(state.parent_id, edge.relationship.groupId);
+        assert.equal(edge.paths.length, 2);
+        const [before, after] = edge.paths;
+        const incoming = edge.relationship.phase === 'initial' ? 'initial' : 'next';
+        const outgoing = edge.relationship.phase === 'final' ? 'final' : 'current';
+        assert.deepEqual(before!.at(-1)!.target, { node_id: state.id, port_id: incoming });
+        assert.deepEqual(after![0]!.source, { node_id: state.id, port_id: outgoing });
+        assert(source!.endpoints.some((end) => key(end) === key(before![0]!.source)));
+        assert(target!.endpoints.some((end) => key(end) === key(after!.at(-1)!.target)));
+        assert.equal(edge.kind, 'state');
+      } else {
+        assert(source!.endpoints.some((end) => key(end) === key(path[0]!.source)));
+        assert(target!.endpoints.some((end) => key(end) === key(path.at(-1)!.target)));
+        assert.equal(edge.kind, path.some((item) => item.kind === 'state') ? 'state' : path[0]!.kind);
+      }
       const pathKey = JSON.stringify(path.map((item) => item.id));
-      assert(!paths.has(pathKey), 'Signal path duplicated'); paths.add(pathKey);
+      if (edge.relationship?.owner !== 'generation') assert(!paths.has(pathKey), 'Signal path duplicated');
+      paths.add(pathKey);
       path.forEach((item, i) => {
         assert.equal(item, sourceEdges.get(item.id)); originals.add(item.id);
         if (i) {
@@ -159,9 +175,10 @@ export function assertTraceability(graph: Graph, projected: Projection, exhausti
   if (exhaustive) {
     assertInterfaceCoverage(graph, projected);
     assert.deepEqual(projected.hiddenEdgeIds, []); assert.deepEqual(projected.filteredEdgeIds, []);
-    const wires = projected.edges.flatMap((edge) => edge.paths.map((path) => ({
+    const uniquePaths = new Map(projected.edges.flatMap((edge) => edge.paths.map((path) => [JSON.stringify(path.map((e) => e.id)), path] as const)));
+    const wires = [...uniquePaths.values()].map((path) => ({
       source: path[0]!.source, target: path.at(-1)!.target, kinds: kinds(path.map((item) => item.kind)),
-    })));
+    }));
     const boundary = (projected.boundaryPaths ?? []).map((path) => ({ source: path[0]!.source, target: path.at(-1)!.target, kinds: kinds(path.map((e) => e.kind)) }));
     assert.deepEqual(sorted(contractedWires(graph, [...wires, ...boundary])), sorted(contractedWires(graph)), 'Exhaustive directed signal multiset changed');
   }
@@ -178,6 +195,12 @@ export function assertInterfaceCoverage(graph: Graph, projected: Projection) {
       assert.equal(node.ports.length, 0); assert.equal(edges.length, 0);
       assert.equal(node.parameter_ids.length, 0); assert(!node.operation && !node.formula);
       assert(node.references.every((r) => r.kind === 'tokenizer')); continue;
+    }
+    if (node.kind === 'state' && node.operation === 'generation_sequence_state') {
+      const relations = projected.edges.filter((e) => e.relationship?.owner === 'generation' && e.relationship.stateId === node.id);
+      assert.deepEqual(relations.map((e) => e.relationship!.kind).sort(), ['entry', 'exit', 'return']);
+      assert(edges.every((e) => relations.some((r) => r.originalEdgeIds.includes(e.id))));
+      continue;
     }
     assert(node.kind === 'input' || node.kind === 'output', `Lost computational component ${node.id}`);
     assert(!node.formula && !node.parameter_ids.length && !node.references.length);

@@ -100,8 +100,8 @@ def test_reference_metadata_full_instance_graph(
     data = metadata(reference["config"], storage)
     graph = graph_for(data)
     assert (len(graph.nodes), len(graph.edges), len(graph.parameters)) == (
-        nodes + 2 * layers,
-        edges + 7 * layers,
+        nodes + 2 * layers + 1,  # five generation records replace four passive declarations
+        edges + 7 * layers + 10,  # authored generation dependencies
         parameters,
     )
     assert len(serialize_graph(graph)) < 4_000_000
@@ -173,7 +173,7 @@ def test_independent_attention_mlp_and_residual_dependencies(qwen: bool) -> None
     assert ("model.layers.0", "out", "model.layers.1", "x") in edges
     assert ("model.layers.1", "out", "model.norm", "x") in edges
     assert ("model.norm", "out", "lm_head", "x") in edges
-    assert ("lm_head", "out", "logits", "x") in edges
+    assert ("lm_head", "out", "model", "logits") in edges
     nodes = {semantic_key(n): n for n in graph.nodes}
     assert dimensions(nodes["model.layers.0.self_attn.q_proj"].ports[-1].shape) == [
         "B",
@@ -490,3 +490,79 @@ def test_unreviewed_quantization_and_unknown_architecture() -> None:
         registry().analyze(metadata(config, small_storage(True))).reason
         == "unsupported_architecture"
     )
+
+
+def test_greedy_generation_preserves_full_sequence_and_phase_shapes() -> None:
+    graph = graph_for(metadata(small_config(False), small_storage(False)))
+    roles = {
+        n.operation: n for n in graph.nodes if n.operation and n.operation.startswith("generation_")
+    }
+    assert set(roles) == {
+        "generation_sequence_state",
+        "generation_prepare_inputs",
+        "generation_greedy_next_token",
+        "generation_append_token",
+    }
+    state = roles["generation_sequence_state"]
+    prepare = roles["generation_prepare_inputs"]
+    select = roles["generation_greedy_next_token"]
+    append = roles["generation_append_token"]
+    generation = next(
+        n
+        for n in graph.nodes
+        if any(
+            a.name == "semantic_role" and a.value == "autoregressive_generation"
+            for a in n.attributes
+        )
+    )
+    model = next(n for n in graph.nodes if semantic_key(n) == "model")
+    assert isinstance(generation, r.ArchitectureGroupNode)
+    assert set(generation.children) == {model.id, state.id, prepare.id, select.id, append.id}
+    assert model.parent_id == generation.id
+    assert [p.label for p in generation.ports] == ["prompt_ids", "token_ids[T]"]
+    ports = {p.id: p for p in state.ports}
+    assert {p.id: p.direction for p in state.ports} == {
+        "initial": "input",
+        "current": "output",
+        "next": "input",
+        "final": "output",
+    }
+    assert dimensions(ports["current"].shape) == ["B", "S"]
+    assert ports["next"].shape == [
+        r.ArchitectureSymbolDimension(kind="symbol", name="B"),
+        r.ArchitectureExpressionDimension(kind="expression", text="S + 1", symbols=["S"]),
+    ]
+    assert dimensions(ports["initial"].shape) == ["B", "S_initial"]
+    assert dimensions(ports["final"].shape) == ["B", "S_final"]
+    assert [dimensions(p.shape) for p in select.ports] == [["B", "S", 16], ["B", 1]]
+    assert [dimensions(p.shape) for p in prepare.ports] == [
+        ["B", "S"],
+        ["B", "S"],
+        ["B", "S"],
+        ["B", 1, "S", "S"],
+    ]
+    expected = {
+        (generation.id, "prompt_ids", state.id, "initial"),
+        (state.id, "current", prepare.id, "sequence"),
+        (prepare.id, "tokens", model.id, "tokens"),
+        (prepare.id, "positions", model.id, "positions"),
+        (prepare.id, "mask", model.id, "mask"),
+        (model.id, "logits", select.id, "logits"),
+        (select.id, "token", append.id, "token"),
+        (prepare.id, "tokens", append.id, "sequence"),
+        (append.id, "updated", state.id, "next"),
+        (state.id, "final", generation.id, "token_ids"),
+    }
+    actual = {
+        (e.source.node_id, e.source.port_id, e.target.node_id, e.target.port_id)
+        for e in graph.edges
+    }
+    assert expected <= actual
+    assert (
+        select.formula == "next_token_id[t] = argmax(logits[t][:, -1, :], axis=-1, keepdims=true)"
+    )
+    assert append.formula == "token_ids[t+1] = concat(token_ids[t], next_token_id[t], axis=1)"
+    assert all(not n.parameter_ids for n in (generation, state, prepare, select, append))
+    assert {p.name for p in graph.parameters} == {name for name, _, _ in small_storage(False)} | {
+        "lm_head.weight"
+    }

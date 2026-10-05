@@ -174,6 +174,7 @@ def test_symbolic_geometry_provenance_and_no_language_or_training_components() -
     assert operations.isdisjoint(
         {
             "tokenizer",
+            "generation_sequence_state",
             "embedding_lookup",
             "lm_head",
             "softmax_logits",

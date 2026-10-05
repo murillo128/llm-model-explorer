@@ -290,6 +290,7 @@ def test_graph_exact_factors_head_and_isolated_rows(tmp_path: Path) -> None:
     )
     assert result.graph is not None
     g = result.graph.document()
+    assert not any(n.get("operation") == "generation_sequence_state" for n in g["nodes"])
     keys = {
         n["id"]: next(
             p["source"]
