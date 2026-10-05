@@ -193,3 +193,17 @@ The concise rules below are operational reminders. `docs/spec/**` is authoritati
 
 - Backend and UI are independent processes and may run on separate machines. Configure backend host/port, model root, artifact-cache directory, compute device, and CORS primarily through command-line options for the proof of concept.
 - The proof of concept has no authentication and assumes a trusted local network or otherwise trusted environment. Do not invent user/account/authentication systems without accepted design.
+
+## Efficient shell execution
+
+Prioritize the shortest total time to a correct result, not the fewest characters or the smallest output at any cost.
+
+- For routine shell operations, choose a direct command and execute it. Do not prepare a separate plan or compare equivalent alternatives.
+- Reuse existing project commands and available tools. Do not write helper scripts for simple operations.
+- Scope searches and reads to the necessary paths and data. Do not repeat queries unless the information may have changed.
+- Batch related checks when no intermediate decision is needed. Avoid both tiny separate calls and giant command chains.
+- Use Python when it is clearer and more reliable than a complicated pipeline. Do not force everything into a one-liner.
+- Avoid unnecessary `bash -c` layers, wrappers, temporary files, retries, and frequent polling.
+- Preserve errors, exit codes, and required checks. Simplifying must not hide failures or skip validation.
+
+These rules do not waive repository workflow, authorization, validation, or review requirements.
