@@ -89,7 +89,11 @@ export function ConnectionInspection({ graph, edge, node, trigger, onClose, insp
     <div className="architecture-connection-details">
       {edge && structure && <><p>{structure.source} · {edge.source.port_id} → {structure.target} · {edge.target.port_id}</p>
         <p>Verified common {edge.kind} dependency. Choose an instance for its source references.</p></>}
-      {edge?.relationship && <p>{edge.relationship.kind === 'entry'
+      {edge?.relationship?.owner === 'generation' && <p>Sequence state {edge.relationship.stateId}: {edge.relationship.phase === 'initial'
+        ? 'Bind prompt_ids as token_ids[0]; begin the first full-sequence call.'
+        : edge.relationship.phase === 'next' ? 'Commit token_ids[t+1] as the next current sequence; initial and return are alternatives in time. No KV cache reuse.'
+        : 'Read the terminal sequence including the prompt after T generated steps; this is not an unconditional early exit.'} Source segments on opposite sides of the state belong to different phases.</p>}
+      {edge?.relationship?.owner === 'repetition' && <p>{edge.relationship.kind === 'entry'
         ? `Initial entry: only instance ${edge.relationship.instances[0]!.index}.`
         : edge.relationship.kind === 'exit' ? `Final exit: only after instance ${edge.relationship.instances.at(-1)!.index}.`
         : edge.relationship.kind === 'return' ? `Next layer: ${edge.target.port_id}[i+1] = ${edge.source.port_id}[i], ${edge.relationship.instances[0]!.index} ≤ i < ${edge.relationship.instances.at(-1)!.index}. ${edge.paths.length} ordered inter-layer transitions; no same-instance feedback.`

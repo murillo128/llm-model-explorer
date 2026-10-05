@@ -181,3 +181,34 @@ describe('source declarations become exact container interfaces', () => {
     }
   });
 });
+
+it('projects generation phases without a visible state or a continuous cross-phase data path', async () => {
+  const { generationFixture } = await import('../../tests/architecture-generation-fixture');
+  const graph = generationFixture(), before = semanticSnapshot(graph);
+  for (const expanded of [['generation'], ['generation', 'model'], ['generation']]) {
+    const projection = projectGraph(graph, { expanded });
+    expect(projection.nodes.map((n) => n.label)).toEqual(expect.arrayContaining(['Generation', 'model', 'Prepare inputs', 'Next token', 'Append token']));
+    expect(projection.nodes.some((n) => n.kind === 'state')).toBe(false);
+    const phases = projection.edges.filter((e) => e.relationship?.owner === 'generation');
+    expect(phases.map((e) => [e.relationship?.kind, e.paths.map((p) => p.map((v) => v.id))])).toEqual([
+      ['entry', [['initial'], ['current']]], ['return', [['next'], ['current']]], ['exit', [['next'], ['final']]],
+    ]);
+    expect(phases.every((e) => e.relationship?.owner === 'generation' && e.relationship.stateId === 'sequence')).toBe(true);
+    expect(projection.edges.find((e) => e.originalEdgeIds.includes('bypass'))).toMatchObject({
+      source: { node_id: 'prepare', port_id: 'tokens' }, target: { node_id: 'append', port_id: 'sequence' },
+    });
+    for (const port of ['positions', 'mask']) expect(projection.edges.find((e) => e.originalEdgeIds.includes(port))).toMatchObject({
+      source: { node_id: 'prepare', port_id: port }, target: { node_id: 'model', port_id: port },
+    });
+    expect(connectionSet(projection, { port: { node_id: 'prepare', port_id: 'tokens' } })).toHaveLength(expanded.includes('model') ? 3 : 2);
+    assertTraceability(graph, projection);
+    expect(browserIndex(graph).some((e) => e.node.id === 'sequence')).toBe(false);
+    if (expanded.includes('model')) expect(projection.nodes.find((n) => n.id === 'neural')!.record!.parameter_ids).toEqual(['weight']);
+  }
+  expect(semanticSnapshot(graph)).toEqual(before);
+  const authoredGraph: typeof graph = { ...graph, scope: 'model_defined', nodes: [...graph.nodes,
+    { id: 'origin', kind: 'context', label: 'Model-supplied definition', ports: [], parameter_ids: [], references: [], provenance: [],
+      attributes: [{ name: 'definition_origin', value: 'model', provenance: [] }] }] };
+  const authored = projectGraph(authoredGraph, { expanded: ['generation', 'model'] });
+  expect(authored.nodes.some((n) => n.presentation === 'model' || n.id === 'origin')).toBe(false);
+});

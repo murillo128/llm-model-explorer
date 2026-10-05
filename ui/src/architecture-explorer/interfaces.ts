@@ -1,3 +1,4 @@
+import { generationPatterns } from './generation';
 import type { Graph, GraphNode } from './graph';
 import type { Endpoint } from './projection';
 
@@ -32,11 +33,17 @@ function buildInterfaceIndex(graph: Graph) {
     const ins = incoming.get(key(edge.target)) ?? []; ins.push(edge); incoming.set(key(edge.target), ins);
     const outs = outgoing.get(key(edge.source)) ?? []; outs.push(edge); outgoing.set(key(edge.source), outs);
   }
+  const generation = generationPatterns(graph);
   const tools = new Set<string>(), notices = new Map<string, string>();
   const declarations = new Map<string, ModelInterface[]>();
   for (const node of graph.nodes) {
     const edges = incident.get(node.id) ?? [];
     const tokenizer = node.references.some((r) => r.kind === 'tokenizer');
+    if (generation.length && graph.scope === 'model_defined' && node.kind === 'context' &&
+      !node.ports.length && !edges.length && !node.parameter_ids.length && !node.references.length &&
+      node.attributes.some((a) => a.name === 'definition_origin' && a.value === 'model')) {
+      tools.add(node.id); continue;
+    }
     if (node.kind === 'context' && tokenizer && !node.ports.length && !edges.length &&
       !node.parameter_ids.length && node.references.every((r) => r.kind === 'tokenizer') && !node.formula && !node.operation) {
       tools.add(node.id); continue;
@@ -120,7 +127,8 @@ function buildInterfaceIndex(graph: Graph) {
   }
   for (const [id, items] of signals) signals.set(id, items.filter((item) => declarations.has(item.node.id)));
   const interfaces = [...declarations.values()].flat();
-  const eligible = (id: string) => !declarations.has(id) && !tools.has(id);
+  const generationStates = new Set(generation.map((p) => p.state.id));
+  const eligible = (id: string) => !declarations.has(id) && !tools.has(id) && !generationStates.has(id);
   const finalRoots = graph.nodes.filter((n) => !n.parent_id && eligible(n.id));
   const finalOuter: BoundaryOwner = finalRoots.length === 1 && finalRoots[0]!.kind === 'group'
     ? { kind: 'source', id: finalRoots[0]!.id } : { kind: 'model', id: modelId };

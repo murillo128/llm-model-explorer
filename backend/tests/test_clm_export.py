@@ -44,6 +44,7 @@ def test_native_clm_selection_without_sidecar(
         response = client.get(f"/sessions/{sid}/architecture").json()
     assert response["status"] == "available", response
     graph = response["graph"]
+    assert not any(n.get("operation") == "generation_sequence_state" for n in graph["nodes"])
     assert graph["scope"] == "language_model" and graph["coverage"] == "complete"
     assert graph["diagnostics"] == []
     layer_families = [t for t in graph.get("templates", []) if t["component_role"] == "layer"]

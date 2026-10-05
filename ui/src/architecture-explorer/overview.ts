@@ -1,4 +1,5 @@
 import type { Graph, Layout } from './graph';
+import { generationPatterns } from './generation';
 import { interfaceIndex } from './interfaces';
 
 // 13px component labels retain at least 10.4 CSS pixels on a fresh view.
@@ -9,7 +10,8 @@ export const maximumOverviewScale = 1;
 /** The visible outer boundary, after passive declarations become ports. */
 export function overviewExpansion(graph: Graph): string[] {
   const outer = interfaceIndex(graph).outer;
-  return outer.kind === 'source' ? [outer.id] : [];
+  const generation = generationPatterns(graph).find((p) => p.owner.id === outer.id);
+  return outer.kind === 'source' ? [outer.id, ...(generation ? [generation.model.id] : [])] : [];
 }
 
 export function visibleBounds(layout: Layout) {

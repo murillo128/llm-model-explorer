@@ -9,6 +9,7 @@ from . import records as r
 from .clm_config import reserved as clm_reserved
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
 from .dense_config import SOURCE_REVISION, DenseConfig, checked
+from .generation import GenerationInterface
 from .semantic import operation_role, role_attribute, source_key
 from .validation import GraphError, require
 
@@ -897,11 +898,19 @@ class DenseGraph:
             )
 
 
-def build(inputs: AnalysisInput, builder: GraphBuilder) -> None:
+def build_single_pass(inputs: AnalysisInput, builder: GraphBuilder) -> None:
+    """Reviewed neural component, also reused by non-generative decision producers."""
     config = checked(inputs.configuration)
     require(config is not None, "Unsupported dense configuration.")
     assert config is not None
     DenseGraph(inputs, builder, config).build()
+
+
+def build(inputs: AnalysisInput, builder: GraphBuilder) -> None:
+    build_single_pass(inputs, builder)
+    builder.generation = GenerationInterface(
+        "model", "input_ids", "position_ids", "attention_mask", "logits"
+    )
 
 
 def register_dense_descriptions(registry: DescriptionRegistry) -> None:
@@ -912,7 +921,7 @@ def register_dense_descriptions(registry: DescriptionRegistry) -> None:
     ):
         registry.register(
             Description(
-                Producer(name, "4", SOURCE_REVISION),
+                Producer(name, "5", SOURCE_REVISION),
                 "language_model",
                 frozenset({family}),
                 frozenset({architecture}),
@@ -926,7 +935,7 @@ def register_dense_descriptions(registry: DescriptionRegistry) -> None:
         )
         registry.register(
             Description(
-                Producer(name + "-lora", "2", SOURCE_REVISION),
+                Producer(name + "-lora", "3", SOURCE_REVISION),
                 "language_model",
                 frozenset({family}),
                 frozenset({architecture}),

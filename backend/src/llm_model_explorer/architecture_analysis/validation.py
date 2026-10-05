@@ -355,6 +355,10 @@ def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
                 "Known connected dimensions disagree without a diagnostic.",
             )
 
+    from .generation import validate_generation
+
+    validate_generation(graph)
+
     for parameter in graph.parameters:
         shape(parameter.logical_shape)
         for storage in parameter.storage:

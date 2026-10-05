@@ -695,3 +695,28 @@ finding with the short high-level status inside the capability card. Preserve
 the record pointer and stage so an author can fix the sidecar without backend
 logs. A client-side schema or protocol rejection displays its bounded
 `ApiFailure` validation message; transport failures retain a generic safe status.
+
+## Authored generation projection
+
+For the API's validated autoregressive generation pattern, retain one Generation
+container, one original model, and ordinary Prepare inputs, Next token and Append
+token cards. Fold only its declared sequence-state record into initial, return
+and terminal relationships. Keep source segment paths separate across state
+phases, preserving state ID, owner group, phase and exact edge references for
+inspection. Generation relationships have a distinct owner from indexed layer
+relationships; never fabricate repetition/template identities or conflate t with i.
+
+Show the prepared full-sequence bypass to Append token as a real attached route,
+separate from positions, mask and logits. Route the return from Append token to
+the same Prepare inputs handle outside the entire model, in a lower gutter
+inside Generation. Reserve clearance from cards, formulas, headers, port labels
+and the bypass. Reuse ordinary connection selection and emphasis. The terminal
+route denotes reading the committed terminal sequence, not an early-exit branch.
+No state box, stop card, decision diamond, condition label, stopping subtitle,
+boolean port or separate legend is added.
+
+The initial candidate opens Generation and the original model's former stage
+overview; its three siblings remain visible. Apply the existing readable-fit
+threshold and bounded collapsed fallback to the resulting actual bounds. Ordinary
+collapse/reopen and indexed Decoder expansion preserve both return owners, source
+weights and inspection. Explore component can isolate the original model alone.

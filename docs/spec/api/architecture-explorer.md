@@ -158,3 +158,50 @@ The backend is the semantic authority for accepted graphs. Reject unknown discri
 The decoded architecture response is limited to 32 MiB (33,554,432 bytes), with no numeric payload hidden in attributes. Enforce byte limits during construction/serialization and bounded reads, not only after an unbounded allocation. Exceeding the bound yields a localized unavailable `unsupported_size` result; it never silently truncates nodes. Text/ID/collection validation must also guard nesting and counts within this budget. Every selected reference must fit and retain all required instances; hitting a limit is not successful reference acceptance.
 
 The publication child owns the OpenAPI schema transcription, closed union schemas, positive/negative fixtures, validator integration, and regenerated TypeScript/runtime bindings as one coherent contract change. Include complete/partial/unavailable graphs, every reason, no-tokenizer V-JEPA, symbolic/unknown dimensions, fused/quantized/native/rank-limited bindings, invalid references, oversize payloads, changed sessions, and current tensor-inventory compatibility. No backend or UI may ship against a divergent handwritten interface. This contract adds no generic execute endpoint, generation polling, public `/v1`, tensor JSON transport, or second cache API.
+
+## Autoregressive generation pattern
+
+This finite authored pattern uses existing group/operation/state/attribute records;
+it introduces no wire fields, edge kinds, execution endpoints or loop DSL.
+A group with `semantic_role=autoregressive_generation` and
+`policy=greedy_no_cache` owns one single-pass model group and exactly four other
+records. Its boundary ports are `prompt_ids` (input) and `token_ids` (output,
+label `token_ids[T]`, including the prompt). Labels are not selectors.
+
+Three ordinary operations declare matching `operation` and `semantic_role`:
+`generation_prepare_inputs`, `generation_greedy_next_token`, and
+`generation_append_token`. Stable ports are respectively
+`sequence` → `tokens, positions, mask`; `logits` → `token`; and
+`sequence, token` → `updated`. The model ports are
+`tokens, positions, mask` → `logits`. Under the unpadded full-sequence convention,
+current IDs and positions are [B,S], the causal mask is [B,1,S,S], logits are
+[B,S,V], the selected vocabulary ID is [B,1], and appended IDs are [B,S+1].
+Argmax selects the last sequence position and vocabulary axis with keepdims;
+concat uses the sequence axis. No arithmetic is performed by a graph consumer.
+
+The fourth record has kind `state`, operation and semantic role
+`generation_sequence_state`. Its stable ports are `initial` (input), `current`
+(output), `next` (input), and `final` (output). Initial and final use distinct
+sequence-length symbols; current uses S and next the expression `S + 1`.
+The operation declares phase correspondence: initial binds prompt as current at
+step zero, next commits the appended sequence as current at step t+1, and final
+reads the terminal sequence after T generated steps. These phases are alternatives
+in time, not arithmetic fan-in or an unconditional early exit. A policy that
+permits T=0 returns the prompt without claiming a model call. No EOS or token
+limit is implied by this explanatory pattern.
+
+Exact dependencies are: group prompt → state initial; state current → preparation
+sequence; each prepared output → the corresponding model input; model logits →
+selection logits; selection token → append token; **prepared tokens → append
+sequence**; append updated → state next; state final → group output.
+Current/next/final state edges use `state`; other edges use `data`.
+Connected port shapes agree exactly, including symbolic expressions. The length
+change occurs solely at state-phase correspondence; it is not broadcasting.
+Internal model forwarding remains real graph edges with exact source records.
+
+Backend contextual validation rejects malformed explicitly declared patterns,
+orphan sequence-state records, missing dependencies, wrong phase roles, kinds,
+ranks or lengths at normal producer/import/cache boundaries. External sidecars
+remain author-controlled. Undeclared graphs retain their ordinary interpretation.
+The browser consumes validated correspondence rather than reproducing backend
+semantic validation. Formula text and symbolic expressions remain inert.

@@ -257,3 +257,28 @@ also requires the actual external wiring, verified by the presentation consumer.
 Optional metadata uses the existing bounded omission/diagnostic policy and normal
 producer/schema cache invalidation. Model-owned definitions declare their own
 complete correspondence; external directories remain read-only.
+
+## Static no-cache generation context
+
+Eligible reviewed vocabulary models may declare the finite
+[autoregressive generation pattern](../api/architecture-explorer.md#autoregressive-generation-pattern).
+The outer caller supplies prompt IDs; deterministic position/mask preparation
+belongs inside Generation. The single-pass model retains its neural operations,
+layer correspondence, parameter bindings and weight inspection. Passive source
+I/O declarations may be materialized as truthful model boundary ports, retaining
+original dependency IDs and real forwarding; they are not neural operations.
+
+The packaged dense Llama/SmolLM2 and Qwen3 descriptions, including supported LoRA
+compositions, use the unpadded full-sequence convention. Preparation preserves
+integer IDs [B,S], derives integer positions [B,S], and an additive causal mask
+[B,1,S,S]. Greedy selection takes the last sequence position, argmax over vocabulary
+with keepdims, yielding one integer ID [B,1]. Append concatenates along sequence.
+This is a chosen explanatory policy, not a checkpoint generation default. No
+forward/generate call, numerical result, EOS ID or token budget is inferred.
+
+Each invocation uses the complete current sequence without cross-step cache
+reuse. State-dependent or conditioning interfaces require reviewed initialization
+and full-sequence conventions before adoption; vocabulary-head metadata alone
+is insufficient. Preserve non-generation graphs and all decision/visual interfaces.
+Semantic-validator and producer revisions participate in ordinary startup cache
+invalidation. Retrieval and canvas actions never regenerate artifacts.

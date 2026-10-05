@@ -12,7 +12,7 @@ from typing import Any
 
 from .clm_config import SOURCE_REVISION, configuration, encoder_inputs
 from .core import AnalysisInput, Description, DescriptionRegistry, GraphBuilder, Producer
-from .dense import register_dense_descriptions
+from .dense import build_single_pass, register_dense_descriptions
 from .packaged import publish_definition
 from .validation import require
 
@@ -226,10 +226,16 @@ def architecture(inputs: AnalysisInput, cfg: dict[str, Any]) -> dict[str, Any]:
     """Reuse the reviewed Qwen mathematical graph, without its generation head."""
     registry = DescriptionRegistry()
     register_dense_descriptions(registry)
-    result = registry.analyze(encoder_inputs(inputs))
-    if result.status != "complete" or result.graph is None or result.graph.diagnostics:
+    encoder = encoder_inputs(inputs)
+    description = registry.select(encoder)
+    if description is None:
         raise ValueError("Encoder is outside the complete native Qwen3 description")
-    graph = result.graph.document()
+    builder = GraphBuilder(encoder, description.producer, description.scope)
+    build_single_pass(encoder, builder)
+    result = builder.finish()
+    if result.coverage != "complete" or result.diagnostics:
+        raise ValueError("Encoder is outside the complete native Qwen3 description")
+    graph = result.document()
     by_id = {n["id"]: n for n in graph["nodes"]}
     root = next(n for n in graph["nodes"] if n["kind"] == "group" and "parent_id" not in n)
     excluded = {

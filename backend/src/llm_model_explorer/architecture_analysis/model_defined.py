@@ -44,7 +44,7 @@ class ModelDefinedProducer(Producer):
 
 
 def producer_for(definition: ModelDefinition) -> Producer:
-    return ModelDefinedProducer("model-defined-json", "4", definition.architecture_revision)
+    return ModelDefinedProducer("model-defined-json", "5", definition.architecture_revision)
 
 
 def _pointer(parts: tuple[str | int, ...]) -> str:

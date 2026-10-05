@@ -60,6 +60,7 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
   if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
   const projection = projectGraph(graph, options);
   const layoutProjection = { ...projection, edges: projection.edges.filter((e) => e.relationship?.kind !== 'return') };
+  const generationContainers = new Set(projection.edges.flatMap((e) => e.relationship?.owner === 'generation' ? [e.relationship.groupId] : []));
   const indexedContainers = new Set(projection.nodes.filter((n) => n.shared && n.parentId && !projection.nodes.find((p) => p.id === n.parentId)?.shared).map((n) => n.parentId));
   const projectedNodes = new Map(projection.nodes.map((node) => [node.id, node]));
   const descendant = (id: string, ancestor: string) => {
@@ -105,7 +106,8 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
     });
     const height = metrics.height;
     const indexed = indexedContainers.has(node.id);
-    const gutter = (direction: 'input' | 'output') => Math.max(24, 20 + metrics.portLabelWidth[direction]) + (indexed ? 80 : 0);
+    const generation = generationContainers.has(node.id);
+    const gutter = (direction: 'input' | 'output') => Math.max(24, 20 + metrics.portLabelWidth[direction]) + (indexed || generation ? 80 : 0);
     elkNodes.set(node.id, {
       id, width: metrics.width, height, ports,
       ...(node.expanded ? { children: [] } : {}),
@@ -115,7 +117,7 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
         'elk.spacing.portPort': String(metrics.portGap),
         // Boundary rows occupy side gutters, not a duplicate band above children.
         // Owned parameters/constants still reserve their actual summary height.
-        'elk.padding': `[top=${metrics.headerHeight + (indexed ? 80 : 16)},left=${gutter('input')},bottom=${24 + (bottomSpace.get(node.id) ?? 0)},right=${gutter('output')}]`,
+        'elk.padding': `[top=${metrics.headerHeight + (indexed ? 80 : 16)},left=${gutter('input')},bottom=${24 + (generation ? 80 : 0) + (bottomSpace.get(node.id) ?? 0)},right=${gutter('output')}]`,
         'elk.spacing.portsSurrounding': `[top=${metrics.headerHeight},left=0,bottom=16,right=0]`,
       },
     });
@@ -282,8 +284,15 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
   const widthGrowth = regularizeBoundaryRows(layoutProjection, boxes, ports, routes, metricsByNode);
   for (const edge of projection.edges.filter((e) => e.relationship?.kind === 'return')) {
     const source = byEndpoint.get(endpointKey(edge.source))!, target = byEndpoint.get(endpointKey(edge.target))!;
-    const inner = boxes.find((b) => b.id === edge.source.node_id)!;
-    const right = inner.absoluteX + inner.width + 48, left = inner.absoluteX - 48, top = inner.absoluteY - 32;
+    const relationship = edge.relationship!;
+    const members = relationship.owner === 'generation'
+      ? boxes.filter((b) => projectedNodes.get(b.id)?.parentId === relationship.groupId)
+      : boxes.filter((b) => b.id === edge.source.node_id);
+    const right = Math.max(...members.map((b) => b.absoluteX + b.width)) + 48;
+    const left = Math.min(...members.map((b) => b.absoluteX)) - 48;
+    const top = relationship.owner === 'generation'
+      ? Math.max(...members.map((b) => b.absoluteY + b.height)) + 48
+      : members[0]!.absoluteY - 32;
     routes.push({ id: edge.id, junctions: [], sections: [[
       { x: source.absoluteX, y: source.absoluteY }, { x: right, y: source.absoluteY },
       { x: right, y: top }, { x: left, y: top }, { x: left, y: target.absoluteY },

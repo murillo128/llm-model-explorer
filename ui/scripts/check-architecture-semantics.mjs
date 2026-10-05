@@ -1,5 +1,6 @@
 /** Compare producer exports with the accepted semantic fingerprints: pre-grouping
- * topology/bindings and issue #269's reviewed canonical operation-card formulas.
+ * topology/bindings, issue #269's canonical formulas and issue #294's explicit
+ * outer generation context. Neural computation and binding fingerprints remain unchanged.
  * Run with Node 24 after backend/tests/architecture_grouping_cases.py.
  * Uses issue #119's independent multiset oracle, never production projection.
  */

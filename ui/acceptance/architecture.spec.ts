@@ -25,6 +25,7 @@ import { fanoutPoint } from '../tests/architecture-pointer';
 // Their passive declarations are verified by the conservation oracle, not by
 // importing the runtime classification as the expected result.
 const componentsOf = (graph: Graph) => graph.nodes.filter((node) => !['input', 'output'].includes(node.kind) &&
+  !(node.kind === 'state' && node.operation === 'generation_sequence_state') &&
   !(node.kind === 'context' && !node.ports.length && node.references.some((r) => r.kind === 'tokenizer')));
 const visibleCount = (graph: Graph) => {
   const nodes = componentsOf(graph), roots = nodes.filter((n) => !n.parent_id);
@@ -696,6 +697,67 @@ for (const reference of [false, true]) for (const family of [
       assertTraceability(graph, projectGraph(graph, { expanded }));
     }
     const canvas = page.getByLabel('Architecture graph', { exact: true });
+    if (!reference && family === 'smollm2') {
+      const generation = graph.nodes.find((n) => n.attributes.some((a) => a.name === 'semantic_role' && a.value === 'autoregressive_generation'))!;
+      expect(generation).toBeTruthy();
+      const prepare = graph.nodes.find((n) => n.operation === 'generation_prepare_inputs')!;
+      const append = graph.nodes.find((n) => n.operation === 'generation_append_token')!;
+      const model = graph.nodes.find((n) => n.parent_id === generation.id && n.kind === 'group')!;
+      const requests = observed.length;
+      const card = (id: string) => page.locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`);
+      const open = async (id: string) => {
+        const control = card(id).locator('.architecture-expand');
+        if (await control.getAttribute('aria-expanded') !== 'true') await control.click();
+        await expect(canvas).toHaveAttribute('aria-busy', 'false');
+      };
+      await open(generation.id); await open(model.id);
+      await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+      const route = (source: string, port: string, target: string) => page.locator(`.architecture-connection[data-source-node=${JSON.stringify(source)}][data-source-port=${JSON.stringify(port)}][data-target-node=${JSON.stringify(target)}]`);
+      await expect(route(prepare.id, 'tokens', append.id)).toHaveCount(1);
+      await expect(route(append.id, 'updated', prepare.id)).toHaveCount(1);
+      await expect(route(generation.id, 'prompt_ids', prepare.id)).toHaveCount(1);
+      await expect(route(append.id, 'updated', generation.id)).toHaveCount(1);
+      await expect(page.locator('.architecture-node-label').filter({ hasText: /^(Prepare inputs|Next token|Append token)$/ })).toHaveCount(3);
+      await expect(page.locator('.architecture-node-label').filter({ hasText: /^(Sequence state|Stop condition|Yes|No)$/ })).toHaveCount(0);
+      const receipt = await route(append.id, 'updated', prepare.id).evaluate((element, modelId) => {
+        const model = document.querySelector(`.react-flow__node[data-id="${modelId}"]`)!.getBoundingClientRect();
+        const paths = [...element.querySelectorAll<SVGPathElement>('.architecture-edge-line')];
+        const points = paths.flatMap((path) => {
+          const length = path.getTotalLength(), transform = path.getScreenCTM()!;
+          return Array.from({ length: Math.ceil(length) + 1 }, (_, i) => {
+            const point = path.getPointAtLength(Math.min(i, length)).matrixTransform(transform);
+            return { x: point.x, y: point.y };
+          });
+        });
+        const endpoint = (side: 'source' | 'target') => {
+          const node = element.getAttribute(`data-${side}-node`), port = element.getAttribute(`data-${side}-port`);
+          const button = document.querySelector(`.architecture-port[data-node-id="${node}"][data-port-id="${port}"]`)!;
+          const rect = button.getBoundingClientRect(); return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        };
+        return { model: model.toJSON(), source: endpoint('source'), target: endpoint('target'), first: points[0]!, last: points.at(-1)!,
+          crossesModel: points.some((p) => p.x > model.left + 1 && p.x < model.right - 1 && p.y > model.top + 1 && p.y < model.bottom - 1),
+          belowModel: Math.max(...points.map((p) => p.y)) > model.bottom, sourceEdges: element.getAttribute('data-original-edge-ids') };
+      }, model.id);
+      expect(receipt.crossesModel).toBe(false); expect(receipt.belowModel).toBe(true);
+      for (const axis of ['x', 'y'] as const) {
+        expect(receipt.first[axis]).toBeCloseTo(receipt.source[axis], 0);
+        expect(receipt.last[axis]).toBeCloseTo(receipt.target[axis], 0);
+      }
+      await info.attach('generation-route-receipt', { body: JSON.stringify({ graph: graph.graph_id, modelId: model.id, ...receipt }), contentType: 'application/json' });
+      const originalViewport = page.viewportSize()!;
+      await page.setViewportSize({ width: 3800, height: 1000 });
+      await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+      const screenshot = info.outputPath('native-generation.png');
+      await page.screenshot({ path: screenshot }); await info.attach('native-generation', { path: screenshot, contentType: 'image/png' });
+      await page.setViewportSize(originalViewport);
+      await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+      await card(model.id).locator('.architecture-expand').click();
+      await expect(canvas).toHaveAttribute('aria-busy', 'false');
+      await open(model.id);
+      await expect(route(prepare.id, 'tokens', append.id)).toHaveCount(1);
+      await expect(route(append.id, 'updated', prepare.id)).toHaveCount(1);
+      expect(observed.slice(requests)).toEqual([]);
+    }
     await recordGraph(page, info, 'compact-graph', graph);
     await graphAction(page, 'Show all operations');
     await expect(canvas).toHaveAttribute('data-visible-nodes', String(visibleCount(graph)));

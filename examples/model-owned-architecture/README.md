@@ -56,3 +56,13 @@ weights requires only a new matching definition/checkpoint, not an Explorer PR.
 Keep model/exporter correspondence tests in that repository. File-format changes
 are different from model-architecture changes: only the former may need a new
 Explorer reader.
+
+`generation-architecture.json` is an explicit small unpadded, greedy, no-cache
+language-model definition with one decoder layer. It preserves a single set of
+model weights and declares preparation, last-position vocabulary selection,
+full-sequence append and sequence-state phases. Its `parameters` list gives the
+exact native tensor names and shapes a package must contain, including the
+separately stored `lm_head.weight`. It is a static authoring example, not trained
+weights or a generation implementation. Copy it as `architecture.json` only into
+a matching local package and use the normal authoring validator. The encoder
+examples above retain their non-generation interfaces.

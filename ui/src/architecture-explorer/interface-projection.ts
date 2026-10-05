@@ -1,3 +1,4 @@
+import { generationPatterns } from './generation';
 import type { Graph } from './graph';
 import { interfaceIndex, interfaceNotices } from './interfaces';
 import type { ModelInterface } from './interfaces';
@@ -66,8 +67,9 @@ export function projectInterfaces(graph: Graph, base: Projection, options: Proje
   // of external declarations or whether a port has a routed connection.
   const isolated = options.scope ? visible.get(options.scope) : undefined;
   if (isolated?.record) for (const port of isolated.record.ports) portAt(isolated, { node_id: isolated.id, port_id: port.id });
+  const generationBoundaries = new Set(generationPatterns(graph).flatMap((p) => [p.owner.id, p.model.id]));
   const expandedBoundary = (endpoint: Endpoint) => visible.get(endpoint.node_id)?.expanded &&
-    (endpoint.node_id === options.scope || Boolean(index.signals.get(key(endpoint))?.length));
+    (endpoint.node_id === options.scope || generationBoundaries.has(endpoint.node_id) || Boolean(index.signals.get(key(endpoint))?.length));
   // Complete declared interfaces remain available even without visible edges.
   for (const item of index.interfaces) {
     if (options.scope && !base.scope?.nodeIds.includes(item.node.id)) continue;
