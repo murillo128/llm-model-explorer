@@ -276,3 +276,9 @@ stack used by the browser proof. The isolated CI-entrypoint case includes both
 architecture and native-package TCP owners introduced by the family matrix,
 while still rejecting npm/browser commands. Both corrections and the existing
 entrypoint/routing cases pass together: 49 tests and 120 subtests.
+
+The retained-navigation browser check now verifies the collapsed Generation and
+both exact Qwen context records, with no redundant Model wrapper. It waits for
+navigation layout readiness before measuring selection-only stability; the
+unchanged camera/layout/retained-state guards and new collapsed identities pass
+at both DPR 1 and DPR 2 (41.6 seconds).

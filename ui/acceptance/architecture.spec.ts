@@ -621,6 +621,7 @@ test('production graph navigation preserves declared structure and retained UI s
   const parameter = graph.parameters.find(p => p.inspection.status === 'available' && p.logical_shape?.length === 2)!;
   const node = graph.nodes.find(n => n.parameter_ids.includes(parameter.id))!;
   await findComponent(page, node.id);
+  await expect(canvas).toHaveAttribute('aria-busy', 'false');
   const card = page.locator(`.react-flow__node[data-id=${JSON.stringify(node.id)}]`);
   const camera = await page.locator('.react-flow__viewport').getAttribute('style');
   const count = await canvas.getAttribute('data-layout-count'), scope = await canvas.getAttribute('data-scope-id');
@@ -642,7 +643,19 @@ test('production graph navigation preserves declared structure and retained UI s
   await viewOptions(page); await expect(page.getByLabel('Show dimensions')).toBeChecked();
   await page.keyboard.press('Escape');
   await graphAction(page, 'Collapse all');
-  await expect(canvas).toHaveAttribute('data-visible-nodes', '1');
+  // Generation is the outer owner; Qwen's two unrelated context records stay
+  // explicit instead of introducing another Model wrapper around all three.
+  await expect(canvas).toHaveAttribute('data-visible-nodes', '3');
+  await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+  const generation = graph.nodes.find((n) => n.attributes.some((a) =>
+    a.name === 'semantic_role' && a.value === 'autoregressive_generation'))!;
+  const generationCard = page.locator(`.react-flow__node[data-id=${JSON.stringify(generation.id)}]`);
+  await expect(generationCard.locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'false');
+  for (const label of ['visual components context only', 'auxiliary mtp weights unused by reviewed language path']) {
+    const context = graph.nodes.find((n) => n.kind === 'context' && n.label === label)!;
+    await expect(page.locator(`.react-flow__node[data-id=${JSON.stringify(context.id)}]`)).toBeAttached();
+  }
+  await expect(page.locator('.react-flow__node[data-id="presentation:model"]')).toHaveCount(0);
   for (const node of graph.nodes.filter(n => ['input', 'output'].includes(n.kind))) {
     await expect(page.locator(`.architecture-browser-row[data-node-id=${JSON.stringify(node.id)}]`)).toHaveCount(0);
   }
