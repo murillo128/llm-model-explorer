@@ -94,7 +94,8 @@ def inspect_graph(service, model_id, *, validate_inventory=True):
     assert response.status_code == 200, response.text
     assert response.headers["cache-control"] == "no-store"
     assert "x-operation-id" not in response.headers
-    assert str(service.model_root) not in response.text
+    model_root = service.model_root or service.root / "models"
+    assert str(model_root.resolve()) not in response.text
     body = response.json()
     if validate_inventory:
         validate_architecture(
@@ -280,7 +281,23 @@ def test_kimi_linear_complete_expert_graph_over_production_tcp(tmp_path):
         )
         assert len({node["id"] for node in expanded["nodes"]}) == len(expanded["nodes"])
         assert len(expanded["nodes"]) > 7000
-        assert len(expanded["edges"]) > 2000
+        # No-cache specialization removes bank bookkeeping, never depth transitions.
+        decoder = next(rep for rep in graph["repetitions"] if len(rep["instances"]) == 27)
+        layers = decoder["instances"]
+        assert [layer["index"] for layer in layers] == list(range(27))
+        connections = {
+            (
+                edge["source"]["node_id"],
+                edge["source"]["port_id"],
+                edge["target"]["node_id"],
+                edge["target"]["port_id"],
+            )
+            for edge in expanded["edges"]
+        }
+        assert all(
+            (previous["node_id"], "out", current["node_id"], "x") in connections
+            for previous, current in zip(layers[:-1], layers[1:], strict=True)
+        )
         assert inventory["coverage"] == "complete"
 
         response = service.client.get(prefix + "/architecture")

@@ -13,7 +13,7 @@ from . import records as r
 from .generation import GenerationInterface, wrap_generation
 from .invocation import Invocation, no_cache_invocation
 from .operations import primitive_formula
-from .templates import ComponentTemplates
+from .templates import ComponentTemplates, fit_template_budget
 from .validation import (
     MAX_BYTES,
     BindingContext,
@@ -443,7 +443,7 @@ class GraphBuilder:
             return graph
         from .compact import compact_graph, expand_graph
 
-        compact = compact_graph(graph)
+        compact = fit_template_budget(compact_graph(graph), self.response_limit)
         serialized_size(compact.document(), self.response_limit)
         validate_graph(expand_graph(compact), self.inputs.bindings)
         return compact

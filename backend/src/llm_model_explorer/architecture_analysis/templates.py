@@ -208,3 +208,51 @@ class ComponentTemplates:
             except GraphError:
                 pass  # A full ordinary graph wins even when no diagnostic bytes remain.
         return result
+
+
+def fit_template_budget(graph: r.ArchitectureGraph, byte_limit: int) -> r.ArchitectureGraph:
+    """Bound optional mappings after lossless compaction, preserving every source record.
+
+    Construction has a separate work budget. Its optional annotations must not
+    make a formerly fitting compact graph unavailable at a lower response budget.
+    Prefer whole-layer correspondence; never truncate a family or its instances.
+    """
+    try:
+        serialized_size(graph.document(), byte_limit)
+        return graph
+    except GraphError as exc:
+        if exc.code != "unsupported_size":
+            raise
+    if not graph.templates:
+        return graph
+    base = graph.model_copy(update={"templates": None})
+    base.model_fields_set.discard("templates")
+    remaining = byte_limit - serialized_size(base.document(), byte_limit) - len(',"templates":[]')
+    retained: set[str] = set()
+    for template in sorted(graph.templates, key=lambda t: t.component_role != "layer"):
+        try:
+            size = serialized_size(template.document(), max(0, remaining)) + int(bool(retained))
+        except GraphError as exc:
+            if exc.code != "unsupported_size":
+                raise
+            continue
+        if size <= remaining:
+            retained.add(template.id)
+            remaining -= size
+    result = (
+        base.model_copy(update={"templates": [t for t in graph.templates if t.id in retained]})
+        if retained
+        else base
+    )
+    diagnostic = r.ArchitectureDiagnostic(
+        code="templates_omitted",
+        message="Some optional shared structures exceeded the response metadata budget.",
+    )
+    diagnosed = result.model_copy(update={"diagnostics": [*result.diagnostics, diagnostic]})
+    try:
+        serialized_size(diagnosed.document(), byte_limit)
+        return diagnosed
+    except GraphError as exc:
+        if exc.code != "unsupported_size":
+            raise
+        return result

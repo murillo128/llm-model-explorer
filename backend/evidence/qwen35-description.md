@@ -249,3 +249,24 @@ Existing semantic-revision invalidation, cold/warm startup and GET-never-generat
 checks passed. Artifacts remain disposable and immutable; no cache was edited.
 This is static-description and deterministic fixture acceptance, not full local
 reference-model or numerical-generation acceptance.
+
+
+The first broad CI run identified additional stale expectations and one bounded
+metadata issue. Qwen/Kimi revision assertions now track the required bumps;
+Qwen state ownership separately exercises native no-cache and retained cached
+components. Optional Shared mappings are charged after lossless compaction and
+retained only as complete families, with layer correspondence prioritized.
+Existing 25,000,000-byte expert reconstruction/NF4 tests pass without changing
+their limit or exact-binding negative controls (14 focused cases passed).
+Twenty template tests also pass, including exact ordinary-graph and array-separator
+boundaries for both construction and response budgets. Default family outcomes
+remain positive in the real producer-to-consumer matrix.
+
+The TCP privacy assertion formerly searched for `str(None)` when no explicit
+model-root override was supplied; Kimi's source-backed `cache=None` text caused a
+false assertion with a huge response diagnostic. It now checks the actual fixture
+model path. The obsolete cached-edge-count threshold is replaced with all 26
+concrete decoder-transition checks after the authorized removal of absent cache
+bookkeeping. Kimi production TCP and the complete 15-row grouping acceptance pass
+together in 137.7 seconds. No CI deadline, response limit or validation gate was
+increased or bypassed.

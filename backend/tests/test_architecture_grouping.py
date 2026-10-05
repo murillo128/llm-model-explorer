@@ -31,7 +31,13 @@ def test_reviewed_groups_and_revision(
     name: str, inputs: AnalysisInput, registry: DescriptionRegistry
 ) -> None:
     selected = registry.select(inputs)
-    expected_revision = "5" if name in {"llama", "qwen3", "llama-bias", "llama-partial"} else "2"
+    expected_revision = (
+        "5"
+        if name in {"llama", "qwen3", "llama-bias", "llama-partial"}
+        else "3"
+        if name == "hybrid"
+        else "2"
+    )
     assert selected is not None and selected.producer.revision == expected_revision
     result = registry.analyze(inputs)
     graph = result.graph
@@ -151,21 +157,40 @@ def test_reviewed_groups_and_revision(
     assert legacy.coverage == graph.coverage
 
 
-def test_hybrid_state_and_unused_layer_interfaces_keep_exact_owners() -> None:
+@pytest.mark.parametrize("cached", [False, True])
+def test_hybrid_state_and_unused_layer_interfaces_keep_exact_owners(cached: bool) -> None:
     _, inputs, registry = next(c for c in cases() if c[0] == "hybrid")
+    if cached:
+        from llm_model_explorer.architecture_analysis.qwen35 import build_single_pass
+
+        description = registry.select(inputs)
+        assert description is not None
+        registry = DescriptionRegistry()
+        registry.register(replace(description, build=build_single_pass))
     graph = registry.analyze(inputs).graph
     assert graph is not None
     keys = {semantic_key(n): n for n in graph.nodes}
     prefix = "model.language_model.layers."
     for index, component, states in (
-        (0, "linear_attn", ("prior_conv", "next_conv", "prior_recurrent", "next_recurrent")),
-        (1, "self_attn", ("prior_kv", "next_kv")),
+        (
+            0,
+            "linear_attn",
+            ("prior_conv", "next_conv", "prior_recurrent", "next_recurrent")
+            if cached
+            else ("prior_recurrent",),
+        ),
+        (1, "self_attn", ("prior_kv", "next_kv") if cached else ()),
     ):
         layer = keys[prefix + str(index)]
         attention = keys[f"{prefix}{index}.{component}"]
         assert [p.id for p in layer.ports] == ["x", "positions", "mask", "current_mask", "out"]
         for state in states:
             assert keys[f"{prefix}{index}.{component}.{state}"].parent_id == attention.id
+    if not cached:
+        assert keys[prefix + "0.linear_attn.prior_recurrent"].operation == "initial_delta_state"
+        assert prefix + "1.self_attn.prior_kv" not in keys
+        assert prefix + "0.linear_attn.prior_conv" not in keys
+        return
     prior = keys[prefix + "1.self_attn.prior_kv"]
     assert [p.id for p in prior.ports] == ["key_state", "value_state"]
     conv = keys[prefix + "0.linear_attn.prior_conv"]

@@ -86,13 +86,17 @@ must still pass; a common name never proves correspondence.
 
 Keep this metadata path removable. A singleton or unverified candidate remains an
 ordinary component, and optional budget exhaustion cannot consume source graph
-records or downgrade mathematical coverage. Construction and validation use one
+records or downgrade mathematical coverage. Charge optional mappings against the
+final response budget after lossless wire compaction. Retain whole families,
+prioritizing layer correspondence when an explicitly smaller budget cannot fit
+all annotations. Required shipped-family views remain available under the normal
+response budget. Construction and validation use one
 bounded graph index and component-local mappings, not another full checkpoint or
 graph. Never read weights, execute operations or infer weight equality to decide
 a family. Parameter bindings and logical tensor identities stay attached to the
 real instance, including verified aliases and unavailable inspections.
 
-The current annotation definition is `exact-component-roles-1`. The analyzer core
+The current annotation definition is `exact-component-roles-3`. The analyzer core
 revision and generated graph-schema revision invalidate structured startup cache
 entries; numeric artifact keys and logical tensor identities are unchanged.
 
