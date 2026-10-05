@@ -48,7 +48,7 @@ Do not treat repository-owned analyzers as an implementation shortcut around aut
 
 Prefer reusable producer helpers for invariants that should hold across families: canonical operation formulas/signatures, port naming, computational scalar attributes, group interfaces, parameter locality, and graph validation. Model-specific code may specialize real semantics, but it must not silently weaken these invariants.
 
-When the same semantic defect can recur across producers, fix or validate the shared construction path rather than patching only one screenshot or one checkpoint. Add regression coverage at the producer boundary and at least one rendered/consumer path when the defect is visible only after projection into the UI.
+When the same semantic defect can recur across producers, fix or validate the shared construction path rather than patching only one screenshot or one checkpoint. Add regression coverage at the producer boundary and at least one rendered/consumer path when the defect is visible only after projection into the UI. Follow `skills/test-quality/SKILL.md`: reuse existing proof and extend its owning cases before adding tests; this rule does not require duplicate suites, a checkpoint Cartesian product, or a new browser scenario when existing coverage already proves the distinct risk.
 
 ## Decompose compound computations instead of hiding them in one card
 
@@ -166,6 +166,30 @@ Map nodes, ports, internal edges, and referenced parameters by stable semantic r
 
 Repetitions and Shared structures are independent: repetitions organize ordered repeated instances; Shared templates enable structure comparison/navigation.
 
+## Compose indexed stack views from repetitions and Shared structures
+
+For a compact serial stack, reuse a verified Shared structure as the symbolic `Layer[i]` inside the existing repetition container. Do not introduce another abstract computational node kind or replace the concrete source layers with a self-loop. Shared supplies structural correspondence; the repetition supplies ordered instances; the real inter-instance edges establish whether those instances form a serial chain. Neither a family label nor repetition membership alone proves that chain.
+
+Author complete whole-layer correspondences, including nested Attention/MLP groups, operations, ports, internal edges and parameter roles, when those layers are structurally equivalent. Preserve eligible nested Shared families as well. Extend the owning graph contract, producer and both consumers together if the current supported component roles do not yet admit whole layers; do not label a layer as Attention/MLP, invent unsupported JSON fields, or create a competing template system to bypass that limitation.
+
+The source graph retains its exact initial input, every `layer[k].out -> layer[k+1].x` dependency, and its final output, with contract-defined boundary forwarding wherever a real group boundary exists. A presentation-only repetition container does not justify adding a redundant source wrapper. Keep all concrete identities, mathematical operations, shapes, parameter bindings and edge kinds recoverable, including when an already-supported compact wire form is decoded.
+
+The indexed view derives three relationships from that source graph. Its entry displays `x[0] -> x[i]` and applies only to the first instance. Its return displays `out[i] -> x[i]` but means `x[i+1] = out[i]` for `0 <= i < N-1`, not feedback into the same concrete layer. Its exit displays `out[i] -> out[N-1]` and applies only to the last instance. For `Decoder ×30`, the final label is `out[29]`: thirty layer applications have twenty-nine inter-layer transitions. Derive actual first/last indices from the repetition rather than hard-coding thirty or renumbering source instances.
+
+These are **presentation relationships with source provenance**, not new `ArchitectureEdge.kind` values. Retain exact source edge IDs and ordered forwarding paths for entry/exit, and the separate ordered inter-instance paths represented by the return. Keep endpoint and instance correspondence available for inspection; do not concatenate unrelated paths into a fictitious source path or treat boundary entry plus return as a simultaneous arithmetic merge. Preserve the ordinary `data`, `state` and `context` meanings.
+
+The compact group keeps its existing title, multiplicity, appearance and controls. Its first expansion shows one symbolic Shared layer, which can itself expand into the common operations; explicit concrete-instance/window and exhaustive views remain available. Route the return outside the inner layer card but inside the repetition container, with space for labels and headers. Connect each invariant input, such as `cos`, `sin` or `mask`, separately through its corresponding group and layer ports. Only an identical verified source value may be shared across instances; never merge these distinct signals into a bus or create a shared-input computation box.
+
+Use indexed display aliases consistently in the symbolic layer's ports and local formulas/signatures, including its expanded operations: `x[i]`, `out[i]`, and layer-dependent parameter roles such as `weight[i]`. A concise group signature may read `out[i] = layer[i](x[i], cos, sin, mask)` when it matches the real interface; it does not replace the inner computation. Invariant inputs/constants remain unindexed. The layer index is not a tensor dimension or a rewrite of checkpoint names, source IDs or binding paths. Preserve genuine tied parameters and any existing mathematical indices; do not apply blind string replacement to formulas. Parameters remain on their consuming operations, not collected into a group-level weights bag.
+
+A symbolic parameter role is not an actionable tensor binding. Numeric inspection requires an explicitly selected concrete instance and resolves its exact existing parameter/tensor identity. Never silently use layer zero, expose anchor-instance weights in structure-only mode, or materialize tensor values to establish correspondence.
+
+Only offer the single-layer return when complete correspondence and the actual ordered connections prove it without hiding extra dependencies. Preserve source order and fall back to the existing concrete/window representation for heterogeneous layers, unverified mappings, non-serial wiring or unrepresentable bypass/state/context dependencies. Nonconsecutive members of one Shared family must not be connected as adjacent layers merely because intervening variants are hidden. A singleton has no return edge. Missing optional metadata keeps the ordinary graph usable; malformed published metadata still fails its existing validation boundary.
+
+This pattern abbreviates finite structural depth, not autoregressive token generation, prefill, sampling, a runtime execution engine or temporal KV-cache recurrence. Those require their own accepted semantic contract and must not be inferred from the visual return.
+
+When adopting this pattern, migrate eligible existing built-in/static producers and repository-owned architecture definitions through their shared construction/annotation paths, not just a screenshot fixture. Preserve exceptional variants and record genuine eligibility limits. Update affected producer/definition revisions through normal startup cache invalidation; never hand-edit disposable caches or silently rewrite user-owned model files. Validate source conservation, correspondence and projection at their owning boundaries, reusing existing cases and one representative real-rendering path rather than duplicating the same matrix across backend, API and browser tests.
+
 ## Prefer semantic fidelity over visual compactness
 
 The default view should be readable, but never obtain compactness by deleting meaningful computation or inventing opaque mega-cards.
@@ -198,7 +222,7 @@ Map each logical parameter to the exact checkpoint tensor name and shape. Keep e
 
 ### 6. Add repetitions and Shared metadata
 
-Only after the concrete graph is correct, add repetition windows and eligible Shared families. Presentation metadata must annotate the real graph, never compensate for a missing graph.
+Only after the concrete graph is correct, add repetition windows and eligible Shared families. Presentation metadata must annotate the real graph, never compensate for a missing graph. For an eligible indexed stack, include whole-layer correspondence and verify the exact initial, inter-instance and final paths plus invariant inputs. Keep symbolic display aliases separate from concrete parameter/resource identity.
 
 ### 7. Validate contract and presentation
 
@@ -237,6 +261,9 @@ Before accepting an Architecture Explorer graph producer, verify all of the foll
 23. The graph is understandable when viewed collapsed and expanded in Architecture Explorer.
 24. Matrix/vector buttons resolve to the intended real tensors for representative operations.
 25. The expanded graph does not rely on a giant parent formula to explain computation that should exist as child nodes.
+26. Indexed stack views compose verified Shared layers with real repetition wiring; entry, return and exit retain exact source provenance without adding a source self-loop.
+27. Indexed formulas/ports/parameter roles agree, invariant inputs stay distinct, and numeric inspection requires a concrete instance.
+28. Existing eligible producers adopt the pattern through normal generation/cache revisions; fallback preserves exceptions and tests reuse the minimum independent owning proof.
 
 ## Common failure modes
 
@@ -261,6 +288,10 @@ Before accepting an Architecture Explorer graph producer, verify all of the foll
 **Fake compactness:** use groups/repetitions for progressive detail instead of deleting real branches or dependencies.
 
 **Shared confused with tied weights:** structural correspondence and parameter identity are separate claims; represent each truth independently.
+
+**Symbolic return mistaken for source recurrence:** keep concrete inter-layer edges and derive the indexed return from their correspondence. Shared membership alone does not prove serial flow, and the return is not a temporal generation loop.
+
+**Indexed labels mistaken for tensor bindings:** display `weight[i]` as a role, preserve exact checkpoint names, and require an explicit instance before numeric inspection. Do not silently reuse the anchor layer's resources.
 
 **Wrong-direction or boundary-skipping edges:** ordinary dependencies are `output → input`; use only contract-defined group forwarding, route through group boundaries, and fan out from the original producer instead of from an input port.
 
