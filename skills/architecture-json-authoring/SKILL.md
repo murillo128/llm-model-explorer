@@ -180,7 +180,8 @@ These are **presentation relationships with source provenance**, not new `Archit
 
 The compact group keeps its existing title, multiplicity, appearance and controls. Its first expansion shows one symbolic Shared layer, which can itself expand into the common operations; explicit concrete-instance/window and exhaustive views remain available. Route the return outside the inner layer card but inside the repetition container, with space for labels and headers. Connect each invariant input, such as `cos`, `sin` or `mask`, separately through its corresponding group and layer ports. Only an identical verified source value may be shared across instances; never merge these distinct signals into a bus or create a shared-input computation box.
 
-Use indexed display aliases consistently in the symbolic layer's ports and local formulas/signatures, including its expanded operations: `x[i]`, `out[i]`, and layer-dependent parameter roles such as `weight[i]`. A concise group signature may read `out[i] = layer[i](x[i], cos, sin, mask)` when it matches the real interface; it does not replace the inner computation. Invariant inputs/constants remain unindexed. The layer index is not a tensor dimension or a rewrite of checkpoint names, source IDs or binding paths. Preserve genuine tied parameters and any existing mathematical indices; do not apply blind string replacement to formulas. Parameters remain on their consuming operations, not collected into a group-level weights bag.
+Use indexed display aliases consistently in the symbolic layer's ports and local formulas/signatures, including its expanded operations: `x[i]`, `out[i]`, and layer-dependent parameter roles such as `weight[i]`. A concise group signature may read `out[i] = layer[i](x[i], cos, sin, mask)` when it matches the real interface; it does not replace the inner computation. Invariant inputs/constants remain unindexed. The layer index is not a tensor dimension or a rewrite of checkpoint names, source IDs or binding paths. Preserve genuine tied parameters and any existing mathematical indices; do not apply blind string replacement to formulas.
+Parameters remain on their consuming operations, not collected into a group-level weights bag.
 
 A symbolic parameter role is not an actionable tensor binding. Numeric inspection requires an explicitly selected concrete instance and resolves its exact existing parameter/tensor identity. Never silently use layer zero, expose anchor-instance weights in structure-only mode, or materialize tensor values to establish correspondence.
 
@@ -189,6 +190,30 @@ Only offer the single-layer return when complete correspondence and the actual o
 This pattern abbreviates finite structural depth, not autoregressive token generation, prefill, sampling, a runtime execution engine or temporal KV-cache recurrence. Those require their own accepted semantic contract and must not be inferred from the visual return.
 
 When adopting this pattern, migrate eligible existing built-in/static producers and repository-owned architecture definitions through their shared construction/annotation paths, not just a screenshot fixture. Preserve exceptional variants and record genuine eligibility limits. Update affected producer/definition revisions through normal startup cache invalidation; never hand-edit disposable caches or silently rewrite user-owned model files. Validate source conservation, correspondence and projection at their owning boundaries, reusing existing cases and one representative real-rendering path rather than duplicating the same matrix across backend, API and browser tests.
+
+## Describe no-cache autoregressive generation outside the model
+
+When a task adopts a generation view, distinguish the neural model's single forward pass from its external generation procedure. Keep one existing `model` boundary and its real internals inside a meaningful `Generation` container. Add three ordinary operation cards outside `model`: `Prepare inputs` before it, then `Next token` and `Append token` after its vocabulary logits. These operations and their dependencies must be declared by the producer; the frontend must not invent them from a label named `logits`, a tokenizer capability, or a `language_model` scope alone. A declared explanatory greedy policy is not a claim about the checkpoint's runtime sampling default.
+
+Without KV caching, `token_ids[t]` denotes the entire sequence at generation step `t`, not the token at position `t`. Initialize it from `prompt_ids`. `Prepare inputs` forwards that sequence and derives its current positions and causal mask using the reviewed model convention. Forward the full sequence on every iteration; never feed only the last generated ID in a no-cache diagram. Use truthful symbolic lengths, rank and mask conventions. A simple `arange` and triangular mask describe the bounded unpadded case, not arbitrary padded, packed, multimodal or encoder-decoder inputs.
+
+`Next token` consumes vocabulary logits, selects the last valid sequence position, and outputs one token ID. For the initial greedy view its signature can be `next_token_id[t] = argmax_vocab(last_valid(logits[t]))`. The selected vocabulary index is the ID; neither detokenization nor re-tokenization belongs on this return path. Preserve the selected dimension and output shape. Do not reinterpret candidate/option scores as vocabulary logits or introduce sampling, temperature and top-k controls into a greedy-only increment.
+
+`Append token` has two independent inputs: the full `token_ids[t]` and `next_token_id[t]`. Derive the former from the same `Prepare inputs` output that feeds the model; this visible bypass is essential. Its formula is `token_ids[t+1] = concat(token_ids[t], next_token_id[t])`, along the sequence axis, with compatible ranks (for example `[B, S]` plus `[B, 1]` yields `[B, S+1]`). Do not obtain both inputs from `Next token`, route IDs through logits, or drop the original prefix.
+
+Describe the sequence carried between steps explicitly, using the owning contract's current/next `state` interfaces and bounded generation-phase correspondence. This sequence state is not a KV cache. Entry initializes the current sequence; return advances the completed sequence to the next step; exit exposes the terminal sequence. They are different phases, not a simultaneous arithmetic merge or three unconditional same-step data edges. Keep source endpoints, actual edge IDs, state ownership and phase semantics inspectable. Reuse existing presentation relationship/routing machinery, but do not invent a Shared family, thirty copies of the model or a list of runtime iterations to satisfy structural repetition metadata.
+
+An ordinary edge must not falsely equate current length `S` with next length `S+1`. Keep the change at the declared state transition and keep connected ordinary port shapes compatible; do not overwrite shapes, add an implicit broadcast or loosen general validation for this drawing. Define any newly needed generation semantics in the owning API/backend/UI specifications and validators together, preferring existing group, operation, state and attribute records over a new loop language. Formulas and symbolic step/length expressions remain data-only descriptions, never code to execute.
+
+The visual return runs from `Append token` back to `Prepare inputs`, outside `model` and inside `Generation`, with both ends attached to their real projected ports. The initial `prompt_ids` route enters that same projected input; the completed sequence also reaches `Generation`'s output as `token_ids[T]`, explicitly including the prompt. Preserve each route's distinct initial, next-step or terminal meaning. Reserve return/bypass gutters without crossing model interiors, headers or labels, and retain the existing line/port/label highlighting and inspection. Reuse ordinary card styles and boundary ports; a source-level sequence state need not become an extra visible card when its complete meaning is projected into these relationships.
+
+Do **not** add a Stop condition card, decision diamond, Yes/No branches, boolean control port, separate legend, loop-controller card or stopping subtitle on `Generation`. At most, show a compact terminal predicate as a second formula line inside `Append token`, such as `(next_token_id[t] in eos_token_ids) or (t+1 >= max_new_tokens)`. Only include terms whose symbols and policy values are actually declared; omit this optional line rather than inventing an EOS ID or token limit. This annotation is not an extra output or an executed decision node. Zero generated steps, when a declared policy permits them, return the prompt without claiming a model pass or token append.
+
+Use `t` for generation and retain `i` for layer depth. The same model and exact weights are reused between generation steps: do not add `weight[t]`, duplicate parameter resources or require choosing a generation step to inspect a weight. Existing layer-indexed Shared views and genuine weight tying retain their own rules. Keep temporal aliases at generation interfaces/formulas where useful; do not mechanically rewrite every operation inside the model.
+
+Apply the pattern only to a verified autoregressive vocabulary-generation path. Migrate eligible existing native/static producers and repository-owned definitions through shared helpers and normal producer/cache revisions; a one-off fixture is not delivery. Preserve ordinary views for genuinely ineligible models, with explicit reasons. Decision-oriented CLM/Kev graphs and V-JEPA encoder/predictor graphs do not acquire a text-generation loop merely because they contain language backbones or repeated layers. Preserve their real interfaces, independent states and output meanings. User-owned model files remain read-only.
+
+Keep this a static, no-cache explanatory view. Do not add inference endpoints, a generation runner, polling, live token values, model downloads, numerical execution or cross-step KV-cache wiring. Reuse tests for source bindings, indexed returns, layout and lifecycle. Add only missing generation topology/phase/shape assertions at their owner and one representative producer-to-built-browser extension for distinct rendering risk; do not replay a model/quantization matrix or execute real generation to validate static records.
 
 ## Prefer semantic fidelity over visual compactness
 
@@ -223,6 +248,8 @@ Map each logical parameter to the exact checkpoint tensor name and shape. Keep e
 ### 6. Add repetitions and Shared metadata
 
 Only after the concrete graph is correct, add repetition windows and eligible Shared families. Presentation metadata must annotate the real graph, never compensate for a missing graph. For an eligible indexed stack, include whole-layer correspondence and verify the exact initial, inter-instance and final paths plus invariant inputs. Keep symbolic display aliases separate from concrete parameter/resource identity.
+
+For an adopted no-cache generation view, separately declare the external input preparation, vocabulary selection, append operation and sequence-state phases. Do not reuse structural repetition membership as evidence of temporal generation. Verify the full-sequence bypass and initial/return/final relationships before checking their compact presentation.
 
 ### 7. Validate contract and presentation
 
@@ -264,6 +291,8 @@ Before accepting an Architecture Explorer graph producer, verify all of the foll
 26. Indexed stack views compose verified Shared layers with real repetition wiring; entry, return and exit retain exact source provenance without adding a source self-loop.
 27. Indexed formulas/ports/parameter roles agree, invariant inputs stay distinct, and numeric inspection requires a concrete instance.
 28. Existing eligible producers adopt the pattern through normal generation/cache revisions; fallback preserves exceptions and tests reuse the minimum independent owning proof.
+29. No-cache generation declares preparation, vocabulary selection and two-input append outside the unchanged model; the full sequence, phase-aware return and truthful evolving shapes are preserved without duplicating weights.
+30. Generation adds no separate stopping element or boolean control port; an optional supported terminal predicate appears only inside Append token, and ineligible decision/visual models remain unchanged.
 
 ## Common failure modes
 
@@ -292,6 +321,10 @@ Before accepting an Architecture Explorer graph producer, verify all of the foll
 **Symbolic return mistaken for source recurrence:** keep concrete inter-layer edges and derive the indexed return from their correspondence. Shared membership alone does not prove serial flow, and the return is not a temporal generation loop.
 
 **Indexed labels mistaken for tensor bindings:** display `weight[i]` as a role, preserve exact checkpoint names, and require an explicit instance before numeric inspection. Do not silently reuse the anchor layer's resources.
+
+**Logits wired directly back to token IDs:** insert explicit last-position vocabulary selection and a two-input append operation. Return the full enlarged sequence without caching; positions and masks alone do not supply newly generated token identities.
+
+**Generation drawn as a decision flowchart:** reuse ordinary cards and initial/return/final relationships. Do not add a separate stopping element; any supported terminal predicate stays inside Append token.
 
 **Wrong-direction or boundary-skipping edges:** ordinary dependencies are `output → input`; use only contract-defined group forwarding, route through group boundaries, and fan out from the original producer instead of from an input port.
 
