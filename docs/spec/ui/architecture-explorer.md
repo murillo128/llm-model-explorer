@@ -396,7 +396,7 @@ Use the existing renderer, cancellable layout worker and connection-hit behavior
 
 For a homogeneous serial repetition whose complete instances belong to one
 verified `layer` family, the first expansion retains its existing container and
-shows one neutral `Layer[i]`. A mixed repetition first shows ordered maximal
+shows one neutral `Layer[i]`. Without a published repeated-body annotation, a mixed repetition first shows ordered maximal
 compatible contiguous ranges and explicit exceptional single layers. Each
 repeated range expands to its neutral layer with real first/last indices; never
 join nonconsecutive members across intervening variants. Layer[i] expands into
@@ -442,6 +442,41 @@ card (including expanded children) and inside the repetition container. Preserve
 label clearance, boundary-row alignment, hover/focus and connection inspection.
 Do not add a source wrapper, loop-controller operation, shared-input box or
 executable/token-generation loop.
+
+### Nested repeated bodies
+
+Consume the producer's verified body mapping without discovering motifs in the
+browser. Default expansion of the native 24-layer Qwen3.5 Decoder retains
+`Decoder ×24` and shows one `Hybrid block[j]`: `Linear decoder ×3` followed by
+`Full attention layer[4j+3]`. Its compact summary states six blocks of four layers.
+The inner card expands to neutral `Linear layer[4j+k]`; the full layer expands
+its operations without another repeat. Other patterns use their actual base,
+width, offsets and counts, preserving explicit exceptional regions.
+
+The outer depth return surrounds the complete Hybrid body inside Decoder; the
+inner return surrounds the linear layer inside its ×3 card. Both attach to real
+handles and clear visible descendant geometry, formulas and labels. Exactly two
+depth returns coexist with the independent token-generation return. Collapse
+choices remain independent; hidden copies contribute no layout bounds.
+
+Scoped typed mappings distinguish outer `j`, inner `k`, and generation `t`.
+For Qwen the original 23 transitions partition into twelve inner returns
+`x[4j+k+1] = out[4j+k]`, six ordinary linear-to-full connections, and five outer
+returns `x[4j+4] = out[4j+3]`. Decoder entry is `x[0]`, final output is `out[23]`.
+The inner range boundary enters at `x[4j]` and exits at `out[4j+2]` in each
+block. Its entry/exit inspection retains these first/final phases; `4j+k`
+belongs to the symbolic layer and its return. Each side-dependency branch
+retains only its represented range's consumers and their ordered source paths.
+Keep separate original paths, endpoints and owning scope; synthetic boundary
+continuations do not add source computation. Positions, distinct masks and
+indexed state retain their actual consumer paths.
+
+Ports, formulas and symbolic parameter roles use the same composed depth. Neutral
+views expose no numeric anchor binding. Existing Shared instance selection must
+resolve a concrete global layer (for example linear layer 9 or full layer 11)
+before weight inspection. Nested component families and repetitions remain in
+the bounded Shared scope, with source identities rebound on instance change.
+Concrete/window/exhaustive navigation remains available.
 
 ## Automatic layout and directional routing
 

@@ -261,3 +261,88 @@ def test_hybrid_generation_uses_text_thw_and_distinct_current_masks() -> None:
         )
         with pytest.raises(GraphError, match="initializer"):
             validate_generation(malformed)
+
+
+def periodic_qwen(pattern: list[str]) -> GraphBuilder:
+    from test_qwen35_architecture import registry
+
+    tiny = copy.deepcopy(TINY)
+    tiny["configuration"]["text_config"].update(layer_types=pattern, num_hidden_layers=len(pattern))
+    original = tiny["storage"]
+    tiny["storage"] = {k: v for k, v in original.items() if ".layers." not in k}
+    for index, variant in enumerate(pattern):
+        source = 1 if variant == "full_attention" else 0
+        tiny["storage"].update(
+            {
+                k.replace(f".layers.{source}.", f".layers.{index}."): v
+                for k, v in original.items()
+                if f".layers.{source}." in k
+            }
+        )
+    return build(metadata(tiny), registry())
+
+
+def test_native_periodic_body_is_verified_without_replacing_concrete_layers() -> None:
+    builder = periodic_qwen(["linear_attention"] * 3 + ["full_attention"])
+    # One body is not a depth loop.
+    single = builder.finish()
+    assert not single.repetitions[0].document().get("bodies")
+    builder = periodic_qwen((["linear_attention"] * 3 + ["full_attention"]) * 6)
+    graph = builder.finish()
+    rep = graph.repetitions[0]
+    bodies = rep.document().get("bodies", [])
+    assert len(bodies) == 1, "24-layer Qwen must publish one verified repeated body"
+    body = bodies[0]
+    assert (body["start"], body["width"], body["count"]) == (0, 4, 6)
+    assert body["ranges"] == [{"start": 0, "count": 3}, {"start": 3, "count": 1}]
+    families = {t.id: t for t in graph.templates or []}
+    assert len(set(body["slots"])) == 2
+    for position, instance in enumerate(rep.instances):
+        assert instance.index == position
+        assert instance.node_id in {
+            i.node_id for i in families[body["slots"][position % 4]].instances
+        }
+    with patch.object(ComponentTemplates, "annotate", side_effect=lambda graph, _: graph):
+        ordinary = builder.finish()
+    assert graph.nodes == ordinary.nodes and graph.edges == ordinary.edges
+    assert graph.parameters == ordinary.parameters
+
+
+@pytest.mark.parametrize("case", ["tail", "homogeneous", "topology", "overlap", "slot"])
+def test_repeated_body_boundaries(case: str) -> None:
+    from llm_model_explorer.architecture_analysis.validation import GraphError, validate_graph
+
+    pattern = (["linear_attention"] * 3 + ["full_attention"]) * 2
+    if case == "tail":
+        pattern += ["linear_attention", "linear_attention"]
+    if case == "homogeneous":
+        pattern = ["linear_attention"] * 8
+    builder = periodic_qwen(pattern)
+    if case == "topology":
+        builder._nodes = [
+            n.model_copy(update={"formula": "out = distinct_transform(x)"})
+            if semantic_key(n) == "model.language_model.layers.5.mlp.silu"
+            else n
+            for n in builder._nodes
+        ]
+    graph = builder.finish()
+    rep = graph.repetitions[0]
+    if case in {"homogeneous", "topology"}:
+        assert not rep.bodies
+    elif case == "tail":
+        assert rep.bodies is not None
+        assert [(b.start, b.width, b.count) for b in rep.bodies] == [(0, 4, 2)]
+        assert [i.index for i in rep.instances[-2:]] == [8, 9]
+    else:
+        assert rep.bodies is not None
+        body = rep.bodies[0]
+        malformed = (
+            [body, body]
+            if case == "overlap"
+            else [body.model_copy(update={"slots": [body.slots[3], *body.slots[1:]]})]
+        )
+        invalid = graph.model_copy(
+            update={"repetitions": [rep.model_copy(update={"bodies": malformed})]}
+        )
+        with pytest.raises(GraphError, match="Repeated body"):
+            validate_graph(invalid, builder.inputs.bindings)

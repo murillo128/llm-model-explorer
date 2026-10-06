@@ -110,6 +110,13 @@ def bind_templates(
     definition: ModelDefinition, graph: r.ArchitectureGraph, builder: GraphBuilder
 ) -> r.ArchitectureGraph:
     if not definition.templates:
+        if any(rep.bodies for rep in definition.repetitions):
+            raise model_finding(
+                "template_invalid",
+                "template",
+                "#/repetitions",
+                "Repeated bodies require Shared mappings.",
+            )
         return graph
     seen_ids: set[str] = set()
     for position, declared in enumerate(definition.templates):
@@ -157,6 +164,68 @@ def bind_templates(
         except GraphError as exc:
             if exc.code != "unsupported_size":
                 raise
+    declared_repetitions = {
+        builder.record_id("repetition", "declared:" + rep.id): rep for rep in definition.repetitions
+    }
+    with_bodies = result.model_copy(
+        update={
+            "repetitions": [
+                rep.model_copy(
+                    update={
+                        "bodies": [
+                            body.model_copy(
+                                update={
+                                    "slots": [
+                                        builder.record_id("template", "declared:" + slot)
+                                        for slot in body.slots
+                                    ]
+                                }
+                            )
+                            for body in declared_repetitions[rep.id].bodies or []
+                        ]
+                    }
+                )
+                if rep.id in declared_repetitions and declared_repetitions[rep.id].bodies
+                else rep
+                for rep in result.repetitions
+            ]
+        }
+    )
+    if any(rep.bodies for rep in with_bodies.repetitions):
+        from .repeated_bodies import validate_bodies
+
+        # Validate all explicitly published maps even when optional families do
+        # not fit the output. Definition bytes already bound this temporary view.
+        referenced = {
+            slot
+            for rep in with_bodies.repetitions
+            for body in rep.bodies or []
+            for slot in body.slots
+        }
+        full_templates = [
+            r.ArchitectureTemplate(
+                id=builder.record_id("template", "declared:" + declared.id),
+                label=declared.label,
+                component_role=declared.component_role,
+                revision=builder.producer.source_revision,
+                provenance=builder.producer.provenance(),
+                instances=[_bind_instance(i, builder) for i in declared.instances],
+            )
+            for declared in definition.templates
+            if builder.record_id("template", "declared:" + declared.id) in referenced
+        ]
+        try:
+            validate_bodies(with_bodies.model_copy(update={"templates": full_templates}))
+        except GraphError as exc:
+            raise model_finding("template_invalid", "template", "#/repetitions", str(exc)) from exc
+        retained_ids = {t.id for t in retained}
+        if referenced <= retained_ids:
+            try:
+                serialized_size(with_bodies.document(), builder.byte_limit)
+                result = with_bodies
+            except GraphError as exc:
+                if exc.code != "unsupported_size":
+                    raise
     serialized_size(result.document(), builder.byte_limit)
     validate_graph(result, builder.inputs.bindings)
     return result

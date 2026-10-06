@@ -1,4 +1,9 @@
 import { expect, it } from 'vitest';
+import { createElement } from 'react';
+import { render } from '@testing-library/react';
+import { ConnectionInspection } from './Connection';
+import { displayLabel } from './presentation';
+import { assertTraceability } from '../../tests/architecture-invariants';
 import { toggleComponent } from "./component-actions";
 import { makeIndexedFixture, makeTemplateFixture } from '../../tests/architecture-template-fixture';
 import { validateArchitecture } from '../api/architecture-validation';
@@ -351,4 +356,120 @@ it.each([false, true])('proves indexed side outputs independently of activation 
     .toBe('out[i], next_key[i], next_value[i] = layer[i](x[i], cos, sin, mask, bank)');
   expect(projection.nodes.some((n) => n.sourceIds.some((id) => id.startsWith('select-')))).toBe(false);
   expect(projection.nodes.find((n) => n.shared)?.record?.attributes.find((a) => a.name === 'layer_index')?.value).toBe('i');
+});
+
+it('projects one verified 3+1 body with two scoped depth returns and exact transition coverage', async () => {
+  const { makeNestedIndexedFixture } = await import('../../tests/architecture-template-fixture');
+  const graph = makeNestedIndexedFixture();
+  // A genuine external group forwarding prefix must stay in each ordered path.
+  const cos = graph.nodes.find((n) => n.id === 'cos')!;
+  cos.parent_id = 'cos-relay';
+  const model = graph.nodes[0]!;
+  if (model.kind === 'group') model.children[model.children.indexOf('cos')] = 'cos-relay';
+  graph.nodes.push({ ...cos, id: 'cos-relay', parent_id: 'model', kind: 'group', children: ['cos'] });
+  for (const edge of graph.edges.filter((e) => e.source.node_id === 'cos')) edge.source.node_id = 'cos-relay';
+  graph.edges.push({ id: 'cos-start', source: { node_id: 'cos', port_id: 'out' },
+    target: { node_id: 'cos-relay', port_id: 'out' }, kind: 'data', provenance: [] });
+  const before = structuredClone(graph);
+  const view = new GraphViews().get('nested', graph);
+  view.update({ expanded: ['model', 'repeat:layers:0:23'] });
+  let projection = projectGraph(graph, projectionOptions(view));
+  expect(projection.nodes.filter((n) => n.label === 'Hybrid block[j]')).toHaveLength(1);
+  expect(projection.nodes.filter((n) => n.label === 'Linear decoder ×3')).toHaveLength(1);
+  expect(projection.nodes.find((n) => n.label === 'Full attention layer[4j+3]')?.shared?.templateId).toBe('full');
+  const inner = projection.nodes.find((n) => n.label === 'Linear decoder ×3')!;
+  expect(displayLabel(inner, graph)).toBe('Linear decoder ×3');
+  assertTraceability(graph, projectGraph(graph, { expanded: [], exhaustive: true }), true);
+  toggleComponent(view, graph, inner, 1);
+  projection = projectGraph(graph, projectionOptions(view));
+  expect(projection.nodes.find((n) => n.label === 'Linear layer[4j+k]')).toBeDefined();
+  const firstIndices = [0, 4, 8, 12, 16, 20], finalIndices = [2, 6, 10, 14, 18, 22];
+  const linearIndices = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 16, 17, 18, 20, 21, 22];
+  const fullIndices = [3, 7, 11, 15, 19, 23];
+  for (const [target, indices] of [[inner.id, linearIndices], ['indexed:body:layers:0:slot:3:layer-3', fullIndices]] as const) {
+    for (const port of ['cos', 'sin', 'mask']) {
+      const branch = projection.edges.find((e) => e.source.node_id === 'body:layers:0' &&
+        e.target.node_id === target && e.target.port_id === port)!;
+      expect.soft(branch.paths.map((path) => path.map((e) => e.id))).toEqual(indices.map((i) =>
+        port === 'cos' ? ['cos-start', `cos-${i}`] : [`${port}-${i}`]));
+      expect.soft(branch.relationship).toMatchObject({ instances: indices.map((index) => ({ nodeId: `layer-${index}`, index })) });
+    }
+  }
+  for (const [port, label, indices] of [['x', 'x[4j]', firstIndices], ['out', 'out[4j+2]', finalIndices]] as const) {
+    const boundary = projection.nodes.find((n) => n.id === inner.id)!.ports.find((p) => p.id === port)!;
+    expect.soft(boundary.label).toBe(label);
+    expect.soft(boundary.endpoints).toEqual(indices.map((i) => ({ node_id: `layer-${i}`, port_id: port })));
+  }
+  for (const [kind, offset, phase, indices, text] of [
+    ['entry', 0, 'initial', firstIndices, 'Initial entry: x[4j], at the first layer of this range in each block (0 ≤ j < 6).'],
+    ['exit', 2, 'final', finalIndices, 'Final exit: out[4j+2], only after the last layer of this range in each block (0 ≤ j < 6).'],
+  ] as const) {
+    const edge = projection.edges.find((e) => e.relationship?.owner === 'repetition' && e.relationship.scopeId === inner.id && e.relationship.kind === kind)!;
+    expect.soft(edge.relationship).toMatchObject({ indexPhase: { phase, base: 0, width: 4, offset, count: 6 },
+      instances: indices.map((index) => ({ nodeId: `layer-${index}`, index })) });
+    const inspection = render(createElement(ConnectionInspection, { graph, edge, trigger: document.createElement('button'),
+      onClose: () => {}, inspectNode: () => {} }));
+    expect.soft(inspection.getByRole('dialog')).toHaveTextContent(text);
+    inspection.unmount();
+  }
+  const returns = projection.edges.filter((e) => e.relationship?.kind === 'return');
+  expect(returns).toHaveLength(2);
+  expect(returns.map((e) => e.paths.flat().map((p) => p.id))).toEqual([
+    ['next-3', 'next-7', 'next-11', 'next-15', 'next-19'],
+    ['next-0', 'next-1', 'next-4', 'next-5', 'next-8', 'next-9', 'next-12', 'next-13', 'next-16', 'next-17', 'next-20', 'next-21'],
+  ]);
+  expect(projection.edges.find((e) => e.id === 'body:layers:0:connection:1')!.originalEdgeIds)
+    .toEqual(['next-2', 'next-6', 'next-10', 'next-14', 'next-18', 'next-22']);
+  const transitionIds = projection.edges.flatMap((e) => e.originalEdgeIds).filter((id) => id.startsWith('next-'));
+  expect(transitionIds).toHaveLength(23);
+  expect(new Set(transitionIds).size).toBe(23);
+  expect(projection.nodes.find((n) => n.id === 'repeat:layers:0:23')!.ports.some((p) => p.label === 'out[23]')).toBe(true);
+  const layer = projection.nodes.find((n) => n.label === 'Linear layer[4j+k]')!;
+  toggleComponent(view, graph, layer, 1);
+  const detailed = projectGraph(graph, projectionOptions(view));
+  const op = detailed.nodes.find((n) => n.id === 'indexed:body:layers:0:slot:0:layer-0.op')!;
+  expect(op.record!.formula).toBe('out[4j+k] = transform(x[4j+k], cos, sin, mask; weight[4j+k])');
+  expect(op.record!.parameter_ids).toEqual([]);
+  expect(op.symbolicParameters![0]!.label).toBe('weight[4j+k]');
+  // Existing Shared concrete selection resolves the complete global index, not
+  // an inner offset which could silently bind the first block.
+  for (const [familyId, index] of [['linear', 9], ['full', 11]] as const) {
+    const family = graph.templates!.find((t) => t.id === familyId)!;
+    const anchor = family.instances[0]!, chosen = family.instances.find((i) => i.node_id === `layer-${index}`)!;
+    const local = await layoutGraph(templateGraph(graph, anchor), { expanded: [anchor.node_id], scope: anchor.node_id });
+    const concrete = bindTemplateLayout(local, graph, family, anchor, chosen);
+    expect(concrete.projection.nodes.find((n) => n.record?.id === `layer-${index}.op`)!.record!.parameter_ids).toEqual([`weight-${index}`]);
+    expect(bindTemplateLayout(local, graph, family, anchor, null).projection.nodes.every((n) => !n.record!.parameter_ids.length)).toBe(true);
+  }
+  const outer = detailed.nodes.find((n) => n.id === 'repeat:layers:0:23')!;
+  toggleComponent(view, graph, outer, 1);
+  expect(projectGraph(graph, projectionOptions(view)).nodes.some((n) => n.id === inner.id)).toBe(false);
+  toggleComponent(view, graph, outer, 1);
+  expect(projectGraph(graph, projectionOptions(view)).nodes.find((n) => n.id === inner.id)!.expanded).toBe(true);
+  const layout = await layoutGraph(graph, projectionOptions(view));
+  expect(layout.projection.edges.filter((e) => e.relationship?.kind === 'return')).toHaveLength(2);
+  expect(graph).toEqual(before);
+});
+
+
+it('preserves nested component repetitions in a bounded Shared scope and rebinds their source endpoints', async () => {
+  const graph = makeTemplateFixture(), family = graph.templates![0]!;
+  for (const index of [0, 2]) graph.repetitions.push({ id: `projections-${index}`, parent_id: `layer-${index}.attention`,
+    label: 'Projections', instances: ['Q', 'K', 'V'].map((role, indexInLayer) => ({ index: indexInLayer,
+      node_id: `layer-${index}.attention.${role}`, variant: 'projection' })) });
+  const [anchor, chosen] = family.instances;
+  const scoped = templateGraph(graph, anchor!);
+  expect(scoped.repetitions.map((r) => r.id)).toEqual(['projections-0']);
+  const layout = await layoutGraph(scoped, { scope: anchor!.node_id, expanded: [anchor!.node_id] });
+  const neutral = bindTemplateLayout(layout, graph, family, anchor!, null);
+  expect(neutral.projection.nodes.find((n) => n.repetitionId)!.sourceIds).toEqual([]);
+  const bound = bindTemplateLayout(layout, graph, family, anchor!, chosen!);
+  const range = bound.projection.nodes.find((n) => n.repetitionId)!;
+  expect(range.sourceIds).toEqual(['layer-2.attention.Q', 'layer-2.attention.K', 'layer-2.attention.V']);
+  expect(range.ports.flatMap((p) => p.endpoints).every((e) => e.node_id.startsWith('layer-2.'))).toBe(true);
+  const view = new GraphViews().get('scoped', graph);
+  enterSharedStructure(view, family, null);
+  view.update({ shared: { templateId: family.id, anchorId: anchor!.node_id, instanceId: chosen!.node_id } });
+  toggleComponent(view, graph, range, 2);
+  expect(view.repetitions['projections-0']).toEqual({ start: 0, count: 2 });
 });

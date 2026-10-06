@@ -158,7 +158,7 @@ def export_families(directory: Path) -> None:
         for name in ("clm", "kev"):
             model_root = root / name
             first, second, _ = (
-                kev_fixture(model_root, repeated=True) if name == "kev" else clm_fixture(model_root)
+                kev_fixture(model_root, repeated=3) if name == "kev" else clm_fixture(model_root)
             )
             destination = model_root / "published"
             (export_kev if name == "kev" else export_clm)(first, second, destination)

@@ -474,3 +474,6 @@ def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
     from .template_validation import validate_templates
 
     validate_templates(graph)
+    from .repeated_bodies import validate_bodies
+
+    validate_bodies(graph)

@@ -228,3 +228,29 @@ state, never activation recurrence or an invariant value. Layer-owned selection
 and gather/scatter operations remain ordinary graph records. Concrete source
 endpoints and role correspondence permit inspection and reject swapped K/V or
 layer bindings. Absent correspondence does not authorize inferred side paths.
+
+
+## Verified repeated depth bodies
+
+A repetition may publish optional `bodies`, ordered disjoint intervals into its
+existing `instances` array. Each body has bounded integer `start`, `width` (>1)
+and `count` (>=2); it covers exactly `width * count` consecutive members from
+`start`, with consecutive original depth indices and sibling order. `slots`
+contains one verified whole-layer template ID per offset, repeated in the same
+order for every body. At least two distinct families occur. `ranges` partitions
+one body into maximal adjacent equal-slot runs, each with `start` and `count`.
+The existing period-one representation owns homogeneous stacks.
+
+`input_port` and `output_port` name the real layer activation interfaces. Existing
+Shared mappings prove each slot's complete computation; contextual validation
+also proves serial activation wiring, boundary closure, per-slot invariant
+inputs, declared indexed `side_ports`, and cross-slot parameter alias relations.
+Every internal and inter-body transition remains a distinct ordered path of
+original edges. A pattern of variant names alone is insufficient. Explicit
+malformed, overlapping or unmatched maps fail the ordinary graph boundary;
+absent optional maps leave ordinary navigation available.
+
+The mapping is integer composition: original depth is the first covered member's
+index plus `width * j + offset`, or `width * j + range.start + k` inside a range.
+Indices are bounded by `count` and the range count. No expression evaluation,
+new computational records, implicit weight tying or additional graph is involved.

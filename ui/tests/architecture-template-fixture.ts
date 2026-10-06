@@ -96,3 +96,21 @@ export function makeIndexedFixture(count: number = 3): Graph {
     })) }];
   return graph;
 }
+
+/** The ordered 3+1 sequence is authored explicitly, independently of discovery. */
+export function makeNestedIndexedFixture(): Graph {
+  const graph = makeIndexedFixture(24);
+  const original = graph.templates![0]!;
+  graph.templates = [
+    { ...original, id: 'linear', instances: original.instances.filter((_, i) => i % 4 !== 3) },
+    { ...original, id: 'full', instances: original.instances.filter((_, i) => i % 4 === 3) },
+  ];
+  for (const instance of graph.repetitions[0]!.instances) {
+    instance.variant = instance.index % 4 === 3 ? 'full_attention' : 'linear_attention';
+    const op = graph.nodes.find((n) => n.id === `${instance.node_id}.op`)!;
+    op.operation = instance.variant;
+  }
+  graph.repetitions[0]!.bodies = [{ start: 0, width: 4, count: 6,
+    slots: ['linear', 'linear', 'linear', 'full'], ranges: [{ start: 0, count: 3 }, { start: 3, count: 1 }], input_port: 'x', output_port: 'out' }];
+  return graph;
+}

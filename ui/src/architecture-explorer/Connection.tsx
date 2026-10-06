@@ -5,9 +5,33 @@ import type { Graph, Route } from './graph';
 import { formatShape } from './graph';
 import type { Endpoint, ProjectedEdge, ProjectedNode, Projection } from './projection';
 import { endpointKey } from './projection';
+import { depthIndex } from './indexed-repetition';
 import { ConnectionContext } from './connection-context';
 import { arrowTransform, type RouteDisplay } from './route-display';
 import { arrowLength, arrowWidth, minimumReadableZoom } from './route-metrics';
+
+function depthPhaseText(edge: ProjectedEdge) {
+  const relationship = edge.relationship;
+  if (relationship?.owner !== 'repetition') return '';
+  const phase = relationship.indexPhase;
+  if (!phase) return relationship.kind === 'entry' ? `Initial entry: only instance ${relationship.instances[0]!.index}.`
+    : `Final exit: only after instance ${relationship.instances.at(-1)!.index}.`;
+  const index = depthIndex(phase.base, phase.width, phase.offset);
+  return phase.phase === 'initial'
+    ? `Initial entry: ${edge.target.port_id}[${index}], at the first layer of this range in each block (0 ≤ j < ${phase.count}).`
+    : `Final exit: ${edge.source.port_id}[${index}], only after the last layer of this range in each block (0 ≤ j < ${phase.count}).`;
+}
+
+function depthReturnText(edge: ProjectedEdge) {
+  const relationship = edge.relationship;
+  if (relationship?.owner !== 'repetition') return '';
+  const scope = relationship.indexScope;
+  if (!scope) return `Next layer: ${edge.target.port_id}[i+1] = ${edge.source.port_id}[i], ${relationship.instances[0]!.index} ≤ i < ${relationship.instances.at(-1)!.index}.`;
+  const base = `${scope.base ? `${scope.base}+` : ''}${scope.width}j`;
+  const index = (offset: number) => `${base}${offset ? `+${offset}` : ''}${scope.variable === 'k' ? '+k' : ''}`;
+  const source = index(scope.offset), target = scope.variable === 'k' ? `${source}+1` : index(scope.offset + 1);
+  return `Next ${scope.variable === 'j' ? 'block' : 'linear layer'}: ${scope.input}[${target}] = ${scope.output}[${source}], 0 ≤ ${scope.variable} < ${scope.count - 1}.`;
+}
 
 export type ConnectionEdge = Edge<{ connection: ProjectedEdge; route: Route; display: RouteDisplay; projection: Projection; dimensions: boolean }, 'connection'>;
 
@@ -93,10 +117,9 @@ export function ConnectionInspection({ graph, edge, node, trigger, onClose, insp
         ? 'Bind prompt_ids as token_ids[0]; begin the first full-sequence call.'
         : edge.relationship.phase === 'next' ? 'Commit token_ids[t+1] as the next current sequence; initial and return are alternatives in time. No KV cache reuse.'
         : 'Read the terminal sequence including the prompt after T generated steps; this is not an unconditional early exit.'} Source segments on opposite sides of the state belong to different phases.</p>}
-      {edge?.relationship?.owner === 'repetition' && <p>{edge.relationship.kind === 'entry'
-        ? `Initial entry: only instance ${edge.relationship.instances[0]!.index}.`
-        : edge.relationship.kind === 'exit' ? `Final exit: only after instance ${edge.relationship.instances.at(-1)!.index}.`
-        : edge.relationship.kind === 'return' ? `Next layer: ${edge.target.port_id}[i+1] = ${edge.source.port_id}[i], ${edge.relationship.instances[0]!.index} ≤ i < ${edge.relationship.instances.at(-1)!.index}. ${edge.paths.length} ordered inter-layer transitions; no same-instance feedback.`
+      {edge?.relationship?.owner === 'repetition' && <p>{edge.relationship.kind === 'entry' || edge.relationship.kind === 'exit'
+        ? depthPhaseText(edge)
+        : edge.relationship.kind === 'return' ? `${depthReturnText(edge)} ${edge.paths.length} ordered inter-layer transitions; no same-instance feedback.`
         : edge.relationship.kind === 'side-input' || edge.relationship.kind === 'side-output'
           ? `Indexed state ${edge.relationship.kind === 'side-input' ? 'input' : 'output'}: each layer retains its own binding and source path.`
           : 'Invariant input: one verified signal with every represented instance consumer.'} No concrete instance is selected by this relationship.</p>}

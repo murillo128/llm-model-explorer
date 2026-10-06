@@ -19,7 +19,7 @@ from .validation import GraphError, serialized_size
 if TYPE_CHECKING:
     from .core import GraphBuilder
 
-REVISION = "exact-component-roles-3"
+REVISION = "exact-component-roles-4"
 LOG = logging.getLogger(__name__)
 
 
@@ -207,7 +207,9 @@ class ComponentTemplates:
                 result = diagnosed
             except GraphError:
                 pass  # A full ordinary graph wins even when no diagnostic bytes remain.
-        return result
+        from .repeated_bodies import annotate_bodies
+
+        return annotate_bodies(result, builder.byte_limit)
 
 
 def fit_template_budget(graph: r.ArchitectureGraph, byte_limit: int) -> r.ArchitectureGraph:
@@ -225,7 +227,12 @@ def fit_template_budget(graph: r.ArchitectureGraph, byte_limit: int) -> r.Archit
             raise
     if not graph.templates:
         return graph
-    base = graph.model_copy(update={"templates": None})
+    repetitions = []
+    for rep in graph.repetitions:
+        plain = rep.model_copy(update={"bodies": None})
+        plain.model_fields_set.discard("bodies")
+        repetitions.append(plain)
+    base = graph.model_copy(update={"templates": None, "repetitions": repetitions})
     base.model_fields_set.discard("templates")
     remaining = byte_limit - serialized_size(base.document(), byte_limit) - len(',"templates":[]')
     retained: set[str] = set()

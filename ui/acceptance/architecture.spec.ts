@@ -410,7 +410,7 @@ test.beforeEach(async ({ page }, info) => {
     if (['kimi_linear', 'deepseek_v2'].includes(family)) {
       execFileSync(python, ['-m', 'acceptance.kimi_linear_fixture', join(root, 'models'), '--family', family], { cwd: repo });
     } else {
-      execFileSync(python, ['-m', 'acceptance.architecture_fixtures', join(root, 'models'), ...(family === 'templates' ? ['--templates'] : [])], { cwd: repo });
+      execFileSync(python, ['-m', 'acceptance.architecture_fixtures', join(root, 'models'), ...(family === 'templates' ? ['--templates'] : family === 'qwen35' ? ['--qwen-blocks', '6'] : [])], { cwd: repo });
     }
     if (info.title.includes('shows the precise model-owned load failure')) {
       writeFileSync(join(root, 'models', family, 'architecture.json'), '{"nodes":1,"nodes":2}');
@@ -468,8 +468,12 @@ test('deterministic production [smollm2] shows the precise model-owned load fail
     r.url().endsWith('/architecture') && r.request().method() === 'GET');
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(modelId);
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
-  const body = await (await response).json();
-  expect(body).toMatchObject({ status: 'unavailable', reason: 'analysis_failed',
+  // As in selectGraph, the UI's bounded reader may release the DevTools body.
+  // Fetch the same immutable prepared result and retain the exact diagnostic/UI oracle.
+  const prepared = await fetch((await response).url());
+  expect(prepared.ok).toBe(true);
+  const body = await prepared.json();
+  expect(body).toMatchObject({ model_id: modelId, status: 'unavailable', reason: 'analysis_failed',
     diagnostics: [{ code: finding.code, message: finding.message }] });
   await expect(page.getByLabel('Architecture capability', { exact: true })
     .getByRole('status').getByText('Architecture preparation failed for this model.', { exact: true })).toBeVisible();
@@ -720,6 +724,7 @@ for (const reference of [false, true]) for (const family of [
       const append = graph.nodes.find((n) => n.operation === 'generation_append_token')!;
       const model = graph.nodes.find((n) => n.parent_id === generation.id && n.kind === 'group')!;
       const requests = observed.length;
+      const inspectionRequests: string[] = [];
       const card = (id: string) => page.locator(`.react-flow__node[data-id=${JSON.stringify(id)}]`);
       const open = async (id: string) => {
         const control = card(id).locator('.architecture-expand');
@@ -766,16 +771,26 @@ for (const reference of [false, true]) for (const family of [
         await open(outerId);
         await page.getByRole('button', { name: 'Fit view', exact: true }).click();
         const first = family === 'qwen35' ? 0 : 1, last = family === 'qwen35' ? 2 : 26;
-        const rangeId = `repeat:${repetition.id}:${first}:${last}`;
+        const nested = family === 'qwen35';
+        const bodyId = `body:${repetition.id}:0`;
+        const rangeId = nested ? `${bodyId}:slot:0` : `repeat:${repetition.id}:${first}:${last}`;
+        if (nested) {
+          expect(repetition.bodies?.map((b) => [b.start, b.width, b.count])).toEqual([[0, 4, 6]]);
+          await expect(page.locator('.architecture-node-label').filter({ hasText: /^Hybrid block\[j\]$/ })).toHaveCount(1);
+          await expect(page.locator('.architecture-node-label').filter({ hasText: /^Linear decoder ×3$/ })).toHaveCount(1);
+          await expect(page.locator('.architecture-node-label').filter({ hasText: /^Full attention layer\[4j\+3\]$/ })).toHaveCount(1);
+        }
         await open(rangeId);
         await page.getByRole('button', { name: 'Fit view', exact: true }).click();
-        const innerId = `indexed:${repetition.id}:${first}:${last}:${repetition.instances[first]!.node_id}`;
+        const innerId = nested ? `indexed:${rangeId}:${repetition.instances[0]!.node_id}` : `indexed:${repetition.id}:${first}:${last}:${repetition.instances[first]!.node_id}`;
         await expect(card(innerId)).toHaveCount(1);
-        const depth = page.locator(`.architecture-connection[data-edge-id=${JSON.stringify(`${rangeId}:return:x`)}]`);
+        const depth = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(innerId)}][data-target-node=${JSON.stringify(innerId)}]`);
         await expect(depth).toHaveCount(1);
         await open(innerId);
         await page.getByRole('button', { name: 'Fit view', exact: true }).click();
-        const geometry = await depth.evaluate((element, innerId) => {
+        const measureReturn = (connection: typeof depth, memberId: string, ownerId: string) => connection.evaluate((element, ids) => {
+          const innerId = ids.memberId;
+          const owner = document.querySelector(`.react-flow__node[data-id="${ids.ownerId}"]`)!.getBoundingClientRect();
           const body = document.querySelector(`.react-flow__node[data-id="${innerId}"]`)!.getBoundingClientRect();
           const paths = [...element.querySelectorAll<SVGPathElement>('.architecture-edge-line')];
           const points = paths.flatMap((path) => Array.from({ length: 101 }, (_, i) => {
@@ -784,25 +799,94 @@ for (const reference of [false, true]) for (const family of [
           }));
           const port = (side: string) => {
             const node = element.getAttribute(`data-${side}-node`), id = element.getAttribute(`data-${side}-port`);
-            const box = document.querySelector(`.architecture-port[data-node-id="${node}"][data-port-id="${id}"]`)!.getBoundingClientRect();
+            const box = document.querySelector(`.architecture-port[data-node-id=${JSON.stringify(node)}][data-port-id=${JSON.stringify(id)}]`)!.getBoundingClientRect();
             return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
           };
-          return { body: body.toJSON(), points, source: port('source'), target: port('target'),
+          const labels = [...document.querySelectorAll('.architecture-port-label, .architecture-node-label, .architecture-node-formula')].map((label) => label.getBoundingClientRect());
+          return { body: body.toJSON(), owner: owner.toJSON(), points, source: port('source'), target: port('target'),
+            clearsLabels: points.every((p) => labels.every((r) => p.x <= r.left + 1 || p.x >= r.right - 1 || p.y <= r.top + 1 || p.y >= r.bottom - 1)),
+            insideOwner: points.every((p) => p.x >= owner.left && p.x <= owner.right && p.y >= owner.top && p.y <= owner.bottom),
             edges: JSON.parse(element.getAttribute('data-original-edge-ids')!),
             crosses: points.some((p) => p.x > body.left + 1 && p.x < body.right - 1 && p.y > body.top + 1 && p.y < body.bottom - 1) };
-        }, innerId);
+        }, { memberId, ownerId });
+        const geometry = await measureReturn(depth, innerId, rangeId);
+        const transitionCount = nested ? 12 : last - first;
         expect(geometry.crosses).toBe(false);
-        expect(geometry.edges).toHaveLength(last - first);
+        expect(geometry.insideOwner).toBe(true);
+        expect(geometry.clearsLabels).toBe(true);
+        expect(geometry.edges).toHaveLength(transitionCount);
+        if (nested) {
+          const outerReturn = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(bodyId)}][data-target-node=${JSON.stringify(bodyId)}]`);
+          await expect(outerReturn).toHaveCount(1);
+          const outerGeometry = await measureReturn(outerReturn, bodyId, outerId);
+          expect(outerGeometry.crosses).toBe(false); expect(outerGeometry.insideOwner).toBe(true); expect(outerGeometry.clearsLabels).toBe(true);
+          expect(outerGeometry.edges).toHaveLength(5);
+          for (const axis of ['x', 'y'] as const) {
+            expect(outerGeometry.points[0]![axis]).toBeCloseTo(outerGeometry.source[axis], 0);
+            expect(outerGeometry.points.at(-1)![axis]).toBeCloseTo(outerGeometry.target[axis], 0);
+          }
+          const fullId = `indexed:${bodyId}:slot:3:${repetition.instances[3]!.node_id}`;
+          const placement = await card(fullId).evaluate((element, rangeId) => {
+            const full = element.getBoundingClientRect(), linear = document.querySelector(`.react-flow__node[data-id="${rangeId}"]`)!.getBoundingClientRect();
+            return { full: full.toJSON(), linear: linear.toJSON() };
+          }, rangeId);
+          expect(placement.full.left).toBeGreaterThanOrEqual(placement.linear.right);
+          await info.attach('outer-block-return', { body: JSON.stringify(outerGeometry), contentType: 'application/json' });
+          await card(rangeId).locator('.architecture-expand').click();
+          await expect(canvas).toHaveAttribute('aria-busy', 'false');
+          await card(outerId).locator('.architecture-expand').click();
+          await expect(canvas).toHaveAttribute('aria-busy', 'false');
+          await open(outerId);
+          await expect(card(rangeId).locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'false');
+          await open(rangeId);
+          await expect(card(innerId).locator('.architecture-expand')).toHaveAttribute('aria-expanded', 'true');
+          await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+        }
         for (const axis of ['x', 'y'] as const) {
           expect(geometry.points[0]![axis]).toBeCloseTo(geometry.source[axis], 0);
           expect(geometry.points.at(-1)![axis]).toBeCloseTo(geometry.target[axis], 0);
         }
         await depth.focus(); await expect(depth).toHaveAttribute('data-emphasized', 'true');
         await depth.press('Enter');
-        await expect(page.getByRole('dialog', { name: 'Connection inspection' })).toContainText(`${last - first} ordered inter-layer transitions`);
+        await expect(page.getByRole('dialog', { name: 'Connection inspection' })).toContainText(`${transitionCount} ordered inter-layer transitions`);
         await page.keyboard.press('Escape');
+        if (nested) {
+          for (const [port, label, source, target, phase] of [
+            ['x', 'x[4j]', rangeId, innerId, 'Initial entry: x[4j], at the first layer of this range in each block'],
+            ['out', 'out[4j+2]', innerId, rangeId, 'Final exit: out[4j+2], only after the last layer of this range in each block'],
+          ]) {
+            await expect(page.locator(`.architecture-port[data-node-id=${JSON.stringify(rangeId)}][data-port-id=${JSON.stringify(port)}]`)).toContainText(label!);
+            const boundary = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(source)}][data-target-node=${JSON.stringify(target)}][data-source-port=${JSON.stringify(port)}]`);
+            await boundary.focus(); await boundary.press('Enter');
+            await expect(page.getByRole('dialog', { name: 'Connection inspection' })).toContainText(phase!);
+            await page.keyboard.press('Escape');
+          }
+        }
         await info.attach('family-depth-geometry', { body: JSON.stringify(geometry), contentType: 'application/json' });
         await recordGraph(page, info, 'generation-compact-depth', graph);
+        if (nested) {
+          await card(innerId).locator('.architecture-node-label').click();
+          await page.getByLabel('Graph selection', { exact: true }).getByRole('button', { name: 'Explore structure', exact: true }).click();
+          await expect(page.getByLabel('Shared structure instance', { exact: true })).toHaveValue('');
+          await expect(page.locator('.architecture-matrix-action:not([disabled])')).toHaveCount(0);
+          await page.getByLabel('Shared structure instance', { exact: true }).selectOption(repetition.instances[9]!.node_id);
+          await expect(canvas).toHaveAttribute('aria-busy', 'false');
+          await page.getByRole('button', { name: 'Fit view', exact: true }).click();
+          const weight = graph.parameters.find((p) => p.name.endsWith('.layers.9.input_layernorm.weight'))!;
+          expect(observed.slice(requests)).toEqual([]);
+          await page.getByRole('button', { name: `Inspect matrix ${weight.name}`, exact: true }).click();
+          await expect(page.getByLabel('Inspect parameter', { exact: true })).toHaveValue(weight.id);
+          await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
+          expect(weight.inspection.status).toBe('available');
+          if (weight.inspection.status !== 'available') throw new Error('Expected native layer-9 weight');
+          const tensorId = weight.inspection.tensor_id;
+          const dataRequest = observed.find((url) => url.endsWith(`/tensors/${tensorId}/data`))!;
+          expect(dataRequest).toBeTruthy();
+          inspectionRequests.push(dataRequest, dataRequest.replace(/\/data$/, '/statistics'));
+          await page.keyboard.press('Escape');
+          await page.getByRole('button', { name: 'Back', exact: true }).click();
+          await expect(canvas).toHaveAttribute('aria-busy', 'false');
+        }
         await card(innerId).locator('.architecture-expand').click();
         await expect(canvas).toHaveAttribute('aria-busy', 'false');
       }
@@ -827,7 +911,7 @@ for (const reference of [false, true]) for (const family of [
       await open(model.id);
       await expect(route(prepare.id, 'tokens', append.id)).toHaveCount(1);
       await expect(route(append.id, 'updated', prepare.id)).toHaveCount(1);
-      expect(observed.slice(requests)).toEqual([]);
+      expect(observed.slice(requests).sort()).toEqual(inspectionRequests.sort());
     }
     if (!reference && family === 'deepseek_v2') {
       // The existing inert metadata shell proves the actual static producer and

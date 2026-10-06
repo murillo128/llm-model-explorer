@@ -21,7 +21,7 @@ SOURCE_REVISION = (
     + "; cyankiwi/Kimi-Linear-48B-A3B-Instruct-AWQ-4bit/config.json@"
     + CONFIG_REVISION
 )
-PRODUCER = Producer("kimi-linear-kda-mla-moe", "5", SOURCE_REVISION)
+PRODUCER = Producer("kimi-linear-kda-mla-moe", "6", SOURCE_REVISION)
 ARCHITECTURE = "KimiLinearForCausalLM"
 MODEL_TYPE = "kimi_linear"
 

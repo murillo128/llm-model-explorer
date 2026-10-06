@@ -138,3 +138,51 @@ cancellation oracle. No model download or full-reference claim is involved.
 Chromium DPR1 observation. Reproduce with the native production acceptance
 configuration and `--grep 'shared structure production'`; the PR records exact
 revision validation and selected CI results.
+
+
+## Nested hybrid bodies (#300)
+
+The existing deterministic Qwen3.5 production scenario uses the native producer
+with 24 ordered layers and tiny synthetic weights. It passes with one symbolic
+four-layer body, an inner linear ×3 range, exactly two attached depth returns,
+independent collapse/reopen, label clearance, full-layer placement and explicit
+layer-9 native inspection. Generation remains present. The retained
+[screenshot](evidence/architecture-indexed/qwen35.png) and
+[geometry receipt](evidence/architecture-indexed/qwen35.json) show Chromium DPR1;
+the receipt contains the outer and inner return samples from expanded geometry.
+This fixture result is not full local checkpoint/reference acceptance.
+
+The focused producer assertion failed before implementation at the doc-seed head
+`8aa4fbc5b0c5ff72c592a12663518d97e7c2f4ae`: no repeated body was published for
+24-layer Qwen. It passes after implementation with width 4, count 6 and ranges
+3+1. The projection owner independently checks the exact partition of all 23
+transitions into 12 inner, 6 ordinary and 5 outer paths, plus layer 9 versus 11
+bindings and unchanged concrete graph records.
+
+The same projection case reproduces the audit findings at `1c052575` and passes
+after repair: the linear/full side branches contain exactly 18/6 consumers,
+including independent ordered group-forwarding paths. The inner boundary and
+connection inspector now identify entry `x[4j]` and final exit `out[4j+2]` in
+each block. The existing real-browser scenario also checks these labels and
+inspection phases. The Kimi family row checks that the inner KDA ×2 mask branch
+contains exactly its 12 consumers, excluding the other KDA slot's six layers.
+
+The existing registered-family export/consumer check passed all fifteen rows:
+
+| Native family | Observed repeated body / preservation |
+| --- | --- |
+| Qwen3.5 | Layers 0–23: width 4, six bodies, inner 3+1 |
+| Kimi Linear | Layers 1–24: width 4, six bodies, inner 2+1+1; dense prefix and tail remain explicit |
+| Qwen-backed Kev | Layers 0–11: width 4, three bodies, inner 3+1; actual adapter/state graph verified |
+| DeepSeek / GLM | Dense layer 0 stays explicit; indexed MoE ranges 1–26 / 1–46 |
+| Llama / Qwen3 / LoRA variants | Existing homogeneous indexed paths and Generation preserved |
+| CLM / visual | Independent stacks preserved |
+| Existing authored definitions | Linear, Shared and Generation cases preserved |
+
+The authored nested example additionally passes its normal importer boundary;
+malformed slot correspondence is rejected. Reproduce the browser observation with
+`npm run test:acceptance --prefix ui -- architecture.spec.ts --project=dpr1 -g 'deterministic production \[qwen35\]'`
+after building the UI. The fixed breadth check uses
+`backend/tests/architecture_grouping_cases.py OUTPUT --families`, followed by
+`node --experimental-transform-types ui/scripts/check-architecture-families.mjs OUTPUT`.
+The PR records final exact-head CI evidence.

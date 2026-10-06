@@ -27,7 +27,10 @@ export function templateGraph(graph: Graph, instance: TemplateInstance): Graph {
   });
   if (nodes.length !== members.size) throw new Error('Shared structure source records are no longer available.');
   return { ...graph, nodes, edges: graph.edges.filter((e) => edges.has(e.id)),
-    parameters: graph.parameters.filter((p) => parameters.has(p.id)), repetitions: [], diagnostics: [], templates: [] };
+    parameters: graph.parameters.filter((p) => parameters.has(p.id)),
+    repetitions: graph.repetitions.filter((r) => members.has(r.parent_id) && r.instances.every((i) => members.has(i.node_id))), diagnostics: [],
+    templates: graph.templates?.filter((t) => t.instances.filter((i) => members.has(i.node_id)).length >= 2)
+      .map((t) => ({ ...t, instances: t.instances.filter((i) => members.has(i.node_id)) })) ?? [] };
 }
 
 export function remapNode(id: string | null, from: TemplateInstance, to: TemplateInstance): string | null {
@@ -75,7 +78,15 @@ export function bindTemplateLayout(layout: Layout, graph: Graph, template: Templ
   const projection = { ...layout.projection,
     nodes: layout.projection.nodes.map((node) => {
       const target = nodes.get(node.id), record = target ? records.get(target) : undefined;
-      if (!record) throw new Error('Shared structure node correspondence is no longer available.');
+      if (!record && !node.repetitionId) throw new Error('Shared structure node correspondence is no longer available.');
+      if (!record) return { ...node,
+        sourceIds: chosen ? node.sourceIds.map((id) => nodes.get(id)!) : [],
+        ...(node.instances ? { instances: node.instances.map((instance) => ({ ...instance, node_id: nodes.get(instance.node_id)! })) } : {}),
+        ports: node.ports.map((port) => {
+          const endpoints = chosen ? port.endpoints.map((endpoint) => ports.get(endpointKey(endpoint))!) : [];
+          return { ...port, endpoints, interfaces: [...new Set(endpoints.filter((e) => interfaces.declarations.has(e.node_id)).map((e) => e.node_id))] };
+        }) };
+
       const common = commonNode(record, roles.get(node.id)!, node.id === from.node_id ? template.label : undefined);
       return { ...node, label: chosen ? record.label : common.label, record: chosen ? record : common,
         sourceIds: chosen ? node.sourceIds.map((id) => nodes.get(id)!) : [],

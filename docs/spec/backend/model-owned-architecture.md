@@ -101,6 +101,14 @@ model-supplied origin notice remains visible. Unknown shapes or unequal
 components cannot establish a Shared family. Omit the declaration for components
 whose equivalence cannot be asserted; they remain ordinary inspectable groups.
 
+Definitions may explicitly declare the API's optional repetition `bodies`, using
+file-local whole-layer template IDs in `slots`. Import remaps those IDs and
+validates the complete correspondence and real wiring, including when valid
+optional metadata exceeds the output budget. Invalid declarations fail; valid
+omitted families also omit dependent bodies. No motif is inferred for authored
+definitions. The [nested example](../../../examples/model-owned-architecture/nested-architecture.json)
+contains two explicit three-GELU-plus-one-ReLU bodies with independent weights.
+
 Repetitions and Shared families are independent annotations. Repetitions enable
 layer windows; templates enable shared-component navigation. Instances follow
 their enclosing repetition order, or sibling order within a common parent when
