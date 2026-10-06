@@ -265,7 +265,7 @@ def test_pinned_configuration_fixture_and_independent_geometry() -> None:
     ]
     assert configuration["layer_types"].count("kda") == 20
     assert configuration["layer_types"].count("full_attention") == 7
-    assert PRODUCER.revision == "5"
+    assert PRODUCER.revision == "6"
     assert parameter_shapes(REFERENCE) == expected_parameters(REFERENCE)
     assert FIXTURE["source"]["configuration_revision"] in PRODUCER.source_revision
     assert FIXTURE["source"]["modeling_revision"] in PRODUCER.source_revision
