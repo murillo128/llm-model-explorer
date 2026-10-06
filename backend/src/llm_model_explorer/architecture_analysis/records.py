@@ -3,7 +3,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_REVISION = "b6e6ed4a6763f15e677d954ea9fbc0db70ece384e0055168b2dd87a6effdd3b9"
+SCHEMA_REVISION = "0f4ffffbb852c2fa903b1007fafab1c1a3bfbe9010bcf8a56ed63b9a846bfe9a"
 
 
 class Record(BaseModel):
@@ -177,6 +177,21 @@ class ArchitectureEdge(Record):
     label: ArchitectureName | None = None
 
 
+class ArchitectureBodyRange(Record):
+    start: SafeInteger
+    count: SafeInteger
+
+
+class ArchitectureRepeatedBody(Record):
+    start: SafeInteger
+    width: SafeInteger
+    count: SafeInteger
+    slots: Annotated[list[ArchitectureId], Field(max_length=33554432)]
+    ranges: Annotated[list[ArchitectureBodyRange], Field(max_length=33554432)]
+    input_port: ArchitectureId
+    output_port: ArchitectureId
+
+
 class ArchitectureIndexedSideBinding(Record):
     index: SafeInteger
     endpoint: ArchitectureEndpoint
@@ -195,6 +210,7 @@ class ArchitectureRepetitionInstance(Record):
 
 
 class ArchitectureRepetition(Record):
+    bodies: Annotated[list[ArchitectureRepeatedBody], Field(max_length=33554432)] | None = None
     side_ports: Annotated[list[ArchitectureIndexedSidePort], Field(max_length=33554432)] | None = (
         None
     )

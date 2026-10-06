@@ -63,6 +63,10 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
   const generationContainers = new Set(projection.edges.flatMap((e) => e.relationship?.owner === 'generation' ? [e.relationship.groupId] : []));
   const indexedContainers = new Set(projection.nodes.filter((n) => n.shared && n.parentId && !projection.nodes.find((p) => p.id === n.parentId)?.shared).map((n) => n.parentId));
   const projectedNodes = new Map(projection.nodes.map((node) => [node.id, node]));
+  for (const edge of projection.edges) if (edge.relationship?.owner === 'repetition' && edge.relationship.kind === 'return') {
+    const parent = projectedNodes.get(edge.source.node_id)?.parentId;
+    if (parent) indexedContainers.add(parent);
+  }
   const descendant = (id: string, ancestor: string) => {
     for (let node = projectedNodes.get(id); node?.parentId; node = projectedNodes.get(node.parentId)) {
       if (node.parentId === ancestor) return true;

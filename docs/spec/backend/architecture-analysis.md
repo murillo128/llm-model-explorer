@@ -267,6 +267,24 @@ Optional metadata uses the existing bounded omission/diagnostic policy and norma
 producer/schema cache invalidation. Model-owned definitions declare their own
 complete correspondence; external directories remain read-only.
 
+## Repeated hybrid bodies
+
+The reusable native annotation pass composes exact whole-layer Shared families
+into the API's [repeated depth bodies](../api/architecture-explorer.md#verified-repeated-depth-bodies).
+Within bounded construction work it prefers the smallest verified period with
+at least two adjacent complete bodies. Actual edges must prove the activation
+chain and all side dependencies; Shared topology, shape, symbol, state and alias
+guards remain unchanged. Preserve nonperiodic prefixes, suffixes, incomplete
+bodies and exceptions, and allow disjoint eligible regions. Metadata budget
+omission must not leave dangling template references.
+
+Qwen3.5, Kimi Linear and Qwen-backed Kev use this common pass on their actual
+ordered graph. A single hybrid body does not acquire an outer return. DeepSeek's
+dense prefix and MoE suffix, GLM exceptions, homogeneous stacks and independent
+backbones retain their truthful source ordering. The pass reads no tensor values
+and changes neither source computation nor prepared GET behavior. Annotation,
+producer and schema revisions invalidate affected startup cache artifacts.
+
 ## Static no-cache generation context
 
 Eligible reviewed vocabulary models may declare the finite

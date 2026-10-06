@@ -25,7 +25,7 @@ def exporter() -> ModuleType:
     return module
 
 
-def fixture(root: Path, *, repeated: bool = False) -> tuple[Path, Path, dict[str, Any]]:
+def fixture(root: Path, *, repeated: int = 0) -> tuple[Path, Path, dict[str, Any]]:
     base, kev = root / "base", root.parent / "upstream-kev"
     base.mkdir(parents=True)
     kev.mkdir()
@@ -71,8 +71,10 @@ def fixture(root: Path, *, repeated: bool = False) -> tuple[Path, Path, dict[str
         },
     }
     if repeated:
-        config["text_config"]["num_hidden_layers"] = 4
-        config["text_config"]["layer_types"] = ["linear_attention"] * 3 + ["full_attention"]
+        config["text_config"]["num_hidden_layers"] = 4 * repeated
+        config["text_config"]["layer_types"] = (
+            ["linear_attention"] * 3 + ["full_attention"]
+        ) * repeated
     (base / "config.json").write_text(json.dumps(config))
     dimensions = {PREFIX + ".embed_tokens.weight": (8, 4), PREFIX + ".norm.weight": (4,)}
     for i in range(2):
@@ -121,7 +123,7 @@ def fixture(root: Path, *, repeated: bool = False) -> tuple[Path, Path, dict[str
     if repeated:
         original = dict(dimensions)
         dimensions = {k: v for k, v in original.items() if ".layers." not in k}
-        for index, source in enumerate([0, 0, 0, 1]):
+        for index, source in enumerate([0, 0, 0, 1] * repeated):
             dimensions.update(
                 {
                     k.replace(f".layers.{source}.", f".layers.{index}."): v
@@ -182,7 +184,7 @@ def fixture(root: Path, *, repeated: bool = False) -> tuple[Path, Path, dict[str
     if repeated:
         original_factors = factors
         factors = {}
-        for index, source in enumerate([0, 0, 0, 1]):
+        for index, source in enumerate([0, 0, 0, 1] * repeated):
             factors.update(
                 {
                     k.replace(f".layers.{source}.", f".layers.{index}."): v.clone()

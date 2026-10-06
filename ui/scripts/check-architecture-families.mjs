@@ -17,9 +17,9 @@ try {
   const { expandCompactGraph } = await import('../src/api/compact-architecture.ts');
   // Expected paths and counts are fixed by the fixtures/source, not opt-in discovery.
   for (const [family, generation, minimumIndexed, expectedRanges] of [
-    ['llama', true, 1], ['qwen3', true, 1], ['qwen35', true, 6, [[0,2],[4,6],[8,10],[12,14],[16,18],[20,22]]],
-    ['deepseek', true, 1, [[1,26]]], ['glm', true, 1, [[1,46]]], ['kimi', true, 1],
-    ['clm', false, 2], ['kev', false, 1, [[0,2]]], ['visual', false, 2], ['lora', true, 1],
+    ['llama', true, 1], ['qwen3', true, 1], ['qwen35', true, 2],
+    ['deepseek', true, 1, [[1,26]]], ['glm', true, 1, [[1,46]]], ['kimi', true, 2],
+    ['clm', false, 2], ['kev', false, 1], ['visual', false, 2], ['lora', true, 1],
     ['qwen-lora', true, 1], ['qwen-gptq-lora', true, 1], ['owned-linear', false, 0],
     ['owned-shared', false, 1], ['owned-generation', true, 0],
   ]) {
@@ -32,13 +32,23 @@ try {
     view.update({ expanded: graph.nodes.filter((n) => n.kind === 'group' && !layerRoots.has(n.id) &&
       !layerRoots.has(parents.get(n.id))).map((n) => n.id) });
     let projection = projectGraph(graph, projectionOptions(view));
-    for (let pass = 0; pass < 2; pass++) {
+    for (let pass = 0; pass < 3; pass++) {
       for (const node of projection.nodes.filter((n) => n.presentation === 'repetition' && !n.expanded))
         toggleComponent(view, graph, node, 2);
       projection = projectGraph(graph, projectionOptions(view));
     }
     const returns = projection.edges.filter((e) => e.relationship?.owner === 'repetition' && e.relationship.kind === 'return');
     assert.ok(returns.length >= minimumIndexed, `${family}: expected ${minimumIndexed} indexed ranges, got ${returns.length}`);
+    if (['qwen35', 'kimi', 'kev'].includes(family)) assert.ok(graph.repetitions.some((r) => r.bodies?.length), `${family}: missing periodic adoption`);
+    if (family === 'qwen35') {
+      const rep = graph.repetitions.find((r) => r.instances.length === 24);
+      assert.equal(rep.bodies.length, 1);
+      assert.deepEqual([rep.bodies[0].width, rep.bodies[0].count], [4, 6]);
+      assert.deepEqual(rep.bodies[0].ranges, [{ start: 0, count: 3 }, { start: 3, count: 1 }]);
+      assert.equal(projection.nodes.filter((n) => n.label === 'Hybrid block[j]').length, 1);
+      assert.equal(projection.nodes.filter((n) => n.label === 'Linear layer[4j+k]').length, 1);
+      assert.deepEqual(returns.map((e) => e.paths.length), [5, 12]);
+    }
     const ranges = returns.map((e) => [e.relationship.instances[0].index, e.relationship.instances.at(-1).index]);
     if (expectedRanges) assert.deepEqual(ranges, expectedRanges, family);
     if (!minimumIndexed) assert.equal(returns.length, 0, family);

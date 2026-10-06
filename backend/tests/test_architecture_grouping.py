@@ -34,7 +34,7 @@ def test_reviewed_groups_and_revision(
     expected_revision = (
         "5"
         if name in {"llama", "qwen3", "llama-bias", "llama-partial"}
-        else "3"
+        else "4"
         if name == "hybrid"
         else "2"
     )

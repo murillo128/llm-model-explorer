@@ -24,6 +24,23 @@ export function depthRanges(graph: Graph, repetition: Graph['repetitions'][numbe
   if (!repetition.instances.some((i) => families.has(i.node_id)) &&
     !(new Set(repetition.instances.map((i) => i.variant)).size > 1 && repetition.instances.every((i) =>
       nodes.get(i.node_id)?.attributes.some((a) => a.name === 'semantic_role' && a.value === 'layer')))) return [repetition];
+  if (repetition.bodies?.length) {
+    const result: Graph['repetitions'] = [];
+    let cursor = 0;
+    const ordinary = (end: number) => {
+      if (end > cursor) result.push(...depthRanges(graph, { ...repetition, bodies: [],
+        id: `${repetition.id}:${cursor}:${end - 1}`, instances: repetition.instances.slice(cursor, end) }));
+    };
+    for (const body of repetition.bodies) {
+      ordinary(body.start);
+      const end = body.start + body.width * body.count;
+      result.push({ ...repetition, id: body.start === 0 && end === repetition.instances.length ? repetition.id : `${repetition.id}:${body.start}:${end - 1}`,
+        instances: repetition.instances.slice(body.start, end), bodies: [{ ...body, start: 0 }] });
+      cursor = end;
+    }
+    ordinary(repetition.instances.length);
+    return result;
+  }
   const ranges: Graph['repetitions'] = [];
   for (const instance of repetition.instances) {
     const previous = ranges.at(-1)?.instances.at(-1);
@@ -186,24 +203,24 @@ const ep = (node_id: string, port_id: string): Endpoint => ({ node_id, port_id }
 
 /** Bounded token substitution for declared port/parameter symbols. Existing
  * mathematical subscripts and constants remain verbatim; source formulas do too. */
-function indexedRecord(node: GraphNode, stack: IndexedStack, root: boolean): GraphNode {
+function indexedRecord(node: GraphNode, stack: IndexedStack, root: boolean, expression = 'i'): GraphNode {
   const invariant = new Set(node.ports.filter((p) => stack.invariantPorts.has(endpointKey(ep(node.id, p.id)))).map((p) => p.id));
   const symbols = new Set(node.ports.filter((p) => !invariant.has(p.id)).flatMap((p) => [p.id, p.label]));
   const own = new Set([...node.parameter_ids, ...node.references.flatMap((r) => r.kind === 'parameter' ? [r.parameter_id] : [])]);
   for (const p of stack.instances[0]!.parameters) if (own.has(p.parameter_id)) {
     if (!stack.invariantParameters.has(p.role)) symbols.add(p.role.split('.').at(-1)!);
   }
-  const alias = (text: string) => text.replace(/\b[A-Za-z_]\w*\b(?!\[)/g, (word) => symbols.has(word) ? `${word}[i]` : word);
-  const localSymbols = new Map((stack.instances[0]!.symbols ?? []).map((s) => [s.name, `${s.role.replace(/[^A-Za-z0-9_]/g, '_')}[i]`]));
+  const alias = (text: string) => text.replace(/\b[A-Za-z_]\w*\b(?!\[)/g, (word) => symbols.has(word) ? `${word}[${expression}]` : word);
+  const localSymbols = new Map((stack.instances[0]!.symbols ?? []).map((s) => [s.name, `${s.role.replace(/[^A-Za-z0-9_]/g, '_')}[${expression}]`]));
   const shape = (value: GraphNode['ports'][number]['shape']) => value?.map((d) => d.kind === 'symbol'
     ? { ...d, name: localSymbols.get(d.name) ?? d.name } : d.kind === 'expression'
       ? { ...d, text: d.text.replace(/\b[A-Za-z_]\w*\b/g, (name) => localSymbols.get(name) ?? name),
         symbols: d.symbols.map((name) => localSymbols.get(name) ?? name) } : d) ?? null;
-  const common = commonNode(node, node.label, root ? 'Layer[i]' : node.label);
+  const common = commonNode(node, node.label, root ? `Layer[${expression}]` : node.label);
   return { ...common, attributes: common.attributes.map((a) => root && ['sequence_index', 'layer_index'].includes(a.name) &&
-    a.value === stack.repetition.instances[0]!.index ? { ...a, value: 'i' } : a), ports: node.ports.map((p) => ({ ...p, label: alias(p.label), shape: shape(p.shape) })),
+    a.value === stack.repetition.instances[0]!.index ? { ...a, value: expression } : a), ports: node.ports.map((p) => ({ ...p, label: alias(p.label), shape: shape(p.shape) })),
     ...(node.formula ? { formula: alias(node.formula) } : {}),
-    ...(root ? { formula: `${node.ports.filter((p) => p.direction === 'output').map((p) => `${p.label}[i]`).join(', ')} = layer[i](${node.ports.filter((p) => p.direction === 'input').map((p) => invariant.has(p.id) ? p.label : `${p.label}[i]`).join(', ')})` } : {}) };
+    ...(root ? { formula: `${node.ports.filter((p) => p.direction === 'output').map((p) => `${p.label}[${expression}]`).join(', ')} = layer[${expression}](${node.ports.filter((p) => p.direction === 'input').map((p) => invariant.has(p.id) ? p.label : `${p.label}[${expression}]`).join(', ')})` } : {}) };
 }
 
 /** Actions and projection must agree on whether the current interface filter
@@ -218,12 +235,58 @@ export function indexedBoundaryPorts(outer: ProjectedNode, stack: IndexedStack |
   return { input, output, portFor };
 }
 
+export function appendIndexedLayer(graph: Graph, base: Projection, options: ProjectionOptions,
+  stack: IndexedStack, ownerId: string, expression = 'i', rootLabel = `${stack.repetition.label.replace(/\s*layers?\s*/gi, ' ').trim()} Layer[i]`) {
+  const anchor = stack.instances[0]!;
+  const id = (source: string) => indexedNodeId(stack.repetition.id, source);
+  const parameters = new Map(graph.parameters.map((p) => [p.id, p]));
+  const sourceEdges = new Map(graph.edges.map((e) => [e.id, e]));
+  const anchorEdgeRoles = new Map(anchor.edges.map((e) => [e.edge_id, e.role]));
+  const instanceEdges = stack.instances.map((instance) => new Map(instance.edges.map((e) => [e.role, sourceEdges.get(e.edge_id)!])));
+  const scoped = templateGraph(graph, anchor);
+  const expanded = anchor.nodes.filter((n) => options.expanded.includes(id(n.node_id))).map((n) => n.node_id);
+  // A nested expert/component range keeps its own disclosure inside this
+  // neutral occurrence. Opening it reveals its bounded concrete role set.
+  for (const repetition of scoped.repetitions) if (options.expanded.includes(id(`repeat:${repetition.id}:0:${repetition.instances.length - 1}`)))
+    expanded.push(...repetition.instances.map((i) => i.node_id));
+  const local = projectGraph(scoped, { expanded,
+    scope: anchor.node_id, showUnused: options.showUnused === true, deriveMlp: false });
+  for (const n of local.nodes) {
+    const source = n.record;
+    if (!source) {
+      base.nodes.push({ ...n, id: id(n.id), parentId: n.parentId ? id(n.parentId) : ownerId,
+        sourceIds: [], nestedRepetition: true,
+        ports: n.ports.map((p) => ({ ...p, endpoints: [], interfaces: [] })) });
+      continue;
+    }
+    const role = anchor.nodes.find((m) => m.node_id === source.id)!.role;
+    const record = indexedRecord(source, stack, source.id === anchor.node_id, expression);
+    const own = new Set([...source.parameter_ids, ...source.references.flatMap((r) => r.kind === 'parameter' ? [r.parameter_id] : [])]);
+    const symbolicParameters = anchor.parameters.filter((p) => own.has(p.parameter_id)).map((p) => ({
+      role: p.role, label: p.role.split('.').at(-1)! + (stack.invariantParameters.has(p.role) ? '' : `[${expression}]`),
+      shape: parameters.get(p.parameter_id)!.logical_shape,
+    }));
+    base.nodes.push({ ...n, id: id(n.id), parentId: n.parentId ? id(n.parentId) : ownerId, record,
+      label: source.id === anchor.node_id ? rootLabel : record.label,
+      sourceIds: [], presentation: 'shared', symbolicParameters, shared: { templateId: stack.template.id, anchorId: anchor.node_id, nodeRole: role },
+      ports: n.ports.filter((p) => options.showUnused || source.id !== anchor.node_id ||
+        !base.unusedInputs.some((v) => v.node_id === anchor.node_id && v.port_id === p.id)).map((p) => ({ ...p, label: record.ports.find((v) => v.id === p.id)?.label ?? p.label,
+        endpoints: [], interfaces: [], templatePort: { kind: 'template-port', templateId: stack.template.id, nodeRole: role,
+          portRole: anchor.ports.find((v) => v.node_id === source.id && v.port_id === p.id)!.role } })) });
+  }
+  for (const e of local.edges) {
+    const roles = e.paths.map((path) => path.map((p) => anchorEdgeRoles.get(p.id)!));
+    const paths = instanceEdges.flatMap((edges) => roles.map((path) => path.map((role) => edges.get(role)!)));
+    base.edges.push({ ...e, id: id(e.id), source: ep(id(e.source.node_id), e.source.port_id), target: ep(id(e.target.node_id), e.target.port_id), paths,
+      originalEdgeIds: [...new Set(paths.flat().map((e) => e.id))] });
+  }
+  return id(anchor.node_id);
+}
+
 /** Compose two existing projections; the source graph stays concrete and immutable. */
 export function projectIndexedRepetitions(graph: Graph, base: Projection, options: ProjectionOptions): Projection {
   if (options.exhaustive || options.stateScope) return base;
   const eligible = indexedStacks(graph);
-  const parameters = new Map(graph.parameters.map((p) => [p.id, p]));
-  const sourceEdges = new Map(graph.edges.map((e) => [e.id, e]));
   for (const outer of [...base.nodes]) {
     if (outer.presentation !== 'repetition' || !options.expanded.includes(outer.id)) continue;
     const stack = eligible.get(stackKey(outer, graph) ?? '');
@@ -233,34 +296,8 @@ export function projectIndexedRepetitions(graph: Graph, base: Projection, option
     const repetition = stack.repetition;
     const anchor = stack.instances[0]!;
     const id = (source: string) => indexedNodeId(repetition.id, source);
-    const anchorEdgeRoles = new Map(anchor.edges.map((e) => [e.edge_id, e.role]));
-    const instanceEdges = stack.instances.map((instance) => new Map(instance.edges.map((e) => [e.role, sourceEdges.get(e.edge_id)!])));
-    const local = projectGraph(templateGraph(graph, anchor), { expanded: anchor.nodes.filter((n) => options.expanded.includes(id(n.node_id))).map((n) => n.node_id),
-      scope: anchor.node_id, showUnused: options.showUnused === true, deriveMlp: false });
     outer.expanded = true;
-    for (const n of local.nodes) {
-      const source = n.record!;
-      const role = anchor.nodes.find((m) => m.node_id === source.id)!.role;
-      const record = indexedRecord(source, stack, source.id === anchor.node_id);
-      const own = new Set([...source.parameter_ids, ...source.references.flatMap((r) => r.kind === 'parameter' ? [r.parameter_id] : [])]);
-      const symbolicParameters = anchor.parameters.filter((p) => own.has(p.parameter_id)).map((p) => ({
-        role: p.role, label: p.role.split('.').at(-1)! + (stack.invariantParameters.has(p.role) ? '' : '[i]'),
-        shape: parameters.get(p.parameter_id)!.logical_shape,
-      }));
-      base.nodes.push({ ...n, id: id(n.id), parentId: n.parentId ? id(n.parentId) : outer.id, record,
-        label: source.id === anchor.node_id ? `${repetition.label.replace(/\s*layers?\s*/gi, ' ').trim()} Layer[i]` : record.label,
-        sourceIds: [], presentation: 'shared', symbolicParameters, shared: { templateId: stack.template.id, anchorId: anchor.node_id, nodeRole: role },
-        ports: n.ports.filter((p) => options.showUnused || source.id !== anchor.node_id ||
-          !base.unusedInputs.some((v) => v.node_id === anchor.node_id && v.port_id === p.id)).map((p) => ({ ...p, label: record.ports.find((v) => v.id === p.id)?.label ?? p.label,
-          endpoints: [], interfaces: [], templatePort: { kind: 'template-port', templateId: stack.template.id, nodeRole: role,
-            portRole: anchor.ports.find((v) => v.node_id === source.id && v.port_id === p.id)!.role } })) });
-    }
-    for (const e of local.edges) {
-      const roles = e.paths.map((path) => path.map((p) => anchorEdgeRoles.get(p.id)!));
-      const paths = instanceEdges.flatMap((edges) => roles.map((path) => path.map((role) => edges.get(role)!)));
-      base.edges.push({ ...e, id: id(e.id), source: ep(id(e.source.node_id), e.source.port_id), target: ep(id(e.target.node_id), e.target.port_id), paths,
-        originalEdgeIds: [...new Set(paths.flat().map((e) => e.id))] });
-    }
+    appendIndexedLayer(graph, base, options, stack, outer.id);
     function relationship(kind: NonNullable<ProjectedEdge['relationship']>['kind'], source: Endpoint, target: Endpoint, paths: Edge[][], port: string) {
       base.edges.push({ id: `${outer.id}:${kind}:${port}`, source, target, kind: paths[0]![0]!.kind, paths,
         originalEdgeIds: [...new Set(paths.flat().map((e) => e.id))], relationship: { owner: 'repetition', kind, repetitionId: repetition.id, templateId: stack!.template.id,

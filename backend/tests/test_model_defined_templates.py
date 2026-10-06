@@ -361,8 +361,8 @@ def test_budget_does_not_hide_invalid_templates(caplog: pytest.LogCaptureFixture
 def test_producer_revision_invalidates_prior_model_defined_cache() -> None:
     definition = parse_definition(EXAMPLE.read_bytes())
     current = producer_for(definition)
-    old = replace(current, revision="5")
-    assert current.revision == "6"
+    old = replace(current, revision="6")
+    assert current.revision == "7"
     assert current.graph_id("unchanged-checkpoint", "model_defined") != old.graph_id(
         "unchanged-checkpoint", "model_defined"
     )
@@ -452,3 +452,28 @@ def test_parameter_resource_references_are_mapped_not_guessed() -> None:
         m for m in value["templates"][0]["instances"][1]["parameters"] if m["role"] != "q.weight"
     ]
     assert analyze(value).status == "unavailable"
+
+
+def test_imports_nested_body_and_rejects_declared_foreign_slot() -> None:
+    value = json.loads((EXAMPLE.parent / "nested-architecture.json").read_text())
+    source = inventory()
+    physical, numeric = dict(source.bindings.physical), dict(source.bindings.numeric)
+    for index in range(2, 8):
+        for p in source.bindings.physical.values():
+            if not p.name.startswith("blocks.0."):
+                continue
+            name = p.name.replace("blocks.0.", f"blocks.{index}.")
+            physical[name] = p.model_copy(update={"name": name})
+            numeric[name] = NumericTensor(name, name, tuple(p.shape), "F32")
+    source = replace(source, bindings=BindingContext(physical, numeric, False))
+    result = analyze_definition(parse_definition(json.dumps(value).encode()), source)
+    assert result.graph is not None, result.diagnostics
+    rep = result.graph.repetitions[0]
+    assert rep.bodies is not None
+    assert (rep.bodies[0].width, rep.bodies[0].count) == (4, 2)
+    assert set(rep.bodies[0].slots) == {t.id for t in result.graph.templates or []}
+    assert len(rep.instances) == 8
+    value["repetitions"][0]["bodies"][0]["slots"][3] = "unknown"
+    invalid = analyze_definition(parse_definition(json.dumps(value).encode()), source)
+    assert invalid.graph is None
+    assert invalid.diagnostics

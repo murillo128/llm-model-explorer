@@ -59,3 +59,12 @@ This optional extension retains `schema_version: 1`. Existing files without
 the new field and must be updated. See the
 [contract](../../docs/spec/backend/model-owned-architecture.md#declared-shared-structures)
 for the trust and size boundaries.
+
+
+`nested-architecture.json` extends the authored demonstration to eight explicit
+layers: three GELU layers and one ReLU layer, repeated twice. Its repetition
+publishes a verified width-four body, two whole-layer families and a nested
+three-layer range. For this example, use a different output directory, change
+`range(2)` above to `range(8)`, and copy `nested-architecture.json` as the sidecar.
+Every global layer retains its own matrices; select a complete global instance
+before inspection. The example adds no executable loop or source wrapper.

@@ -9,6 +9,17 @@ import { ConnectionContext } from './connection-context';
 import { arrowTransform, type RouteDisplay } from './route-display';
 import { arrowLength, arrowWidth, minimumReadableZoom } from './route-metrics';
 
+function depthReturnText(edge: ProjectedEdge) {
+  const relationship = edge.relationship;
+  if (relationship?.owner !== 'repetition') return '';
+  const scope = relationship.indexScope;
+  if (!scope) return `Next layer: ${edge.target.port_id}[i+1] = ${edge.source.port_id}[i], ${relationship.instances[0]!.index} ≤ i < ${relationship.instances.at(-1)!.index}.`;
+  const base = `${scope.base ? `${scope.base}+` : ''}${scope.width}j`;
+  const index = (offset: number) => `${base}${offset ? `+${offset}` : ''}${scope.variable === 'k' ? '+k' : ''}`;
+  const source = index(scope.offset), target = scope.variable === 'k' ? `${source}+1` : index(scope.offset + 1);
+  return `Next ${scope.variable === 'j' ? 'block' : 'linear layer'}: ${scope.input}[${target}] = ${scope.output}[${source}], 0 ≤ ${scope.variable} < ${scope.count - 1}.`;
+}
+
 export type ConnectionEdge = Edge<{ connection: ProjectedEdge; route: Route; display: RouteDisplay; projection: Projection; dimensions: boolean }, 'connection'>;
 
 
@@ -96,7 +107,7 @@ export function ConnectionInspection({ graph, edge, node, trigger, onClose, insp
       {edge?.relationship?.owner === 'repetition' && <p>{edge.relationship.kind === 'entry'
         ? `Initial entry: only instance ${edge.relationship.instances[0]!.index}.`
         : edge.relationship.kind === 'exit' ? `Final exit: only after instance ${edge.relationship.instances.at(-1)!.index}.`
-        : edge.relationship.kind === 'return' ? `Next layer: ${edge.target.port_id}[i+1] = ${edge.source.port_id}[i], ${edge.relationship.instances[0]!.index} ≤ i < ${edge.relationship.instances.at(-1)!.index}. ${edge.paths.length} ordered inter-layer transitions; no same-instance feedback.`
+        : edge.relationship.kind === 'return' ? `${depthReturnText(edge)} ${edge.paths.length} ordered inter-layer transitions; no same-instance feedback.`
         : edge.relationship.kind === 'side-input' || edge.relationship.kind === 'side-output'
           ? `Indexed state ${edge.relationship.kind === 'side-input' ? 'input' : 'output'}: each layer retains its own binding and source path.`
           : 'Invariant input: one verified signal with every represented instance consumer.'} No concrete instance is selected by this relationship.</p>}

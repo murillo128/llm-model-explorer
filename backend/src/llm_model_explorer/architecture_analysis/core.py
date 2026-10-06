@@ -30,7 +30,7 @@ from .validation import (
 if TYPE_CHECKING:
     from ..tensor_source import PeftLoraComposition, PhysicalTensor, TensorDescriptor
 
-ANALYZER_REVISION = "static-graph-core-7"
+ANALYZER_REVISION = "static-graph-core-8"
 Scope = Literal["language_model", "visual_encoder_predictor", "model_defined"]
 
 

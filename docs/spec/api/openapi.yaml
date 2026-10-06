@@ -1712,6 +1712,40 @@ components:
           maxItems: 33554432
           items:
             $ref: '#/components/schemas/ArchitectureIndexedSideBinding'
+    ArchitectureBodyRange:
+      type: object
+      additionalProperties: false
+      required: [start, count]
+      properties:
+        start:
+          $ref: '#/components/schemas/SafeInteger'
+        count:
+          $ref: '#/components/schemas/SafeInteger'
+    ArchitectureRepeatedBody:
+      type: object
+      additionalProperties: false
+      required: [start, width, count, slots, ranges, input_port, output_port]
+      properties:
+        start:
+          $ref: '#/components/schemas/SafeInteger'
+        width:
+          $ref: '#/components/schemas/SafeInteger'
+        count:
+          $ref: '#/components/schemas/SafeInteger'
+        slots:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureId'
+        ranges:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureBodyRange'
+        input_port:
+          $ref: '#/components/schemas/ArchitectureId'
+        output_port:
+          $ref: '#/components/schemas/ArchitectureId'
     ArchitectureRepetition:
       type: object
       additionalProperties: false
@@ -1721,6 +1755,11 @@ components:
       - label
       - instances
       properties:
+        bodies:
+          type: array
+          maxItems: 33554432
+          items:
+            $ref: '#/components/schemas/ArchitectureRepeatedBody'
         side_ports:
           type: array
           maxItems: 33554432

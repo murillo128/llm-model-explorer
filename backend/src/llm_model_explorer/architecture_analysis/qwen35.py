@@ -19,7 +19,7 @@ from .semantic import operation_role, role_attribute, source_key
 from .validation import require
 
 PRODUCER = Producer(
-    "transformers-qwen35-nvfp4", "3", "transformers/2cba19507be799b7bef247ca6c1c4708bf881b5b"
+    "transformers-qwen35-nvfp4", "4", "transformers/2cba19507be799b7bef247ca6c1c4708bf881b5b"
 )
 PREFIX = "model.language_model"
 # Require explicit structural dimensions; do not transplant another size's defaults.

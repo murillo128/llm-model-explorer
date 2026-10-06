@@ -124,7 +124,7 @@ def write_checkpoint(directory, config, storage, scalar_value=None):
     (directory / "modeling_custom.py").write_text('raise AssertionError("checkpoint executed")\n')
 
 
-def generate(root):
+def generate(root, *, qwen_blocks=1):
     # Reuse the independently authored dense fixture geometry, not production rules.
     sys.path.insert(0, str(FIXTURES.parent))
     try:
@@ -146,11 +146,11 @@ def generate(root):
         fixture = json.loads((FIXTURES / f"{family}-tiny.json").read_text())
         if family == "qwen35":
             cfg = fixture["configuration"]["text_config"]
-            cfg["num_hidden_layers"] = 4
-            cfg["layer_types"] = ["linear_attention"] * 3 + ["full_attention"]
+            cfg["num_hidden_layers"] = 4 * qwen_blocks
+            cfg["layer_types"] = (["linear_attention"] * 3 + ["full_attention"]) * qwen_blocks
             original = fixture["storage"]
             fixture["storage"] = {k: v for k, v in original.items() if ".layers." not in k}
-            for index, source in enumerate([0, 0, 0, 1]):
+            for index, source in enumerate([0, 0, 0, 1] * qwen_blocks):
                 fixture["storage"].update(
                     {
                         k.replace(f".layers.{source}.", f".layers.{index}."): v
@@ -185,5 +185,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("root", type=Path)
     parser.add_argument("--templates", action="store_true")
+    parser.add_argument("--qwen-blocks", type=int, default=1, choices=(1, 6))
     args = parser.parse_args()
-    (generate_templates if args.templates else generate)(args.root)
+    if args.templates:
+        generate_templates(args.root)
+    else:
+        generate(args.root, qwen_blocks=args.qwen_blocks)

@@ -747,7 +747,21 @@ export interface components {
             direction: "input" | "output";
             bindings: components["schemas"]["ArchitectureIndexedSideBinding"][];
         };
+        ArchitectureBodyRange: {
+            start: components["schemas"]["SafeInteger"];
+            count: components["schemas"]["SafeInteger"];
+        };
+        ArchitectureRepeatedBody: {
+            start: components["schemas"]["SafeInteger"];
+            width: components["schemas"]["SafeInteger"];
+            count: components["schemas"]["SafeInteger"];
+            slots: components["schemas"]["ArchitectureId"][];
+            ranges: components["schemas"]["ArchitectureBodyRange"][];
+            input_port: components["schemas"]["ArchitectureId"];
+            output_port: components["schemas"]["ArchitectureId"];
+        };
         ArchitectureRepetition: {
+            bodies?: components["schemas"]["ArchitectureRepeatedBody"][];
             side_ports?: components["schemas"]["ArchitectureIndexedSidePort"][];
             id: components["schemas"]["ArchitectureId"];
             parent_id: components["schemas"]["ArchitectureId"];

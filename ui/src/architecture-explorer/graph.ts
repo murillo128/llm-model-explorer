@@ -1,3 +1,4 @@
+import { bodyProjectionIds } from './repeated-body';
 import type { components } from '../api/generated/types';
 import type { Projection, ProjectionOptions } from './projection';
 import { projectGraph } from './projection';
@@ -96,11 +97,14 @@ export class GraphViews {
       `repeat:${repetitionId}:0:${stack.instances.length - 1}`,
       `repeat:${repetitionId}`,
       ...stack.instances[0]!.nodes.map((n) => indexedNodeId(repetitionId, n.node_id)),
+      ...graph.repetitions.filter((r) => stack.instances[0]!.nodes.some((n) => n.node_id === r.parent_id))
+        .map((r) => indexedNodeId(repetitionId, `repeat:${r.id}:0:${r.instances.length - 1}`)),
     ]));
     for (const repetition of graph.repetitions) {
       indexedIds.add(`repeat:${repetition.id}:0:${repetition.instances.length - 1}`);
       for (const range of depthRanges(graph, repetition)) indexedIds.add(`repeat:${range.id}`);
     }
+    for (const id of bodyProjectionIds(graph)) indexedIds.add(id);
     const interfaces = interfaceIndex(graph);
     const declaration = view.selected && interfaces.declarations.get(view.selected)?.[0];
     if (declaration) { view.boundary = interfaceSelection(declaration); view.selected = declaration.owner.kind === 'source' ? declaration.owner.id : null; view.edge = null; }

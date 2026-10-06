@@ -484,7 +484,7 @@ def architecture(inputs: AnalysisInput, cfg: dict[str, Any]) -> dict[str, Any]:
         ],
         "repetitions": [
             {
-                **r,
+                **{k: v for k, v in r.items() if k != "bodies"},
                 "parent_id": ids[r["parent_id"]],
                 "instances": [{**i, "node_id": ids[i["node_id"]]} for i in r["instances"]],
             }

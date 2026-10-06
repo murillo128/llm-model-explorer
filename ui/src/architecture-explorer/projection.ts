@@ -1,3 +1,4 @@
+import { projectRepeatedBodies } from './repeated-body';
 import { projectGeneration } from './generation';
 import { depthRanges, projectIndexedRepetitions } from './indexed-repetition';
 import type { components } from '../api/generated/types';
@@ -22,6 +23,7 @@ export interface ProjectedNode {
   id: string; parentId?: string; kind: GraphNode['kind']; label: string;
   sourceIds: string[]; record?: GraphNode; ports: ProjectedPort[]; expanded: boolean;
   presentation?: 'repetition' | 'range' | 'mlp' | 'external' | 'model' | 'shared'; repetitionId?: string;
+  nestedRepetition?: boolean;
   shared?: { templateId: string; anchorId: string; nodeRole: string };
   symbolicParameters?: { role: string; label: string; shape: SourcePort['shape'] }[];
   componentCount?: number;
@@ -32,8 +34,8 @@ export interface ProjectedEdge {
   /** Each path is ordered from the original source to original destination.
    * Shared forwarding prefixes may occur in genuine fan-out paths. */
   paths: SourceEdge[][]; originalEdgeIds: string[];
-  relationship?: { owner: 'repetition'; kind: 'entry' | 'return' | 'exit' | 'invariant' | 'side-input' | 'side-output'; repetitionId: string; templateId: string;
-    portRole: string; instances: { nodeId: string; index: number }[] } |
+  relationship?: { owner: 'repetition'; kind: 'entry' | 'return' | 'exit' | 'invariant' | 'side-input' | 'side-output'; repetitionId: string; scopeId?: string; templateId: string;
+    portRole: string; indexScope?: { variable: 'j' | 'k'; base: number; width: number; offset: number; count: number; input: string; output: string }; instances: { nodeId: string; index: number }[] } |
     { owner: 'generation'; kind: 'entry' | 'return' | 'exit'; groupId: string; stateId: string; phase: 'initial' | 'next' | 'final' };
 }
 export interface ProjectionOptions {
@@ -83,7 +85,7 @@ export function variantSummary(instances: Graph['repetitions'][number]['instance
  * remain untouched. Only group interfaces are transparent; computations stop
  * traversal, even when two operation ports have the same shape or label. */
 export function projectGraph(graph: Graph, options: ProjectionOptions): Projection {
-  return projectGeneration(graph, projectIndexedRepetitions(graph, projectInterfaces(graph, projectSourceGraph(graph, options), options), options));
+  return projectGeneration(graph, projectIndexedRepetitions(graph, projectRepeatedBodies(graph, projectInterfaces(graph, projectSourceGraph(graph, options), options), options), options));
 }
 
 function projectSourceGraph(graph: Graph, options: ProjectionOptions): Projection {
