@@ -468,8 +468,12 @@ test('deterministic production [smollm2] shows the precise model-owned load fail
     r.url().endsWith('/architecture') && r.request().method() === 'GET');
   await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption(modelId);
   await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
-  const body = await (await response).json();
-  expect(body).toMatchObject({ status: 'unavailable', reason: 'analysis_failed',
+  // As in selectGraph, the UI's bounded reader may release the DevTools body.
+  // Fetch the same immutable prepared result and retain the exact diagnostic/UI oracle.
+  const prepared = await fetch((await response).url());
+  expect(prepared.ok).toBe(true);
+  const body = await prepared.json();
+  expect(body).toMatchObject({ model_id: modelId, status: 'unavailable', reason: 'analysis_failed',
     diagnostics: [{ code: finding.code, message: finding.message }] });
   await expect(page.getByLabel('Architecture capability', { exact: true })
     .getByRole('status').getByText('Architecture preparation failed for this model.', { exact: true })).toBeVisible();
