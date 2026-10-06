@@ -49,6 +49,15 @@ try {
       assert.equal(projection.nodes.filter((n) => n.label === 'Linear layer[4j+k]').length, 1);
       assert.deepEqual(returns.map((e) => e.paths.length), [5, 12]);
     }
+    if (family === 'kimi') {
+      const range = projection.nodes.find((n) => n.nestedRepetition && n.instances?.length === 12);
+      assert.ok(range, 'Kimi: missing inner KDA ×2 range');
+      const mask = projection.edges.find((e) => e.target.node_id === range.id && e.target.port_id === 'padding_mask');
+      const layers = graph.repetitions.find((r) => r.bodies?.length).instances;
+      const consumers = [1, 2, 5, 6, 9, 10, 13, 14, 17, 18, 21, 22];
+      assert.deepEqual(mask.paths.map((p) => p.at(-1).target.node_id), consumers.map((index) => layers.find((i) => i.index === index).node_id));
+      assert.deepEqual(mask.relationship.instances.map((i) => i.index), consumers);
+    }
     const ranges = returns.map((e) => [e.relationship.instances[0].index, e.relationship.instances.at(-1).index]);
     if (expectedRanges) assert.deepEqual(ranges, expectedRanges, family);
     if (!minimumIndexed) assert.equal(returns.length, 0, family);

@@ -159,6 +159,14 @@ The focused producer assertion failed before implementation at the doc-seed head
 transitions into 12 inner, 6 ordinary and 5 outer paths, plus layer 9 versus 11
 bindings and unchanged concrete graph records.
 
+The same projection case reproduces the audit findings at `1c052575` and passes
+after repair: the linear/full side branches contain exactly 18/6 consumers,
+including independent ordered group-forwarding paths. The inner boundary and
+connection inspector now identify entry `x[4j]` and final exit `out[4j+2]` in
+each block. The existing real-browser scenario also checks these labels and
+inspection phases. The Kimi family row checks that the inner KDA ×2 mask branch
+contains exactly its 12 consumers, excluding the other KDA slot's six layers.
+
 The existing registered-family export/consumer check passed all fifteen rows:
 
 | Native family | Observed repeated body / preservation |

@@ -1,11 +1,12 @@
 import type { Graph } from './graph';
 import type { Endpoint, ProjectedEdge, ProjectedNode, Projection, ProjectionOptions } from './projection';
 import { endpointKey } from './projection';
-import { appendIndexedLayer, indexedNodeId, type IndexedStack } from './indexed-repetition';
+import { appendIndexedLayer, depthIndex, indexedNodeId, type IndexedStack } from './indexed-repetition';
 
 type Repetition = Graph['repetitions'][number];
 type Body = NonNullable<Repetition['bodies']>[number];
 type Edge = Graph['edges'][number];
+type IndexPhase = Extract<NonNullable<ProjectedEdge['relationship']>, { owner: 'repetition' }>['indexPhase'];
 type IndexScope = Extract<NonNullable<ProjectedEdge['relationship']>, { owner: 'repetition' }>['indexScope'];
 const ep = (node_id: string, port_id: string): Endpoint => ({ node_id, port_id });
 export const bodyId = (rep: Repetition, body: Body) => `body:${rep.id}:${body.start}`;
@@ -63,7 +64,7 @@ export function projectRepeatedBodies(graph: Graph, base: Projection, options: P
     output.label = `${body.output_port}[${covered.at(-1)!.index}]`;
     const id = bodyId(rep, body);
     const origin = covered[0]!.index;
-    const expression = (offset: number, inner = false) => `${origin ? `${origin}+` : ''}${body.width}j${inner ? (offset ? `+${offset}+k` : '+k') : offset ? `+${offset}` : ''}`;
+    const expression = (offset: number, inner = false) => `${depthIndex(origin, body.width, offset)}${inner ? '+k' : ''}`;
     const shell: ProjectedNode = { id, parentId: outer.id, kind: 'group', label: 'Hybrid block[j]', sourceIds: [],
       expanded: true, presentation: 'repetition', nestedRepetition: true, componentCount: body.ranges.length,
       ports: outer.ports.map((p) => ({ ...p, endpoints: [...p.endpoints], label: p === input ? `${body.input_port}[${expression(0)}]`
@@ -71,12 +72,16 @@ export function projectRepeatedBodies(graph: Graph, base: Projection, options: P
       summary: `${body.width} layers per block` };
     base.nodes.push(shell);
     let sequence = 0;
-    const relationship = (scope: string, kind: NonNullable<ProjectedEdge['relationship']>['kind'], source: Endpoint, target: Endpoint, paths: Edge[][], templateId: string, indexScope?: IndexScope, represented = covered) => {
+    const relationship = (scope: string, kind: NonNullable<ProjectedEdge['relationship']>['kind'], source: Endpoint, target: Endpoint, paths: Edge[][], templateId: string, indexScope?: IndexScope, represented = covered, indexPhase?: IndexPhase) => {
       base.edges.push({ id: `${scope}:${kind}:${sequence++}`, source, target, paths, kind: paths[0]?.[0]?.kind ?? 'data',
         originalEdgeIds: [...new Set(paths.flat().map((e) => e.id))], relationship: { owner: 'repetition', kind,
-          repetitionId: rep.id, scopeId: scope, templateId, portRole: body.input_port, ...(indexScope ? { indexScope } : {}),
+          repetitionId: rep.id, scopeId: scope, templateId, portRole: body.input_port, ...(indexScope ? { indexScope } : {}), ...(indexPhase ? { indexPhase } : {}),
           instances: represented.map((i) => ({ nodeId: i.node_id, index: i.index })) } });
     };
+    const phaseMembers = (offset: number) => covered.filter((_, at) => at % body.width === offset);
+    const phase = (scope: string, kind: 'entry' | 'exit', source: Endpoint, target: Endpoint, offset: number, templateId: string) =>
+      relationship(scope, kind, source, target, [], templateId, undefined, phaseMembers(offset),
+        { phase: kind === 'entry' ? 'initial' : 'final', base: origin, width: body.width, offset, count: body.count });
     relationship(outer.id, 'entry', ep(outer.id, input.id), ep(id, input.id), [paths[0]!], families[0]!.id);
     relationship(outer.id, 'return', ep(id, output.id), ep(id, input.id), paths.filter((_, i) => i > 0 && i % body.width === 0), families[0]!.id,
       { variable: 'j', base: origin, width: body.width, offset: body.width - 1, count: body.count, input: body.input_port, output: body.output_port });
@@ -124,7 +129,11 @@ export function projectRepeatedBodies(graph: Graph, base: Projection, options: P
       const singleName = selected[0]!.variant.replaceAll('_', ' ');
       const singleLabel = singleName.charAt(0).toUpperCase() + singleName.slice(1);
       const ports = record.ports.filter((p) => options.showUnused || !base.unusedInputs.some((u) => u.node_id === record.id && u.port_id === p.id))
-        .map((p) => ({ ...p, endpoints: selected.map((i) => ep(i.node_id, p.id)), label: invariantPorts.has(endpointKey(ep(record.id, p.id))) ? p.label : `${p.label}[${symbol}]` }));
+        .map((p) => {
+          const offset = p.id === body.input_port ? range.start : p.id === body.output_port ? range.start + range.count - 1 : undefined;
+          return { ...p, endpoints: (offset === undefined ? selected : phaseMembers(offset)).map((i) => ep(i.node_id, p.id)),
+            label: invariantPorts.has(endpointKey(ep(record.id, p.id))) ? p.label : `${p.label}[${offset === undefined ? symbol : expression(offset)}]` };
+        });
       let root: string;
       if (range.count > 1) {
         const container: ProjectedNode = { id: scope, parentId: id, kind: 'group', label: `${name} ${layerNoun} ×${range.count}`,
@@ -134,36 +143,40 @@ export function projectRepeatedBodies(graph: Graph, base: Projection, options: P
         root = scope;
         if (container.expanded) {
           const layer = appendIndexedLayer(graph, base, options, stack, scope, symbol, `${name} layer[${symbol}]`);
-          relationship(scope, 'entry', ep(scope, body.input_port), ep(layer, body.input_port), [], template.id);
+          phase(scope, 'entry', ep(scope, body.input_port), ep(layer, body.input_port), range.start, template.id);
           relationship(scope, 'return', ep(layer, body.output_port), ep(layer, body.input_port), paths.filter((_, at) =>
             at % body.width > range.start && at % body.width < range.start + range.count), template.id,
             { variable: 'k', base: origin, width: body.width, offset: range.start, count: range.count, input: body.input_port, output: body.output_port }, selected);
-          relationship(scope, 'exit', ep(layer, body.output_port), ep(scope, body.output_port), [], template.id);
+          phase(scope, 'exit', ep(layer, body.output_port), ep(scope, body.output_port), range.start + range.count - 1, template.id);
           for (const port of ports) if (![body.input_port, body.output_port].includes(port.id))
             relationship(scope, port.direction === 'input' ? 'invariant' : 'side-output',
               port.direction === 'input' ? ep(scope, port.id) : ep(layer, port.id),
-              port.direction === 'input' ? ep(layer, port.id) : ep(scope, port.id), [], template.id);
+              port.direction === 'input' ? ep(layer, port.id) : ep(scope, port.id), [], template.id, undefined, selected);
         }
       } else root = appendIndexedLayer(graph, base, options, stack, id, symbol, `${singleLabel} layer[${symbol}]`);
       rangeNodes.push({ input: ep(root, body.input_port), output: ep(root, body.output_port) });
       for (const port of ports) if (![body.input_port, body.output_port].includes(port.id)) {
         for (const boundary of shell.ports.filter((p) => p.endpoints.some((e) => selected.some((i) => i.node_id === e.node_id) && e.port_id === port.id))) {
-          const dependency = graph.edges.filter((e) => port.direction === 'input'
-            ? boundary.endpoints.some((p) => endpointKey(p) === endpointKey(e.target)) && e.target.port_id === port.id && !members.has(e.source.node_id)
-            : boundary.endpoints.some((p) => endpointKey(p) === endpointKey(e.source)) && e.source.port_id === port.id && !members.has(e.target.node_id));
+          const represented = selected.filter((i) => boundary.endpoints.some((e) => e.node_id === i.node_id && e.port_id === port.id));
+          const dependency = represented.flatMap((i) => {
+            const endpoint = ep(i.node_id, port.id);
+            if (port.direction === 'input') return (incoming.get(endpointKey(endpoint)) ?? []).some((e) => !members.has(e.source.node_id))
+              ? [pathTo(endpoint)] : [];
+            return (outgoing.get(endpointKey(endpoint)) ?? []).filter((e) => !members.has(e.target.node_id)).map((e) => [e]);
+          });
           relationship(scope, side.has(port.id) ? port.direction === 'input' ? 'side-input' : 'side-output' : 'invariant',
             port.direction === 'input' ? ep(id, boundary.id) : ep(root, port.id),
-            port.direction === 'input' ? ep(root, port.id) : ep(id, boundary.id), dependency.map((e) => [e]), template.id);
+            port.direction === 'input' ? ep(root, port.id) : ep(id, boundary.id), dependency, template.id, undefined, represented);
         }
       }
     }
-    relationship(id, 'entry', ep(id, input.id), rangeNodes[0]!.input, [], families[0]!.id);
+    phase(id, 'entry', ep(id, input.id), rangeNodes[0]!.input, 0, families[0]!.id);
     for (let at = 1; at < rangeNodes.length; at++) {
       const transitions = paths.filter((_, i) => i % body.width === body.ranges[at]!.start);
       base.edges.push({ id: `${id}:connection:${at}`, source: rangeNodes[at - 1]!.output, target: rangeNodes[at]!.input,
         kind: 'data', paths: transitions, originalEdgeIds: transitions.flat().map((e) => e.id) });
     }
-    relationship(id, 'exit', rangeNodes.at(-1)!.output, ep(id, output.id), [], families.at(-1)!.id);
+    phase(id, 'exit', rangeNodes.at(-1)!.output, ep(id, output.id), body.width - 1, families.at(-1)!.id);
   }
   const represented = new Set(base.edges.flatMap((e) => e.originalEdgeIds));
   return { ...base, hiddenEdgeIds: base.hiddenEdgeIds.filter((id) => !represented.has(id)), filteredEdgeIds: base.filteredEdgeIds.filter((id) => !represented.has(id)) };

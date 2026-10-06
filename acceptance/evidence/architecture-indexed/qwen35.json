@@ -907,10 +907,10 @@
     },
     "dpr": 1,
     "heap": {
-      "usedSize": 28149412,
-      "totalSize": 53600256,
-      "embedderHeapUsedSize": 8921560,
-      "backingStorageSize": 919946
+      "usedSize": 37704576,
+      "totalSize": 56483840,
+      "embedderHeapUsedSize": 12265336,
+      "backingStorageSize": 922278
     },
     "collected": false,
     "active": 0,
@@ -921,7 +921,7 @@
       "height": 1524,
       "nodes": 21,
       "edges": 44,
-      "layoutMs": 182.09999990463257
+      "layoutMs": 176
     },
     "observedGraphs": 1,
     "observedLayouts": 11,

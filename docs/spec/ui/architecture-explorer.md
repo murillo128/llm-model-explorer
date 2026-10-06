@@ -463,6 +463,10 @@ Scoped typed mappings distinguish outer `j`, inner `k`, and generation `t`.
 For Qwen the original 23 transitions partition into twelve inner returns
 `x[4j+k+1] = out[4j+k]`, six ordinary linear-to-full connections, and five outer
 returns `x[4j+4] = out[4j+3]`. Decoder entry is `x[0]`, final output is `out[23]`.
+The inner range boundary enters at `x[4j]` and exits at `out[4j+2]` in each
+block. Its entry/exit inspection retains these first/final phases; `4j+k`
+belongs to the symbolic layer and its return. Each side-dependency branch
+retains only its represented range's consumers and their ordered source paths.
 Keep separate original paths, endpoints and owning scope; synthetic boundary
 continuations do not add source computation. Positions, distinct masks and
 indexed state retain their actual consumer paths.

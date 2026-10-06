@@ -850,6 +850,18 @@ for (const reference of [false, true]) for (const family of [
         await depth.press('Enter');
         await expect(page.getByRole('dialog', { name: 'Connection inspection' })).toContainText(`${transitionCount} ordered inter-layer transitions`);
         await page.keyboard.press('Escape');
+        if (nested) {
+          for (const [port, label, source, target, phase] of [
+            ['x', 'x[4j]', rangeId, innerId, 'Initial entry: x[4j], at the first layer of this range in each block'],
+            ['out', 'out[4j+2]', innerId, rangeId, 'Final exit: out[4j+2], only after the last layer of this range in each block'],
+          ]) {
+            await expect(page.locator(`.architecture-port[data-node-id=${JSON.stringify(rangeId)}][data-port-id=${JSON.stringify(port)}]`)).toContainText(label!);
+            const boundary = page.locator(`.architecture-connection[data-source-node=${JSON.stringify(source)}][data-target-node=${JSON.stringify(target)}][data-source-port=${JSON.stringify(port)}]`);
+            await boundary.focus(); await boundary.press('Enter');
+            await expect(page.getByRole('dialog', { name: 'Connection inspection' })).toContainText(phase!);
+            await page.keyboard.press('Escape');
+          }
+        }
         await info.attach('family-depth-geometry', { body: JSON.stringify(geometry), contentType: 'application/json' });
         await recordGraph(page, info, 'generation-compact-depth', graph);
         if (nested) {

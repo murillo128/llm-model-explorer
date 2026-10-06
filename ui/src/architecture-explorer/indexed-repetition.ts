@@ -198,6 +198,8 @@ export function indexedStacks(graph: Graph): Map<string, IndexedStack> {
   return result;
 }
 
+export const depthIndex = (base: number, width: number, offset: number) => `${base ? `${base}+` : ''}${width}j${offset ? `+${offset}` : ''}`;
+
 export const indexedNodeId = (repetitionId: string, nodeId: string) => `indexed:${repetitionId}:${nodeId}`;
 const ep = (node_id: string, port_id: string): Endpoint => ({ node_id, port_id });
 

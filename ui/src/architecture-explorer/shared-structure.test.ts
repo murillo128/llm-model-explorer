@@ -1,4 +1,7 @@
 import { expect, it } from 'vitest';
+import { createElement } from 'react';
+import { render } from '@testing-library/react';
+import { ConnectionInspection } from './Connection';
 import { displayLabel } from './presentation';
 import { assertTraceability } from '../../tests/architecture-invariants';
 import { toggleComponent } from "./component-actions";
@@ -357,7 +360,17 @@ it.each([false, true])('proves indexed side outputs independently of activation 
 
 it('projects one verified 3+1 body with two scoped depth returns and exact transition coverage', async () => {
   const { makeNestedIndexedFixture } = await import('../../tests/architecture-template-fixture');
-  const graph = makeNestedIndexedFixture(), before = structuredClone(graph);
+  const graph = makeNestedIndexedFixture();
+  // A genuine external group forwarding prefix must stay in each ordered path.
+  const cos = graph.nodes.find((n) => n.id === 'cos')!;
+  cos.parent_id = 'cos-relay';
+  const model = graph.nodes[0]!;
+  if (model.kind === 'group') model.children[model.children.indexOf('cos')] = 'cos-relay';
+  graph.nodes.push({ ...cos, id: 'cos-relay', parent_id: 'model', kind: 'group', children: ['cos'] });
+  for (const edge of graph.edges.filter((e) => e.source.node_id === 'cos')) edge.source.node_id = 'cos-relay';
+  graph.edges.push({ id: 'cos-start', source: { node_id: 'cos', port_id: 'out' },
+    target: { node_id: 'cos-relay', port_id: 'out' }, kind: 'data', provenance: [] });
+  const before = structuredClone(graph);
   const view = new GraphViews().get('nested', graph);
   view.update({ expanded: ['model', 'repeat:layers:0:23'] });
   let projection = projectGraph(graph, projectionOptions(view));
@@ -370,6 +383,35 @@ it('projects one verified 3+1 body with two scoped depth returns and exact trans
   toggleComponent(view, graph, inner, 1);
   projection = projectGraph(graph, projectionOptions(view));
   expect(projection.nodes.find((n) => n.label === 'Linear layer[4j+k]')).toBeDefined();
+  const firstIndices = [0, 4, 8, 12, 16, 20], finalIndices = [2, 6, 10, 14, 18, 22];
+  const linearIndices = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 16, 17, 18, 20, 21, 22];
+  const fullIndices = [3, 7, 11, 15, 19, 23];
+  for (const [target, indices] of [[inner.id, linearIndices], ['indexed:body:layers:0:slot:3:layer-3', fullIndices]] as const) {
+    for (const port of ['cos', 'sin', 'mask']) {
+      const branch = projection.edges.find((e) => e.source.node_id === 'body:layers:0' &&
+        e.target.node_id === target && e.target.port_id === port)!;
+      expect.soft(branch.paths.map((path) => path.map((e) => e.id))).toEqual(indices.map((i) =>
+        port === 'cos' ? ['cos-start', `cos-${i}`] : [`${port}-${i}`]));
+      expect.soft(branch.relationship).toMatchObject({ instances: indices.map((index) => ({ nodeId: `layer-${index}`, index })) });
+    }
+  }
+  for (const [port, label, indices] of [['x', 'x[4j]', firstIndices], ['out', 'out[4j+2]', finalIndices]] as const) {
+    const boundary = projection.nodes.find((n) => n.id === inner.id)!.ports.find((p) => p.id === port)!;
+    expect.soft(boundary.label).toBe(label);
+    expect.soft(boundary.endpoints).toEqual(indices.map((i) => ({ node_id: `layer-${i}`, port_id: port })));
+  }
+  for (const [kind, offset, phase, indices, text] of [
+    ['entry', 0, 'initial', firstIndices, 'Initial entry: x[4j], at the first layer of this range in each block (0 ≤ j < 6).'],
+    ['exit', 2, 'final', finalIndices, 'Final exit: out[4j+2], only after the last layer of this range in each block (0 ≤ j < 6).'],
+  ] as const) {
+    const edge = projection.edges.find((e) => e.relationship?.owner === 'repetition' && e.relationship.scopeId === inner.id && e.relationship.kind === kind)!;
+    expect.soft(edge.relationship).toMatchObject({ indexPhase: { phase, base: 0, width: 4, offset, count: 6 },
+      instances: indices.map((index) => ({ nodeId: `layer-${index}`, index })) });
+    const inspection = render(createElement(ConnectionInspection, { graph, edge, trigger: document.createElement('button'),
+      onClose: () => {}, inspectNode: () => {} }));
+    expect.soft(inspection.getByRole('dialog')).toHaveTextContent(text);
+    inspection.unmount();
+  }
   const returns = projection.edges.filter((e) => e.relationship?.kind === 'return');
   expect(returns).toHaveLength(2);
   expect(returns.map((e) => e.paths.flat().map((p) => p.id))).toEqual([

@@ -35,6 +35,7 @@ export interface ProjectedEdge {
    * Shared forwarding prefixes may occur in genuine fan-out paths. */
   paths: SourceEdge[][]; originalEdgeIds: string[];
   relationship?: { owner: 'repetition'; kind: 'entry' | 'return' | 'exit' | 'invariant' | 'side-input' | 'side-output'; repetitionId: string; scopeId?: string; templateId: string;
+    indexPhase?: { phase: 'initial' | 'final'; base: number; width: number; offset: number; count: number };
     portRole: string; indexScope?: { variable: 'j' | 'k'; base: number; width: number; offset: number; count: number; input: string; output: string }; instances: { nodeId: string; index: number }[] } |
     { owner: 'generation'; kind: 'entry' | 'return' | 'exit'; groupId: string; stateId: string; phase: 'initial' | 'next' | 'final' };
 }
