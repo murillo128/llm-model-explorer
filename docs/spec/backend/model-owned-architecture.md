@@ -143,9 +143,13 @@ configuration or payload fields are not passed through to runtime records.
 The sidecar is already covered by the checkpoint's JSON file snapshot/content
 fingerprint. Adding, removing or modifying it changes content identity and
 invalidates pinned sessions normally. Cold startup builds a new artifact; warm
-startup may reuse only the matching content/producer/schema artifact. GET reads
-prepared state only and never reruns analysis. A malformed sidecar cannot reuse
-an old graph or fall back to a packaged interpretation. Definitions are read-only.
+startup may reuse only the matching content/producer/schema artifact. After startup,
+an architecture request for an unprepared fresh session snapshot uses the same
+pipeline and exact pinned definition; subsequent requests reuse its terminal state.
+The lifecycle is owned by
+[backend architecture](architecture.md#demand-preparation-after-startup). A malformed
+sidecar cannot reuse an old graph or fall back to a packaged interpretation.
+Definitions are read-only.
 
 ## Validation and maintenance
 
@@ -161,8 +165,9 @@ execution or correspondence to `forward()`.
 
 Model-owned validation diagnostics use stable codes and concise safe messages.
 When known, the message names `architecture.json` plus a JSON pointer and the
-JSON, schema, graph, binding, template or resource stage. Startup stores the same
-finding in its unavailable response, and GET only retrieves that prepared state.
+JSON, schema, graph, binding, template or resource stage. Startup or demand
+preparation stores the same finding in its unavailable response; repeated GETs
+retrieve that terminal state without rerunning analysis.
 Unexpected internal failures stay generic. Neither command nor response exposes
 local paths, source fragments, traceback text or tensor values.
 

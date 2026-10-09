@@ -202,6 +202,7 @@ class ModelSource:
     _additional_snapshots: tuple[FileSnapshot, ...] = ()
     _composition_semantics: str | None = None
     lora_composition: PeftLoraComposition | None = None
+    tokenizer_available: bool = False
 
     def physical_tensors(self) -> tuple[PhysicalTensor, ...]:
         """Complete guarded storage inventory for structural analysis, never HTTP."""

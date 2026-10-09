@@ -10,9 +10,9 @@ Runtime state is separate from persistent artifacts. Temporary CPU/GPU buffers, 
 
 ## Prepared architecture lookup
 
-Architecture preparation is application-scoped startup work, as defined in [backend architecture](architecture.md#blocking-architecture-preparation), not a session inference job. It must not change the session's immutable model binding or require a tokenizer. Establish prepared-result identity using the same content snapshot rules as [models.md](models.md).
+Architecture preparation is application-scoped startup and demand-driven work, as defined in [backend architecture](architecture.md#blocking-architecture-preparation), not a session inference job. It must not change the session's immutable model binding or require a tokenizer. Establish prepared-result identity using the same content snapshot rules as [models.md](models.md).
 
-A session may read only an architecture for its exact pinned content. Reject detected content changes rather than rebinding it to newer weights. A fresh valid session for content without a startup result reports restart required; it does not trigger analysis. Deleting a session releases its consumers/modal streams but does not delete shared architecture artifacts. No inference state, paused call stack, KV cache, or execution history is added by this increment.
+A session may read only an architecture for its exact pinned content. Reject detected content changes rather than rebinding it to newer weights. A fresh valid session for content without a prepared result triggers preparation only on its architecture request, awaiting a shared terminal outcome for the exact pinned source. Listing, pinning and independent explorer requests do not wait for that analysis. Deleting a session releases its consumers/modal streams but does not delete shared architecture artifacts. No inference state, paused call stack, KV cache, or execution history is added by this increment.
 
 ## Long operations
 
@@ -20,7 +20,7 @@ Potentially expensive user-requested work is represented as an explicit long ope
 
 A long operation starts with a request whose same HTTP response carries its progressive binary result. The `operation_id` is available at the beginning so the UI can track or cancel it while consuming the response. Fast metadata operations and prepared architecture retrieval do not use this numerical-operation mechanism.
 
-Operations are not retained as history after completion. A successful persistent result is an artifact, not a completed operation record. Startup architecture analysis has no client operation ID; shutdown cancellation and artifact ownership apply at application lifetime instead.
+Operations are not retained as history after completion. A successful persistent result is an artifact, not a completed operation record. Startup and demand-driven architecture analysis have no client operation ID; shutdown cancellation and artifact ownership apply at application lifetime instead. Cancelling an architecture waiter leaves shared preparation owned by the application until completion or shutdown.
 
 ## Cancellation
 
@@ -36,7 +36,7 @@ Equivalent operations requested by multiple sessions are deduplicated when they 
 
 Multiple sessions, disk reads, cache hits, tokenization requests, and HTTP streams may proceed concurrently after readiness. Expensive GPU work is serialized through one execution queue per GPU device. CPU and CUDA expose the same logical API result.
 
-Static architecture analysis performs no GPU computation and must not acquire or hold a GPU compute slot. Its blocking startup lifecycle is distinct from future inference pause/resume scheduling, which remains outside this increment.
+Static architecture analysis performs no GPU computation and must not acquire or hold a GPU compute slot. Its startup/demand lifecycle is distinct from future inference pause/resume scheduling, which remains outside this increment.
 
 ## Input embedding analysis lifetime
 

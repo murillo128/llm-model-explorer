@@ -22,7 +22,13 @@ Process pending models sequentially for this first increment, bounding working m
 
 Terminal outcomes are available (complete or partial within scope) or unavailable with a safe diagnostic. A model-local analysis failure must not prevent later models from being processed or final service readiness. Invalid checkpoints remain subject to catalogue diagnostics in [models.md](models.md). Global failures that make the configured backend unsafe or unusable still fail startup. Graceful shutdown during preparation stops at safe bounded-work boundaries, aborts unpublished artifacts, and releases resources; it does not proceed to readiness.
 
-There is no architecture directory watcher, UI regeneration action, on-demand analysis, or post-start background preparation. Models added or changed require the next restart for a new architecture result. This rule does not replace the existing discovery/session behavior of the other explorers. Detected stale snapshots may never be served or rebound to new weights.
+## Demand preparation after startup
+
+The existing manual model-list reload discovers added or changed local content under the catalogue rules in [models.md](models.md). Listing, session creation, tensor inventory and tokenization do not prepare graphs. There is no watcher, polling, background root scan or new refresh endpoint.
+
+For a fresh session whose exact `(model_id, content_fingerprint)` has no process-local prepared result, its architecture GET awaits preparation using that pinned source. Reuse the startup selection, validation, bounded graph construction, structured cache and atomic publication pipeline. Already-prepared snapshots retain pure retrieval, including terminal unavailable outcomes; ordinary repeatable analysis failures do not recommend restart. Missing or corrupt artifacts for already-prepared snapshots retain the cache-loss behavior in [artifact-cache.md](artifact-cache.md).
+
+Application-owned preparation is deduplicated by model ID and fingerprint across sessions and serialized to one heavy analysis at a time. Blocking CPU/file work runs off the event loop. A cancelled or disconnected waiter does not abandon the worker or launch a duplicate writer; other capabilities remain independent. Shutdown signals safe-boundary stopping and settles owned work before releasing resources. Source guards apply before delivery and publication: detected stale sessions return the existing content-change error and never rebind to new content.
 
 ## Deployment
 

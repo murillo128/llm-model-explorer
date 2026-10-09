@@ -37,6 +37,7 @@ async def open_services(
     """Own application resources and prepare static architectures before readiness."""
     work = BlockingWork()
     sessions = None
+    architectures = None
     try:
         artifacts = await work.run(
             ArtifactStore, settings.cache_dir, model_root=settings.model_root
@@ -61,4 +62,8 @@ async def open_services(
             if sessions is not None:
                 await sessions.aclose()
         finally:
-            await work.aclose()
+            try:
+                if architectures is not None:
+                    await architectures.aclose()
+            finally:
+                await work.aclose()

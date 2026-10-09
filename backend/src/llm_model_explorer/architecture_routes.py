@@ -1,4 +1,4 @@
-"""Prepared architecture HTTP adapter; no analysis or numerical operations on GET."""
+"""Snapshot-bound architecture retrieval, with demand preparation when needed."""
 
 from typing import Annotated
 from uuid import UUID
@@ -19,6 +19,6 @@ async def get_architecture(
     architectures: Annotated[ArchitectureService, Depends(get_architectures)],
 ) -> Response:
     session = sessions.require(session_id)
-    body = await architectures.work.run(architectures.lookup, session.source)
+    body = await architectures.get(session.source)
     sessions.require(session_id)
     return Response(body, media_type="application/json", headers={"Cache-Control": "no-store"})

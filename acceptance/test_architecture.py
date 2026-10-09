@@ -682,7 +682,7 @@ def test_issue_178_actual_quantized_architectures_cold_warm_and_numeric_samples(
     )
 
 
-def test_tcp_unavailable_restart_cache_loss_and_partial_predictor(tmp_path):
+def test_tcp_unavailable_refresh_cache_loss_and_partial_predictor(tmp_path):
     root = tmp_path / "models"
     generate(root)
     # Remove the predictor storage, preserving a valid admitted encoder checkpoint.
@@ -717,7 +717,12 @@ def test_tcp_unavailable_restart_cache_loss_and_partial_predictor(tmp_path):
         config = root / "qwen3/config.json"
         config.write_text(config.read_text() + " ")
         assert service.client.get(prefix + "/architecture").status_code == 409
-        assert inspect_graph(service, "qwen3")[2]["reason"] == "restart_required"
+        # A fresh snapshot can publish its own artifact through the normal writer,
+        # which recreates disposable cache storage. The old session stays stale.
+        fresh = inspect_graph(service, "qwen3")[2]
+        assert fresh["graph"]["coverage"] == "complete"
+        assert fresh["graph"]["graph_id"] != body["graph"]["graph_id"]
+        assert service.client.get(prefix + "/architecture").status_code == 409
     finally:
         service.stop()
         service.client.close()
