@@ -160,9 +160,9 @@ def test_session_errors_and_new_or_changed_content(settings: Settings) -> None:
         response = architecture(client, old)
         assert response.status_code == 409
         assert response.json()["code"] == "model_content_changed"
-        assert architecture(client, session(client)).json()["reason"] == "restart_required"
+        assert architecture(client, session(client)).json()["status"] == "available"
         shutil.copytree(directory, settings.model_root / "new")
-        assert architecture(client, session(client, "new")).json()["reason"] == "restart_required"
+        assert architecture(client, session(client, "new")).json()["status"] == "available"
 
 
 @pytest.mark.parametrize("failure", ["unsupported", "analysis", "partial", "size"])
@@ -240,11 +240,19 @@ def test_model_local_cache_failure_versus_global_storage_failure(
 
 
 @pytest.mark.parametrize("error, status", [(PermissionError, 500), (MemoryError, 503)])
+@pytest.mark.parametrize("prepared", [True, False])
 def test_request_failures_are_http_errors(
-    settings: Settings, monkeypatch: pytest.MonkeyPatch, error: type[Exception], status: int
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    error: type[Exception],
+    status: int,
+    prepared: bool,
 ) -> None:
-    local_fixture(settings.model_root, False)
+    directory = local_fixture(settings.model_root, False)
     with TestClient(create_app(settings)) as client:
+        if not prepared:
+            config = directory / "config.json"
+            config.write_text(config.read_text() + " ")
         sid = session(client)
         monkeypatch.setattr(
             ArtifactStore, "lookup_graph", Mock(side_effect=error("private details"))
@@ -441,9 +449,9 @@ def test_failed_source_publication_aborts_and_continues(
 
     monkeypatch.setattr(ArchitectureArtifactWriter, "_check_publication", changed)
     with TestClient(create_app(settings)) as client:
-        assert architecture(client, session(client)).json()["reason"] == "restart_required"
+        assert architecture(client, session(client)).json()["status"] == "available"
         assert architecture(client, session(client, "later")).json()["status"] == "available"
-    assert len(list(settings.cache_dir.iterdir())) == 1
+    assert len(list(settings.cache_dir.iterdir())) == 2
     assert not list(settings.cache_dir.glob(".tmp-*"))
 
 
@@ -525,3 +533,282 @@ main(sys.argv[2:])
     assert "Application startup complete" not in output
     assert "outcome=cancelled" in output
     assert not list(settings.cache_dir.iterdir())
+
+
+def test_real_tcp_hot_add_edit_invalid_and_remove(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from test_model_defined_service import local_model
+
+    from llm_model_explorer.architecture_analysis.model_defined import ModelDefinedValidator
+    from llm_model_explorer.model_files import FileSnapshot
+
+    local_fixture(settings.model_root, False)
+    # Preserve method binding while counting actual importer calls.
+    original = ModelDefinedValidator.validate
+
+    def counted(self: ModelDefinedValidator, *args: Any, **kwargs: Any) -> Any:
+        validate(self, *args, **kwargs)
+        return original(self, *args, **kwargs)
+
+    validate = Mock()
+    monkeypatch.setattr(ModelDefinedValidator, "validate", counted)
+
+    async def scenario() -> None:
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+            server = uvicorn.Server(uvicorn.Config(create_app(settings), log_level="error"))
+            task = asyncio.create_task(server.serve(sockets=[sock]))
+            try:
+                async with asyncio.timeout(10):
+                    while not server.started:
+                        await asyncio.sleep(0.01)
+                async with httpx.AsyncClient(
+                    base_url=f"http://127.0.0.1:{port}", trust_env=False
+                ) as client:
+
+                    async def fresh() -> str:
+                        response = await client.post("/sessions", json={"model_id": "owned"})
+                        assert response.status_code == 201, response.text
+                        return f"/sessions/{response.json()['id']}"
+
+                    directory = local_model(settings.model_root)
+                    listing = await client.get("/models")
+                    assert listing.headers["cache-control"] == "no-store"
+                    assert {m["id"] for m in listing.json()["models"]} == {"dense", "owned"}
+                    old = await fresh()
+                    tensors = (await client.get(old + "/tensors")).json()["tensors"]
+                    assert {t["name"] for t in tensors} == {
+                        "encoder.proj.weight",
+                        "encoder.proj.bias",
+                    }
+                    validate.assert_not_called()  # Listing/pinning/inventory is independent.
+                    response = await client.get(old + "/architecture")
+                    assert response.status_code == 200, response.text
+                    assert response.headers["cache-control"] == "no-store"
+                    assert "x-operation-id" not in response.headers
+                    graph = response.json()["graph"]
+                    assert graph["scope"] == "model_defined"
+                    assert any(n["label"] == "Encoder" for n in graph["nodes"])
+                    assert validate.call_count == 1
+                    assert (await client.get(old + "/architecture")).content == response.content
+                    forbidden = Mock(side_effect=AssertionError("warm list hashed assets"))
+                    with monkeypatch.context() as patch:
+                        patch.setattr(FileSnapshot, "fingerprint", forbidden)
+                        assert (await client.get("/models")).content == listing.content
+                        forbidden.assert_not_called()
+                    assert validate.call_count == 1
+
+                    sidecar = directory / "architecture.json"
+                    value = json.loads(sidecar.read_text())
+                    value["architecture_revision"] = "encoder-v2"
+                    value["nodes"][1]["label"] = "Updated encoder"
+                    sidecar.write_text(json.dumps(value))
+                    assert (await client.get("/models")).json()["models"]
+                    new = await fresh()
+                    updated = (await client.get(new + "/architecture")).json()["graph"]
+                    assert updated["graph_id"] != graph["graph_id"]
+                    assert any(n["label"] == "Updated encoder" for n in updated["nodes"])
+                    assert any(
+                        a["name"] == "architecture_revision" and a["value"] == "encoder-v2"
+                        for n in updated["nodes"]
+                        for a in n["attributes"]
+                    )
+                    for suffix in ["", "/tensors", "/architecture"]:
+                        stale = await client.get(old + suffix)
+                        assert stale.status_code == 409
+                        assert stale.json()["code"] == "model_content_changed"
+                    assert validate.call_count == 2
+
+                    # The admitted checkpoint stays inspectable, but invalid sidecars
+                    # cannot return its earlier valid graph or packaged fallback.
+                    sidecar.write_text("{")
+                    broken = await fresh()
+                    failure = await client.get(broken + "/architecture")
+                    assert failure.json()["reason"] == "analysis_failed"
+                    assert failure.json()["requires_restart"] is False
+                    assert "graph" not in failure.json()
+                    with monkeypatch.context() as patch:
+                        patch.setattr(ModelDefinedValidator, "from_bytes", forbidden)
+                        assert (
+                            await client.get(broken + "/architecture")
+                        ).content == failure.content
+                        forbidden.assert_not_called()
+                    assert (await client.get(broken + "/tensors")).status_code == 200
+                    assert (await client.get(new + "/architecture")).status_code == 409
+                    assert len(list(settings.cache_dir.glob("*/manifest.json"))) == 3
+                    assert not list(settings.cache_dir.glob(".tmp-*"))
+
+                    shutil.rmtree(directory)
+                    assert [m["id"] for m in (await client.get("/models")).json()["models"]] == [
+                        "dense"
+                    ]
+                    assert (
+                        await client.post("/sessions", json={"model_id": "owned"})
+                    ).status_code == 404
+                    assert (await client.get(broken + "/architecture")).status_code == 409
+            finally:
+                server.should_exit = True
+                await asyncio.wait_for(task, 10)
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("action", ["cancel", "mutate", "shutdown"])
+def test_demand_preparation_singleflight_cancellation_and_shutdown(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, action: str
+) -> None:
+    from llm_model_explorer.model_files import ModelError
+
+    async def scenario() -> None:
+        async with open_services(settings) as services:
+            assert services.sessions is not None and services.architectures is not None
+            service = services.architectures
+            directory = local_fixture(settings.model_root, False)
+            first = await services.sessions.create("dense")
+            second = await services.sessions.create("dense")
+            entered, release = threading.Event(), threading.Event()
+            original = DescriptionRegistry.analyze
+            calls = 0
+
+            def analyze(self: DescriptionRegistry, *args: Any, **kwargs: Any) -> AnalysisResult:
+                nonlocal calls
+                calls += 1
+                entered.set()
+                assert release.wait(10)
+                return original(self, *args, **kwargs)
+
+            monkeypatch.setattr(DescriptionRegistry, "analyze", analyze)
+            request = asyncio.create_task(service.get(first.source))
+            waiter = None
+            closing = None
+            try:
+                assert await asyncio.to_thread(entered.wait, 5)
+                request.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await request
+                # The cancelled waiter has left; a second session must still join
+                # its live worker, and unrelated inventory work remains responsive.
+                waiter = asyncio.create_task(service.get(second.source))
+                assert await services.sessions.inventory(second.id)
+                if action == "mutate":
+                    config = directory / "config.json"
+                    config.write_text(config.read_text() + " ")
+                elif action == "shutdown":
+                    closing = asyncio.create_task(service.aclose())
+                    # Synchronize on the public stop boundary, not a timing guess.
+                    assert await asyncio.to_thread(service._stop.wait, 5)
+                    assert not closing.done()
+                    closing.cancel()  # Teardown cancellation must also settle work.
+                release.set()
+                if action == "cancel":
+                    body = await asyncio.wait_for(waiter, 5)
+                    assert json.loads(body)["status"] == "available"
+                    assert await service.get(second.source) == body
+                    assert len(list(settings.cache_dir.glob("*/manifest.json"))) == 1
+                elif action == "mutate":
+                    with pytest.raises(ModelError) as error:
+                        await asyncio.wait_for(waiter, 5)
+                    assert error.value.code == "model_content_changed"
+                    assert not list(settings.cache_dir.iterdir())
+                    fresh = await services.sessions.create("dense")
+                    assert fresh.source.fingerprint != first.source.fingerprint
+                    assert json.loads(await service.get(fresh.source))["status"] == "available"
+                else:
+                    from llm_model_explorer.architecture_service import PreparationStopped
+
+                    with pytest.raises(PreparationStopped):
+                        await asyncio.wait_for(waiter, 5)
+                    assert closing is not None
+                    with pytest.raises(asyncio.CancelledError):
+                        await asyncio.wait_for(closing, 5)
+                    assert not list(settings.cache_dir.iterdir())
+                assert calls == (2 if action == "mutate" else 1)
+                assert not list(settings.cache_dir.glob(".tmp-*"))
+            finally:
+                release.set()
+                await asyncio.gather(
+                    *[t for t in (request, waiter, closing) if t is not None],
+                    return_exceptions=True,
+                )
+
+    asyncio.run(scenario())
+
+
+def test_distinct_demand_snapshots_serialize_analysis_and_reuse_disk_cache(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def scenario() -> None:
+        async with open_services(settings) as services:
+            assert services.sessions is not None and services.architectures is not None
+            service = services.architectures
+            directory = local_fixture(settings.model_root, False)
+            other = settings.model_root / "other"
+            shutil.copytree(directory, other)
+            config = other / "config.json"
+            config.write_text(config.read_text() + " ")
+            first = await services.sessions.create("dense")
+            second = await services.sessions.create("other")
+            assert first.source.fingerprint != second.source.fingerprint
+            entered, release = threading.Event(), threading.Event()
+            queued = asyncio.Event()
+            original = DescriptionRegistry.analyze
+            ensure = service._ensure
+            run = service.work.run
+            active = maximum = 0
+
+            async def tracked_run(function: Any, *args: Any, **kwargs: Any) -> Any:
+                nonlocal active, maximum
+                if function != service._prepare_one:
+                    return await run(function, *args, **kwargs)
+                active += 1
+                maximum = max(maximum, active)
+                try:
+                    return await run(function, *args, **kwargs)
+                finally:
+                    active -= 1
+
+            async def queued_ensure(source: ModelSource) -> None:
+                if source.model_id == "other":
+                    queued.set()
+                await ensure(source)
+
+            def analyze(self: DescriptionRegistry, *args: Any, **kwargs: Any) -> AnalysisResult:
+                entered.set()
+                assert release.wait(10)
+                return original(self, *args, **kwargs)
+
+            monkeypatch.setattr(service.work, "run", tracked_run)
+            monkeypatch.setattr(service, "_ensure", queued_ensure)
+            monkeypatch.setattr(DescriptionRegistry, "analyze", analyze)
+            first_get = asyncio.create_task(service.get(first.source))
+            second_get = None
+            try:
+                assert await asyncio.to_thread(entered.wait, 5)
+                second_get = asyncio.create_task(service.get(second.source))
+                await asyncio.wait_for(queued.wait(), 5)
+                assert maximum == 1  # Queuing must not submit another heavy worker.
+                release.set()
+                a, b = await asyncio.gather(first_get, second_get)
+                assert json.loads(a)["graph"]["graph_id"] != json.loads(b)["graph"]["graph_id"]
+                assert maximum == 1
+                assert len(list(settings.cache_dir.glob("*/manifest.json"))) == 2
+                # A new public identity for identical bytes has no prepared entry,
+                # but must reuse the validated artifact without another analysis.
+                shutil.copytree(directory, settings.model_root / "copy")
+                third = await services.sessions.create("copy")
+                forbidden = Mock(side_effect=AssertionError("cache hit analyzed again"))
+                monkeypatch.setattr(DescriptionRegistry, "analyze", forbidden)
+                c = json.loads(await service.get(third.source))
+                assert c["model_id"] == "copy"
+                assert c["graph"] == json.loads(a)["graph"]
+                forbidden.assert_not_called()
+            finally:
+                release.set()
+                await asyncio.gather(
+                    *[t for t in (first_get, second_get) if t is not None],
+                    return_exceptions=True,
+                )
+
+    asyncio.run(scenario())

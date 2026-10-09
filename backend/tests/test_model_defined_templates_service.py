@@ -93,7 +93,6 @@ def test_template_mutation_invalidates_pin_and_bad_mapping_never_falls_back(
     with pytest.raises(ModelError) as error:
         service.lookup(source)
     assert error.value.code == "model_content_changed"
-    assert json.loads(service.lookup(catalogue.pin("shared")))["reason"] == "restart_required"
     fresh, catalogue = prepare(settings)
     updated = json.loads(fresh.lookup(catalogue.pin("shared")))
     assert updated["graph"]["graph_id"] != original["graph"]["graph_id"]

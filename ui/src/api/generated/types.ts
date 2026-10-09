@@ -65,7 +65,7 @@ export interface paths {
         };
         /**
          * Retrieve the prepared static architecture for the pinned session model
-         * @description Read-only prepared-result retrieval. Does not start or retry analysis, execute a model, or create a long operation. Contract published ahead of runtime route implementation.
+         * @description Retrieve the architecture for the exact pinned session snapshot. If this content has no prepared result, await shared bounded preparation in a backend worker. Reuse terminal results thereafter. Does not execute a model, download assets, rebind sessions, or create a long operation.
          */
         get: operations["getArchitecture"];
         put?: never;

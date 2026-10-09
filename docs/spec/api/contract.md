@@ -40,7 +40,7 @@ The currently published API includes the proof-of-concept operations and the acc
 | Analyze input embedding row/column distributions | `POST /sessions/{session_id}/embeddings/distributions` | Binary stream |
 | Cancel long operation | `DELETE /operations/{operation_id}` | Empty |
 
-The published architecture addition is `GET /sessions/{session_id}/architecture` (`getArchitecture`), returning the prepared structural result under the [architecture contract](architecture-explorer.md#prepared-architecture-endpoint). It is read-only retrieval, not an analysis trigger or a numerical long operation. No generic operation endpoint is introduced.
+The published architecture addition is `GET /sessions/{session_id}/architecture` (`getArchitecture`), returning the prepared structural result under the [architecture contract](architecture-explorer.md#prepared-architecture-endpoint). It uses the demand-preparation and terminal-retrieval lifecycle defined there, without a numerical long operation. No generic operation endpoint is introduced.
 
 ## Models and sessions
 

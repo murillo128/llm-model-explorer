@@ -1,4 +1,4 @@
-"""Application-owned blocking preparation and immutable prepared-result lookup."""
+"""Application-owned startup/demand preparation and immutable result lookup."""
 
 import asyncio
 import json
@@ -34,12 +34,14 @@ from .tensor_source import ModelSource
 logger = logging.getLogger(__name__)
 
 
-def unavailable(model_id: str, reason: str, message: str) -> dict[str, object]:
+def unavailable(
+    model_id: str, reason: str, message: str, *, requires_restart: bool = False
+) -> dict[str, object]:
     return {
         "status": "unavailable",
         "model_id": model_id,
         "reason": reason,
-        "requires_restart": True,
+        "requires_restart": requires_restart,
         "diagnostics": [{"code": reason, "message": message}],
     }
 
@@ -77,6 +79,50 @@ class ArchitectureService:
         self.registry = packaged_registry()
         self._prepared: dict[tuple[str, str], Prepared] = {}
         self._stop = stop if stop is not None else threading.Event()
+        # Event-loop owned tasks outlive individual HTTP waiters. Only one worker
+        # may analyze at a time, without occupying pool threads while queued.
+        self._pending: dict[tuple[str, str], asyncio.Task[None]] = {}
+        self._analysis_lock = asyncio.Lock()
+
+    async def get(self, source: ModelSource) -> bytes:
+        """Ensure this exact session snapshot, then perform guarded retrieval."""
+        await self.work.run(source.check_unchanged)
+        self._check_stop()
+        key = (source.model_id, source.fingerprint)
+        if key not in self._prepared:
+            task = self._pending.get(key)
+            if task is None:
+                task = asyncio.create_task(self._ensure(source))
+                self._pending[key] = task
+                task.add_done_callback(lambda done: self._finished(key, done))
+            # Disconnect/cancellation never cancels the shared blocking writer.
+            await asyncio.shield(task)
+        return await self.work.run(self.lookup, source)
+
+    async def _ensure(self, source: ModelSource) -> None:
+        async with self._analysis_lock:
+            self._check_stop()
+            await self.work.run(self._prepare_one, source)
+
+    def _finished(self, key: tuple[str, str], task: asyncio.Task[None]) -> None:
+        del self._pending[key]
+        # Retrieve errors even if all waiters disconnected. Active waiters still
+        # receive the original exception through shield.
+        if not task.cancelled():
+            task.exception()
+
+    async def aclose(self) -> None:
+        """Stop at publication boundaries and settle writers before pool teardown."""
+        self._stop.set()
+        pending = asyncio.gather(*self._pending.values(), return_exceptions=True)
+        cancelled = False
+        while not pending.done():
+            try:
+                await asyncio.shield(pending)
+            except asyncio.CancelledError:
+                cancelled = True
+        if cancelled:
+            raise asyncio.CancelledError()
 
     def _check_stop(self) -> None:
         if self._stop.is_set():
@@ -121,8 +167,8 @@ class ArchitectureService:
             self._prepare_one(entry)
         self._check_stop()
 
-    def _prepare_one(self, entry: CatalogueEntry) -> None:
-        model_id = entry.summary.id
+    def _prepare_one(self, entry: CatalogueEntry | ModelSource) -> None:
+        model_id = entry.model_id if isinstance(entry, ModelSource) else entry.summary.id
         source = None
         model_supplied = False
         outcome = "unavailable"
@@ -132,12 +178,13 @@ class ArchitectureService:
         try:
             stamp = perf_counter()
             try:
-                source = entry.pin()
+                source = entry if isinstance(entry, ModelSource) else entry.pin()
+                source.check_unchanged()
             finally:
                 hashing += perf_counter() - stamp
             self._check_stop()
             inputs = AnalysisInput.from_source(
-                source, tokenizer_available=entry.summary.tokenizer_available
+                source, tokenizer_available=source.tokenizer_available
             )
             try:
                 raw_definition = source.architecture_definition(max_bytes=MAX_DEFINITION_BYTES)
@@ -165,7 +212,7 @@ class ArchitectureService:
                         model_id,
                         "unsupported_architecture",
                         "No verified description matches. Install a compatible analyzer "
-                        "before restarting.",
+                        "or supply a valid architecture.json definition.",
                     ),
                 )
                 return
@@ -233,6 +280,10 @@ class ArchitectureService:
             outcome = "cancelled"
             raise
         except Exception as exc:
+            if isinstance(entry, ModelSource) and isinstance(exc, (OSError, MemoryError)):
+                # Request-time infrastructure failures retain the ordinary HTTP
+                # error path; they are not terminal model-analysis diagnostics.
+                raise
             if isinstance(exc, OSError):
                 self._check_storage()  # A global storage failure aborts startup.
             if source is not None:
@@ -282,16 +333,10 @@ class ArchitectureService:
         )
 
     def lookup(self, source: ModelSource) -> bytes:
-        """Only read startup state/cache, with the session's source guarded on both sides."""
+        """Read prepared state/cache, with the session source guarded on both sides."""
         source.check_unchanged()
-        prepared = self._prepared.get((source.model_id, source.fingerprint))
-        if prepared is None:
-            result = json.dumps(
-                unavailable(
-                    source.model_id, "restart_required", "Restart to prepare this model content."
-                )
-            ).encode()
-        elif prepared.failure is not None:
+        prepared = self._prepared[(source.model_id, source.fingerprint)]
+        if prepared.failure is not None:
             result = json.dumps(prepared.failure).encode()
         else:
             assert prepared.spec is not None and prepared.context is not None
@@ -302,6 +347,7 @@ class ArchitectureService:
                         source.model_id,
                         "cache_unavailable",
                         "Prepared cache is unavailable; restart required.",
+                        requires_restart=True,
                     )
                 ).encode()
             else:
@@ -313,6 +359,7 @@ class ArchitectureService:
                                 source.model_id,
                                 "cache_unavailable",
                                 "Prepared response exceeds its limit.",
+                                requires_restart=True,
                             )
                         ).encode()
                     else:

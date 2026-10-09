@@ -7,7 +7,7 @@ The specification is split along the three system boundaries: backend, API contr
 ## Documents
 
 - [`product.md`](product.md): product intent, accepted capabilities, reference checkpoints, future direction, and non-goals.
-- [`backend/architecture.md`](backend/architecture.md): runtime, deployment, and blocking architecture preparation at startup.
+- [`backend/architecture.md`](backend/architecture.md): runtime, deployment, startup preparation and demand preparation for newly pinned content.
 - [`backend/models.md`](backend/models.md): local checkpoint admission, identity, lazy access, and physical/logical representations.
 - [`backend/architecture-analysis.md`](backend/architecture-analysis.md): static semantic analysis, family coverage, parameter binding, and verification requirements.
 - [`backend/model-owned-architecture.md`](backend/model-owned-architecture.md): checkpoint-owned JSON definitions, native bindings, limits and trust boundary.

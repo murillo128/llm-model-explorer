@@ -8,7 +8,7 @@ The graph describes architecture, not execution. [Backend analysis](../backend/a
 
 ## Prepared architecture endpoint
 
-Add `GET /sessions/{session_id}/architecture`, operation ID `getArchitecture`, using the existing session parameter, error schema, and `Cache-Control: no-store` convention. It reads the result prepared for the exact pinned model snapshot; it never starts analysis, retries analysis, executes a model, or downloads anything. It has no request body, operation ID, polling protocol, or WebSocket counterpart.
+Add `GET /sessions/{session_id}/architecture`, operation ID `getArchitecture`, using the existing session parameter, error schema, and `Cache-Control: no-store` convention. It reads the result prepared for the exact pinned model snapshot. For a fresh snapshot without a prepared entry, this request awaits bounded off-event-loop preparation using that exact pinned source and the existing structured cache. Concurrent requests share preparation; subsequent requests reuse its terminal outcome. It never executes a model or downloads anything. It has no request body, operation ID, polling protocol, or WebSocket counterpart.
 
 A successful HTTP 200 uses a discriminated `ArchitectureResponse`:
 
@@ -23,9 +23,9 @@ A successful HTTP 200 uses a discriminated `ArchitectureResponse`:
 
 An available graph has `coverage: complete | partial`. Missing quantization decoding is not by itself incomplete architecture coverage. Complete means complete within the declared scope and abstraction, not every instruction of an implementation or every modality.
 
-Use existing HTTP errors for malformed session identifiers (422), unknown sessions (404), changed pinned content (409 `model_content_changed`), runtime resource exhaustion (503), and unexpected request failures (500). A known analysis failure, unsupported architecture, or missing prepared result is the typed capability result above, not a fabricated empty graph or a new HTTP error-code family. Permission/I/O failures during an actual request are not silently changed into successful empty results.
+Use existing HTTP errors for malformed session identifiers (422), unknown sessions (404), changed pinned content (409 `model_content_changed`), runtime resource exhaustion (503), and unexpected request failures (500). A known analysis failure, unsupported architecture, or missing prepared artifact is the typed capability result above, not a fabricated empty graph or a new HTTP error-code family. Permission/I/O failures during an actual request are not silently changed into successful empty results.
 
-For a newly discovered model/snapshot that was not prepared at startup, a new valid session may obtain `unavailable/restart_required`. Existing pinned-session mutation still returns 409. Missing/corrupt graph artifacts discovered after readiness return `cache_unavailable` with `requires_restart: true`; do not regenerate on a GET. Unsupported descriptions also need a compatible analyzer installation before restart can help; diagnostics must not promise that restart alone adds support.
+Newly discovered valid snapshots are prepared on demand without requiring restart. `restart_required` remains in the schema for compatibility but is not emitted merely because content was added or changed after startup. Ordinary analysis failures, invalid model-owned definitions and unsupported descriptions use `requires_restart: false`; unchanged content reuses that terminal result. Existing pinned-session mutation still returns 409, including mutations racing preparation. Missing/corrupt graph artifacts discovered after readiness return `cache_unavailable` with `requires_restart: true`; do not regenerate on a GET. Unsupported descriptions need a compatible analyzer or valid model-owned definition; diagnostics must not promise that restart alone adds support.
 
 ## Graph document and identity
 

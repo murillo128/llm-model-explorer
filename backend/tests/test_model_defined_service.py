@@ -202,7 +202,6 @@ def test_definition_mutation_rejects_old_session_and_invalidates_cache(settings:
     assert error.value.code == "model_content_changed"
     new_source = catalogue.pin("owned")
     assert new_source.fingerprint != old_source.fingerprint
-    assert json.loads(service.lookup(new_source))["reason"] == "restart_required"
     restarted, fresh_catalogue = prepare(settings)
     new = json.loads(restarted.lookup(fresh_catalogue.pin("owned")))
     assert new["graph"]["graph_id"] != old["graph"]["graph_id"]
@@ -418,7 +417,7 @@ def test_canonical_failure_matches_cli_startup_and_get(
         assert prepared.failure is not None
         assert prepared.failure["diagnostics"] == [finding]
         assert prepared.failure["reason"] == cli["reason"]
-        assert prepared.failure["requires_restart"] is True
+        assert prepared.failure["requires_restart"] is False
         monkeypatch.setattr(
             ModelDefinedValidator,
             "validate",

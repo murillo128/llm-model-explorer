@@ -132,6 +132,7 @@ class CatalogueEntry:
             self._additional_snapshots,
             self._composition_semantics,
             self.lora_composition,
+            self.summary.tokenizer_available,
         )
 
 
