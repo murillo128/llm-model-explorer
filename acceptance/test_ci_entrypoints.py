@@ -297,6 +297,7 @@ class CiEntrypointsTest(unittest.TestCase):
             [
                 r"architecture\.spec\.ts",
                 r"bindings\.spec\.ts",
+                r"hot\-reload\.spec\.ts",
                 r"native\.spec\.ts",
                 r"scientific\.spec\.ts",
                 r"tokenizer\-layout\.spec\.ts",
@@ -315,6 +316,7 @@ class CiEntrypointsTest(unittest.TestCase):
                 "--",
                 r"architecture\.spec\.ts",
                 r"bindings\.spec\.ts",
+                r"hot\-reload\.spec\.ts",
                 r"lora\-reference\.spec\.ts",
                 r"native\.spec\.ts",
                 r"tokenizer\-layout\.spec\.ts",
