@@ -220,8 +220,12 @@ test('filesystem graph revisions preserve nonzero scope, camera, bindings and co
   expect(failedGraph.status).toBe('unavailable');
   const inventory = await (await fetch(`${backend}/sessions/${malformed.id}/tensors`)).json();
   const tensor = inventory.tensors.find((tensor: any) => tensor.name === 'encoder.proj.weight');
-  const stream = await fetch(`${backend}/sessions/${malformed.id}/tensors/${tensor.id}/data`, { method: 'POST' });
-  expect(stream.status).toBe(200); expect((await stream.arrayBuffer()).byteLength).toBeGreaterThan(48);
+  const stream = await fetch(`${backend}/sessions/${malformed.id}/tensors/${tensor.id}/data`);
+  expect(stream.status).toBe(200);
+  // The API streaming specification defines a zero-payload COMPLETE header.
+  // HTTP 200 alone could also contain an in-stream error.
+  const bytes = Buffer.from(await stream.arrayBuffer());
+  expect(bytes.subarray(-12)).toEqual(Buffer.from('4c4d45580400000000000000', 'hex'));
   atomic(definition, valid);
   const repaired = await replaced(page, malformed); await graph(page, repaired);
   const state = await control(); expect(state.pid).toBe(process.pid); expect(state.observer.epoch).toBe(process.observer.epoch);
