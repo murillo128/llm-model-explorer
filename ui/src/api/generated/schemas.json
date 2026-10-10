@@ -1520,6 +1520,11 @@
           "shape"
         ],
         "properties": {
+          "navigation_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },
@@ -1667,6 +1672,11 @@
           "provenance"
         ],
         "properties": {
+          "navigation_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },
@@ -1747,6 +1757,11 @@
           "children"
         ],
         "properties": {
+          "navigation_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },
@@ -2024,6 +2039,11 @@
           "instances"
         ],
         "properties": {
+          "navigation_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "bodies": {
             "type": "array",
             "maxItems": 33554432,
@@ -2473,6 +2493,11 @@
           "instances"
         ],
         "properties": {
+          "navigation_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },
@@ -2522,6 +2547,16 @@
           "symbols"
         ],
         "properties": {
+          "node_navigation_keys": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 33554432,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
           "node_id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },
@@ -2642,6 +2677,11 @@
           "diagnostics"
         ],
         "properties": {
+          "navigation_namespace": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "graph_id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },

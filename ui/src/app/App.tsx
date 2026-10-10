@@ -32,7 +32,7 @@ export function App({ config, slots = {} }: AppProps) {
 function BackendApp({ config, slots }: Required<AppProps>) {
   const [controller] = useState(() => new SessionController(new ApiClient(config), config.backendBaseUrl, tabStorage()));
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
-  // Cross-graph restoration attaches through the presentation handoff; until then use a fresh graph.
+  // Views retain only current graph IDs; the refresh handoff carries portable presentation.
   const [graphViews] = useState(() => new GraphViews());
   useEffect(() => { graphViews.clear(); }, [graphViews, state.refreshAttempt]);
   useEffect(() => { controller.start(); return controller.dispose; }, [controller]);

@@ -2004,12 +2004,14 @@
     "diagnostics": [],
     "graph": {
       "graph_id": "independent-compact",
+      "navigation_namespace": "independent-compact-family",
       "scope": "language_model",
       "coverage": "complete",
       "symbols": [],
       "nodes": [
         {
           "id": "root",
+          "navigation_key": "moe",
           "kind": "group",
           "label": "MoE",
           "children": [
@@ -2092,6 +2094,7 @@
       "repetitions": [
         {
           "id": "experts",
+          "navigation_key": "routed-experts",
           "parent_id": "root",
           "label": "Routed experts",
           "instances": [
@@ -2116,6 +2119,7 @@
           "nodes": [
             {
               "id": "expert0",
+              "navigation_key": "expert/0",
               "kind": "group",
               "parent_id": "root",
               "label": "Routed expert 0",
@@ -2186,7 +2190,10 @@
               "parameter_ids": [
                 "p0"
               ],
-              "symbols": []
+              "symbols": [],
+              "node_navigation_keys": [
+                "expert/0"
+              ]
             },
             {
               "node_id": "expert1",
@@ -2200,7 +2207,10 @@
               "parameter_ids": [
                 "p1"
               ],
-              "symbols": []
+              "symbols": [],
+              "node_navigation_keys": [
+                "expert/1"
+              ]
             }
           ]
         }
@@ -29767,6 +29777,67 @@
       ],
       "valid": false,
       "schema_valid": true,
+      "context_edits": []
+    },
+    {
+      "name": "compact-duplicate-navigation",
+      "base": "compact_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "compact_components",
+            "0",
+            "instances",
+            "1",
+            "node_navigation_keys"
+          ],
+          "value": [
+            "expert/0"
+          ]
+        }
+      ],
+      "valid": false,
+      "schema_valid": true,
+      "context_edits": []
+    },
+    {
+      "name": "compact-short-navigation-map",
+      "base": "compact_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "compact_components",
+            "0",
+            "instances",
+            "1",
+            "node_navigation_keys"
+          ],
+          "value": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "valid": false,
+      "schema_valid": true,
+      "context_edits": []
+    },
+    {
+      "name": "compact-oversized-navigation",
+      "base": "compact_response",
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "navigation_namespace"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ],
+      "valid": false,
+      "schema_valid": false,
       "context_edits": []
     },
     {

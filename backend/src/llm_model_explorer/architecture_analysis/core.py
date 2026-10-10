@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 from collections.abc import Callable, Mapping, Sequence
@@ -30,7 +31,7 @@ from .validation import (
 if TYPE_CHECKING:
     from ..tensor_source import PeftLoraComposition, PhysicalTensor, TensorDescriptor
 
-ANALYZER_REVISION = "static-graph-core-8"
+ANALYZER_REVISION = "static-graph-core-9"
 Scope = Literal["language_model", "visual_encoder_predictor", "model_defined"]
 
 
@@ -184,6 +185,7 @@ class GraphBuilder:
         self._numeric_by_name = {t.name: t for t in inputs.bindings.numeric.values()}
         self._used = 0
         self._ids: set[str] = set()
+        self._construction_keys: dict[str, tuple[str, str]] = {}
         self._nodes: list[r.ArchitectureNode] = []
         self._edges: list[r.ArchitectureEdge] = []
         self._parameters: list[r.ArchitectureParameter] = []
@@ -197,7 +199,41 @@ class GraphBuilder:
         self._parameter_by_id: dict[str, r.ArchitectureParameter] = {}
 
     def record_id(self, kind: str, key: str) -> str:
-        return identity("architecture-record", self.graph_id, kind, key)
+        record_id = identity("architecture-record", self.graph_id, kind, key)
+        self._construction_keys[record_id] = (kind, key)
+        return record_id
+
+    def navigation_key(self, kind: str, key: str) -> str:
+        # Preserve the full digest while keeping large compact-instance maps small.
+        digest = bytes.fromhex(identity("architecture-navigation-1", kind, key))
+        return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+
+    def navigation_for(self, record_id: str) -> str | None:
+        construction = self._construction_keys.get(record_id)
+        return self.navigation_key(*construction) if construction else None
+
+    def _navigation(self, graph: r.ArchitectureGraph) -> r.ArchitectureGraph:
+        # Attach after invocation/wrapper construction too. Port IDs are authored,
+        # node-local roles; never infer identity from labels or provenance.
+        nodes = []
+        for node in graph.nodes:
+            key = self.navigation_for(node.id)
+            update: dict[str, object] = {
+                "ports": [
+                    port.model_copy(update={"navigation_key": self.navigation_key("port", port.id)})
+                    for port in node.ports
+                ]
+            }
+            if key is not None:
+                update["navigation_key"] = key
+            nodes.append(node.model_copy(update=update))
+        repetitions = [
+            rep.model_copy(update={"navigation_key": key})
+            if (key := self.navigation_for(rep.id))
+            else rep
+            for rep in graph.repetitions
+        ]
+        return graph.model_copy(update={"nodes": nodes, "repetitions": repetitions})
 
     def _append(self, collection: list[Any], record: r.Record) -> None:
         # Round-trip catches mutated nested lists and excludes caller ownership after insertion.
@@ -254,7 +290,15 @@ class GraphBuilder:
             key = self.templates.keys.get(node.id)
             if key is None:
                 continue
-            self.templates.begin(node.id, key, repetition.label, "layer")
+            self.templates.begin(
+                node.id,
+                key,
+                (self.navigation_for(repetition.id) or repetition.id)
+                + ":"
+                + next(i.variant for i in repetition.instances if i.node_id == node.id),
+                "layer",
+                label=repetition.label,
+            )
             attributes = [a for a in node.attributes if a.name != "semantic_role"]
             attributes.append(
                 r.ArchitectureAttribute(
@@ -421,6 +465,9 @@ class GraphBuilder:
     def finish(self) -> r.ArchitectureGraph:
         graph = r.ArchitectureGraph(
             graph_id=self.graph_id,
+            navigation_namespace=identity(
+                "architecture-navigation-namespace-1", self.producer.description, self.scope
+            ),
             scope=self.scope,
             coverage="partial" if self._partial else "complete",
             symbols=self._symbols,
@@ -434,6 +481,7 @@ class GraphBuilder:
             graph = no_cache_invocation(graph, self, self.invocation)
         if self.generation is not None:
             graph = wrap_generation(graph, self, self.generation)
+        graph = self._navigation(graph)
         serialized_size(graph.document(), self.byte_limit)
         validate_graph(graph, self.inputs.bindings)
         graph = self.templates.annotate(graph, self)

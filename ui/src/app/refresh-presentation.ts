@@ -1,12 +1,8 @@
 import type { Lifetime } from './lifetime';
 
-/** Presentation only. Semantic interpretation belongs to the explorer. */
-export interface ArchitectureBookmark {
-  expanded: readonly string[];
-  focus: string | null;
-  selection: string | null;
-  camera: { x: number; y: number; zoom: number } | null;
-}
+import type { ArchitectureBookmark } from '../architecture-explorer/navigation-bookmark';
+export type { ArchitectureBookmark } from '../architecture-explorer/navigation-bookmark';
+
 export interface RefreshKey { backend: string; modelId: string; attempt: number }
 export class RefreshPresentation {
   private capture: (() => ArchitectureBookmark) | undefined;
@@ -19,7 +15,7 @@ export class RefreshPresentation {
   }
   save(key: RefreshKey) {
     try {
-      const bookmark = this.capture?.() ?? this.pending?.bookmark;
+      const bookmark = this.capture?.() ?? (this.pending?.key.backend === key.backend && this.pending.key.modelId === key.modelId ? this.pending.bookmark : undefined);
       this.pending = bookmark && JSON.stringify(bookmark).length <= 65_536
         ? { key, bookmark: structuredClone(bookmark) } : undefined;
     } catch { this.pending = undefined; }

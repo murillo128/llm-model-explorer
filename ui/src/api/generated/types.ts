@@ -709,6 +709,7 @@ export interface components {
             meaning: components["schemas"]["ArchitectureText"];
         };
         ArchitecturePort: {
+            navigation_key?: string;
             id: components["schemas"]["ArchitectureId"];
             /** @enum {string} */
             direction: "input" | "output";
@@ -745,6 +746,7 @@ export interface components {
             provenance: components["schemas"]["ArchitectureProvenance"][];
         };
         ArchitectureLeafNode: {
+            navigation_key?: string;
             id: components["schemas"]["ArchitectureId"];
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -763,6 +765,7 @@ export interface components {
             formula?: components["schemas"]["ArchitectureText"];
         };
         ArchitectureGroupNode: {
+            navigation_key?: string;
             id: components["schemas"]["ArchitectureId"];
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -824,6 +827,7 @@ export interface components {
             output_port: components["schemas"]["ArchitectureId"];
         };
         ArchitectureRepetition: {
+            navigation_key?: string;
             bodies?: components["schemas"]["ArchitectureRepeatedBody"][];
             side_ports?: components["schemas"]["ArchitectureIndexedSidePort"][];
             id: components["schemas"]["ArchitectureId"];
@@ -932,6 +936,7 @@ export interface components {
             parameters: components["schemas"]["ArchitectureTemplateParameterRole"][];
         };
         ArchitectureTemplate: {
+            navigation_key?: string;
             id: components["schemas"]["ArchitectureId"];
             label: components["schemas"]["ArchitectureName"];
             /** @enum {string} */
@@ -941,6 +946,7 @@ export interface components {
             instances: components["schemas"]["ArchitectureTemplateInstance"][];
         };
         ArchitectureCompactInstance: {
+            node_navigation_keys?: string[];
             node_id: components["schemas"]["ArchitectureId"];
             prefix: components["schemas"]["ArchitectureName"];
             label: components["schemas"]["ArchitectureName"];
@@ -961,6 +967,7 @@ export interface components {
             instances: components["schemas"]["ArchitectureCompactInstance"][];
         };
         ArchitectureGraph: {
+            navigation_namespace?: string;
             graph_id: components["schemas"]["ArchitectureId"];
             /** @enum {string} */
             scope: "language_model" | "visual_encoder_predictor" | "model_defined";

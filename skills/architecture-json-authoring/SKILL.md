@@ -128,6 +128,18 @@ Prefer `Attention`, `MLP`, `Temporal Predictor`, `Stop Head`, `Player Projection
 
 Descriptions may explain non-obvious semantics, but labels should remain compact.
 
+## Preserve semantic identity across edits
+
+Keep author-local node, port, repetition and template IDs stable when their
+semantic elements persist. For packaged producers, keep the actual construction
+and declared family keys stable, including distinct invocation/layer/expert
+scopes. Labels and formulas may change without renaming those keys. Never derive
+correspondence from display labels, insertion order, graph hashes, the first
+family member or its changing member list. A deliberate ID change loses
+correspondence; do not guess a rename or reuse another instance's weights.
+The backend derives navigation metadata; authors need no new required field or
+schema version. Navigation continuity does not prove unchanged mathematics.
+
 ## Preserve real topology
 
 Edges must describe verified data dependencies, not a visually convenient sequence.

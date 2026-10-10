@@ -185,6 +185,11 @@ def test_builder_preserves_independent_full_instance_graph() -> None:
     assert result.graph is not None
     actual = result.graph.document()
     actual["graph_id"] = ORACLE["response"]["graph"]["graph_id"]
+    # Presentation metadata does not change the independently authored semantics.
+    assert actual.pop("navigation_namespace")
+    for node in actual["nodes"]:
+        for port in node["ports"]:
+            assert port.pop("navigation_key")
     assert actual == ORACLE["response"]["graph"]
 
 

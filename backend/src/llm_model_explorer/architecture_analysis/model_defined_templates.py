@@ -59,6 +59,7 @@ def _bind_template(
 ) -> tuple[r.ArchitectureTemplate | None, int]:
     envelope = {
         "id": builder.record_id("template", "declared:" + declared.id),
+        "navigation_key": builder.navigation_key("template", "declared:" + declared.id),
         "label": declared.label,
         "component_role": declared.component_role,
         "revision": builder.producer.source_revision,

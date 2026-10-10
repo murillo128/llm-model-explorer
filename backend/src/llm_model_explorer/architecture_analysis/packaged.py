@@ -31,6 +31,10 @@ def publish_definition(definition: dict[str, Any], builder: GraphBuilder) -> Non
             builder.templates.parameter_keys[parameter_ids[parameter["id"]]] = parameter[
                 "semantic_key"
             ]
+    originals = {n["id"]: n for n in definition["nodes"]}
+    variants = {
+        i["node_id"]: i["variant"] for rep in definition["repetitions"] for i in rep["instances"]
+    }
     node_ids = {n["id"]: builder.record_id("node", n["id"]) for n in definition["nodes"]}
     for original in definition["nodes"]:
         node = dict(original)
@@ -70,7 +74,11 @@ def publish_definition(definition: dict[str, Any], builder: GraphBuilder) -> Non
         builder.add_node(nodes.validate_python(node), semantic_key=semantic_key)
         role = next((a["value"] for a in node["attributes"] if a["name"] == "semantic_role"), None)
         if role in ("layer", "attention", "mlp") and node["kind"] == "group":
-            builder.templates.begin(node["id"], semantic_key, role, role)
+            owner = original
+            while owner["id"] not in variants and owner.get("parent_id") in originals:
+                owner = originals[owner["parent_id"]]
+            family = role + ":" + variants.get(owner["id"], "component")
+            builder.templates.begin(node["id"], semantic_key, role, role, navigation_family=family)
     for original in definition["edges"]:
         edge = dict(original)
         edge["id"] = builder.record_id("edge", edge["id"])

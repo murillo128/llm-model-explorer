@@ -37,6 +37,29 @@ All record IDs are nonempty URL-safe strings, at most 256 characters, scoped by 
 
 The ordinary representation sends the full instance graph. Repetition records group existing instances for display. Verified routed-expert repetitions may instead use `compact_components` as described below; all required instances remain reconstructable from the same response. Server responses may use ordinary HTTP compression, but the decoded JSON size is bounded. No camera positions, renderer classes, modal commands, local filesystem paths, executable code, tensor values, or runtime execution IDs belong in graph records.
 
+## Navigation correspondence across revisions
+
+Optional `navigation_namespace` on the graph and `navigation_key` on nodes,
+node-local ports, repetitions and template families are nonempty strings of at
+most 128 characters. Keys are unique within each record category; port keys are
+unique within their node. They are producer-owned presentation correspondence,
+independent of graph-scoped runtime IDs. An absent key remains valid for ordinary
+exploration. Ambiguous or missing correspondence cannot authorize selection.
+
+A namespace names a compatible producer interpretation. Keys identify authored
+semantic components, including distinct invocation scopes and concrete repetition
+instances. Neither display labels, insertion order, content fingerprints nor
+ordinary producer revisions define correspondence. Template-family identity must
+not depend on the first member or the changing member list. Navigation identity
+asserts no mathematical equivalence, provenance verification or numeric identity.
+Session, model, graph and current inventory checks still apply to all actions.
+
+Compact experts carry optional `node_navigation_keys` parallel to each instance's
+`node_ids`. If prototype nodes have keys, every instance must supply a complete
+key mapping. Reconstruction substitutes these keys without changing port-local
+keys or semantic records. Mapping lengths and reconstructed uniqueness are
+validated with the existing compact contract and within its 32 MiB byte budget.
+
 ## Nodes, ports, edges, and repetition
 
 `ArchitectureNode` requires `id`, `kind`, `label`, `ports`, `parameter_ids`, `references`, `attributes`, and `provenance`. `kind` is `group`, `operation`, `input`, `output`, `context`, or `state`. Optional `parent_id` names a group; absent means a root. Optional `operation` is a nonempty semantic string identifier, not a callable or endpoint name. All `provenance` fields are arrays of `ArchitectureProvenance` records; all `references` fields are arrays of `ArchitectureReference` records. Optional `description` and `formula` are non-executable explanatory text. A group has ordered `children` IDs; non-groups do not. Unknown components carry a diagnostic and may not be disguised as understood operations.

@@ -125,6 +125,21 @@ def _render(
     ids.update(zip(family.symbols, instance.symbols, strict=True))
     nodes = [_replace(n.document(), ids, family.base_prefix, instance.prefix) for n in family.nodes]
     edges = [_replace(e.document(), ids, family.base_prefix, instance.prefix) for e in family.edges]
+    if instance.node_navigation_keys is not None:
+        require(
+            len(instance.node_navigation_keys) == len(nodes), "Compact navigation mapping length."
+        )
+        require(
+            all(n.navigation_key is not None for n in family.nodes),
+            "Compact navigation prototype missing.",
+        )
+        for node, key in zip(nodes, instance.node_navigation_keys, strict=True):
+            node["navigation_key"] = key
+    else:
+        require(
+            all(n.navigation_key is None for n in family.nodes),
+            "Compact navigation mapping missing.",
+        )
     nodes[0]["label"] = instance.label
     for attribute in nodes[0]["attributes"]:
         if attribute["name"] == "expert_index":
@@ -289,6 +304,15 @@ def compact_graph(graph: r.ArchitectureGraph) -> r.ArchitectureGraph:
                 actual_parameter_ids = _parameter_ids(members)
                 actual_symbols = _symbols(members)
                 instance = r.ArchitectureCompactInstance(
+                    **(
+                        {
+                            "node_navigation_keys": [
+                                n.navigation_key for n in members if n.navigation_key is not None
+                            ]
+                        }
+                        if all(n.navigation_key is not None for n in members)
+                        else {}
+                    ),
                     node_id=root.id,
                     prefix=prefix,
                     label=root.label,
