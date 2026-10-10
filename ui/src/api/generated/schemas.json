@@ -99,7 +99,8 @@
         "additionalProperties": false,
         "required": [
           "id",
-          "model_id"
+          "model_id",
+          "model_revision"
         ],
         "properties": {
           "id": {
@@ -109,6 +110,130 @@
           "model_id": {
             "type": "string",
             "minLength": 1
+          },
+          "model_revision": {
+            "$ref": "#/components/schemas/ModelRevision"
+          }
+        }
+      },
+      "ModelRevision": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^[A-Za-z0-9_-]+$",
+        "description": "Opaque equality token for the pinned metadata snapshot, never an artifact key."
+      },
+      "ObservedModelId": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Exact nonempty logical identity, query-encoded without normalization. Reject unsupported_size if its escaped JSON cannot fit the 64 KiB event budget."
+      },
+      "ModelStatePresent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "epoch",
+          "sequence",
+          "model_id",
+          "status",
+          "model_revision"
+        ],
+        "properties": {
+          "epoch": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "model_id": {
+            "$ref": "#/components/schemas/ObservedModelId"
+          },
+          "status": {
+            "type": "string",
+            "const": "present"
+          },
+          "model_revision": {
+            "$ref": "#/components/schemas/ModelRevision"
+          }
+        }
+      },
+      "ModelStateUnavailable": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "epoch",
+          "sequence",
+          "model_id",
+          "status",
+          "model_revision"
+        ],
+        "properties": {
+          "epoch": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "model_id": {
+            "$ref": "#/components/schemas/ObservedModelId"
+          },
+          "status": {
+            "type": "string",
+            "const": "unavailable"
+          },
+          "model_revision": {
+            "type": "null"
+          }
+        }
+      },
+      "ModelState": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ModelStatePresent"
+          },
+          {
+            "$ref": "#/components/schemas/ModelStateUnavailable"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "status",
+          "mapping": {
+            "present": "#/components/schemas/ModelStatePresent",
+            "unavailable": "#/components/schemas/ModelStateUnavailable"
+          }
+        }
+      },
+      "ModelObservationError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "epoch",
+          "sequence",
+          "model_id",
+          "code"
+        ],
+        "properties": {
+          "epoch": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "model_id": {
+            "$ref": "#/components/schemas/ObservedModelId"
+          },
+          "code": {
+            "type": "string",
+            "const": "observation_failed"
           }
         }
       },

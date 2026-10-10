@@ -4,7 +4,9 @@
 
 The backend supports multiple concurrent sessions. Each session has a stable `session_id` and is permanently associated with one `model_id` for its lifetime.
 
-For the proof of concept, logical session state is held in backend memory. A browser refresh or reconnect can reuse the session while that backend process remains alive. Backend restart may discard sessions. Persistent session recovery is not required.
+For the proof of concept, logical session state is held in backend memory. A required `model_revision` in create/get descriptors identifies the exact metadata snapshot captured by session pinning, including composition dependencies. Never attach a later catalogue token to an earlier pinned source. It is an equality hint only; existing content-change guards still reject stale access with 409. Model notifications never rebind a session.
+
+A browser refresh or reconnect can reuse the session while that backend process remains alive. Backend restart may discard sessions. Persistent session recovery is not required.
 
 Runtime state is separate from persistent artifacts. Temporary CPU/GPU buffers, in-flight work, and future inference state belong to the session/runtime layer and may disappear without invalidating cached artifacts.
 

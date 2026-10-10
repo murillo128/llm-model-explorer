@@ -21,7 +21,11 @@ def test_sessions_inventory_refresh_isolation_and_restart(settings: Settings) ->
         assert a.status_code == b.status_code == 201
         a_id, b_id = a.json()["id"], b.json()["id"]
         assert UUID(a_id) != UUID(b_id)
-        assert a.json() == {"id": a_id, "model_id": "test/tiny"}
+        assert a.json() == {
+            "id": a_id,
+            "model_id": "test/tiny",
+            "model_revision": app.state.services.sessions.require(UUID(a_id)).source.model_revision,
+        }
         assert client.get(f"/sessions/{a_id}").json() == a.json()
         inventory = client.get(f"/sessions/{a_id}/tensors")
         assert inventory.status_code == 200

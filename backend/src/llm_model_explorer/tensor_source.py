@@ -7,12 +7,21 @@ import sys
 from collections.abc import Generator, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 import torch
 from pydantic import BaseModel, ConfigDict
 
-from .model_files import MAX_METADATA_BYTES, FileSnapshot, ModelError, changed, invalid, parse_json
+from .model_files import (
+    MAX_METADATA_BYTES,
+    FileSnapshot,
+    ModelError,
+    changed,
+    invalid,
+    parse_json,
+    snapshot_revision,
+)
 
 MAX_SAFE_INTEGER = 2**53 - 1
 DEFAULT_CHUNK_ELEMENTS = 256 * 1024
@@ -203,6 +212,12 @@ class ModelSource:
     _composition_semantics: str | None = None
     lora_composition: PeftLoraComposition | None = None
     tokenizer_available: bool = False
+
+    @cached_property
+    def model_revision(self) -> str:
+        return snapshot_revision(
+            (self._snapshot, *self._additional_snapshots), self._composition_semantics
+        )
 
     def physical_tensors(self) -> tuple[PhysicalTensor, ...]:
         """Complete guarded storage inventory for structural analysis, never HTTP."""

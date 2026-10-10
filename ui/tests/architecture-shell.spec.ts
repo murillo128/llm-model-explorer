@@ -19,7 +19,7 @@ async function backend(context: BrowserContext) {
     ], diagnostics: [] } });
     if (path === '/sessions') return r.fulfill({ status: 201, json: {
       id: r.request().postDataJSON().model_id === visual.model_id ? 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' : 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-      model_id: r.request().postDataJSON().model_id,
+      model_id: r.request().postDataJSON().model_id, model_revision: 'snapshot_A',
     } });
     const isVisual = path.includes('bbbbbbbb');
     if (path.endsWith('/tensors')) return r.fulfill({ json: isVisual ? { tensors: [], coverage: 'partial', diagnostics: [{ code: 'partial', message: 'Fixture has no native weights.' }] } : contractInventory });

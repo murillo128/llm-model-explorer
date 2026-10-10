@@ -4,6 +4,7 @@ import hashlib
 import logging
 import re
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path, PurePosixPath
 from threading import Lock
 from time import perf_counter
@@ -12,7 +13,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from .catalogue_generation import CatalogueGeneration
-from .model_files import FileSnapshot, ModelError, confined, invalid, read_json
+from .model_files import FileSnapshot, ModelError, confined, invalid, read_json, snapshot_revision
 from .peft_adapters import AdapterSpec, bind_adapter, factor_logical_names, validate_adapter
 from .quantized_inventory import encoding, logical_locations
 from .tensor_source import (
@@ -103,6 +104,12 @@ class CatalogueEntry:
     _additional_snapshots: tuple[FileSnapshot, ...] = ()
     _composition_semantics: str | None = None
     lora_composition: PeftLoraComposition | None = None
+
+    @cached_property
+    def model_revision(self) -> str:
+        return snapshot_revision(
+            (self._snapshot, *self._additional_snapshots), self._composition_semantics
+        )
 
     def physical_tensors(self) -> tuple[PhysicalTensor, ...]:
         for snapshot in (self._snapshot, *self._additional_snapshots):
@@ -519,35 +526,56 @@ class ModelCatalogue:
         # Hold the lock through validation and refresh. An abandoned HTTP consumer
         # does not cancel this worker or permit another worker to rebuild in parallel.
         with self._lock:
+            return self._resolve_locked()
+
+    def metadata_generation(self) -> CatalogueGeneration:
+        """One bounded metadata observation, serialized with catalogue publication."""
+        with self._lock:
             shards = self._cached[1].nested_shards if self._cached else frozenset()
+            return CatalogueGeneration.capture(self._root, shards)
+
+    def observe(self, expected: CatalogueGeneration) -> dict[str, str]:
+        """Validate a settled observation; do not publish a newer, unquiet generation."""
+        with self._lock:
+            shards = self._cached[1].nested_shards if self._cached else frozenset()
+            if CatalogueGeneration.capture(self._root, shards) != expected:
+                raise invalid("Local model catalogue changed during observation.")
+            discovery = self._resolve_locked()
+            # Newly learned shard dependencies are validated by _resolve_locked.
+            if CatalogueGeneration.capture(self._root, shards) != expected:
+                raise invalid("Local model catalogue changed during observation.")
+            return {entry.summary.id: entry.model_revision for entry in discovery.entries}
+
+    def _resolve_locked(self) -> _Discovery:
+        shards = self._cached[1].nested_shards if self._cached else frozenset()
+        generation = CatalogueGeneration.capture(self._root, shards)
+        if self._cached is not None and generation == self._cached[0]:
+            logger.debug("Catalogue cache hit")
+            return self._cached[1]
+        started = perf_counter()
+        for _ in range(3):
+            try:
+                discovery = self._discover()
+            except Exception:
+                if CatalogueGeneration.capture(self._root, shards) == generation:
+                    raise
+            else:
+                shards = discovery.nested_shards
+                current = CatalogueGeneration.capture(self._root, shards)
+                if current == generation:
+                    self._cached = (current, discovery)
+                    logger.info(
+                        "Catalogue refreshed models=%d diagnostics=%d discovery_seconds=%.3f",
+                        len(discovery.entries),
+                        len(discovery.diagnostics),
+                        perf_counter() - started,
+                    )
+                    return discovery
+            # Newly learned nested shard paths also require a stable scan with
+            # those dependencies captured before discovery, including rejected
+            # candidates. The last successful cache remains intact on failure.
             generation = CatalogueGeneration.capture(self._root, shards)
-            if self._cached is not None and generation == self._cached[0]:
-                logger.debug("Catalogue cache hit")
-                return self._cached[1]
-            started = perf_counter()
-            for _ in range(3):
-                try:
-                    discovery = self._discover()
-                except Exception:
-                    if CatalogueGeneration.capture(self._root, shards) == generation:
-                        raise
-                else:
-                    shards = discovery.nested_shards
-                    current = CatalogueGeneration.capture(self._root, shards)
-                    if current == generation:
-                        self._cached = (current, discovery)
-                        logger.info(
-                            "Catalogue refreshed models=%d diagnostics=%d discovery_seconds=%.3f",
-                            len(discovery.entries),
-                            len(discovery.diagnostics),
-                            perf_counter() - started,
-                        )
-                        return discovery
-                # Newly learned nested shard paths also require a stable scan with
-                # those dependencies captured before discovery, including rejected
-                # candidates. The last successful cache remains intact on failure.
-                generation = CatalogueGeneration.capture(self._root, shards)
-            raise invalid("Local model catalogue changed during discovery; retry the request.")
+        raise invalid("Local model catalogue changed during discovery; retry the request.")
 
     def discover(self) -> tuple[CatalogueEntry, ...]:
         """Resolve the current validated catalogue, without exposing rejected entries."""

@@ -214,6 +214,26 @@ def fixtures():
     def instance(name, schema, value, valid=True):
         instances.append(dict(name=name, schema=schema, valid=valid, value=value))
 
+    session = dict(id='12345678-1234-4234-8234-123456789abc',
+                   model_id='org/model@main+peft-lora:org/adapter', model_revision='snapshot_A')
+    instance('session-revision', 'Session', session)
+    instance('session-missing-revision', 'Session', {k:v for k,v in session.items() if k != 'model_revision'}, False)
+    state = dict(epoch=session['id'], sequence=0, model_id=session['model_id'],
+                 status='present', model_revision='snapshot_A')
+    instance('model-present', 'ModelState', state)
+    instance('model-unavailable', 'ModelState', {**state, 'status':'unavailable', 'model_revision':None})
+    for name, changes in [('present-null', {'model_revision':None}),
+                          ('unavailable-revision', {'status':'unavailable'}),
+                          ('unsafe-sequence', {'sequence':2**53}),
+                          ('negative-sequence', {'sequence':-1}),
+                          ('unknown-field', {'path':'private'}),
+                          ('long-revision', {'model_revision':'a'*129})]:
+        instance('model-' + name, 'ModelState', {**state, **changes}, False)
+    error = {k:v for k,v in state.items() if k not in ('status','model_revision')}
+    error['code'] = 'observation_failed'
+    instance('model-observation-error', 'ModelObservationError', error)
+    instance('model-observation-error-private', 'ModelObservationError', {**error, 'message':'private'}, False)
+
     def success(name, metadata, data=b'', decoded=None, progress=False):
         instance(name, 'StreamMetadata', metadata)
         frames = [frame(1, metadata)]
@@ -630,13 +650,13 @@ def main():
     references = resolve_references(document)
     for schema in document['components']['schemas'].values():
         Draft202012Validator.check_schema(schema)
-    expected_operations = {'listModels', 'createSession', 'getSession', 'deleteSession',
+    expected_operations = {'listModels', 'watchModel', 'createSession', 'getSession', 'deleteSession',
                            'listTensors', 'streamTensor', 'streamTensorStatistics',
                            'streamTensorDistributions', 'streamInputEmbeddings',
                            'streamInputEmbeddingsStatistics', 'streamInputEmbeddingsDistributions', 'tokenize', 'cancelOperation', 'getArchitecture'}
     operations = [op for item in document['paths'].values() for method, op in item.items()
                   if method in ('get', 'post', 'delete')]
-    require(len(operations) == 14 and {op['operationId'] for op in operations} == expected_operations,
+    require(len(operations) == 15 and {op['operationId'] for op in operations} == expected_operations,
             'operation set changed')
     golden = fixtures()
     embeddings = embedding_fixtures(document)
