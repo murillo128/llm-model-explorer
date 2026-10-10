@@ -220,7 +220,9 @@ function captureView(graph: Graph, view: GraphSnapshot, anchor?: CameraAnchor): 
   const target = cameraTarget && nav.locators.get(cameraTarget);
   const zoom = anchor?.zoom ?? view.viewport?.zoom;
   return {
-    selected: nav.chain(view.selected), scope: nav.chain(view.scope), focus: nav.chain(view.focus),
+    // Shared geometry may still use a different instance's anchor. The ordinary
+    // fallback scope belongs to the user's concrete choice and its own ancestry.
+    selected: nav.chain(view.selected), scope: nav.chain(view.shared?.instanceId ?? view.scope), focus: nav.chain(view.focus),
     expanded: view.expanded.flatMap((id) => nav.locators.get(id) ?? []),
     flags: { dimensions: view.dimensions, exhaustive: view.exhaustive, showUnused: view.showUnused, showContext: view.showContext,
       deriveMlp: view.deriveMlp, modelCollapsed: view.modelCollapsed, selectionMode: view.selectionMode },
@@ -275,7 +277,6 @@ function restoreView(graph: Graph, saved: PortableView): { view: GraphView; fall
   if (view.scope) { try { componentScope(graph, view.scope); } catch { view.scope = undefined; fallback = true; } }
   view.selected = nearest(saved.selected) ?? null; view.focus = nearest(saved.focus) ?? null;
   view.expanded = saved.expanded.flatMap((locator) => nav.resolve(locator) ?? []);
-  if (view.scope && !view.expanded.includes(view.scope)) view.expanded.push(view.scope);
   view.stateScope = nav.resolveSource(saved.stateScope);
   view.activeStack = only(graph.repetitions.filter((r) => r.navigation_key === saved.activeStack))?.id ?? null;
   for (const window of saved.repetitions) {
@@ -285,9 +286,27 @@ function restoreView(graph: Graph, saved: PortableView): { view: GraphView; fall
     const start = found < 0 ? rep.instances.length - 1 : found;
     view.repetitions[rep.id] = { start, count: Math.min(Math.max(1, window.count), rep.instances.length - start) };
   }
-  if (saved.shared === null) {
-    if (view.selectionMode !== 'source') { view.scope = undefined; view.selected = null; view.focus = null; }
+  const leaveShared = (concrete: boolean) => {
     fallback = true;
+    if (!concrete) view.scope = undefined;
+    const members = view.scope ? componentScope(graph, view.scope).members : new Set<string>();
+    view.selected = view.scope ? view.selected && members.has(view.selected) ? view.selected : view.scope : null;
+    view.focus = view.selected;
+    view.expanded = view.expanded.filter((id) => members.has(id));
+    // Reveal a surviving selected descendant without importing the old display
+    // anchor's expansions or focusing a source outside the new ordinary scope.
+    let parent = view.selected ? nav.nodes.get(view.selected)?.parent_id : undefined;
+    while (parent && members.has(parent)) {
+      if (!view.expanded.includes(parent)) view.expanded.push(parent);
+      parent = nav.nodes.get(parent)?.parent_id;
+    }
+    if (!view.stateScope || !members.has(view.stateScope)) view.stateScope = undefined;
+    view.activeStack = null;
+    view.repetitions = Object.fromEntries(Object.entries(view.repetitions).filter(([id]) =>
+      graph.repetitions.some((r) => r.id === id && members.has(r.parent_id))));
+  };
+  if (saved.shared === null) {
+    leaveShared(view.selectionMode === 'source');
   } else if (saved.shared) {
     const template = only(graph.templates?.filter((t) => t.navigation_key === saved.shared!.family) ?? []);
     const anchor = nav.resolveSource(saved.shared.anchor), instance = nav.resolveSource(saved.shared.instance ?? undefined);
@@ -296,12 +315,10 @@ function restoreView(graph: Graph, saved: PortableView): { view: GraphView; fall
       view.shared = { templateId: template.id, anchorId: anchor, instanceId: instance ?? null };
       view.scope = anchor; view.selectionMode = instance ? 'source' : 'structure';
     } else {
-      // Keep the independently resolved concrete source/ancestor. A neutral
-      // structure must never inherit its display anchor as a concrete binding.
-      if (!saved.shared.instance) { view.scope = undefined; view.selected = null; view.focus = null; }
-      fallback = true;
+      leaveShared(saved.shared.instance !== null);
     }
   }
+  if (view.scope && !view.expanded.includes(view.scope)) view.expanded.push(view.scope);
   view.boundary = nav.resolveBoundary(saved.boundary);
   if (saved.edge) {
     const source = nav.resolveEndpoint(saved.edge.source), target = nav.resolveEndpoint(saved.edge.target);

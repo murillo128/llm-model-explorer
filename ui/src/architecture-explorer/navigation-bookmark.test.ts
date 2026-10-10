@@ -160,6 +160,42 @@ it('does not promote a neutral Shared view when its family disappears', () => {
   expect(restored.selected).toBeNull(); expect(restored.initialOverview).toBe(true);
 });
 
+it.each(['root', 'descendant', 'removed-instance', 'removed-selection', 'missing-metadata'] as const)(
+  'uses the chosen Shared instance ancestry rather than its display anchor on family loss (%s)', (change) => {
+    const old = revision(makeTemplateFixture(), '-old'), next = revision(makeTemplateFixture(), '-new');
+    const view = new GraphView();
+    enterSharedStructure(view, old.templates![0]!, null);
+    // The instance selector keeps neutral geometry but changes the source choice.
+    view.update({ shared: { ...view.shared!, instanceId: 'layer-2.attention-old' }, selectionMode: 'source',
+      selected: change === 'root' ? 'layer-2.attention-old' : 'layer-2.attention.Q-old' });
+    expect(view.scope).toBe('layer-0.attention-old');
+    const compatible = restoreBookmark(next, captureBookmark(old, view));
+    expect(compatible.shared).toMatchObject({ anchorId: 'layer-0.attention-new', instanceId: 'layer-2.attention-new' });
+    if (change === 'missing-metadata') delete old.templates![0]!.navigation_key;
+    const removed = new Set(change === 'removed-instance'
+      ? next.templates![0]!.instances.find((i) => i.node_id === 'layer-2.attention-new')!.nodes.map((n) => n.node_id)
+      : change === 'removed-selection' ? ['layer-2.attention.Q-new'] : []);
+    next.nodes = next.nodes.filter((n) => !removed.has(n.id));
+    for (const node of next.nodes) if (node.kind === 'group') node.children = node.children.filter((id) => !removed.has(id));
+    next.edges = next.edges.filter((e) => !removed.has(e.source.node_id) && !removed.has(e.target.node_id));
+    next.templates = [];
+    const restored = restoreBookmark(next, captureBookmark(old, view));
+    const scope = change === 'removed-instance' ? 'layer-2-new' : 'layer-2.attention-new';
+    const selected = ['descendant', 'missing-metadata'].includes(change) ? 'layer-2.attention.Q-new' : scope;
+    expect(restored.shared).toBeUndefined();
+    expect(restored.scope).toBe(scope);
+    expect(restored.selected).toBe(selected);
+    expect(restored.focus).toBe(selected);
+    expect(restored.expanded).toContain(scope);
+    expect(restored.expanded.some((id) => id.startsWith('layer-0'))).toBe(false);
+    expect(restored.restoreCamera?.target).toBe(selected);
+    expect(restored.notice).toContain('nearest');
+    const projection = projectGraph(next, projectionOptions(restored));
+    expect(projection.nodes.some((n) => n.id === selected)).toBe(true);
+    expect(projection.nodes.some((n) => n.id === 'layer-0.attention-new')).toBe(false);
+  },
+);
+
 it.each(['0:1', '4:5'])('preserves compressed range %s beside an open repetition window', (range) => {
   const old = revision(makeIndexedFixture(6), '-old'), next = revision(makeIndexedFixture(6), '-new');
   const view = new GraphView(['model-old']);
