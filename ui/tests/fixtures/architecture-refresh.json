@@ -1,7 +1,7 @@
 {
   "before": {
     "navigation_namespace": "r726kAUGPnJ-834hpOcCcGZZc1xlXJiCi-tSI3LdbLI",
-    "graph_id": "baeb00ec5a7b6e1f4aea28993f57977cec46ea123d78f433023e38c9c07cdb58",
+    "graph_id": "bbca289d0cd5051af9db8eee5e06c31223c4d5932b70a6e38613294b63597474",
     "scope": "model_defined",
     "coverage": "complete",
     "symbols": [
@@ -13,7 +13,7 @@
     "nodes": [
       {
         "navigation_key": "FO7cpWMa2wsBY4U1sC56JBOM8UFr0JhsCS6pLIC3a3c",
-        "id": "e4ea87318ac7c99ac473c4793006a562b457edf754d516203ee8ff771240acc8",
+        "id": "OC4y1MfV_NQurvw6l1jHbPOypLT4lQiCiWkXBy0x4V8",
         "kind": "context",
         "label": "Model-supplied definition",
         "ports": [],
@@ -93,7 +93,7 @@
       },
       {
         "navigation_key": "gULaPhPsHZu5LmnNR8m30lSkdxNikPnwnp8i-HblfSg",
-        "id": "9c72f104c976b874e8baced385f0445ba94ead994ef7734f9b75bfafc49d6553",
+        "id": "lrL0O5IPw9TuPpsaAm0q4Q2n1J-XhsQNUra_kYCmLHc",
         "kind": "input",
         "label": "Observations",
         "ports": [
@@ -134,7 +134,7 @@
       },
       {
         "navigation_key": "mkx3A7jRLqpSn6Sx7-jXTmveofB8daauljYSolQ4pvM",
-        "id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+        "id": "g6BPMqFApC3ZwFWnOXxkbhDI3_wLA2QaHHvXJi4f4lU",
         "kind": "group",
         "label": "Encoder",
         "ports": [
@@ -189,13 +189,13 @@
           }
         ],
         "children": [
-          "411bf5ba03602f8e92d6617ed652b155aff302bbd9ec7acba77631a3db132669",
-          "e6d45d34f86ec32b3b7311a96e8a5c8fb851f429e721f88c4dfa8cbeb3c4297e"
+          "HoTxyShxmsblm5gkhxhE9Hzc03ajt1I_X7HmVzw4oIo",
+          "nYnB5-OGohPQ16Cn0UWcMZZ7AZ4ZA0t1Knkuy8ObljM"
         ]
       },
       {
         "navigation_key": "LszD65ctQOxWURBIQkEfRpm4ijwwq_UmV_-V5KTbIto",
-        "id": "411bf5ba03602f8e92d6617ed652b155aff302bbd9ec7acba77631a3db132669",
+        "id": "HoTxyShxmsblm5gkhxhE9Hzc03ajt1I_X7HmVzw4oIo",
         "kind": "operation",
         "label": "Projection",
         "ports": [
@@ -233,8 +233,8 @@
           }
         ],
         "parameter_ids": [
-          "124a6a7fd364e63083e75cbecb0c979a4faa2c07a9c4646e11b3d74ff59638f7",
-          "220f75ef92c4c61fd5c921d5c4c1ea724d2d52b635ed906c6e5b3f311063b3bc"
+          "Fhse6thWmmG4Yr5TDoWWphzr22WuTs2qUEQkjU83G_U",
+          "RmDolkkCbf0nSeQrd79bDg-zvnJflQJEmIazKA8Flq4"
         ],
         "references": [],
         "attributes": [],
@@ -252,13 +252,13 @@
             "rule": "Semantic source key supplied by the model author; not source-verified."
           }
         ],
-        "parent_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+        "parent_id": "g6BPMqFApC3ZwFWnOXxkbhDI3_wLA2QaHHvXJi4f4lU",
         "operation": "linear",
         "formula": "y = x W^T + b"
       },
       {
         "navigation_key": "89zzMQi0qNPVyyVg6rkriT-qct1sRXI3pFhfSbE5Y24",
-        "id": "e6d45d34f86ec32b3b7311a96e8a5c8fb851f429e721f88c4dfa8cbeb3c4297e",
+        "id": "nYnB5-OGohPQ16Cn0UWcMZZ7AZ4ZA0t1Knkuy8ObljM",
         "kind": "operation",
         "label": "GELU",
         "ports": [
@@ -312,12 +312,12 @@
             "rule": "Semantic source key supplied by the model author; not source-verified."
           }
         ],
-        "parent_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+        "parent_id": "g6BPMqFApC3ZwFWnOXxkbhDI3_wLA2QaHHvXJi4f4lU",
         "operation": "gelu"
       },
       {
         "navigation_key": "ggVaiSuE29A-xxeU-41Nbq1L2HnbUknLVZDRcAt0l9Q",
-        "id": "d98efb43c5febb4eb8b6b1d69c6aadaafb47c1c888fef8f9579aa7bf4e67ca5f",
+        "id": "uc9V5LH7PXAmjZ1gHYHW0gFeVKCHg8FZ3Kx0OoVCTyg",
         "kind": "output",
         "label": "Latents",
         "ports": [
@@ -359,13 +359,13 @@
     ],
     "edges": [
       {
-        "id": "34481d1e3d4edba3d982f9159e2b7303a9ac7cb8d45ca61360ff03634705fed1",
+        "id": "MdQRbsuxeAbkAQJvw4UP7OtEJUikOXMx1mf4wTmuFn0",
         "source": {
-          "node_id": "9c72f104c976b874e8baced385f0445ba94ead994ef7734f9b75bfafc49d6553",
+          "node_id": "lrL0O5IPw9TuPpsaAm0q4Q2n1J-XhsQNUra_kYCmLHc",
           "port_id": "out"
         },
         "target": {
-          "node_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+          "node_id": "g6BPMqFApC3ZwFWnOXxkbhDI3_wLA2QaHHvXJi4f4lU",
           "port_id": "x"
         },
         "kind": "data",
@@ -379,33 +379,13 @@
         ]
       },
       {
-        "id": "5cb90054118831778aa1b37de7ee29fc71d0c0d203b550363ccef55823817f2e",
+        "id": "NWbCgWUxrjMFqhboUUndkbrr-I2dFzCp8rexqqk64F0",
         "source": {
-          "node_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+          "node_id": "g6BPMqFApC3ZwFWnOXxkbhDI3_wLA2QaHHvXJi4f4lU",
           "port_id": "x"
         },
         "target": {
-          "node_id": "411bf5ba03602f8e92d6617ed652b155aff302bbd9ec7acba77631a3db132669",
-          "port_id": "x"
-        },
-        "kind": "data",
-        "provenance": [
-          {
-            "kind": "description",
-            "source": "model-supplied architecture.json",
-            "revision": "encoder-v1",
-            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
-          }
-        ]
-      },
-      {
-        "id": "5d1cc60d867d68873d3e58ec82b694228324084f32a9162ce8a897df0cac185e",
-        "source": {
-          "node_id": "411bf5ba03602f8e92d6617ed652b155aff302bbd9ec7acba77631a3db132669",
-          "port_id": "out"
-        },
-        "target": {
-          "node_id": "e6d45d34f86ec32b3b7311a96e8a5c8fb851f429e721f88c4dfa8cbeb3c4297e",
+          "node_id": "HoTxyShxmsblm5gkhxhE9Hzc03ajt1I_X7HmVzw4oIo",
           "port_id": "x"
         },
         "kind": "data",
@@ -419,13 +399,33 @@
         ]
       },
       {
-        "id": "13aa432dbdd048707f586498845576c0e364f147317205dc2d43981971e8c844",
+        "id": "vEtxcXO-5XZiUMQUvRshNyy6NigdK-PoVst2z9zBuUg",
         "source": {
-          "node_id": "e6d45d34f86ec32b3b7311a96e8a5c8fb851f429e721f88c4dfa8cbeb3c4297e",
+          "node_id": "HoTxyShxmsblm5gkhxhE9Hzc03ajt1I_X7HmVzw4oIo",
           "port_id": "out"
         },
         "target": {
-          "node_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+          "node_id": "nYnB5-OGohPQ16Cn0UWcMZZ7AZ4ZA0t1Knkuy8ObljM",
+          "port_id": "x"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "JNAqiHJ0nOFl3Lpdl8k86vDRKJR-f5ZKMmWuM3ZwZPI",
+        "source": {
+          "node_id": "nYnB5-OGohPQ16Cn0UWcMZZ7AZ4ZA0t1Knkuy8ObljM",
+          "port_id": "out"
+        },
+        "target": {
+          "node_id": "g6BPMqFApC3ZwFWnOXxkbhDI3_wLA2QaHHvXJi4f4lU",
           "port_id": "out"
         },
         "kind": "data",
@@ -439,13 +439,13 @@
         ]
       },
       {
-        "id": "b8ed7eacddcffb5f8f7c98a533db3c8c5888977e63596d48ff7eb8af252c8b62",
+        "id": "1uc0vrCKfW1Fd8c8bdVMX3WfP6L2KcmoDCHWniURqGs",
         "source": {
-          "node_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+          "node_id": "g6BPMqFApC3ZwFWnOXxkbhDI3_wLA2QaHHvXJi4f4lU",
           "port_id": "out"
         },
         "target": {
-          "node_id": "d98efb43c5febb4eb8b6b1d69c6aadaafb47c1c888fef8f9579aa7bf4e67ca5f",
+          "node_id": "uc9V5LH7PXAmjZ1gHYHW0gFeVKCHg8FZ3Kx0OoVCTyg",
           "port_id": "x"
         },
         "kind": "data",
@@ -462,7 +462,7 @@
     "repetitions": [],
     "parameters": [
       {
-        "id": "124a6a7fd364e63083e75cbecb0c979a4faa2c07a9c4646e11b3d74ff59638f7",
+        "id": "Fhse6thWmmG4Yr5TDoWWphzr22WuTs2qUEQkjU83G_U",
         "name": "encoder.proj.weight",
         "logical_shape": [
           {
@@ -499,7 +499,7 @@
         ]
       },
       {
-        "id": "220f75ef92c4c61fd5c921d5c4c1ea724d2d52b635ed906c6e5b3f311063b3bc",
+        "id": "RmDolkkCbf0nSeQrd79bDg-zvnJflQJEmIazKA8Flq4",
         "name": "encoder.proj.bias",
         "logical_shape": [
           {
@@ -535,7 +535,7 @@
   },
   "after": {
     "navigation_namespace": "r726kAUGPnJ-834hpOcCcGZZc1xlXJiCi-tSI3LdbLI",
-    "graph_id": "7312da6abc704de463bf53c841362e0b8896b0cc0fbba30615a31a167acf87c2",
+    "graph_id": "e4aeb5b88a3b180de7c1cfb2baf37b103d5e0f6f34205093aab59e2ab5ba9d2f",
     "scope": "model_defined",
     "coverage": "complete",
     "symbols": [
@@ -547,7 +547,7 @@
     "nodes": [
       {
         "navigation_key": "FO7cpWMa2wsBY4U1sC56JBOM8UFr0JhsCS6pLIC3a3c",
-        "id": "b167ab162ae3f81e8577bfc4089fa1bb481f89c5d04661e67874935a3da1051a",
+        "id": "KNvH9GLlHlOh3fCcFeJp1cX-UK8DzFZYYHoynySsAoc",
         "kind": "context",
         "label": "Model-supplied definition",
         "ports": [],
@@ -627,7 +627,7 @@
       },
       {
         "navigation_key": "ggVaiSuE29A-xxeU-41Nbq1L2HnbUknLVZDRcAt0l9Q",
-        "id": "eadc7c1ebe76923f05dc67c81fc7edf8f472f01c4bd760218345c5df03c1079c",
+        "id": "auRyciZeV70rzLVAnUyrkMTDQIiW0fI8dafV7uAr9UE",
         "kind": "output",
         "label": "Latents",
         "ports": [
@@ -668,7 +668,7 @@
       },
       {
         "navigation_key": "89zzMQi0qNPVyyVg6rkriT-qct1sRXI3pFhfSbE5Y24",
-        "id": "f9d291fd91e6de1eafcfb10f0048d757fa4af6b3aae3304498fb479ecfd316d3",
+        "id": "TWMTeh3nG4bI7HEdOXqufNq5XaGA_Fgg7k5JjEMyfgc",
         "kind": "operation",
         "label": "GELU",
         "ports": [
@@ -722,12 +722,12 @@
             "rule": "Semantic source key supplied by the model author; not source-verified."
           }
         ],
-        "parent_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+        "parent_id": "ZYFUOoashIuOgUawsWQNOjNDQULldxe2rlHo6p0RAwE",
         "operation": "gelu"
       },
       {
         "navigation_key": "LszD65ctQOxWURBIQkEfRpm4ijwwq_UmV_-V5KTbIto",
-        "id": "49dc3afb13c61d39bef5d609ac57b012dc346c1653f5a890a219e31c2fdeeb4a",
+        "id": "rP2vY3q_XD-VDZboIj3auvAGHYivYHBLP0Lzr5qQGTU",
         "kind": "operation",
         "label": "Renamed projection",
         "ports": [
@@ -765,8 +765,8 @@
           }
         ],
         "parameter_ids": [
-          "5c2c23d02f002068f2dae4fffe667ea0bfb0d9dcd4219876fa8a4ebf3cb4e1c9",
-          "216b9b41d85b99adbb56d60336ce9dfbd9122bd7f138c78ebf7ebb12e6a59bc6"
+          "FZWEzSK3LZyzjS39fzpwZr1hJ4VcEOarD9noOcWZa3U",
+          "NPTPKTfY7gyXRQTQ08_N4PCM2V87MTbYBv64GaZMBgo"
         ],
         "references": [],
         "attributes": [],
@@ -784,14 +784,14 @@
             "rule": "Semantic source key supplied by the model author; not source-verified."
           }
         ],
-        "parent_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+        "parent_id": "ZYFUOoashIuOgUawsWQNOjNDQULldxe2rlHo6p0RAwE",
         "operation": "linear",
         "description": "Updated projection description after a model edit.",
         "formula": "y = x W^T + b"
       },
       {
         "navigation_key": "mkx3A7jRLqpSn6Sx7-jXTmveofB8daauljYSolQ4pvM",
-        "id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+        "id": "ZYFUOoashIuOgUawsWQNOjNDQULldxe2rlHo6p0RAwE",
         "kind": "group",
         "label": "Encoder",
         "ports": [
@@ -846,13 +846,13 @@
           }
         ],
         "children": [
-          "49dc3afb13c61d39bef5d609ac57b012dc346c1653f5a890a219e31c2fdeeb4a",
-          "f9d291fd91e6de1eafcfb10f0048d757fa4af6b3aae3304498fb479ecfd316d3"
+          "rP2vY3q_XD-VDZboIj3auvAGHYivYHBLP0Lzr5qQGTU",
+          "TWMTeh3nG4bI7HEdOXqufNq5XaGA_Fgg7k5JjEMyfgc"
         ]
       },
       {
         "navigation_key": "gULaPhPsHZu5LmnNR8m30lSkdxNikPnwnp8i-HblfSg",
-        "id": "64a90addb70b72070b247068643ccfdb3fc1052ecb02be2ddda844e4083f0802",
+        "id": "JlU1oHHPQvGNkZACWEWNLJ4hOsHVjB8EOvRguN29Uyw",
         "kind": "input",
         "label": "Observations",
         "ports": [
@@ -894,13 +894,13 @@
     ],
     "edges": [
       {
-        "id": "d7010303ca65e446de6a31e5d554064aea4d23b5ad56ed0ee850ee49e9d1c5e8",
+        "id": "ttDehzwiYh-0VVaqpTBUUoIcK-rkP6SURi9T-XnmvW4",
         "source": {
-          "node_id": "64a90addb70b72070b247068643ccfdb3fc1052ecb02be2ddda844e4083f0802",
+          "node_id": "JlU1oHHPQvGNkZACWEWNLJ4hOsHVjB8EOvRguN29Uyw",
           "port_id": "out"
         },
         "target": {
-          "node_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+          "node_id": "ZYFUOoashIuOgUawsWQNOjNDQULldxe2rlHo6p0RAwE",
           "port_id": "x"
         },
         "kind": "data",
@@ -914,33 +914,13 @@
         ]
       },
       {
-        "id": "f49a3db33aab13e6d71f4ca64da6be87a884d9d510abe2cf3bdc55e1a7171852",
+        "id": "1Cg52-Oa2GuyC71EpQgfgid8-pylHCczh7WGvzVLVqM",
         "source": {
-          "node_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+          "node_id": "ZYFUOoashIuOgUawsWQNOjNDQULldxe2rlHo6p0RAwE",
           "port_id": "x"
         },
         "target": {
-          "node_id": "49dc3afb13c61d39bef5d609ac57b012dc346c1653f5a890a219e31c2fdeeb4a",
-          "port_id": "x"
-        },
-        "kind": "data",
-        "provenance": [
-          {
-            "kind": "description",
-            "source": "model-supplied architecture.json",
-            "revision": "navigation-second-revision",
-            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
-          }
-        ]
-      },
-      {
-        "id": "d9fa26786f1c721921128bdde389bb4dea0c6670a0522b82df8e0426e3ec06f8",
-        "source": {
-          "node_id": "49dc3afb13c61d39bef5d609ac57b012dc346c1653f5a890a219e31c2fdeeb4a",
-          "port_id": "out"
-        },
-        "target": {
-          "node_id": "f9d291fd91e6de1eafcfb10f0048d757fa4af6b3aae3304498fb479ecfd316d3",
+          "node_id": "rP2vY3q_XD-VDZboIj3auvAGHYivYHBLP0Lzr5qQGTU",
           "port_id": "x"
         },
         "kind": "data",
@@ -954,13 +934,33 @@
         ]
       },
       {
-        "id": "903f2940f1ca3d9f3ba00930c298777e384bf8797e7ce6c066a958fe824c66d0",
+        "id": "AiA8XqoPjJwbM2VNOwSevWFcBP11mfJcAy6zpdLwMI8",
         "source": {
-          "node_id": "f9d291fd91e6de1eafcfb10f0048d757fa4af6b3aae3304498fb479ecfd316d3",
+          "node_id": "rP2vY3q_XD-VDZboIj3auvAGHYivYHBLP0Lzr5qQGTU",
           "port_id": "out"
         },
         "target": {
-          "node_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+          "node_id": "TWMTeh3nG4bI7HEdOXqufNq5XaGA_Fgg7k5JjEMyfgc",
+          "port_id": "x"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "1qlvfKEL9uQU2LWAO11mbnE7flkaFPS_SgZKjG75cGQ",
+        "source": {
+          "node_id": "TWMTeh3nG4bI7HEdOXqufNq5XaGA_Fgg7k5JjEMyfgc",
+          "port_id": "out"
+        },
+        "target": {
+          "node_id": "ZYFUOoashIuOgUawsWQNOjNDQULldxe2rlHo6p0RAwE",
           "port_id": "out"
         },
         "kind": "data",
@@ -974,13 +974,13 @@
         ]
       },
       {
-        "id": "559494b2b2b85a52731afd41047f3442eaa623f7123ee617dcf512e71fee2840",
+        "id": "fc35kJYtGDTatKr12HmmmSmp67G2jzKGATLlawT9Tak",
         "source": {
-          "node_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+          "node_id": "ZYFUOoashIuOgUawsWQNOjNDQULldxe2rlHo6p0RAwE",
           "port_id": "out"
         },
         "target": {
-          "node_id": "eadc7c1ebe76923f05dc67c81fc7edf8f472f01c4bd760218345c5df03c1079c",
+          "node_id": "auRyciZeV70rzLVAnUyrkMTDQIiW0fI8dafV7uAr9UE",
           "port_id": "x"
         },
         "kind": "data",
@@ -997,7 +997,7 @@
     "repetitions": [],
     "parameters": [
       {
-        "id": "5c2c23d02f002068f2dae4fffe667ea0bfb0d9dcd4219876fa8a4ebf3cb4e1c9",
+        "id": "FZWEzSK3LZyzjS39fzpwZr1hJ4VcEOarD9noOcWZa3U",
         "name": "encoder.proj.weight",
         "logical_shape": [
           {
@@ -1034,7 +1034,7 @@
         ]
       },
       {
-        "id": "216b9b41d85b99adbb56d60336ce9dfbd9122bd7f138c78ebf7ebb12e6a59bc6",
+        "id": "NPTPKTfY7gyXRQTQ08_N4PCM2V87MTbYBv64GaZMBgo",
         "name": "encoder.proj.bias",
         "logical_shape": [
           {

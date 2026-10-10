@@ -90,6 +90,13 @@ and unchanged. Routed-expert compaction preserves every concrete navigation key.
 The analyzer core and generated schema revision invalidate old cached graphs;
 numeric artifact identities and computation are unaffected.
 
+The shared builder encodes graph-scoped record digests as unpadded URL-safe
+Base64, preserving the full SHA-256 digest in 43 characters. This reduces repeated
+identity references in concrete graphs and template/compact-instance maps so
+navigation metadata does not displace required views. IDs remain opaque under
+the existing API contract; encoding changes invalidate structured artifacts via
+the analyzer revision without changing navigation correspondence or byte limits.
+
 ## Optional component equivalence annotations
 
 Packaged descriptions may opt into the API's verified shared structures. Open

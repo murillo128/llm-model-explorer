@@ -31,7 +31,7 @@ from .validation import (
 if TYPE_CHECKING:
     from ..tensor_source import PeftLoraComposition, PhysicalTensor, TensorDescriptor
 
-ANALYZER_REVISION = "static-graph-core-9"
+ANALYZER_REVISION = "static-graph-core-10"
 Scope = Literal["language_model", "visual_encoder_predictor", "model_defined"]
 
 
@@ -199,7 +199,10 @@ class GraphBuilder:
         self._parameter_by_id: dict[str, r.ArchitectureParameter] = {}
 
     def record_id(self, kind: str, key: str) -> str:
-        record_id = identity("architecture-record", self.graph_id, kind, key)
+        # IDs recur throughout instance/template maps. Encode the full digest
+        # without hex overhead so navigation metadata does not displace views.
+        digest = bytes.fromhex(identity("architecture-record", self.graph_id, kind, key))
+        record_id = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
         self._construction_keys[record_id] = (kind, key)
         return record_id
 
