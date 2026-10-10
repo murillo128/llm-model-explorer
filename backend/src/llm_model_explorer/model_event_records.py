@@ -3,7 +3,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_REVISION = "390680271011b2c73dc8d8e945d548c5638cce2aaadfeda0030dfd67f475c7f1"
+SCHEMA_REVISION = "3d2adadda05cd338bdc72ac72d57f117262184cd62db90a3f702ddcd4cb12fa6"
 
 
 class Record(BaseModel):

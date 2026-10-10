@@ -721,6 +721,9 @@ components:
         - $ref: '#/components/schemas/ModelStateUnavailable'
       discriminator:
         propertyName: status
+        mapping:
+          present: '#/components/schemas/ModelStatePresent'
+          unavailable: '#/components/schemas/ModelStateUnavailable'
 
     ModelObservationError:
       type: object

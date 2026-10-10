@@ -365,7 +365,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            status: "ModelStatePresent";
+            status: "present";
             model_revision: components["schemas"]["ModelRevision"];
         };
         ModelStateUnavailable: {
@@ -377,7 +377,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            status: "ModelStateUnavailable";
+            status: "unavailable";
             model_revision: null;
         };
         ModelState: components["schemas"]["ModelStatePresent"] | components["schemas"]["ModelStateUnavailable"];

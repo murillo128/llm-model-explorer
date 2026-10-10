@@ -202,7 +202,11 @@
           }
         ],
         "discriminator": {
-          "propertyName": "status"
+          "propertyName": "status",
+          "mapping": {
+            "present": "#/components/schemas/ModelStatePresent",
+            "unavailable": "#/components/schemas/ModelStateUnavailable"
+          }
         }
       },
       "ModelObservationError": {
