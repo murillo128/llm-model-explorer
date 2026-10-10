@@ -30,7 +30,7 @@ test('actionable session errors leave the camera dock and notifications pointer 
     requests.push(path);
     if (path === '/models') return r.fulfill({ json: { models: [{ id: contractResponse.model_id, display_name: 'Control fixture', architectures: [], tokenizer_available: true }], diagnostics: [] } });
     if (r.request().method() === 'DELETE') { deletes++; return r.abort('connectionrefused'); }
-    if (path === '/sessions') return r.fulfill({ status: 201, json: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', model_id: contractResponse.model_id } });
+    if (path === '/sessions') return r.fulfill({ status: 201, json: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', model_id: contractResponse.model_id, model_revision: 'snapshot_A' } });
     if (path.endsWith('/tensors')) return r.fulfill({ json: contractInventory });
     if (path.endsWith('/architecture')) return r.fulfill({ json: contractResponse });
     return r.fulfill({ status: 204 });

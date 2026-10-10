@@ -12,7 +12,7 @@ async function fixture(context: BrowserContext) {
     const request = route.request(); const path = new URL(request.url()).pathname;
     if (path === '/models') return route.fulfill({ json: { models, diagnostics: [] } });
     if (path === '/sessions' && request.method() === 'POST') {
-      const session = { id: `aaaaaaaa-aaaa-4aaa-8aaa-${String(++serial).padStart(12, '0')}`, model_id: request.postDataJSON().model_id as string };
+      const session = { id: `aaaaaaaa-aaaa-4aaa-8aaa-${String(++serial).padStart(12, '0')}`, model_id: request.postDataJSON().model_id as string, model_revision: 'snapshot_A' };
       sessions.set(session.id, session);
       return route.fulfill({ status: 201, json: session });
     }

@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "backend/src/llm_model_explorer/architecture_analysis/records.py"
 
 
-def generate() -> str:
+def generate(roots: tuple[str, ...] = ("ArchitectureGraph",)) -> str:
     schemas = yaml.safe_load((ROOT / "docs/spec/api/openapi.yaml").read_text())["components"][
         "schemas"
     ]
@@ -36,7 +36,8 @@ def generate() -> str:
         refs(schemas[name])
         ordered[name] = schemas[name]
 
-    visit("ArchitectureGraph")
+    for root in roots:
+        visit(root)
 
     def annotation(s: dict[str, Any]) -> str:
         if "$ref" in s:
@@ -131,9 +132,16 @@ def generate() -> str:
 
 
 if __name__ == "__main__":
-    output = generate()
-    if "--check" in sys.argv:
-        if OUTPUT.read_text() != output:
-            raise SystemExit("Architecture records drifted; regenerate from OpenAPI.")
-    else:
-        OUTPUT.write_text(output)
+    for target, roots in [
+        (OUTPUT, ("ArchitectureGraph",)),
+        (
+            OUTPUT.parent.parent / "model_event_records.py",
+            ("Session", "ModelState", "ModelObservationError"),
+        ),
+    ]:
+        output = generate(roots)
+        if "--check" in sys.argv:
+            if target.read_text() != output:
+                raise SystemExit(f"{target.name} drifted; regenerate from OpenAPI.")
+        else:
+            target.write_text(output)

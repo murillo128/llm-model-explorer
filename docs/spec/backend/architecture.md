@@ -24,7 +24,7 @@ Terminal outcomes are available (complete or partial within scope) or unavailabl
 
 ## Demand preparation after startup
 
-The existing manual model-list reload discovers added or changed local content under the catalogue rules in [models.md](models.md). Listing, session creation, tensor inventory and tokenization do not prepare graphs. There is no watcher, polling, background root scan or new refresh endpoint.
+The existing manual model-list reload discovers added or changed local content under the catalogue rules in [models.md](models.md). Listing, session creation, tensor inventory and tokenization do not prepare graphs. Subscription-driven metadata observation is the sole additional background exception; its ownership and cost are defined in [models.md](models.md#subscription-driven-observation). It never prepares architectures or inference.
 
 For a fresh session whose exact `(model_id, content_fingerprint)` has no process-local prepared result, its architecture GET awaits preparation using that pinned source. Reuse the startup selection, validation, bounded graph construction, structured cache and atomic publication pipeline. Already-prepared snapshots retain pure retrieval, including terminal unavailable outcomes; ordinary repeatable analysis failures do not recommend restart. Missing or corrupt artifacts for already-prepared snapshots retain the cache-loss behavior in [artifact-cache.md](artifact-cache.md).
 
@@ -33,6 +33,8 @@ Application-owned preparation is deduplicated by model ID and fingerprint across
 ## Deployment
 
 Backend and UI are separate deployables and may run on different computers. Host, port, model root, artifact cache, compute device, and CORS remain CLI-configured. No configuration file or extra public service is required. Architecture preparation is CPU/metadata work and does not require a GPU or a separate inference process.
+
+The CLI server ends indefinite model-notification streams before draining HTTP requests during shutdown. Application teardown then settles observer workers before closing the worker pool.
 
 The proof of concept has no authentication and assumes a trusted network or equivalent trusted environment. Existing deployment assumptions remain unchanged.
 

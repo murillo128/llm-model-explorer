@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 from .artifacts import ArtifactSpec
 from .execution import BlockingWork
+from .model_event_records import Session as SessionRecord
 from .model_files import ModelError
 from .models import ModelCatalogue
 from .operations import Consumer, OperationRuntime, Producer
@@ -18,7 +19,11 @@ class Session:
     source: ModelSource
 
     def descriptor(self) -> dict[str, str]:
-        return {"id": str(self.id), "model_id": self.source.model_id}
+        return SessionRecord(
+            id=str(self.id),
+            model_id=self.source.model_id,
+            model_revision=self.source.model_revision,
+        ).model_dump(mode="json")
 
 
 class SessionRegistry:

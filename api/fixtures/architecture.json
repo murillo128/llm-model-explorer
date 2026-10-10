@@ -2210,7 +2210,8 @@
   "context": {
     "session": {
       "id": "12345678-1234-4234-8234-123456789abc",
-      "model_id": "test/architecture"
+      "model_id": "test/architecture",
+      "model_revision": "snapshot_A"
     },
     "tokenizer_available": true,
     "inventory": {

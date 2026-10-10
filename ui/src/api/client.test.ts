@@ -115,9 +115,9 @@ it('uses explicit typed endpoint methods and checks JSON responses', async () =>
   const json = (value: unknown, status = 200) => fetcher.mockResolvedValueOnce(new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json; charset=utf-8' } }));
   json({ models: [], diagnostics: [] });
   expect(await client.listModels()).toEqual({ models: [], diagnostics: [] });
-  json({ id, model_id: 'model' }, 201);
-  expect(await client.createSession({ model_id: 'model' })).toEqual({ id, model_id: 'model' });
-  json({ id, model_id: 'model' });
+  json({ id, model_id: 'model', model_revision: 'snapshot_A' }, 201);
+  expect(await client.createSession({ model_id: 'model' })).toEqual({ id, model_id: 'model', model_revision: 'snapshot_A' });
+  json({ id, model_id: 'model', model_revision: 'snapshot_A' });
   await client.getSession(id);
   json({ coverage: 'complete', diagnostics: [], tensors: [] });
   await client.listTensors(id);

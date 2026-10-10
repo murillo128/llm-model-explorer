@@ -52,6 +52,53 @@ Session IDs and long-operation IDs are UUIDs. Tensor IDs are opaque URL-safe ide
 
 A valid model/session need not have a text tokenizer. Architecture retrieval uses the same pinned snapshot independently of tokenizer and numeric-weight availability; its resource references never authorize cross-model access or rebind an existing session.
 
+## Model state notifications
+
+`GET /models/events?model_id=<encoded logical ID>` (`watchModel`) is an indefinite
+`text/event-stream` subscription using the configured backend base URL and CORS.
+Query encoding preserves `/`, `@`, `+` and composition punctuation. The identity is
+exact; an absent identity may stay subscribed until it reappears. The transport
+preserves nonempty IDs exactly, including spaces in directory-name fallback IDs.
+It returns `unsupported_size` before streaming if the escaped identity exceeds the
+64 KiB event budget (reserving 1 KiB for bounded fields and framing).
+The initial limit is 256 subscriptions; excess requests return structured 503
+`resource_exhausted` before streaming.
+
+Each connection, including reconnect with unknown `Last-Event-ID` or a new server
+epoch, observes fresh current state after metadata settles. Registration precedes
+initial capture so there is no lost-update window. There is no replay log.
+Named `model-state` events contain exactly `epoch` (process-lifetime UUID),
+`sequence` (nonnegative safe integer), `model_id`, `status`, and `model_revision`.
+Present means catalogue-admitted, not successful architecture/tokenizer/numeric
+capabilities. Its revision is a bounded opaque equality token matching sessions
+pinned from that snapshot. Unavailable means removed or rejected, with null revision.
+Invalid model-local architecture JSON remains admitted and fails its own capability.
+Re-added content with the exact logical ID emits present again. Never substitute a
+similarly named model or compare tokens lexically. Create/get Session records require
+`model_revision`; it is neither an architecture revision nor a content hash, and
+never authorizes stale access or session rebinding.
+
+Event IDs are `epoch:sequence`; sequence increases within an epoch. Epochs permit
+restart detection, while revision equality identifies snapshot equivalence. Each
+subscriber has one replaceable pending event (at most 64 KiB including framing), so
+a slow consumer converges to current state without retaining every intermediate
+change. No event is emitted for an unrelated model change.
+
+A root scan failure or ambiguous catalogue yields a named `observation-error` event
+with exactly `epoch`, `sequence`, `model_id`, and fixed `code: observation_failed`.
+It does not mean unavailable and carries no filesystem details. Observation retries
+with bounded backoff; successful recovery emits authoritative state even if its
+revision is unchanged. Initial observation failure can therefore precede the first
+model-state event. No stale state is substituted as successful current observation.
+
+The stream begins with `retry: 2000`, sends comment heartbeats approximately every
+15 seconds without data, and flushes frames incrementally with `Cache-Control:
+no-store` and `X-Accel-Buffering: no`. Deployment proxies must disable buffering and
+compression for this indefinite response and set idle timeouts above the heartbeat
+interval. Cross-origin clients use the same configured CORS as other requests;
+`Last-Event-ID` is allowed. This channel has no LMEX operation ID, cancellation or
+history. Disconnecting it cannot cancel tensor consumers or architecture preparation.
+
 ## Tensor inventory
 
 `GET /sessions/{session_id}/tensors` returns descriptors for the session model's tensors. Each descriptor includes the full logical tensor name, logical path segments, shape, rank, element count, physical storage dtype/format metadata, and the canonical logical visualization dtype.

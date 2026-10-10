@@ -750,7 +750,7 @@ def fixtures():
         path=['linear', 'weight'], shape=[2, 3], rank=2, numel=6, storage_dtype='F16', logical_dtype='float32'),
         dict(id='tensor_volume', name='patch.weight', path=['patch', 'weight'], shape=[2, 3, 4], rank=3,
              numel=24, storage_dtype='F32', logical_dtype='float32')])
-    context = dict(session=dict(id='12345678-1234-4234-8234-123456789abc', model_id=response['model_id']),
+    context = dict(session=dict(id='12345678-1234-4234-8234-123456789abc', model_id=response['model_id'], model_revision='snapshot_A'),
                    tokenizer_available=True, inventory=inventory)
     cases = []
     def case(name, edits=(), valid=False, schema_valid=True, context_edits=(), physical_storage=()):

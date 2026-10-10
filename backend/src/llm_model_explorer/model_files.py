@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import secrets
 import stat
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -188,3 +189,13 @@ def read_json(root: Path, path: Path) -> dict[str, object]:
     if len(raw) > MAX_METADATA_BYTES:
         raise ModelError("unsupported_size", "Model metadata exceeds the supported size.")
     return parse_json(raw)
+
+
+# Private process key: tokens are equality hints, never paths or artifact fingerprints.
+_REVISION_KEY = secrets.token_bytes(32)
+
+
+def snapshot_revision(snapshots: tuple[FileSnapshot, ...], semantics: str | None) -> str:
+    digest = hashlib.blake2b(key=_REVISION_KEY, digest_size=32)
+    digest.update(repr((snapshots, semantics)).encode("utf-8", errors="surrogatepass"))
+    return digest.hexdigest()

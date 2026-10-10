@@ -13,7 +13,7 @@ import { GraphViews } from './graph';
 
 vi.mock('./ArchitectureCanvas', () => ({ ArchitectureCanvas: ({ modelId, notices }: { modelId: string; notices: ReactNode }) => <div>{notices}Graph for {modelId}</div> }));
 const response = validateSchema('ArchitectureResponse', fixture.response);
-const session = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', model_id: response.model_id };
+const session = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', model_id: response.model_id, model_revision: 'snapshot_A' };
 const inventory = validateSchema('TensorInventory', fixture.context.inventory);
 function setup() {
   const client = new ApiClient({ backendBaseUrl: 'https://example.test' });

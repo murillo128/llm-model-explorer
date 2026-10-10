@@ -9,6 +9,7 @@ from .architecture_service import ArchitectureService
 from .artifacts import ArtifactStore
 from .execution import BlockingWork
 from .materialization import LogicalTensorService
+from .model_events import ModelObserver
 from .models import ModelCatalogue
 from .operations import OperationRuntime
 from .sessions import SessionRegistry
@@ -28,6 +29,7 @@ class Services:
     tokenizers: TokenizerService | None = None
     logical_tensors: LogicalTensorService | None = None
     architectures: ArchitectureService | None = None
+    model_observer: ModelObserver | None = None
 
 
 @asynccontextmanager
@@ -38,6 +40,7 @@ async def open_services(
     work = BlockingWork()
     sessions = None
     architectures = None
+    observer = None
     try:
         artifacts = await work.run(
             ArtifactStore, settings.cache_dir, model_root=settings.model_root
@@ -47,6 +50,7 @@ async def open_services(
         sessions = SessionRegistry(catalogue, work, operations)
         architectures = ArchitectureService(artifacts, work, stop=startup_stop)
         await architectures.prepare(catalogue)
+        observer = ModelObserver(catalogue, work)
         yield Services(
             blocking_work=work,
             catalogue=catalogue,
@@ -56,11 +60,16 @@ async def open_services(
             tokenizers=TokenizerService(settings.model_root),
             logical_tensors=LogicalTensorService(operations),
             architectures=architectures,
+            model_observer=observer,
         )
     finally:
         try:
-            if sessions is not None:
-                await sessions.aclose()
+            try:
+                if observer is not None:
+                    await observer.aclose()
+            finally:
+                if sessions is not None:
+                    await sessions.aclose()
         finally:
             try:
                 if architectures is not None:
