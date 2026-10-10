@@ -36,6 +36,18 @@ Retain and move prior decorations through the editor transaction’s normal chan
 
 A result for an older input must never replace the presentation for a newer input if responses complete out of order. Only a result matching the current text, tokenizer options, session, and model may become authoritative.
 
+## Same-model session replacement
+
+The shell refresh policy preserves the mounted source editor independently from
+session-bound consumers. Keep current text, options, native caret/selection,
+undo history, IME composition and panel preference, including edits made during
+replacement. Clear old session annotations, token linkage and embedding resources;
+the ordinary same-session stale-result policy below does not retain scientific
+results across model revisions. Retokenize the latest source/options only after
+adopting the replacement, then derive embeddings from its new ordered token IDs.
+If tokenizer support disappears, the source remains editable with an unavailable
+status. Do not persist prompt text in new browser storage or event/evidence records.
+
 ## Inline token presentation
 
 Ordinary tokens are presented inline as annotations of the prompt itself. The prompt text is not duplicated on another line merely to show tokenization.

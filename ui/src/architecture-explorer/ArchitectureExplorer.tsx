@@ -45,7 +45,7 @@ function SessionArchitectureExplorer(props: Props) {
     const detach = selection.onDispose(request.dispose);
     const timeout = setTimeout(() => {
       if (request.isCurrent()) { request.dispose(); fail('Architecture retrieval timed out. Retry retrieval.'); }
-    }, 15_000);
+    }, 120_000);
     // Inventory is required to validate actionable parameter bindings; no tensor bytes or tokenization.
     void client.listTensors(session.id, request.signal).then(request.guard(async (inventory) => {
       diagnostics.observe(session, 'Tensor inventory', inventory.diagnostics.map((d) => finding(session.model_id, session.id, 'Tensor inventory', d, 'warning')));
@@ -71,7 +71,7 @@ function SessionArchitectureExplorer(props: Props) {
         }
       } catch (error) {
         if (request.isCurrent()) fail(error instanceof ApiFailure && error.detail?.code === 'model_content_changed'
-          ? 'Model content changed. Close this session and open a fresh session.'
+          ? 'Updating model…'
           : error instanceof ApiFailure && error.kind === 'protocol'
             ? error.message.length <= 240 ? error.message : 'Architecture response failed validation.'
             : 'Architecture retrieval failed or returned an invalid graph. Retry retrieval.');

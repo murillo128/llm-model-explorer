@@ -93,7 +93,7 @@ export function TokenizerWorkspace({ client, sessionId, ...props }: Props) {
       activeRow={link && linkedSignal === link.signal ? { signal: link.signal, row: link.matrixRow ?? link.tokenRow } : undefined}
       onRowSelect={selectTokenRow} onRowActivate={(row, current) => selectTokenRow(row, current, true)}
       downstream={(current, selectedRows) => <>{divider}<section className="input-embeddings" aria-label="Input embeddings">
-        <EmbeddingRegion client={client} sessionId={sessionId} current={current}
+        <EmbeddingRegion key={sessionId} client={client} sessionId={sessionId} current={current}
           selectedRows={selectedRows}
           highlightedRow={link && link.signal === current?.signal ? link.tokenRow : null}
           revealRow={link && link.signal === current?.signal ? link.revealRow : null}

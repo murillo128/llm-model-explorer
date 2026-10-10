@@ -27,10 +27,10 @@ export function AppBar({ state, controller, model, backend }: {
         </button>)}
     </nav>
     <label className="model-label"><span className="visually-hidden">Model</span>
-      <select value={state.session?.model_id ?? ''} disabled={state.catalogue !== 'complete' || !state.models.length}
+      <select value={state.selectedModelId ?? ''} disabled={state.catalogue !== 'complete' || !state.models.length}
         onChange={(event) => controller.chooseModel(event.target.value)}>
         <option value="" disabled>Select a model</option>
-        {state.session && !model && <option value={state.session.model_id}>Current model (not in catalogue)</option>}
+        {state.selectedModelId && !model && <option value={state.selectedModelId}>Current model (not in catalogue)</option>}
         {state.models.map((entry) => <option key={entry.id} value={entry.id}>{labels.get(entry.id)}</option>)}
       </select>
     </label>
@@ -49,7 +49,7 @@ export function AppBar({ state, controller, model, backend }: {
       </button>
       <section id="session-options" className="session-options" aria-label="Session options" hidden={!expanded}>
         <p className="section-label">LLM Model Explorer</p>
-        {state.session && <Button disabled={state.sessionStatus === 'closing'} onClick={() => {
+        {state.selectedModelId && <Button disabled={state.sessionStatus === 'closing'} onClick={() => {
           controller.closeSession(); setExpanded(false); trigger.current?.focus();
         }}>Close session</Button>}
         <h2>Model information</h2>
@@ -71,11 +71,16 @@ export function AppBar({ state, controller, model, backend }: {
   </header>;
 }
 
-export function AppStatusBar({ state, model, onRetry }: { state: ShellState; model: ModelSummary | undefined; onRetry: () => void }) {
-  const feedback = state.sessionStatus === 'loading' ? 'Loading session…'
+export function AppStatusBar({ state, model, onRetry, onRetryObservation }: { state: ShellState; model: ModelSummary | undefined; onRetry: () => void; onRetryObservation?: () => void }) {
+  const feedback = state.refreshStatus === 'updating' ? 'Updating model…'
+    : state.refreshStatus === 'waiting' ? 'Waiting for valid model.'
+    : state.sessionStatus === 'loading' ? 'Loading session…'
     : state.sessionStatus === 'closing' ? 'Closing session…'
     : state.sessionStatus === 'failed' ? 'Session unavailable.'
     : state.session ? 'Session active.' : 'Session inactive.';
+  const liveFeedback = state.observation === 'reconnecting' ? 'Live updates reconnecting…'
+    : state.observation === 'protocol-error' ? 'Live updates returned invalid data.'
+    : state.observation === 'observation-error' ? 'Live model observation unavailable.' : '';
   return <footer className="app-status-bar" aria-label="Application status">
     <div className="connection-slot">
       <span role="status" aria-live="polite" aria-atomic="true" data-state={state.connection}>
@@ -86,6 +91,8 @@ export function AppStatusBar({ state, model, onRetry }: { state: ShellState; mod
         className="connection-retry" aria-label="Retry connection" disabled={state.catalogue === 'loading'} onClick={onRetry}>Retry</button>}
     </div>
     <span className="session-status" role="status" title={feedback} data-state={state.sessionStatus}>{feedback}</span>
+    {liveFeedback && <span className="session-status" role="status" title={liveFeedback}>{liveFeedback}</span>}
+    {['protocol-error', 'observation-error'].includes(state.observation) && <button type="button" onClick={onRetryObservation}>Retry live updates</button>}
     {model && <div className="status-metadata metadata">
       {(model.architectures.length > 0 || model.model_type) &&
         <span title={[...model.architectures, model.model_type].filter(Boolean).join(' · ')}>

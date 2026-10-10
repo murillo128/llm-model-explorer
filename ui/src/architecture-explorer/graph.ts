@@ -74,6 +74,7 @@ export class GraphView {
 /** Owned by the mounted backend shell, retained across explorer/session switches. No graph copies. */
 export class GraphViews {
   private readonly views = new Map<string, GraphView>();
+  clear() { this.views.clear(); }
   get(model: string, graph: Graph): GraphView {
     const key = JSON.stringify([model, graph.graph_id]);
     let view = this.views.get(key);

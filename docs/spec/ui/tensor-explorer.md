@@ -71,6 +71,16 @@ Pending/streaming feedback and cancellation occupy reserved space inside the hea
 
 The primary screen should remain visually sparse. The current design has three primary data rectangles for a 2D tensor and does not add a fourth legend/control block in the lower-right corner merely to fill space.
 
+## Same-model replacement
+
+Automatic refresh follows the shell's bounded replacement policy. Resolve the
+selected tensor against fresh inventory by exact public ID/full logical name,
+never a leaf label or list position. A unique exact full name can locate a new
+public descriptor when its opaque ID changes. Missing/ambiguous selection clears
+only the tensor selection with a notice. New rank, shape and capabilities control
+metadata-only fallback and fresh streams/statistics. A new numeric source starts
+a fresh camera and GPU allocation; old values or coordinates are never restored.
+
 ## Matrix orientation and geometry
 
 For a logical rank-2 tensor with shape `[rows, columns]`:
