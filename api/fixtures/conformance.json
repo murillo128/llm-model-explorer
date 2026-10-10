@@ -960,6 +960,145 @@
   ],
   "schema_cases": [
     {
+      "name": "session-revision",
+      "schema": "Session",
+      "valid": true,
+      "value": {
+        "id": "12345678-1234-4234-8234-123456789abc",
+        "model_id": "org/model@main+peft-lora:org/adapter",
+        "model_revision": "snapshot_A"
+      }
+    },
+    {
+      "name": "session-missing-revision",
+      "schema": "Session",
+      "valid": false,
+      "value": {
+        "id": "12345678-1234-4234-8234-123456789abc",
+        "model_id": "org/model@main+peft-lora:org/adapter"
+      }
+    },
+    {
+      "name": "model-present",
+      "schema": "ModelState",
+      "valid": true,
+      "value": {
+        "epoch": "12345678-1234-4234-8234-123456789abc",
+        "sequence": 0,
+        "model_id": "org/model@main+peft-lora:org/adapter",
+        "status": "present",
+        "model_revision": "snapshot_A"
+      }
+    },
+    {
+      "name": "model-unavailable",
+      "schema": "ModelState",
+      "valid": true,
+      "value": {
+        "epoch": "12345678-1234-4234-8234-123456789abc",
+        "sequence": 0,
+        "model_id": "org/model@main+peft-lora:org/adapter",
+        "status": "unavailable",
+        "model_revision": null
+      }
+    },
+    {
+      "name": "model-present-null",
+      "schema": "ModelState",
+      "valid": false,
+      "value": {
+        "epoch": "12345678-1234-4234-8234-123456789abc",
+        "sequence": 0,
+        "model_id": "org/model@main+peft-lora:org/adapter",
+        "status": "present",
+        "model_revision": null
+      }
+    },
+    {
+      "name": "model-unavailable-revision",
+      "schema": "ModelState",
+      "valid": false,
+      "value": {
+        "epoch": "12345678-1234-4234-8234-123456789abc",
+        "sequence": 0,
+        "model_id": "org/model@main+peft-lora:org/adapter",
+        "status": "unavailable",
+        "model_revision": "snapshot_A"
+      }
+    },
+    {
+      "name": "model-unsafe-sequence",
+      "schema": "ModelState",
+      "valid": false,
+      "value": {
+        "epoch": "12345678-1234-4234-8234-123456789abc",
+        "sequence": 9007199254740992,
+        "model_id": "org/model@main+peft-lora:org/adapter",
+        "status": "present",
+        "model_revision": "snapshot_A"
+      }
+    },
+    {
+      "name": "model-negative-sequence",
+      "schema": "ModelState",
+      "valid": false,
+      "value": {
+        "epoch": "12345678-1234-4234-8234-123456789abc",
+        "sequence": -1,
+        "model_id": "org/model@main+peft-lora:org/adapter",
+        "status": "present",
+        "model_revision": "snapshot_A"
+      }
+    },
+    {
+      "name": "model-unknown-field",
+      "schema": "ModelState",
+      "valid": false,
+      "value": {
+        "epoch": "12345678-1234-4234-8234-123456789abc",
+        "sequence": 0,
+        "model_id": "org/model@main+peft-lora:org/adapter",
+        "status": "present",
+        "model_revision": "snapshot_A",
+        "path": "private"
+      }
+    },
+    {
+      "name": "model-long-revision",
+      "schema": "ModelState",
+      "valid": false,
+      "value": {
+        "epoch": "12345678-1234-4234-8234-123456789abc",
+        "sequence": 0,
+        "model_id": "org/model@main+peft-lora:org/adapter",
+        "status": "present",
+        "model_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "name": "model-observation-error",
+      "schema": "ModelObservationError",
+      "valid": true,
+      "value": {
+        "epoch": "12345678-1234-4234-8234-123456789abc",
+        "sequence": 0,
+        "model_id": "org/model@main+peft-lora:org/adapter",
+        "code": "observation_failed"
+      }
+    },
+    {
+      "name": "model-observation-error-private",
+      "schema": "ModelObservationError",
+      "valid": false,
+      "value": {
+        "epoch": "12345678-1234-4234-8234-123456789abc",
+        "sequence": 0,
+        "model_id": "org/model@main+peft-lora:org/adapter",
+        "code": "observation_failed",
+        "message": "private"
+      }
+    },
+    {
       "name": "tensor-special-floats",
       "schema": "StreamMetadata",
       "valid": true,

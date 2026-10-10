@@ -1,17 +1,23 @@
 """The catalogue HTTP adapter; blocking discovery never runs on the event loop."""
 
+import asyncio
 import logging
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
-from fastapi.responses import JSONResponse
+import anyio
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse, StreamingResponse
+from starlette.types import Receive, Scope, Send
 
-from .dependencies import get_blocking_work, get_catalogue
+from .dependencies import get_blocking_work, get_catalogue, get_model_observer
 from .execution import BlockingWork
+from .model_events import HEARTBEAT_SECONDS, ModelObserver, ModelSubscription
 from .model_files import ModelError
 from .models import ModelCatalogue
+from .session_routes import LifecycleRoute
 
-router = APIRouter()
+router = APIRouter(route_class=LifecycleRoute)
 logger = logging.getLogger(__name__)
 
 
@@ -56,3 +62,48 @@ async def list_models(
             status_code=500,
             headers={"Cache-Control": "no-store"},
         )
+
+
+class ModelEventResponse(StreamingResponse):
+    def __init__(self, observer: ModelObserver, subscription: ModelSubscription) -> None:
+        self.observer = observer
+        self.subscription = subscription
+        super().__init__(
+            self.frames(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+        )
+
+    async def frames(self) -> AsyncGenerator[bytes, None]:
+        yield b"retry: 2000\n\n"
+        loop = asyncio.get_running_loop()
+        heartbeat = loop.time() + HEARTBEAT_SECONDS
+        while True:
+            try:
+                frame = await asyncio.wait_for(
+                    self.subscription.queue.get(), max(0, heartbeat - loop.time())
+                )
+            except TimeoutError:
+                heartbeat = loop.time() + HEARTBEAT_SECONDS
+                yield b": heartbeat\n\n"
+                continue
+            if frame is None:
+                return
+            yield frame
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            # Starlette cancels its streaming task group on disconnect. Cleanup
+            # must outlive that cancellation, including a header-send failure.
+            with anyio.CancelScope(shield=True):
+                await self.observer.unsubscribe(self.subscription)
+
+
+@router.get("/models/events")
+async def watch_model(
+    model_id: Annotated[str, Query(min_length=1)],
+    observer: Annotated[ModelObserver, Depends(get_model_observer)],
+) -> StreamingResponse:
+    return ModelEventResponse(observer, await observer.subscribe(model_id))

@@ -243,6 +243,13 @@ Integrated explorer polish and expanded numeric coverage are documented in [poli
 The earlier compact explorer and embedding evidence is in [improvements.md](improvements.md).
 The earlier [evidence.md](evidence.md) remains the historical PoC report.
 
+## Automatic model hot reload
+
+[Hot-reload acceptance](hot-reload.md) covers real filesystem changes reaching
+native SSE and the production browser, semantic view restoration, conservative
+recovery, competing tab/user intent, and fresh tensor/tokenizer content. It also
+provides an edit-in-place recipe and performed nginx smoke evidence.
+
 ## Static Architecture Explorer
 
 The acceptance stack also exercises all four static descriptions through real

@@ -3,7 +3,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_REVISION = "0f4ffffbb852c2fa903b1007fafab1c1a3bfbe9010bcf8a56ed63b9a846bfe9a"
+SCHEMA_REVISION = "69e6b6a19b27d953677a5aedb7489ac0a3ad8d23167290c052b4dbeff04c2a10"
 
 
 class Record(BaseModel):
@@ -79,6 +79,7 @@ ArchitectureShape = Annotated[list[ArchitectureDimension], Field(max_length=3355
 
 
 class ArchitecturePort(Record):
+    navigation_key: Annotated[str, Field(min_length=1, max_length=128)] | None = None
     id: ArchitectureId
     direction: Literal["input", "output"]
     label: ArchitectureName
@@ -128,6 +129,7 @@ class ArchitectureAttribute(Record):
 
 
 class ArchitectureLeafNode(Record):
+    navigation_key: Annotated[str, Field(min_length=1, max_length=128)] | None = None
     id: ArchitectureId
     kind: Literal["operation", "input", "output", "context", "state"]
     label: ArchitectureName
@@ -143,6 +145,7 @@ class ArchitectureLeafNode(Record):
 
 
 class ArchitectureGroupNode(Record):
+    navigation_key: Annotated[str, Field(min_length=1, max_length=128)] | None = None
     id: ArchitectureId
     kind: Literal["group"]
     label: ArchitectureName
@@ -210,6 +213,7 @@ class ArchitectureRepetitionInstance(Record):
 
 
 class ArchitectureRepetition(Record):
+    navigation_key: Annotated[str, Field(min_length=1, max_length=128)] | None = None
     bodies: Annotated[list[ArchitectureRepeatedBody], Field(max_length=33554432)] | None = None
     side_ports: Annotated[list[ArchitectureIndexedSidePort], Field(max_length=33554432)] | None = (
         None
@@ -337,6 +341,7 @@ class ArchitectureTemplateInstance(Record):
 
 
 class ArchitectureTemplate(Record):
+    navigation_key: Annotated[str, Field(min_length=1, max_length=128)] | None = None
     id: ArchitectureId
     label: ArchitectureName
     component_role: Literal["attention", "mlp", "layer"]
@@ -348,6 +353,13 @@ class ArchitectureTemplate(Record):
 
 
 class ArchitectureCompactInstance(Record):
+    node_navigation_keys: (
+        Annotated[
+            list[Annotated[str, Field(min_length=1, max_length=128)]],
+            Field(min_length=1, max_length=33554432),
+        ]
+        | None
+    ) = None
     node_id: ArchitectureId
     prefix: ArchitectureName
     label: ArchitectureName
@@ -372,6 +384,7 @@ class ArchitectureCompactComponent(Record):
 
 
 class ArchitectureGraph(Record):
+    navigation_namespace: Annotated[str, Field(min_length=1, max_length=128)] | None = None
     graph_id: ArchitectureId
     scope: Literal["language_model", "visual_encoder_predictor", "model_defined"]
     coverage: Literal["complete", "partial"]

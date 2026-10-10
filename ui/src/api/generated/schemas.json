@@ -99,7 +99,8 @@
         "additionalProperties": false,
         "required": [
           "id",
-          "model_id"
+          "model_id",
+          "model_revision"
         ],
         "properties": {
           "id": {
@@ -109,6 +110,130 @@
           "model_id": {
             "type": "string",
             "minLength": 1
+          },
+          "model_revision": {
+            "$ref": "#/components/schemas/ModelRevision"
+          }
+        }
+      },
+      "ModelRevision": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^[A-Za-z0-9_-]+$",
+        "description": "Opaque equality token for the pinned metadata snapshot, never an artifact key."
+      },
+      "ObservedModelId": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Exact nonempty logical identity, query-encoded without normalization. Reject unsupported_size if its escaped JSON cannot fit the 64 KiB event budget."
+      },
+      "ModelStatePresent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "epoch",
+          "sequence",
+          "model_id",
+          "status",
+          "model_revision"
+        ],
+        "properties": {
+          "epoch": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "model_id": {
+            "$ref": "#/components/schemas/ObservedModelId"
+          },
+          "status": {
+            "type": "string",
+            "const": "present"
+          },
+          "model_revision": {
+            "$ref": "#/components/schemas/ModelRevision"
+          }
+        }
+      },
+      "ModelStateUnavailable": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "epoch",
+          "sequence",
+          "model_id",
+          "status",
+          "model_revision"
+        ],
+        "properties": {
+          "epoch": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "model_id": {
+            "$ref": "#/components/schemas/ObservedModelId"
+          },
+          "status": {
+            "type": "string",
+            "const": "unavailable"
+          },
+          "model_revision": {
+            "type": "null"
+          }
+        }
+      },
+      "ModelState": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ModelStatePresent"
+          },
+          {
+            "$ref": "#/components/schemas/ModelStateUnavailable"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "status",
+          "mapping": {
+            "present": "#/components/schemas/ModelStatePresent",
+            "unavailable": "#/components/schemas/ModelStateUnavailable"
+          }
+        }
+      },
+      "ModelObservationError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "epoch",
+          "sequence",
+          "model_id",
+          "code"
+        ],
+        "properties": {
+          "epoch": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "model_id": {
+            "$ref": "#/components/schemas/ObservedModelId"
+          },
+          "code": {
+            "type": "string",
+            "const": "observation_failed"
           }
         }
       },
@@ -1395,6 +1520,11 @@
           "shape"
         ],
         "properties": {
+          "navigation_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },
@@ -1542,6 +1672,11 @@
           "provenance"
         ],
         "properties": {
+          "navigation_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },
@@ -1622,6 +1757,11 @@
           "children"
         ],
         "properties": {
+          "navigation_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },
@@ -1899,6 +2039,11 @@
           "instances"
         ],
         "properties": {
+          "navigation_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "bodies": {
             "type": "array",
             "maxItems": 33554432,
@@ -2348,6 +2493,11 @@
           "instances"
         ],
         "properties": {
+          "navigation_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },
@@ -2397,6 +2547,16 @@
           "symbols"
         ],
         "properties": {
+          "node_navigation_keys": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 33554432,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
           "node_id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },
@@ -2517,6 +2677,11 @@
           "diagnostics"
         ],
         "properties": {
+          "navigation_namespace": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "graph_id": {
             "$ref": "#/components/schemas/ArchitectureId"
           },

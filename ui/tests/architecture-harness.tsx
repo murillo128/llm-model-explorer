@@ -87,7 +87,7 @@ function Harness() {
   const [shown, setShown] = useState(true);
   const [inspection, setInspection] = useState('');
   const [native, setNative] = useState<ArchitectureSelection | null>(null);
-  const [context] = useState(() => ({ client: new ApiClient({ backendBaseUrl: 'http://127.0.0.1:1' }), session: { id: 'fixture-session', model_id: name }, sessionId: 'fixture-session', selection: new Lifetime(), selectedTensor: null, reportStatus: () => {} }));
+  const [context] = useState(() => ({ client: new ApiClient({ backendBaseUrl: 'http://127.0.0.1:1' }), session: { id: 'fixture-session', model_id: name, model_revision: 'snapshot_A' }, sessionId: 'fixture-session', selection: new Lifetime(), selectedTensor: null, reportStatus: () => {} }));
   const [response, setResponse] = useState(() => configuredFixture(name));
   return <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
     <div><select aria-label="Fixture" value={name} onChange={(e) => { setName(e.target.value); setResponse(configuredFixture(e.target.value)); }}>

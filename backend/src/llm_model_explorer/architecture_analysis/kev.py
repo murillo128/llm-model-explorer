@@ -114,7 +114,7 @@ def architecture(inputs: AnalysisInput, cfg: dict[str, Any]) -> dict[str, Any]:
                 for p in n["provenance"]
                 if p.get("rule") == "Semantic source key in the reviewed packaged description"
             ),
-            n["id"],
+            n["navigation_key"],
         )
         ids[n["id"]] = key
     ids[root["id"]] = "backbone"
@@ -485,6 +485,7 @@ def architecture(inputs: AnalysisInput, cfg: dict[str, Any]) -> dict[str, Any]:
         "repetitions": [
             {
                 **{k: v for k, v in r.items() if k != "bodies"},
+                "id": r["navigation_key"],
                 "parent_id": ids[r["parent_id"]],
                 "instances": [{**i, "node_id": ids[i["node_id"]]} for i in r["instances"]],
             }

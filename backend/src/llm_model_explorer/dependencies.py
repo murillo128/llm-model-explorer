@@ -8,6 +8,7 @@ from .architecture_service import ArchitectureService
 from .artifacts import ArtifactStore
 from .execution import BlockingWork
 from .materialization import LogicalTensorService
+from .model_events import ModelObserver
 from .models import ModelCatalogue
 from .operations import OperationRuntime
 from .services import Services
@@ -77,4 +78,11 @@ def get_architectures(request: Request) -> ArchitectureService:
     service = get_services(request).architectures
     if service is None:
         raise RuntimeError("architecture service is not configured")
+    return service
+
+
+def get_model_observer(request: Request) -> ModelObserver:
+    service = get_services(request).model_observer
+    if service is None:
+        raise RuntimeError("model observer is not configured")
     return service

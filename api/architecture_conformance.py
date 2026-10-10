@@ -100,6 +100,13 @@ def expand_compact_graph(source):
             ids.update(zip(family['symbols'], instance['symbols'], strict=True))
             nodes = replace(family['nodes'], ids, family['base_prefix'], instance['prefix'])
             edges = replace(family['edges'], ids, family['base_prefix'], instance['prefix'])
+            navigation = instance.get('node_navigation_keys')
+            if navigation is not None:
+                require(len(navigation) == len(nodes) and all('navigation_key' in n for n in family['nodes']), 'compact navigation mapping')
+                for node, key in zip(nodes, navigation, strict=True):
+                    node['navigation_key'] = key
+            else:
+                require(all('navigation_key' not in n for n in family['nodes']), 'missing compact navigation')
             nodes[0]['label'] = instance['label']
             for attribute in nodes[0]['attributes']:
                 if attribute['name'] == 'expert_index':
@@ -187,6 +194,10 @@ def validate_architecture(value, context=None, *, validate_storage=True):
             require(value['requires_restart'], 'restart required')
         return
     graph = expand_compact_graph(value['graph'])
+    for category in ('nodes', 'repetitions', 'templates'):
+        unique([r for r in graph.get(category, []) if 'navigation_key' in r], 'navigation_key')
+    for node in graph['nodes']:
+        unique([p for p in node['ports'] if 'navigation_key' in p], 'navigation_key')
     nodes = unique(graph['nodes'])
     params = unique(graph['parameters'])
     unique(graph['edges'])
@@ -626,9 +637,9 @@ def compact_cases(inventory):
     """Small authored routed-expert wire document with distinct exact bindings."""
     provenance = [dict(kind='description', source='independent-compact-fixture', revision='1')]
     prefix = 'model.layers.1.mlp.experts.0'
-    root = dict(id='root',kind='group',label='MoE',children=['expert0','expert1'],ports=[],
+    root = dict(id='root',navigation_key='moe',kind='group',label='MoE',children=['expert0','expert1'],ports=[],
                 parameter_ids=[],references=[],attributes=[],provenance=provenance)
-    prototype = dict(id='expert0',kind='group',parent_id='root',label='Routed expert 0',
+    prototype = dict(id='expert0',navigation_key='expert/0',kind='group',parent_id='root',label='Routed expert 0',
                      operation='weighted_swiglu_mlp',children=[],ports=[],parameter_ids=['p0'],
                      references=[dict(kind='module',name=prefix),dict(kind='parameter',parameter_id='p0')],
                      attributes=[dict(name='semantic_role',value='mlp',provenance=provenance),
@@ -642,10 +653,10 @@ def compact_cases(inventory):
     def instance(index):
         return dict(node_id=f'expert{index}',prefix=f'model.layers.1.mlp.experts.{index}',
                     label=f'Routed expert {index}',index=index,node_ids=[f'expert{index}'],
-                    edge_ids=[],parameter_ids=[f'p{index}'],symbols=[])
-    graph = dict(graph_id='independent-compact',scope='language_model',coverage='complete',symbols=[],
+                    edge_ids=[],parameter_ids=[f'p{index}'],symbols=[],node_navigation_keys=[f'expert/{index}'])
+    graph = dict(graph_id='independent-compact',navigation_namespace='independent-compact-family',scope='language_model',coverage='complete',symbols=[],
                  nodes=[root],edges=[],parameters=[parameter(0),parameter(1)],diagnostics=[],
-                 repetitions=[dict(id='experts',parent_id='root',label='Routed experts',instances=[
+                 repetitions=[dict(id='experts',navigation_key='routed-experts',parent_id='root',label='Routed experts',instances=[
                      dict(node_id='expert0',index=0,variant='routed_expert'),
                      dict(node_id='expert1',index=1,variant='routed_expert')])],
                  compact_components=[dict(id='compact_experts',repetition_id='experts',base_prefix=prefix,
@@ -667,6 +678,13 @@ def compact_cases(inventory):
              edits=[edit('compact_components/0/instances/1/node_ids',['expert0'])],valid=False,
              schema_valid=True,context_edits=[]),
     ]
+    for name, path, value, schema_valid in [
+        ('duplicate-navigation', 'compact_components/0/instances/1/node_navigation_keys', ['expert/0'], True),
+        ('short-navigation-map', 'compact_components/0/instances/1/node_navigation_keys', ['a', 'b'], True),
+        ('oversized-navigation', 'navigation_namespace', 'x' * 129, False),
+    ]:
+        cases.append(dict(name='compact-' + name, base='compact_response', edits=[edit(path,value)],
+                          valid=False, schema_valid=schema_valid, context_edits=[]))
     compressed_prefix = 'model.layers.1.mlp.experts.0.w1'
     compressed_parameter = dict(
         id='p0', name=compressed_prefix + '.weight',
@@ -750,7 +768,7 @@ def fixtures():
         path=['linear', 'weight'], shape=[2, 3], rank=2, numel=6, storage_dtype='F16', logical_dtype='float32'),
         dict(id='tensor_volume', name='patch.weight', path=['patch', 'weight'], shape=[2, 3, 4], rank=3,
              numel=24, storage_dtype='F32', logical_dtype='float32')])
-    context = dict(session=dict(id='12345678-1234-4234-8234-123456789abc', model_id=response['model_id']),
+    context = dict(session=dict(id='12345678-1234-4234-8234-123456789abc', model_id=response['model_id'], model_revision='snapshot_A'),
                    tokenizer_available=True, inventory=inventory)
     cases = []
     def case(name, edits=(), valid=False, schema_valid=True, context_edits=(), physical_storage=()):

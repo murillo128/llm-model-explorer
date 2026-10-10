@@ -38,6 +38,50 @@ paths:
           $ref: "#/components/responses/ResourceExhausted"
         '500':
           $ref: "#/components/responses/InternalError"
+  /models/events:
+    get:
+      operationId: watchModel
+      tags: [Models]
+      summary: Observe the current state of one logical model
+      description: |
+        Indefinite SSE notifications, independent of LMEX operations. Every connection
+        obtains current state after metadata settles; Last-Event-ID never requests replay.
+        Named model-state data uses ModelState; observation-error uses ModelObservationError.
+        Event IDs are epoch:sequence. Frames are at most 64 KiB. The one-slot pending
+        queue replaces older states. Heartbeat comments are sent about every 15 seconds;
+        retry is 2000 milliseconds. Disable proxy buffering and allow idle heartbeats.
+      parameters:
+        - name: model_id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ObservedModelId'
+        - name: Last-Event-ID
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Accepted but ignored; reconnect always observes fresh current state.
+      responses:
+        '200':
+          description: Incremental model-state or observation-error events and comment heartbeats
+          content:
+            text/event-stream:
+              schema:
+                type: string
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            X-Accel-Buffering:
+              schema:
+                type: string
+                const: 'no'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '503':
+          $ref: '#/components/responses/ResourceExhausted'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /sessions:
     post:
       operationId: createSession
@@ -608,7 +652,7 @@ components:
     Session:
       type: object
       additionalProperties: false
-      required: [id, model_id]
+      required: [id, model_id, model_revision]
       properties:
         id:
           type: string
@@ -616,6 +660,88 @@ components:
         model_id:
           type: string
           minLength: 1
+        model_revision:
+          $ref: '#/components/schemas/ModelRevision'
+
+    ModelRevision:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[A-Za-z0-9_-]+$'
+      description: Opaque equality token for the pinned metadata snapshot, never an artifact key.
+
+    ObservedModelId:
+      type: string
+      minLength: 1
+      description: Exact nonempty logical identity, query-encoded without normalization. Reject unsupported_size if its escaped JSON cannot fit the 64 KiB event budget.
+
+    ModelStatePresent:
+      type: object
+      additionalProperties: false
+      required: [epoch, sequence, model_id, status, model_revision]
+      properties:
+        epoch:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        model_id:
+          $ref: '#/components/schemas/ObservedModelId'
+        status:
+          type: string
+          const: present
+        model_revision:
+          $ref: '#/components/schemas/ModelRevision'
+
+    ModelStateUnavailable:
+      type: object
+      additionalProperties: false
+      required: [epoch, sequence, model_id, status, model_revision]
+      properties:
+        epoch:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        model_id:
+          $ref: '#/components/schemas/ObservedModelId'
+        status:
+          type: string
+          const: unavailable
+        model_revision:
+          type: 'null'
+
+    ModelState:
+      oneOf:
+        - $ref: '#/components/schemas/ModelStatePresent'
+        - $ref: '#/components/schemas/ModelStateUnavailable'
+      discriminator:
+        propertyName: status
+        mapping:
+          present: '#/components/schemas/ModelStatePresent'
+          unavailable: '#/components/schemas/ModelStateUnavailable'
+
+    ModelObservationError:
+      type: object
+      additionalProperties: false
+      required: [epoch, sequence, model_id, code]
+      properties:
+        epoch:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        model_id:
+          $ref: '#/components/schemas/ObservedModelId'
+        code:
+          type: string
+          const: observation_failed
 
     TensorInventory:
       type: object
@@ -1418,6 +1544,10 @@ components:
       - label
       - shape
       properties:
+        navigation_key:
+          type: string
+          minLength: 1
+          maxLength: 128
         id:
           $ref: '#/components/schemas/ArchitectureId'
         direction:
@@ -1518,6 +1648,10 @@ components:
       - attributes
       - provenance
       properties:
+        navigation_key:
+          type: string
+          minLength: 1
+          maxLength: 128
         id:
           $ref: '#/components/schemas/ArchitectureId'
         kind:
@@ -1577,6 +1711,10 @@ components:
       - provenance
       - children
       properties:
+        navigation_key:
+          type: string
+          minLength: 1
+          maxLength: 128
         id:
           $ref: '#/components/schemas/ArchitectureId'
         kind:
@@ -1756,6 +1894,10 @@ components:
       - label
       - instances
       properties:
+        navigation_key:
+          type: string
+          minLength: 1
+          maxLength: 128
         bodies:
           type: array
           maxItems: 33554432
@@ -2050,6 +2192,10 @@ components:
       additionalProperties: false
       required: [id, label, component_role, revision, provenance, instances]
       properties:
+        navigation_key:
+          type: string
+          minLength: 1
+          maxLength: 128
         id:
           $ref: '#/components/schemas/ArchitectureId'
         label:
@@ -2076,6 +2222,14 @@ components:
       additionalProperties: false
       required: [node_id, prefix, label, index, node_ids, edge_ids, parameter_ids, symbols]
       properties:
+        node_navigation_keys:
+          type: array
+          minItems: 1
+          maxItems: 33554432
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
         node_id:
           $ref: '#/components/schemas/ArchitectureId'
         prefix:
@@ -2157,6 +2311,10 @@ components:
       - parameters
       - diagnostics
       properties:
+        navigation_namespace:
+          type: string
+          minLength: 1
+          maxLength: 128
         graph_id:
           $ref: '#/components/schemas/ArchitectureId'
         scope:

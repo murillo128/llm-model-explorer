@@ -1,3 +1,5 @@
+import { restoreBookmark } from './navigation-bookmark';
+import type { ArchitectureBookmark, CameraAnchor } from './navigation-bookmark';
 import { bodyProjectionIds } from './repeated-body';
 import type { components } from '../api/generated/types';
 import type { Projection, ProjectionOptions } from './projection';
@@ -20,7 +22,7 @@ export interface PortPosition extends Point { nodeId: string; portId: string; ab
 export interface Route { id: string; sections: Point[][]; junctions: Point[]; labels?: { x: number; y: number; width: number; height: number; lines: string[] }[] }
 export interface Layout { boxes: Box[]; ports: PortPosition[]; routes: Route[]; projection: Projection; edgeIds: string[]; width: number; height: number; milliseconds: number }
 export type GraphSnapshot = Pick<GraphView, 'selected' | 'selectionMode' | 'dimensions' | 'edge' | 'focus' | 'activeStack' | 'repetitions' |
-  'exhaustive' | 'showUnused' | 'showContext' | 'deriveMlp' | 'stateScope' | 'expanded' | 'viewport' | 'scope' | 'shared' | 'boundary' | 'modelCollapsed'>;
+  'exhaustive' | 'showUnused' | 'showContext' | 'deriveMlp' | 'stateScope' | 'expanded' | 'viewport' | 'scope' | 'shared' | 'boundary' | 'modelCollapsed' | 'restoreCamera' | 'cameraAnchor'>;
 export class GraphView {
   private revision = 0;
   private readonly listeners = new Set<() => void>();
@@ -66,27 +68,31 @@ export class GraphView {
   update(patch: Partial<Omit<GraphView, 'update'>>) {
     if (!Object.entries(patch).some(([key, value]) => Reflect.get(this, key) !== value)) return;
     if (['expanded', 'repetitions', 'exhaustive', 'scope', 'shared', 'stateScope', 'modelCollapsed'].some((key) => key in patch)) this.initialOverview = false;
+    if (!('restoreCamera' in patch) && ['selected', 'scope', 'shared', 'expanded', 'repetitions', 'modelCollapsed'].some((key) => key in patch)) this.restoreCamera = undefined;
     Object.assign(this, patch); this.revision++;
     this.listeners.forEach((listener) => listener());
   }
+  cameraAnchor: CameraAnchor | undefined;
+  restoreCamera: CameraAnchor | undefined;
   viewport: { x: number; y: number; zoom: number } | undefined;
 }
 /** Owned by the mounted backend shell, retained across explorer/session switches. No graph copies. */
 export class GraphViews {
   private readonly views = new Map<string, GraphView>();
-  get(model: string, graph: Graph): GraphView {
+  clear() { this.views.clear(); }
+  get(model: string, graph: Graph, bookmark?: ArchitectureBookmark): GraphView {
     const key = JSON.stringify([model, graph.graph_id]);
     let view = this.views.get(key);
-    if (!view) {
+    if (!view || bookmark) {
       // Old graph identities for this model cannot contain valid navigation
       // references to the replacement graph. Bound retained models as well.
       let clearedShared = false;
       for (const existing of this.views.keys()) if ((JSON.parse(existing) as string[])[0] === model) {
         clearedShared ||= Boolean(this.views.get(existing)?.shared); this.views.delete(existing);
       }
-      view = new GraphView(overviewExpansion(graph));
-      view.initialOverview = true;
-      if (clearedShared) view.notice = "Graph changed; the shared structure selection was cleared.";
+      view = bookmark ? restoreBookmark(graph, bookmark) : new GraphView(overviewExpansion(graph));
+      if (!bookmark) view.initialOverview = true;
+      if (clearedShared && !bookmark) view.notice = "Graph changed; the shared structure selection was cleared.";
       this.views.set(key, view);
     }
     this.views.delete(key); this.views.set(key, view);

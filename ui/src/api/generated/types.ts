@@ -17,6 +17,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/models/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Observe the current state of one logical model
+         * @description Indefinite SSE notifications, independent of LMEX operations. Every connection
+         *     obtains current state after metadata settles; Last-Event-ID never requests replay.
+         *     Named model-state data uses ModelState; observation-error uses ModelObservationError.
+         *     Event IDs are epoch:sequence. Frames are at most 64 KiB. The one-slot pending
+         *     queue replaces older states. Heartbeat comments are sent about every 15 seconds;
+         *     retry is 2000 milliseconds. Disable proxy buffering and allow idle heartbeats.
+         */
+        get: operations["watchModel"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sessions": {
         parameters: {
             query?: never;
@@ -325,6 +350,44 @@ export interface components {
             /** Format: uuid */
             id: string;
             model_id: string;
+            model_revision: components["schemas"]["ModelRevision"];
+        };
+        /** @description Opaque equality token for the pinned metadata snapshot, never an artifact key. */
+        ModelRevision: string;
+        /** @description Exact nonempty logical identity, query-encoded without normalization. Reject unsupported_size if its escaped JSON cannot fit the 64 KiB event budget. */
+        ObservedModelId: string;
+        ModelStatePresent: {
+            /** Format: uuid */
+            epoch: string;
+            sequence: number;
+            model_id: components["schemas"]["ObservedModelId"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "present";
+            model_revision: components["schemas"]["ModelRevision"];
+        };
+        ModelStateUnavailable: {
+            /** Format: uuid */
+            epoch: string;
+            sequence: number;
+            model_id: components["schemas"]["ObservedModelId"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "unavailable";
+            model_revision: null;
+        };
+        ModelState: components["schemas"]["ModelStatePresent"] | components["schemas"]["ModelStateUnavailable"];
+        ModelObservationError: {
+            /** Format: uuid */
+            epoch: string;
+            sequence: number;
+            model_id: components["schemas"]["ObservedModelId"];
+            /** @constant */
+            code: "observation_failed";
         };
         TensorInventory: {
             /** @enum {string} */
@@ -646,6 +709,7 @@ export interface components {
             meaning: components["schemas"]["ArchitectureText"];
         };
         ArchitecturePort: {
+            navigation_key?: string;
             id: components["schemas"]["ArchitectureId"];
             /** @enum {string} */
             direction: "input" | "output";
@@ -682,6 +746,7 @@ export interface components {
             provenance: components["schemas"]["ArchitectureProvenance"][];
         };
         ArchitectureLeafNode: {
+            navigation_key?: string;
             id: components["schemas"]["ArchitectureId"];
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -700,6 +765,7 @@ export interface components {
             formula?: components["schemas"]["ArchitectureText"];
         };
         ArchitectureGroupNode: {
+            navigation_key?: string;
             id: components["schemas"]["ArchitectureId"];
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -761,6 +827,7 @@ export interface components {
             output_port: components["schemas"]["ArchitectureId"];
         };
         ArchitectureRepetition: {
+            navigation_key?: string;
             bodies?: components["schemas"]["ArchitectureRepeatedBody"][];
             side_ports?: components["schemas"]["ArchitectureIndexedSidePort"][];
             id: components["schemas"]["ArchitectureId"];
@@ -869,6 +936,7 @@ export interface components {
             parameters: components["schemas"]["ArchitectureTemplateParameterRole"][];
         };
         ArchitectureTemplate: {
+            navigation_key?: string;
             id: components["schemas"]["ArchitectureId"];
             label: components["schemas"]["ArchitectureName"];
             /** @enum {string} */
@@ -878,6 +946,7 @@ export interface components {
             instances: components["schemas"]["ArchitectureTemplateInstance"][];
         };
         ArchitectureCompactInstance: {
+            node_navigation_keys?: string[];
             node_id: components["schemas"]["ArchitectureId"];
             prefix: components["schemas"]["ArchitectureName"];
             label: components["schemas"]["ArchitectureName"];
@@ -898,6 +967,7 @@ export interface components {
             instances: components["schemas"]["ArchitectureCompactInstance"][];
         };
         ArchitectureGraph: {
+            navigation_namespace?: string;
             graph_id: components["schemas"]["ArchitectureId"];
             /** @enum {string} */
             scope: "language_model" | "visual_encoder_predictor" | "model_defined";
@@ -1066,6 +1136,36 @@ export interface operations {
                         models: components["schemas"]["ModelSummary"][];
                         diagnostics: components["schemas"]["CatalogueDiagnostic"][];
                     };
+                };
+            };
+            422: components["responses"]["Unprocessable"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ResourceExhausted"];
+        };
+    };
+    watchModel: {
+        parameters: {
+            query: {
+                model_id: components["schemas"]["ObservedModelId"];
+            };
+            header?: {
+                /** @description Accepted but ignored; reconnect always observes fresh current state. */
+                "Last-Event-ID"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Incremental model-state or observation-error events and comment heartbeats */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    "X-Accel-Buffering"?: "no";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
                 };
             };
             422: components["responses"]["Unprocessable"];

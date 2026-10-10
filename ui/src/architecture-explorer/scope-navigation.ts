@@ -11,7 +11,8 @@ export function projectionOptions(view: GraphSnapshot): ProjectionOptions {
 
 /** Copy only small view state. Neither source records nor geometry enter history. */
 export function snapshotView(view: GraphSnapshot, viewport = view.viewport): GraphSnapshot {
-  return { selected: view.selected, boundary: view.boundary, modelCollapsed: view.modelCollapsed, selectionMode: view.selectionMode, dimensions: view.dimensions, edge: view.edge, focus: view.focus,
+  return { cameraAnchor: view.cameraAnchor ? { ...view.cameraAnchor } : undefined,
+    restoreCamera: view.restoreCamera ? { ...view.restoreCamera } : undefined, selected: view.selected, boundary: view.boundary, modelCollapsed: view.modelCollapsed, selectionMode: view.selectionMode, dimensions: view.dimensions, edge: view.edge, focus: view.focus,
     activeStack: view.activeStack, expanded: [...view.expanded],
     repetitions: Object.fromEntries(Object.entries(view.repetitions).map(([id, window]) => [id, { ...window }])),
     exhaustive: view.exhaustive, showUnused: view.showUnused, showContext: view.showContext,

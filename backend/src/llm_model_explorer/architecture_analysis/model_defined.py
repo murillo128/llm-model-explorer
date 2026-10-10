@@ -608,6 +608,13 @@ def analyze_definition(
         )
         build_definition(definition, inputs, builder)
         graph = bind_templates(definition, builder.finish(), builder)
+        graph = graph.model_copy(
+            update={
+                "navigation_namespace": builder.navigation_key(
+                    "model-defined-namespace", definition.scope
+                )
+            }
+        )
         return AnalysisResult(graph, None)
     except GraphError as exc:
         reason: Literal["unsupported_size", "analysis_failed"] = (

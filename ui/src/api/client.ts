@@ -7,6 +7,8 @@ import type { DecoderCallbacks, StreamOutcome } from './lmex-decoder';
 import type { RuntimeConfig } from './runtime-config';
 import { uuidPattern, validateResponse, validateSchema } from './validation';
 import type { Metadata } from './validation';
+import { watchModel } from './model-events';
+import type { ModelObserver } from './model-events';
 
 export type RequestActivity = { id: symbol; phase: 'start' | 'response' | 'end'; failure?: ApiFailure | undefined; quiet?: boolean };
 export type ActivityObserver = (activity: RequestActivity) => void;
@@ -120,6 +122,7 @@ export class ApiClient {
   listModels(signal?: AbortSignal) {
     return this.request<operations['listModels']['responses'][200]['content']['application/json']>('/models', 'GET', 200, 'listModels', undefined, signal);
   }
+  watchModel(modelId: string, observer: ModelObserver) { return watchModel(this.base, modelId, observer); }
   createSession(body: Schemas['CreateSessionRequest'], signal?: AbortSignal) {
     validateSchema('CreateSessionRequest', body);
     return this.request<Schemas['Session']>('/sessions', 'POST', 201, 'createSession', body, signal);
@@ -207,7 +210,11 @@ export class ApiClient {
           controller.signal.throwIfAborted();
           const { value, done } = await reader.read();
           controller.signal.throwIfAborted();
-          if (done) return decoder.finish();
+          if (done) {
+            const outcome = decoder.finish();
+            if (outcome.kind === 'backend') activity('end', new ApiFailure('backend', outcome.error.message, undefined, outcome.error));
+            return outcome;
+          }
           decoder.push(value);
         }
       } catch (error) {

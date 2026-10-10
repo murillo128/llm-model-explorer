@@ -4,8 +4,8 @@ export const models: ModelSummary[] = [
   { id: 'lab/alpha', display_name: 'Alpha', architectures: ['ExampleArchitecture'], tokenizer_available: true, parameter_count: 12 },
   { id: 'lab/beta', display_name: 'Beta', architectures: [], tokenizer_available: false },
 ];
-export const sessionA: Session = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', model_id: models[0]!.id };
-export const sessionB: Session = { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', model_id: models[1]!.id };
+export const sessionA: Session = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', model_id: models[0]!.id, model_revision: 'snapshot_A' };
+export const sessionB: Session = { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', model_id: models[1]!.id, model_revision: 'snapshot_A' };
 export const tensors: TensorDescriptor[] = [
   { id: 'first', name: 'left.weight', path: ['left', 'weight'], shape: [2, 3], rank: 2, numel: 6, storage_dtype: 'bfloat16', storage_format: 'safetensors', logical_dtype: 'float32' },
   { id: 'second', name: 'right.weight', path: ['right', 'weight'], shape: [3], rank: 1, numel: 3, storage_dtype: 'float32', logical_dtype: 'float32' },

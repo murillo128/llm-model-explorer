@@ -18,7 +18,7 @@ import { SessionController } from './session-controller';
 import type { SessionStorage } from './session-controller';
 
 const ArchitectureExplorer = lazy(() => import('../architecture-explorer/ArchitectureExplorer').then((module) => ({ default: module.ArchitectureExplorer })));
-const TokenizerExplorer = lazy(() => import('../tokenizer/TokenizerExplorer').then((module) => ({ default: module.TokenizerExplorer })));
+const TokenizerExplorer = lazy(() => import('../tokenizer/TokenizerExplorer').then((module) => ({ default: module.TokenizerWorkspace })));
 interface AppProps { config: RuntimeConfig; slots?: ExplorerSlots }
 function tabStorage(): SessionStorage | null {
   try { return window.sessionStorage; } catch { return null; }
@@ -31,20 +31,25 @@ export function App({ config, slots = {} }: AppProps) {
 
 function BackendApp({ config, slots }: Required<AppProps>) {
   const [controller] = useState(() => new SessionController(new ApiClient(config), config.backendBaseUrl, tabStorage()));
-  const [graphViews] = useState(() => new GraphViews());
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  // Views retain only current graph IDs; the refresh handoff carries portable presentation.
+  const [graphViews] = useState(() => new GraphViews());
+  useEffect(() => { graphViews.clear(); }, [graphViews, state.refreshAttempt]);
   useEffect(() => { controller.start(); return controller.dispose; }, [controller]);
-  const model = state.models.find((entry) => entry.id === state.session?.model_id);
+  const model = state.models.find((entry) => entry.id === state.selectedModelId);
   const tensor = state.selected;
   const supported = tensor?.rank === 1 || tensor?.rank === 2;
   const Slot = state.explorer === 'Tensor Explorer' ? (slots.tensor ?? TensorExplorer) : state.explorer === 'Tokenizer Explorer' ? slots.tokenizer : slots.architecture;
   const canCompose = state.session && state.sessionStatus === 'ready' &&
     (state.explorer !== 'Tensor Explorer' || supported);
+  const explorerClient = useMemo(() => controller.explorerClient(state.view), [controller, state.view]);
   const context = useMemo<ExplorerContextValue | null>(() => canCompose && state.session ? {
-    client: controller.explorerClient(state.view), session: state.session, sessionId: state.session.id,
+    client: explorerClient, session: state.session, sessionId: state.session.id,
     selectedTensor: tensor, selection: state.view,
+    refreshPresentation: controller.presentation,
+    refreshKey: { backend: config.backendBaseUrl, modelId: state.session.model_id, attempt: state.refreshAttempt },
     reportStatus: (status) => controller.reportStatus(state.view, status),
-  } : null, [canCompose, controller, state.session, state.view, tensor]);
+  } : null, [canCompose, controller, explorerClient, config.backendBaseUrl, state.refreshAttempt, state.session, state.view, tensor]);
   const architectureLoading = state.sessionStatus === 'loading' ? 'Loading model session…' :
     state.sessionStatus === 'failed' ? 'Session unavailable. Retry the session to load the architecture.' :
       state.sessionStatus === 'ready' ? 'Retrieving prepared architecture…' : 'Open a model session to use this explorer.';
@@ -56,9 +61,13 @@ function BackendApp({ config, slots }: Required<AppProps>) {
         </ViewerPanel>
       </section> : slots.tensor && <TensorHeader key={tensor.id} tensor={tensor} />}
     </>}
-    {context ? <ExplorerContext.Provider key={state.viewRevision} value={context}>
+    {state.explorer === 'Tokenizer Explorer' && !slots.tokenizer && state.selectedModelId ?
+      <Suspense fallback={<p role="status">Loading prompt editor…</p>}>
+        <TokenizerExplorer key={state.modelGeneration} client={explorerClient} sessionId={state.session?.id ?? ''}
+          signal={state.view.signal} tokenizerAvailable={state.sessionStatus === 'ready' && (model?.tokenizer_available ?? true)} />
+      </Suspense> : context ? <ExplorerContext.Provider key={state.viewRevision} value={context}>
       {Slot ? <Slot {...context} /> : state.explorer === 'Tokenizer Explorer' ?
-        <Suspense fallback={<p role="status">Loading prompt editor…</p>}><TokenizerExplorer {...context} tokenizerAvailable={model?.tokenizer_available ?? true} /></Suspense> :
+        <Suspense fallback={<p role="status">Loading prompt editor…</p>}><TokenizerExplorer {...context} signal={context.selection.signal} tokenizerAvailable={model?.tokenizer_available ?? true} /></Suspense> :
         <Suspense fallback={<div className="architecture-explorer explorer-card architecture-empty" aria-label="Architecture capability"><header className="architecture-empty-heading">Architecture</header><p className="architecture-capability-state" role="status">Retrieving prepared architecture…</p></div>}><ArchitectureExplorer {...context} views={graphViews} diagnostics={controller.diagnostics} tokenizerAvailable={model?.tokenizer_available ?? false} onInspect={slots.inspectArchitecture} /></Suspense>}
       {state.viewStatus !== 'idle' && <p role="status" data-state={state.viewStatus}>{state.viewStatus === 'failed' ? 'Operation failed.' : `Operation ${state.viewStatus}.`}</p>}
     </ExplorerContext.Provider> : state.explorer === 'Architecture Explorer' ?
@@ -86,7 +95,7 @@ function BackendApp({ config, slots }: Required<AppProps>) {
             {state.sessionStatus === 'loading' && <p role="status">Loading model session…</p>}
             {!state.session && state.sessionStatus !== 'loading' && <p role="status">Open a model session to browse tensors.</p>}
             {state.inventory === 'loading' && <p role="status">Loading tensor inventory…</p>}
-            {state.inventory === 'failed' && <><p role="status">{state.message}</p><Button onClick={controller.loadInventory}>Retry tensor inventory</Button></>}
+            {state.inventory === 'failed' && <><p role="status">{state.message}</p><Button onClick={() => controller.loadInventory()}>Retry tensor inventory</Button></>}
             {state.inventoryCoverage === 'partial' && <p role="status">Partial tensor inventory: some parameters cannot be inspected numerically.</p>}
             {state.inventoryDiagnostics.map((d, i) => <p key={i}>{d.message}</p>)}
             {state.inventory === 'complete' && !state.tensors.length && <p>No tensors available.</p>}
@@ -97,7 +106,7 @@ function BackendApp({ config, slots }: Required<AppProps>) {
           </ArchitectureWorkspace> : surface}
         </TensorWorkspace>
       </div>
-      <AppStatusBar state={state} model={model} onRetry={controller.loadModels} />
+      <AppStatusBar state={state} model={model} onRetry={controller.loadModels} onRetryObservation={controller.retryObservation} />
       <ToastHost toasts={state.toasts} onDismiss={controller.feedback.dismiss} />
     </div>
   </>;

@@ -93,14 +93,14 @@ export function PromptTokenizer({ client, sessionId, addSpecialTokens = true, to
   const prompt = <section className="prompt-tokenizer" aria-label="Live prompt tokenization">
     <label className="section-label" htmlFor={id}>Prompt</label>
     <p id={`${id}-help`} className="tokenizer-help">Edit the prompt directly. Gray brackets and IDs annotate source spans. Gray token text is an annotation without a source span.</p>
-    <InlineEditor id={id} result={current?.data} onEdit={edit} onContentHeight={onContentHeight}
+    <InlineEditor id={id} annotationIdentity={sessionId} result={current?.data} onEdit={edit} onContentHeight={onContentHeight}
       onSourceSelection={setSourceSelection}
       activeRow={activeRow?.signal === current?.signal ? activeRow?.row : null}
       onRowSelect={row => onRowSelect?.(row, tokenization)}
       onRowActivate={row => onRowActivate?.(row, tokenization)} />
     <div className="tokenizer-status-row">
       <p id={`${id}-status`} role={current?.error ? 'alert' : 'status'} className="tokenizer-status">
-        {message}{!current?.data && hasPrevious ? ' Previous annotations are stale.' : ''}
+        {message}{!current?.data && hasPrevious && result?.context === context ? ' Previous annotations are stale.' : ''}
       </p>
       <button type="button" className="button tokenizer-retry" hidden={!current?.error}
         onClick={() => edit(editor.text, false, true)}>Retry tokenization</button>

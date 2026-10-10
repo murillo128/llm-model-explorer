@@ -63,7 +63,7 @@ it('distinguishes expiration from transport errors and permits fresh creation or
   vi.mocked(client.listTensors).mockRejectedValue(expired);
   controller.loadInventory();
   await tick();
-  expect(controller.getSnapshot().sessionStatus).toBe('expired-session');
+  expect(controller.getSnapshot()).toMatchObject({ sessionStatus: 'loading', refreshStatus: 'updating', selectedModelId: models[0]!.id });
   controller.dispose();
 });
 
@@ -125,7 +125,7 @@ it('disposes A → B → A selections and tool changes, and accepts only current
   controller.reportStatus(nextA, 'expired-session');
   expect(controller.getSnapshot().sessionStatus).toBe('ready');
   controller.reportStatus(controller.getSnapshot().view, 'expired-session');
-  expect(controller.getSnapshot().sessionStatus).toBe('expired-session');
+  expect(controller.getSnapshot()).toMatchObject({ sessionStatus: 'loading', refreshStatus: 'updating', selectedModelId: models[0]!.id });
   controller.dispose();
 });
 

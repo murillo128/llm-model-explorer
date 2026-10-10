@@ -32,10 +32,11 @@ function useChildLifetime(parent: Lifetime) {
 }
 
 /** One modal generation; numeric children never own the graph's selection lifetime. */
-export function ArchitectureInspection({ context, graph, inventory, selected, onClose, diagnostics: findings = [] }: {
+export function ArchitectureInspection({ context, graph, inventory, selected, onClose, onParameterChange, diagnostics: findings = [] }: {
   context: ExplorerContextValue; graph: Graph; inventory: S['TensorInventory'];
   selected: ArchitectureSelection; onClose: () => void;
   diagnostics?: Diagnostic[];
+  onParameterChange?: (id: string) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const title = useId();
@@ -103,7 +104,7 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
       <Provenance records={node.provenance} />
       </>}
       <InterfaceDetails graph={graph} selected={selected} />
-      {parameters.length > 0 && <label>Parameter <select aria-label="Inspect parameter" value={choice} onChange={(event) => setChoice(event.target.value)}>
+      {parameters.length > 0 && <label>Parameter <select aria-label="Inspect parameter" value={choice} onChange={(event) => { setChoice(event.target.value); onParameterChange?.(event.target.value); }}>
         <option value="">Choose a parameter…</option>
         {parameters.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.binding}</option>)}
       </select></label>}

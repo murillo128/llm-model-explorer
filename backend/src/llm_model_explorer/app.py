@@ -1,6 +1,7 @@
 """Reusable application factory. The normative API lives in docs/spec/api/."""
 
 import asyncio
+import socket
 import threading
 from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
@@ -55,7 +56,7 @@ def create_app(
         allow_origins=list(settings.cors_origins),
         allow_credentials=False,
         allow_methods=["GET", "POST", "DELETE"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "Last-Event-ID"],
         expose_headers=["X-Operation-Id"],
     )
     for router in (
@@ -89,3 +90,11 @@ class ApplicationServer(uvicorn.Server):
             # The worker may reach publication before the loop delivers cancellation.
             self.application.state.startup_stop.set()
             task.cancel()
+
+    async def shutdown(self, sockets: list[socket.socket] | None = None) -> None:
+        # Lifespan teardown happens only after Uvicorn drains HTTP requests.
+        # Indefinite notifications must end before that drain can complete.
+        services = getattr(self.application.state, "services", None)
+        if isinstance(services, Services) and services.model_observer is not None:
+            services.model_observer.request_stop()
+        await super().shutdown(sockets)

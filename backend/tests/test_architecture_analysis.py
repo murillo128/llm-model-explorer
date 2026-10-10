@@ -1,7 +1,9 @@
 """Consume the independently audited API oracle; no model-family implementation oracle."""
 
+import base64
 import builtins
 import copy
+import hashlib
 import importlib.util
 import json
 import shutil
@@ -185,6 +187,11 @@ def test_builder_preserves_independent_full_instance_graph() -> None:
     assert result.graph is not None
     actual = result.graph.document()
     actual["graph_id"] = ORACLE["response"]["graph"]["graph_id"]
+    # Presentation metadata does not change the independently authored semantics.
+    assert actual.pop("navigation_namespace")
+    for node in actual["nodes"]:
+        for port in node["ports"]:
+            assert port.pop("navigation_key")
     assert actual == ORACLE["response"]["graph"]
 
 
@@ -225,6 +232,17 @@ def test_identity_uses_semantic_keys_not_order_labels_or_ambiguous_concatenation
             replace(inputs(), fingerprint="changed"), PRODUCER, "language_model"
         ).graph_id
     )
+
+
+def test_record_identity_encoding_preserves_the_full_namespaced_digest() -> None:
+    builder = GraphBuilder(inputs(), PRODUCER, "language_model")
+    record = builder.record_id("node", "layer.27.attention")
+    assert len(record) == 43
+    encoded = json.dumps(
+        ["architecture-record", builder.graph_id, "node", "layer.27.attention"],
+        separators=(",", ":"),
+    ).encode()
+    assert base64.urlsafe_b64decode(record + "=") == hashlib.sha256(encoded).digest()
 
 
 @pytest.mark.parametrize(

@@ -13,7 +13,7 @@ import { GraphViews } from './graph';
 
 vi.mock('./ArchitectureCanvas', () => ({ ArchitectureCanvas: ({ modelId, notices }: { modelId: string; notices: ReactNode }) => <div>{notices}Graph for {modelId}</div> }));
 const response = validateSchema('ArchitectureResponse', fixture.response);
-const session = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', model_id: response.model_id };
+const session = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', model_id: response.model_id, model_revision: 'snapshot_A' };
 const inventory = validateSchema('TensorInventory', fixture.context.inventory);
 function setup() {
   const client = new ApiClient({ backendBaseUrl: 'https://example.test' });
@@ -98,4 +98,25 @@ it('shows the bounded protocol validation failure', async () => {
   retrieve.mockRejectedValue(new ApiFailure('protocol', 'Invalid ArchitectureResponse schema'));
   render(<ArchitectureExplorer {...props} />);
   expect(await screen.findByRole('alert')).toHaveTextContent('Invalid ArchitectureResponse schema');
+});
+
+it('allows cold retrieval beyond 15 seconds, times out at 120 seconds, and retries the same session', async () => {
+  vi.useFakeTimers();
+  try {
+    const { props, retrieve } = setup();
+    retrieve.mockReturnValue(new Promise(() => {}));
+    const view = render(<ArchitectureExplorer {...props} />);
+    await act(async () => { await Promise.resolve(); });
+    const signal = retrieve.mock.calls[0]![2]!;
+    await act(() => vi.advanceTimersByTimeAsync(15_001));
+    expect(signal.aborted).toBe(false);
+    expect(screen.queryByRole('button', { name: 'Retry retrieval' })).not.toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(104_999));
+    expect(signal.aborted).toBe(true);
+    retrieve.mockResolvedValue(response);
+    await act(async () => { screen.getByRole('button', { name: 'Retry retrieval' }).click(); });
+    expect(retrieve.mock.calls.map(call => call[0])).toEqual([session.id, session.id]);
+    expect(screen.getByText(`Graph for ${session.model_id}`)).toBeInTheDocument();
+    view.unmount();
+  } finally { vi.useRealTimers(); }
 });

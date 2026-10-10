@@ -43,7 +43,7 @@ function setup() {
     });
   }
   const trigger = document.createElement('button'); document.body.append(trigger);
-  const session = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', model_id: response.model_id };
+  const session = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', model_id: response.model_id, model_revision: 'snapshot_A' };
   const context = { client, session, sessionId: session.id, selection: new Lifetime(), selectedTensor: null, reportStatus: vi.fn() };
   const props = { context, graph, inventory, selected: { modelId: response.model_id, sessionId: session.id, graphId: graph.graph_id, node, trigger }, onClose: vi.fn() };
   return { props, handles, trigger, client };

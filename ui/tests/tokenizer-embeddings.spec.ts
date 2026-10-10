@@ -154,8 +154,9 @@ test('A→B→A, late headers/data, options and session changes cancel supersede
   await tokenize(page, 4, tokens('A', [0], false)); await embeddingCount(page, 3);
   await tokenize(page, 5, tokens('A', [2])); await embeddingCount(page, 4);
   await page.getByRole('button', { name: 'Change session' }).click(); await count(page, 7);
-  await stream(page, 3, [2]); await expect(page.locator('.matrix-scroll')).toBeVisible();
-  await expect(page.locator('[data-embeddings]')).toHaveAttribute('data-embeddings', 'stale');
+  await stream(page, 3, [2]); await expect(page.locator('.matrix-scroll')).toHaveCount(0);
+  // A replacement session clears scientific results even if old delivery completes.
+  expect(await page.evaluate(() => window.embeddingHarness.renderers.every(renderer => renderer.state === 'disposed'))).toBe(true);
   await tokenize(page, 6, tokens('A', [0])); await embeddingCount(page, 5); await stream(page, 4, [0]);
   expect(await page.evaluate(() => window.embeddingHarness.requests[4]!.session)).toMatch(/^bbbb/);
   await expect(page.getByText('[1 × 7] · float32')).toBeVisible();

@@ -525,7 +525,19 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       const center = centerPending.current && boxes.get(centerPending.current);
       const substitute = anchor.current?.sourceId && [...projected.values()].find((n) => n.sourceIds.includes(anchor.current!.sourceId!));
       const at = anchor.current && (boxes.get(anchor.current.id) ?? (substitute ? boxes.get(substitute.id) : undefined));
-      if (collapsePending.current === options) await fitLayout({ padding: 0.1, minZoom: 0.00001, maxZoom: 1 });
+      if (view.restoreCamera) {
+        const restore = view.restoreCamera;
+        view.restoreCamera = undefined;
+        const target = boxes.get(restore.target) ?? [...projected.values()].filter((n) => n.sourceIds.includes(restore.target)).map((n) => boxes.get(n.id)).find(Boolean);
+        if (target) {
+          const zoom = Math.max(0.00001, Math.min(4, restore.zoom));
+          const x = Math.max(0.1, Math.min(0.9, restore.x)) * size.width;
+          const y = Math.max(0.1, Math.min(0.9, restore.y)) * size.height;
+          await flow.setViewport({ zoom, x: x - (target.absoluteX + Math.min(target.width / 2, 180)) * zoom,
+            y: y - (target.absoluteY + Math.min(target.height / 2, 120)) * zoom });
+        } else await fitLayout({ padding: 0.1, minZoom: 0.8, maxZoom: 1 });
+      }
+      else if (collapsePending.current === options) await fitLayout({ padding: 0.1, minZoom: 0.00001, maxZoom: 1 });
       else if (restorePending.current) await flow.setViewport(restorePending.current);
       else if (scopeCameraPending.current) await fitLayout({ padding: 0.1, minZoom: 0.8, maxZoom: 1 });
       else if (fitPending.current) await fitLayout({ padding: 0.1, minZoom: 0.00001, maxZoom: 1,
@@ -541,7 +553,18 @@ function Canvas({ graph, modelId, sessionId, view, onInspect, onDismissInspectio
       restorePending.current = undefined; scopeCameraPending.current = false;
       collapsePending.current = undefined;
     });
+  useEffect(() => {
+    const viewport = view.viewport, container = flowContainer.current;
+    if (!viewport || !container?.offsetWidth || !container.offsetHeight) return;
+    const id = view.selected ?? view.scope ?? interfaces.outer.id;
+    const target = id && (boxes.get(id) ?? [...projected.values()].filter((n) => n.sourceIds.includes(id)).map((n) => boxes.get(n.id)).find(Boolean));
+    if (!target || !id) { view.cameraAnchor = undefined; return; }
+    view.cameraAnchor = { target: id, zoom: viewport.zoom,
+      x: (viewport.x + (target.absoluteX + Math.min(target.width / 2, 180)) * viewport.zoom) / container.offsetWidth,
+      y: (viewport.y + (target.absoluteY + Math.min(target.height / 2, 120)) * viewport.zoom) / container.offsetHeight };
+  }, [view, view.viewport, selected, view.scope, boxes, projected, interfaces.outer.id]);
   const cancelCamera = useCanvasCallback(() => {
+    view.restoreCamera = undefined;
     view.update({ initialOverview: false }); cameraState.cancel(); initialized.current = true;
     anchor.current = null; centerPending.current = null; fitPending.current = false;
     restorePending.current = undefined; scopeCameraPending.current = false; collapsePending.current = undefined;

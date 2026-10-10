@@ -55,6 +55,11 @@ export function expandCompactGraph(graph: Graph): Graph {
       family.symbols.forEach((name, i) => ids.set(name, instance.symbols[i]!));
       const materializedNodes = family.nodes.map((node) => replace(node, ids, family.base_prefix, instance.prefix) as S['ArchitectureNode']);
       const materializedEdges = family.edges.map((edge) => replace(edge, ids, family.base_prefix, instance.prefix) as S['ArchitectureEdge']);
+      const navigation = instance.node_navigation_keys;
+      if (navigation) {
+        require(navigation.length === materializedNodes.length && family.nodes.every((n) => n.navigation_key), 'Compact navigation mapping');
+        materializedNodes.forEach((node, i) => { node.navigation_key = navigation[i]!; });
+      } else require(family.nodes.every((n) => !n.navigation_key), 'Missing compact navigation mapping');
       const root = materializedNodes[0]!;
       require(root.kind === 'group' && root.parent_id === repetition.parent_id, 'Compact parent mismatch');
       root.label = instance.label;

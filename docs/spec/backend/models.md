@@ -67,7 +67,7 @@ Ordinary metadata listing reads configuration, indexes, and headers only. Full-f
 
 The process-lifetime model catalogue retains one immutable successful discovery result, including selectable entries and ordered path-free diagnostics. Startup discovery warms the same cache used by metadata listing and model lookup for session pinning. Each catalogue-dependent call checks a bounded filesystem metadata generation: immediate root candidates and assets, plus explicitly indexed nested shards (including those in rejected candidates). The check covers names, confined resolved targets, file types, device/inode, size, modification time and change time, detecting additions, removals, renames, replacements, symlink retargeting and same-size writes with restored modification time. It reads no asset bytes and does not rebuild tensor inventories, quantization metadata or adapter bindings on a hit.
 
-Refresh is serialized across callers and publishes only a complete discovery against a stable generation. Newly learned nested shard dependencies require a stable scan with those paths included before discovery. A changing root is retried at bounded discovery boundaries; persistent instability returns a path-free validation error. A failed refresh preserves the last successful cache internally but cannot serve it for a changed generation; a later call can retry. There is no persistent catalogue cache, TTL, watcher or background refresh. A changed model root is observable on the next catalogue-dependent call without restart; architecture readiness for newly discovered content follows the demand-preparation lifecycle in [backend architecture](architecture.md#demand-preparation-after-startup). HTTP metadata responses retain `Cache-Control: no-store`. This metadata generation never replaces cryptographic content fingerprints for pinning, duplicate identity comparison or architecture/artifact identity, and never refreshes an existing pinned session.
+Refresh is serialized across callers and publishes only a complete discovery against a stable generation. Newly learned nested shard dependencies require a stable scan with those paths included before discovery. A changing root is retried at bounded discovery boundaries; persistent instability returns a path-free validation error. A failed refresh preserves the last successful cache internally but cannot serve it for a changed generation; a later call can retry. There is no persistent catalogue cache or TTL. Subscription-driven observation below is the only background refresh owner. A changed model root is observable on the next catalogue-dependent call without restart; architecture readiness for newly discovered content follows the demand-preparation lifecycle in [backend architecture](architecture.md#demand-preparation-after-startup). HTTP metadata responses retain `Cache-Control: no-store`. This metadata generation never replaces cryptographic content fingerprints for pinning, duplicate identity comparison or architecture/artifact identity, and never refreshes an existing pinned session.
 
 Before/after hashing, inventory access, guarded tokenizer work, and each tensor chunk, check the asset set, resolved targets, device/inode, size, modification time, and change time. Replacement, removal, addition, or mutation invalidates a pinned source with `model_content_changed`; never silently refresh a session. Explicit rehash remains available. This assumes ordinary filesystem change tracking in the trusted deployment environment; no full rehash is required per chunk. Exhaust iterators and pass final checks before declaring successful generation/publication.
 
@@ -139,3 +139,37 @@ F32/F16/BF16 input table. Reuse logical ordered row access without tokenizer-spe
 physical decoders; actionable packed tables use that same seam.
 Only missing/unaccepted mappings or unavailable representations are unsupported;
 source mutation, I/O, and delivery faults retain their existing failure codes.
+
+
+## Subscription-driven observation
+
+One application-owned observer serves at most 256 simultaneous model subscriptions.
+It starts with the first subscriber, stops and settles its blocking worker after the
+last disconnect, and closes before its worker pool at shutdown. Its lifetime is
+independent from numerical consumers and architecture preparation locks/stop flags.
+There is no per-tab watcher, hashing loop, discovery task or graph generation.
+
+Approximately one-second ticks capture the existing bounded metadata generation off
+the event loop. Two identical observations separated by a tick precede validated
+catalogue refresh/publication. Unchanged ticks reuse successful discovery and read
+no asset payloads, hashes, headers, quantization metadata or graphs. A settled
+change shares the existing catalogue lock with ordinary callers. Discovery retains
+its stable-generation checks, including newly learned indexed shard dependencies.
+Ambiguous catalogues and root observation failures are errors, not mass deletion.
+Failed discovery retries with exponentially increasing tick delays capped at 32;
+material metadata changes reset the delay. Invalid individual candidates remain
+subject to normal admission, and a partial copy or repair can recover automatically.
+
+Atomic directory/file replacement is the preferred checkpoint producer behavior.
+Filesystem quiet does not prove export completeness; admission/source validation
+still applies. Large inventories, duplicate-ID integrity hashing and later graph
+preparation have no strict end-to-end notification latency guarantee.
+
+A bounded opaque revision token is derived from each captured FileSnapshot and all
+base/adapter dependencies with a private process key. The same captured metadata
+has the same token within the process; additions, removals, replacements, retargets
+and writes (including restored mtime) change it. Unrelated model updates do not.
+Tokens reveal no paths, have equality semantics only, and may change for identical
+bytes replaced on disk. They never replace content fingerprints for artifacts,
+duplicate-ID comparisons or guarded numeric access. Bookkeeping contains only the
+current catalogue and active subscriptions, with no historical revision/replay log.

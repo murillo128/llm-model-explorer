@@ -4,7 +4,7 @@
 
 Architecture Explorer is an additional static model view inside the existing bounded application shell. It does not replace Tensor Explorer, Tokenizer Explorer, or Matrix Explorer. [Product scope](../product.md#architecture-reference-checkpoints-and-bounded-coverage) defines the selected model coverage; [the API contract](../api/architecture-explorer.md) provides the prepared graph and resource references.
 
-Fetch the prepared architecture for the selected session when its view is needed. This is retrieval, not generation. Display available complete/partial coverage or a model-local unavailable reason; the server has already finished preparation before accepting connections. A restart-required result must explain that restarting prepares new or changed models. Do not add a regenerate button, analysis polling, metadata-only onboarding, or a text prompt needed to see the graph.
+Fetch the prepared architecture for the selected session when its view is needed. This is retrieval, not generation. Display available complete/partial coverage or a model-local unavailable reason; startup content is prepared before accepting connections, while newly pinned content may require shared demand preparation. Use a cancellable 120-second retrieval budget (including inventory validation), with an explicit same-session Retry on timeout. Timeout does not create another session; shared preparation may continue for reuse. A restart-required result retains its explicit recovery explanation. Do not add a regenerate button, analysis polling, metadata-only onboarding, or a text prompt needed to see the graph.
 
 A failure affects only this capability. Preserve all existing supported exploration workflows, matrix camera behavior, prompt editing, embedding linkage, streaming, and cancellation. Show explicit partial-coverage diagnostics when supplied by the inventory; a fully actionable quantized inventory may report complete.
 
@@ -678,6 +678,48 @@ Connection interaction tests must actually hover/focus source ports, destination
 Visual acceptance uses the established neutral/amber language and verifies readable labels, visible direction, non-overlapping nodes/labels, and distinguishable multi-signal routing at representative desktop widths. Compare the surrounding application before and after with only the Architecture panel interior allowed to change; the application shell, Tensor Explorer, Tokenizer Explorer, and shared Matrix Explorer presentation must not acquire geometry, typography, color, or interaction regressions from Architecture-specific work.
 
 Integrated tests use the built UI, real HTTP backend, and the repository's existing browser/WebGL2 harness. Verify that architecture failures do not break existing tensor/tokenizer workflows and that absence of a tokenizer on V-JEPA does not trigger phantom tokenization calls. A structural graph fixture proves UI behavior, not actual checkpoint support; reference evidence is governed by [analysis validation](../backend/architecture-analysis.md#validation-and-evidence).
+
+## Same-model automatic refresh restoration
+
+At the shell's refresh capture boundary, preserve a typed presentation bookmark
+only for the same backend and public logical model. Resolve it once for the exact
+refresh attempt after the replacement graph arrives. Keep semantic keys and
+ordered ancestor locators, flags, valid expansions, concrete repetition windows,
+browser query/disclosures/scroll positions and at most sixteen remapped Back
+snapshots. Retain at most eight model views. The capsule is bounded to 64 KiB and
+must not retain source graphs, projections, layouts, numeric arrays or old tensor
+descriptors. Explicit navigation, backend/model changes or a newer refresh
+supersede pending restoration; camera interaction supersedes pending framing.
+
+An unambiguous compatible namespace/key/kind/containment match selects the new
+runtime record. Changed labels or order do not affect identity. A missing or
+incompatible component falls back to its nearest surviving compatible ancestor,
+then normal compact model overview, with one concise explanation. Missing
+metadata or a changed namespace uses the overview. An unavailable graph keeps
+the selected explorer and its ordinary localized capability explanation.
+
+Projection-only locators are typed: derived MLPs name their source owner,
+repetition windows name their repetition and concrete indices, indexed roles name
+the verified family, and repeated bodies name their slot roles and concrete
+context. Reconstruct these against the new projection and clamp obsolete window
+bounds. Rebuild Shared correspondence; preserve exact nonzero layer/expert
+bindings, and keep neutral structure-only views unbound. Never select instance
+zero as a substitute for a missing instance. Retain only valid history entries.
+
+Resolve secondary ports/connections by new source endpoint keys, node-local port
+keys and edge kinds, including ordered projected source paths. Otherwise clear
+only that secondary selection. Reopen inspection only through the new component,
+exact logical parameter/tensor name and current binding/rank/inventory capability,
+using a new session-bound numeric consumer. Close an unresolved inspection with
+a safe notice; obsolete numeric views cannot remain mounted as current.
+
+After the new layout and a nonzero viewport are committed, restore compatible
+zoom around the selected component/scope using its normalized screen anchor and
+current camera limits. Clamp off-screen anchors to useful content; center the
+surviving ancestor on fallback. Do not replay initial overview collapse/Fit after
+successful restoration. Old layout and HTTP completion guards remain mandatory.
+Browser visibility/width persist through the existing workspace preference owner;
+old browser rows and inspector actions disappear during replacement.
 
 ## Model-supplied provenance
 

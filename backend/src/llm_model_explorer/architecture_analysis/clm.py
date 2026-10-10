@@ -268,7 +268,8 @@ def architecture(inputs: AnalysisInput, cfg: dict[str, Any]) -> dict[str, Any]:
         ("candidate_encoder", "C", "S_candidate"),
     ):
         ids = {
-            n["id"]: call if n["id"] == root["id"] else f"{call}.{n['id']}" for n in graph["nodes"]
+            n["id"]: call if n["id"] == root["id"] else f"{call}.{n['navigation_key']}"
+            for n in graph["nodes"]
         }
 
         def dims(value: Any, batch: str = batch, seq: str = seq) -> Any:
