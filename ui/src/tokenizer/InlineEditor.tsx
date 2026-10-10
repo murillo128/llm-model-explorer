@@ -89,6 +89,7 @@ function decorations(result: Tokenization): DecorationSet {
 
 interface Props {
   id: string;
+  annotationIdentity?: string;
   result: Tokenization | undefined;
   activeRow?: number | null | undefined;
   onRowSelect?: ((row: number | null) => void) | undefined;
@@ -100,7 +101,7 @@ interface Props {
 
 /** CodeMirror's immutable document/history remain separate from decoration-only
  * transactions. Widgets and brackets never enter source, selections or copy. */
-export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect, onRowActivate, onContentHeight, onSourceSelection }: Props) {
+export function InlineEditor({ id, annotationIdentity, result, onEdit, activeRow = null, onRowSelect, onRowActivate, onContentHeight, onSourceSelection }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const edit = useRef(onEdit);
@@ -142,6 +143,9 @@ export function InlineEditor({ id, result, onEdit, activeRow = null, onRowSelect
     reportHeight(instance);
     return () => { disposed = true; view.current = null; instance.destroy(); };
   }, [id]);
+  useLayoutEffect(() => {
+    view.current?.dispatch({ effects: [annotationsChanged.of(Decoration.none), annotationsStale.of(true)] });
+  }, [annotationIdentity]);
   useLayoutEffect(() => {
     const instance = view.current;
     if (!instance) return;

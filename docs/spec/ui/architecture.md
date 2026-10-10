@@ -35,7 +35,7 @@ Keep path-free catalogue diagnostics for rejected PEFT adapter candidates visibl
 
 Consume numerical long-operation responses incrementally; begin rendering before the entire tensor arrives. Cancellation aborts the active stream and uses operation cancellation where required.
 
-Architecture is already prepared at startup and retrieved as bounded structured JSON. Its response has graph identity and capability states, not progressive numeric values or an analysis job to poll. Keep graph and modal requests fenced by session/model/graph identity; late callbacks must not overwrite a later selection.
+Architecture is prepared at startup or on demand for a newly pinned session and retrieved as bounded structured JSON. Its response has graph identity and capability states, not progressive numeric values or an analysis job to poll. Keep graph and modal requests fenced by session/model/graph identity; late callbacks must not overwrite a later selection.
 
 ## Matrix Explorer composition
 
@@ -54,8 +54,9 @@ The shell footer reports last observed backend reachability independently of ses
 existence: Connecting initially, Connected after a response (including HTTP or
 protocol errors), Disconnected after transport failure, and Reconnecting only while
 an actual request is pending after failure. Cancellation and session expiration do
-not imply disconnection. Existing refresh/recovery actions remain explicit; no
-heartbeat, polling, automatic numerical replay, or new backend endpoint is used.
+not imply disconnection. Catalogue Reload remains explicit. The bounded same-model replacement exception
+below automatically reloads only the selected read-only exploration; it does not
+authorize inference or arbitrary numeric jobs.
 
 Connection transitions use only the footer. Consequential transport failures may
 produce one dismissible shell toast per request, while the affected explorer keeps
@@ -97,3 +98,40 @@ No disk persistence is needed. Architecture-specific inline notices remain local
 to Architecture Explorer; inventory/tokenizer recovery and scientific surfaces
 retain their existing behavior. Connection state and transient events continue
 through the separate footer/toast routing above.
+
+
+## Automatic same-model refresh
+
+One native EventSource subscription per selected model belongs to the tab/backend
+session controller, using the API model-event contract. Validate bounded schemas,
+identity, epoch and sequence; ignore unrelated models, stale callbacks and repeated
+or out-of-order events. Compare revisions to the actual pinned Session snapshot.
+Initial/reconnected state catches missed changes. Transport loss alone preserves
+usable scientific views and reports Live updates reconnecting in the footer.
+Protocol and observation errors have fixed safe copy and explicit Retry.
+
+A changed revision, restart epoch, or current request's `model_content_changed` /
+known-model `session_not_found` replaces the session without rebinding it. Capture
+small presentation state, detach old consumers, clear scientific results and
+current diagnostics, delete the retired session, then pin the same logical model.
+Only one replacement POST runs at a time. Coalesce pending changes and reconcile
+its result through a fresh subscription; revision tokens have equality semantics.
+Never relabel old data. Inventory and the currently selected explorer load afresh;
+architecture availability cannot gate Tensor or Tokenizer use.
+
+Explicit close/model choice supersedes pending work; delete abandoned POST results.
+Explorer navigation during refresh wins over earlier presentation state. Retain
+selected identity while unavailable and observe its repair, never select another
+model implicitly. Legacy storage containing only an unknown expired session ID
+uses manual recovery. Source prompts are never persisted as recovery metadata.
+Transient transport/server failures allow three retries after 1/2/4 seconds, cancelled
+by new intent or revision. Stable admission errors wait for a new revision or Retry.
+Retired-session deletion gets one bounded retry and a safe failure notice.
+
+Updating model / Waiting for valid model use the existing footer and local surfaces.
+Preserve drawer geometry/preferences and backend connection feedback. Completion is
+one unobtrusive notice; catalogue metadata may reload once after successful replacement.
+A typed, bounded, once-consumed presentation handoff is scoped by backend, logical
+model and refresh attempt. It carries primitives and semantic locators only. The
+architecture restoration implementation owns cross-graph correspondence; without it,
+start a fresh graph rather than reusing old IDs or camera state.

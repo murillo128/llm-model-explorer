@@ -4,6 +4,7 @@ import type { ComponentType } from 'react';
 import type { ApiClient } from '../api/client';
 import type { Lifetime } from './lifetime';
 import type { Session, TensorDescriptor, ViewStatus } from './session-controller';
+import type { RefreshKey, RefreshPresentation } from './refresh-presentation';
 
 export interface ExplorerContextValue {
   client: ApiClient;
@@ -13,6 +14,8 @@ export interface ExplorerContextValue {
   /** Disposed synchronously on selection, tool, session, or backend changes. */
   selection: Lifetime;
   reportStatus: (status: ViewStatus) => void;
+  refreshPresentation?: RefreshPresentation;
+  refreshKey?: RefreshKey;
 }
 export interface ExplorerSlots {
   tensor?: ComponentType<ExplorerContextValue>;
