@@ -7,6 +7,7 @@ HTTP framing and tokenization remain the production implementations.
 import argparse
 import asyncio
 import json
+import os
 import tempfile
 import time
 from collections import Counter
@@ -147,6 +148,13 @@ def application(root: Path, origin: str, device: str = "cpu"):
                 "mtime_ns": payload.stat().st_mtime_ns,
             }
         return {
+            "pid": os.getpid(),
+            "sessions": [str(key) for key in app.state.services.sessions._sessions],
+            "observer": {
+                "epoch": app.state.services.model_observer.epoch,
+                "subscribers": len(app.state.services.model_observer._subscribers),
+                "running": app.state.services.model_observer._task is not None,
+            },
             "control": control,
             "productions": dict(counts),
             "timings": timings,
@@ -162,6 +170,14 @@ def application(root: Path, origin: str, device: str = "cpu"):
             "device": runtime.device,
             "source_reads": source_reads,
         }
+
+    @router.post("/__test/disconnect-model-events")
+    async def disconnect_model_events():
+        # End actual HTTP streams. Native EventSource must reconnect and obtain
+        # fresh production observation; this control never manufactures a frame.
+        for subscription in tuple(app.state.services.model_observer._subscribers):
+            subscription.replace(None)
+        return {"disconnected": True}
 
     settings = Settings(
         model_root=root / "models",
