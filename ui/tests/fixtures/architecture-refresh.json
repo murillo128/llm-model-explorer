@@ -1,0 +1,1071 @@
+{
+  "before": {
+    "navigation_namespace": "r726kAUGPnJ-834hpOcCcGZZc1xlXJiCi-tSI3LdbLI",
+    "graph_id": "baeb00ec5a7b6e1f4aea28993f57977cec46ea123d78f433023e38c9c07cdb58",
+    "scope": "model_defined",
+    "coverage": "complete",
+    "symbols": [
+      {
+        "name": "B",
+        "meaning": "Symbolic batch size; no input was executed."
+      }
+    ],
+    "nodes": [
+      {
+        "navigation_key": "FO7cpWMa2wsBY4U1sC56JBOM8UFr0JhsCS6pLIC3a3c",
+        "id": "e4ea87318ac7c99ac473c4793006a562b457edf754d516203ee8ff771240acc8",
+        "kind": "context",
+        "label": "Model-supplied definition",
+        "ports": [],
+        "parameter_ids": [],
+        "references": [],
+        "attributes": [
+          {
+            "name": "definition_origin",
+            "value": "model",
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "model-supplied architecture.json",
+                "revision": "encoder-v1",
+                "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+              }
+            ]
+          },
+          {
+            "name": "semantic_verification",
+            "value": "not_verified",
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "model-supplied architecture.json",
+                "revision": "encoder-v1",
+                "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+              }
+            ]
+          },
+          {
+            "name": "name",
+            "value": "Example experimental encoder",
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "model-supplied architecture.json",
+                "revision": "encoder-v1",
+                "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+              }
+            ]
+          },
+          {
+            "name": "architecture_revision",
+            "value": "encoder-v1",
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "model-supplied architecture.json",
+                "revision": "encoder-v1",
+                "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+              }
+            ]
+          },
+          {
+            "name": "declared_scope",
+            "value": "feature_encoder",
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "model-supplied architecture.json",
+                "revision": "encoder-v1",
+                "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+              }
+            ]
+          }
+        ],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ],
+        "description": "This graph was supplied with the checkpoint. Validation checks its structure and parameter bindings; it does not establish equivalence to forward()."
+      },
+      {
+        "navigation_key": "gULaPhPsHZu5LmnNR8m30lSkdxNikPnwnp8i-HblfSg",
+        "id": "9c72f104c976b874e8baced385f0445ba94ead994ef7734f9b75bfafc49d6553",
+        "kind": "input",
+        "label": "Observations",
+        "ports": [
+          {
+            "navigation_key": "j8mkjhZ_HlQrlxD6lJ4643CtFvq3k5sdCKR4XTTAXBw",
+            "id": "out",
+            "direction": "output",
+            "label": "out",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ]
+          }
+        ],
+        "parameter_ids": [],
+        "references": [],
+        "attributes": [],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          },
+          {
+            "kind": "description",
+            "source": "observations",
+            "revision": "encoder-v1",
+            "rule": "Semantic source key supplied by the model author; not source-verified."
+          }
+        ]
+      },
+      {
+        "navigation_key": "mkx3A7jRLqpSn6Sx7-jXTmveofB8daauljYSolQ4pvM",
+        "id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+        "kind": "group",
+        "label": "Encoder",
+        "ports": [
+          {
+            "navigation_key": "hXdct_RuMK-1bj3t3rLXzI5Y5dlCJU6qV2rdIaluSak",
+            "id": "x",
+            "direction": "input",
+            "label": "x",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "navigation_key": "j8mkjhZ_HlQrlxD6lJ4643CtFvq3k5sdCKR4XTTAXBw",
+            "id": "out",
+            "direction": "output",
+            "label": "out",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 4
+              }
+            ]
+          }
+        ],
+        "parameter_ids": [],
+        "references": [],
+        "attributes": [],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          },
+          {
+            "kind": "description",
+            "source": "encoder",
+            "revision": "encoder-v1",
+            "rule": "Semantic source key supplied by the model author; not source-verified."
+          }
+        ],
+        "children": [
+          "411bf5ba03602f8e92d6617ed652b155aff302bbd9ec7acba77631a3db132669",
+          "e6d45d34f86ec32b3b7311a96e8a5c8fb851f429e721f88c4dfa8cbeb3c4297e"
+        ]
+      },
+      {
+        "navigation_key": "LszD65ctQOxWURBIQkEfRpm4ijwwq_UmV_-V5KTbIto",
+        "id": "411bf5ba03602f8e92d6617ed652b155aff302bbd9ec7acba77631a3db132669",
+        "kind": "operation",
+        "label": "Projection",
+        "ports": [
+          {
+            "navigation_key": "hXdct_RuMK-1bj3t3rLXzI5Y5dlCJU6qV2rdIaluSak",
+            "id": "x",
+            "direction": "input",
+            "label": "x",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "navigation_key": "j8mkjhZ_HlQrlxD6lJ4643CtFvq3k5sdCKR4XTTAXBw",
+            "id": "out",
+            "direction": "output",
+            "label": "out",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 4
+              }
+            ]
+          }
+        ],
+        "parameter_ids": [
+          "124a6a7fd364e63083e75cbecb0c979a4faa2c07a9c4646e11b3d74ff59638f7",
+          "220f75ef92c4c61fd5c921d5c4c1ea724d2d52b635ed906c6e5b3f311063b3bc"
+        ],
+        "references": [],
+        "attributes": [],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          },
+          {
+            "kind": "description",
+            "source": "projection",
+            "revision": "encoder-v1",
+            "rule": "Semantic source key supplied by the model author; not source-verified."
+          }
+        ],
+        "parent_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+        "operation": "linear",
+        "formula": "y = x W^T + b"
+      },
+      {
+        "navigation_key": "89zzMQi0qNPVyyVg6rkriT-qct1sRXI3pFhfSbE5Y24",
+        "id": "e6d45d34f86ec32b3b7311a96e8a5c8fb851f429e721f88c4dfa8cbeb3c4297e",
+        "kind": "operation",
+        "label": "GELU",
+        "ports": [
+          {
+            "navigation_key": "hXdct_RuMK-1bj3t3rLXzI5Y5dlCJU6qV2rdIaluSak",
+            "id": "x",
+            "direction": "input",
+            "label": "x",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 4
+              }
+            ]
+          },
+          {
+            "navigation_key": "j8mkjhZ_HlQrlxD6lJ4643CtFvq3k5sdCKR4XTTAXBw",
+            "id": "out",
+            "direction": "output",
+            "label": "out",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 4
+              }
+            ]
+          }
+        ],
+        "parameter_ids": [],
+        "references": [],
+        "attributes": [],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          },
+          {
+            "kind": "description",
+            "source": "activation",
+            "revision": "encoder-v1",
+            "rule": "Semantic source key supplied by the model author; not source-verified."
+          }
+        ],
+        "parent_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+        "operation": "gelu"
+      },
+      {
+        "navigation_key": "ggVaiSuE29A-xxeU-41Nbq1L2HnbUknLVZDRcAt0l9Q",
+        "id": "d98efb43c5febb4eb8b6b1d69c6aadaafb47c1c888fef8f9579aa7bf4e67ca5f",
+        "kind": "output",
+        "label": "Latents",
+        "ports": [
+          {
+            "navigation_key": "hXdct_RuMK-1bj3t3rLXzI5Y5dlCJU6qV2rdIaluSak",
+            "id": "x",
+            "direction": "input",
+            "label": "x",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 4
+              }
+            ]
+          }
+        ],
+        "parameter_ids": [],
+        "references": [],
+        "attributes": [],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          },
+          {
+            "kind": "description",
+            "source": "latents",
+            "revision": "encoder-v1",
+            "rule": "Semantic source key supplied by the model author; not source-verified."
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "34481d1e3d4edba3d982f9159e2b7303a9ac7cb8d45ca61360ff03634705fed1",
+        "source": {
+          "node_id": "9c72f104c976b874e8baced385f0445ba94ead994ef7734f9b75bfafc49d6553",
+          "port_id": "out"
+        },
+        "target": {
+          "node_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+          "port_id": "x"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "5cb90054118831778aa1b37de7ee29fc71d0c0d203b550363ccef55823817f2e",
+        "source": {
+          "node_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+          "port_id": "x"
+        },
+        "target": {
+          "node_id": "411bf5ba03602f8e92d6617ed652b155aff302bbd9ec7acba77631a3db132669",
+          "port_id": "x"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "5d1cc60d867d68873d3e58ec82b694228324084f32a9162ce8a897df0cac185e",
+        "source": {
+          "node_id": "411bf5ba03602f8e92d6617ed652b155aff302bbd9ec7acba77631a3db132669",
+          "port_id": "out"
+        },
+        "target": {
+          "node_id": "e6d45d34f86ec32b3b7311a96e8a5c8fb851f429e721f88c4dfa8cbeb3c4297e",
+          "port_id": "x"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "13aa432dbdd048707f586498845576c0e364f147317205dc2d43981971e8c844",
+        "source": {
+          "node_id": "e6d45d34f86ec32b3b7311a96e8a5c8fb851f429e721f88c4dfa8cbeb3c4297e",
+          "port_id": "out"
+        },
+        "target": {
+          "node_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+          "port_id": "out"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "b8ed7eacddcffb5f8f7c98a533db3c8c5888977e63596d48ff7eb8af252c8b62",
+        "source": {
+          "node_id": "a2c63811b8cbc15a7fb34c101c4918425aa03178f3d1b7755448787365dd128b",
+          "port_id": "out"
+        },
+        "target": {
+          "node_id": "d98efb43c5febb4eb8b6b1d69c6aadaafb47c1c888fef8f9579aa7bf4e67ca5f",
+          "port_id": "x"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      }
+    ],
+    "repetitions": [],
+    "parameters": [
+      {
+        "id": "124a6a7fd364e63083e75cbecb0c979a4faa2c07a9c4646e11b3d74ff59638f7",
+        "name": "encoder.proj.weight",
+        "logical_shape": [
+          {
+            "kind": "constant",
+            "value": 4
+          },
+          {
+            "kind": "constant",
+            "value": 3
+          }
+        ],
+        "binding": "native",
+        "storage": [
+          {
+            "name": "encoder.proj.weight",
+            "dtype": "F32",
+            "shape": [
+              4,
+              3
+            ]
+          }
+        ],
+        "inspection": {
+          "status": "available",
+          "tensor_id": "actual-weight-id"
+        },
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "220f75ef92c4c61fd5c921d5c4c1ea724d2d52b635ed906c6e5b3f311063b3bc",
+        "name": "encoder.proj.bias",
+        "logical_shape": [
+          {
+            "kind": "constant",
+            "value": 4
+          }
+        ],
+        "binding": "native",
+        "storage": [
+          {
+            "name": "encoder.proj.bias",
+            "dtype": "F32",
+            "shape": [
+              4
+            ]
+          }
+        ],
+        "inspection": {
+          "status": "available",
+          "tensor_id": "actual-bias-id"
+        },
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "encoder-v1",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      }
+    ],
+    "diagnostics": []
+  },
+  "after": {
+    "navigation_namespace": "r726kAUGPnJ-834hpOcCcGZZc1xlXJiCi-tSI3LdbLI",
+    "graph_id": "7312da6abc704de463bf53c841362e0b8896b0cc0fbba30615a31a167acf87c2",
+    "scope": "model_defined",
+    "coverage": "complete",
+    "symbols": [
+      {
+        "name": "B",
+        "meaning": "Symbolic batch size; no input was executed."
+      }
+    ],
+    "nodes": [
+      {
+        "navigation_key": "FO7cpWMa2wsBY4U1sC56JBOM8UFr0JhsCS6pLIC3a3c",
+        "id": "b167ab162ae3f81e8577bfc4089fa1bb481f89c5d04661e67874935a3da1051a",
+        "kind": "context",
+        "label": "Model-supplied definition",
+        "ports": [],
+        "parameter_ids": [],
+        "references": [],
+        "attributes": [
+          {
+            "name": "definition_origin",
+            "value": "model",
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "model-supplied architecture.json",
+                "revision": "navigation-second-revision",
+                "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+              }
+            ]
+          },
+          {
+            "name": "semantic_verification",
+            "value": "not_verified",
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "model-supplied architecture.json",
+                "revision": "navigation-second-revision",
+                "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+              }
+            ]
+          },
+          {
+            "name": "name",
+            "value": "Example experimental encoder",
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "model-supplied architecture.json",
+                "revision": "navigation-second-revision",
+                "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+              }
+            ]
+          },
+          {
+            "name": "architecture_revision",
+            "value": "navigation-second-revision",
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "model-supplied architecture.json",
+                "revision": "navigation-second-revision",
+                "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+              }
+            ]
+          },
+          {
+            "name": "declared_scope",
+            "value": "feature_encoder",
+            "provenance": [
+              {
+                "kind": "description",
+                "source": "model-supplied architecture.json",
+                "revision": "navigation-second-revision",
+                "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+              }
+            ]
+          }
+        ],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ],
+        "description": "This graph was supplied with the checkpoint. Validation checks its structure and parameter bindings; it does not establish equivalence to forward()."
+      },
+      {
+        "navigation_key": "ggVaiSuE29A-xxeU-41Nbq1L2HnbUknLVZDRcAt0l9Q",
+        "id": "eadc7c1ebe76923f05dc67c81fc7edf8f472f01c4bd760218345c5df03c1079c",
+        "kind": "output",
+        "label": "Latents",
+        "ports": [
+          {
+            "navigation_key": "hXdct_RuMK-1bj3t3rLXzI5Y5dlCJU6qV2rdIaluSak",
+            "id": "x",
+            "direction": "input",
+            "label": "x",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 4
+              }
+            ]
+          }
+        ],
+        "parameter_ids": [],
+        "references": [],
+        "attributes": [],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          },
+          {
+            "kind": "description",
+            "source": "latents",
+            "revision": "navigation-second-revision",
+            "rule": "Semantic source key supplied by the model author; not source-verified."
+          }
+        ]
+      },
+      {
+        "navigation_key": "89zzMQi0qNPVyyVg6rkriT-qct1sRXI3pFhfSbE5Y24",
+        "id": "f9d291fd91e6de1eafcfb10f0048d757fa4af6b3aae3304498fb479ecfd316d3",
+        "kind": "operation",
+        "label": "GELU",
+        "ports": [
+          {
+            "navigation_key": "hXdct_RuMK-1bj3t3rLXzI5Y5dlCJU6qV2rdIaluSak",
+            "id": "x",
+            "direction": "input",
+            "label": "x",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 4
+              }
+            ]
+          },
+          {
+            "navigation_key": "j8mkjhZ_HlQrlxD6lJ4643CtFvq3k5sdCKR4XTTAXBw",
+            "id": "out",
+            "direction": "output",
+            "label": "out",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 4
+              }
+            ]
+          }
+        ],
+        "parameter_ids": [],
+        "references": [],
+        "attributes": [],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          },
+          {
+            "kind": "description",
+            "source": "activation",
+            "revision": "navigation-second-revision",
+            "rule": "Semantic source key supplied by the model author; not source-verified."
+          }
+        ],
+        "parent_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+        "operation": "gelu"
+      },
+      {
+        "navigation_key": "LszD65ctQOxWURBIQkEfRpm4ijwwq_UmV_-V5KTbIto",
+        "id": "49dc3afb13c61d39bef5d609ac57b012dc346c1653f5a890a219e31c2fdeeb4a",
+        "kind": "operation",
+        "label": "Renamed projection",
+        "ports": [
+          {
+            "navigation_key": "hXdct_RuMK-1bj3t3rLXzI5Y5dlCJU6qV2rdIaluSak",
+            "id": "x",
+            "direction": "input",
+            "label": "x",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "navigation_key": "j8mkjhZ_HlQrlxD6lJ4643CtFvq3k5sdCKR4XTTAXBw",
+            "id": "out",
+            "direction": "output",
+            "label": "out",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 4
+              }
+            ]
+          }
+        ],
+        "parameter_ids": [
+          "5c2c23d02f002068f2dae4fffe667ea0bfb0d9dcd4219876fa8a4ebf3cb4e1c9",
+          "216b9b41d85b99adbb56d60336ce9dfbd9122bd7f138c78ebf7ebb12e6a59bc6"
+        ],
+        "references": [],
+        "attributes": [],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          },
+          {
+            "kind": "description",
+            "source": "projection",
+            "revision": "navigation-second-revision",
+            "rule": "Semantic source key supplied by the model author; not source-verified."
+          }
+        ],
+        "parent_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+        "operation": "linear",
+        "description": "Updated projection description after a model edit.",
+        "formula": "y = x W^T + b"
+      },
+      {
+        "navigation_key": "mkx3A7jRLqpSn6Sx7-jXTmveofB8daauljYSolQ4pvM",
+        "id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+        "kind": "group",
+        "label": "Encoder",
+        "ports": [
+          {
+            "navigation_key": "hXdct_RuMK-1bj3t3rLXzI5Y5dlCJU6qV2rdIaluSak",
+            "id": "x",
+            "direction": "input",
+            "label": "x",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "navigation_key": "j8mkjhZ_HlQrlxD6lJ4643CtFvq3k5sdCKR4XTTAXBw",
+            "id": "out",
+            "direction": "output",
+            "label": "out",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 4
+              }
+            ]
+          }
+        ],
+        "parameter_ids": [],
+        "references": [],
+        "attributes": [],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          },
+          {
+            "kind": "description",
+            "source": "encoder",
+            "revision": "navigation-second-revision",
+            "rule": "Semantic source key supplied by the model author; not source-verified."
+          }
+        ],
+        "children": [
+          "49dc3afb13c61d39bef5d609ac57b012dc346c1653f5a890a219e31c2fdeeb4a",
+          "f9d291fd91e6de1eafcfb10f0048d757fa4af6b3aae3304498fb479ecfd316d3"
+        ]
+      },
+      {
+        "navigation_key": "gULaPhPsHZu5LmnNR8m30lSkdxNikPnwnp8i-HblfSg",
+        "id": "64a90addb70b72070b247068643ccfdb3fc1052ecb02be2ddda844e4083f0802",
+        "kind": "input",
+        "label": "Observations",
+        "ports": [
+          {
+            "navigation_key": "j8mkjhZ_HlQrlxD6lJ4643CtFvq3k5sdCKR4XTTAXBw",
+            "id": "out",
+            "direction": "output",
+            "label": "out",
+            "shape": [
+              {
+                "kind": "symbol",
+                "name": "B"
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ]
+          }
+        ],
+        "parameter_ids": [],
+        "references": [],
+        "attributes": [],
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          },
+          {
+            "kind": "description",
+            "source": "observations",
+            "revision": "navigation-second-revision",
+            "rule": "Semantic source key supplied by the model author; not source-verified."
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "d7010303ca65e446de6a31e5d554064aea4d23b5ad56ed0ee850ee49e9d1c5e8",
+        "source": {
+          "node_id": "64a90addb70b72070b247068643ccfdb3fc1052ecb02be2ddda844e4083f0802",
+          "port_id": "out"
+        },
+        "target": {
+          "node_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+          "port_id": "x"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "f49a3db33aab13e6d71f4ca64da6be87a884d9d510abe2cf3bdc55e1a7171852",
+        "source": {
+          "node_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+          "port_id": "x"
+        },
+        "target": {
+          "node_id": "49dc3afb13c61d39bef5d609ac57b012dc346c1653f5a890a219e31c2fdeeb4a",
+          "port_id": "x"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "d9fa26786f1c721921128bdde389bb4dea0c6670a0522b82df8e0426e3ec06f8",
+        "source": {
+          "node_id": "49dc3afb13c61d39bef5d609ac57b012dc346c1653f5a890a219e31c2fdeeb4a",
+          "port_id": "out"
+        },
+        "target": {
+          "node_id": "f9d291fd91e6de1eafcfb10f0048d757fa4af6b3aae3304498fb479ecfd316d3",
+          "port_id": "x"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "903f2940f1ca3d9f3ba00930c298777e384bf8797e7ce6c066a958fe824c66d0",
+        "source": {
+          "node_id": "f9d291fd91e6de1eafcfb10f0048d757fa4af6b3aae3304498fb479ecfd316d3",
+          "port_id": "out"
+        },
+        "target": {
+          "node_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+          "port_id": "out"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "559494b2b2b85a52731afd41047f3442eaa623f7123ee617dcf512e71fee2840",
+        "source": {
+          "node_id": "e64bc07dacaf58f32f731504a8a12bebc070a4dac399fd307f6805bb8726c862",
+          "port_id": "out"
+        },
+        "target": {
+          "node_id": "eadc7c1ebe76923f05dc67c81fc7edf8f472f01c4bd760218345c5df03c1079c",
+          "port_id": "x"
+        },
+        "kind": "data",
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      }
+    ],
+    "repetitions": [],
+    "parameters": [
+      {
+        "id": "5c2c23d02f002068f2dae4fffe667ea0bfb0d9dcd4219876fa8a4ebf3cb4e1c9",
+        "name": "encoder.proj.weight",
+        "logical_shape": [
+          {
+            "kind": "constant",
+            "value": 4
+          },
+          {
+            "kind": "constant",
+            "value": 3
+          }
+        ],
+        "binding": "native",
+        "storage": [
+          {
+            "name": "encoder.proj.weight",
+            "dtype": "F32",
+            "shape": [
+              4,
+              3
+            ]
+          }
+        ],
+        "inspection": {
+          "status": "available",
+          "tensor_id": "actual-weight-id"
+        },
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      },
+      {
+        "id": "216b9b41d85b99adbb56d60336ce9dfbd9122bd7f138c78ebf7ebb12e6a59bc6",
+        "name": "encoder.proj.bias",
+        "logical_shape": [
+          {
+            "kind": "constant",
+            "value": 4
+          }
+        ],
+        "binding": "native",
+        "storage": [
+          {
+            "name": "encoder.proj.bias",
+            "dtype": "F32",
+            "shape": [
+              4
+            ]
+          }
+        ],
+        "inspection": {
+          "status": "available",
+          "tensor_id": "actual-bias-id"
+        },
+        "provenance": [
+          {
+            "kind": "description",
+            "source": "model-supplied architecture.json",
+            "revision": "navigation-second-revision",
+            "rule": "Author-declared structure; validated against graph and inventory contracts, not verified against the model implementation."
+          }
+        ]
+      }
+    ],
+    "diagnostics": []
+  }
+}

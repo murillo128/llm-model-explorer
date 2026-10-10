@@ -66,6 +66,21 @@ chosen by the author and can change with every experiment without changing the
 Explorer. Python may generate the JSON in the model's development/export
 environment, but Explorer does not import or execute checkpoint Python.
 
+## Stable author-local identity
+
+Keep a node, port, repetition or template's file-local ID when that semantic
+element persists across edits. Labels, formulas, order and `architecture_revision`
+may change independently. Changing a local ID intentionally loses that element's
+navigation correspondence; the importer does not guess renames. Distinct calls
+or layer/expert instances need distinct local node IDs even when sharing weights.
+
+The importer derives navigation metadata from these existing IDs, in a separate
+model-defined namespace qualified by the declared scope. No new required file
+field or schema version is introduced. Port/repetition navigation metadata in
+reused API record shapes is producer-derived and replaced on import. Changing
+declared scope changes the namespace. This correspondence preserves presentation
+only; all graph/session identities and numeric bindings are rebuilt and checked.
+
 ## Declared Shared structures
 
 `templates` is an additive, optional version-1 extension. Existing definitions

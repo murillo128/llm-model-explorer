@@ -1,3 +1,4 @@
+import { captureBookmark, restoreInspection } from './navigation-bookmark';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ExplorerContextValue } from '../app/explorer-context';
@@ -30,7 +31,7 @@ export function ArchitectureExplorer(props: Props) {
 }
 function SessionArchitectureExplorer(props: Props) {
   const browserTarget = useArchitectureBrowserTarget();
-  const { client, session, selection, views, onInspect } = props;
+  const { client, session, selection, views, onInspect, refreshKey, refreshPresentation } = props;
   const [localDiagnostics] = useState(() => { const store = new ModelDiagnostics(); store.activate(session); return store; });
   const diagnostics = props.diagnostics ?? localDiagnostics;
   const [inspected, setInspected] = useState<ArchitectureSelection | null>(null);
@@ -67,6 +68,13 @@ function SessionArchitectureExplorer(props: Props) {
           if (response.status === 'unavailable' && !records.length) records.push(finding(session.model_id, generation, 'Architecture',
             { code: response.reason, message: unavailable[response.reason] }, severity));
           diagnostics.observe(session, 'Architecture', records, graph?.scope === 'model_defined');
+          const bookmark = refreshKey && refreshPresentation?.consume(refreshKey);
+          if (graph && bookmark) {
+            const restored = views.get(session.model_id, graph, bookmark);
+            const inspection = restoreInspection(graph, bookmark, inventory, session.id, session.model_id, document.body);
+            if (inspection) setInspected(inspection);
+            else if (bookmark.inspection) restored.notice ??= 'The previous inspection is no longer available.';
+          }
           setResult({ response, inventory });
         }
       } catch (error) {
@@ -78,8 +86,13 @@ function SessionArchitectureExplorer(props: Props) {
       } finally { clearTimeout(timeout); }
     }), request.guard(() => { clearTimeout(timeout); fail('Could not validate the model inventory. Retry retrieval.'); }));
     return () => { clearTimeout(timeout); request.dispose(); detach(); };
-  }, [client, session, selection, retry, diagnostics]);
+  }, [client, session, selection, retry, diagnostics, views, refreshKey, refreshPresentation]);
   const response = result.response;
+  const graph = response?.status === 'available' ? response.graph : undefined;
+  useEffect(() => {
+    if (!graph || !props.refreshPresentation) return;
+    return props.refreshPresentation.register(selection, () => captureBookmark(graph, views.get(session.model_id, graph), inspected, result.inventory));
+  }, [graph, props.refreshPresentation, selection, views, session.model_id, inspected, result.inventory]);
   const band = <DiagnosticBand store={diagnostics} />;
   if (!response || response.status === 'unavailable') return <>
     {browserTarget && createPortal(<p className="architecture-browser-state" role={result.error ? 'alert' : 'status'}>
@@ -104,6 +117,6 @@ function SessionArchitectureExplorer(props: Props) {
       modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspected(null)} onInspect={(value) => { setInspected(value); onInspect?.(value); }} />
     {inspected && result.inventory && inspected.sessionId === session.id && inspected.modelId === response.model_id && inspected.graphId === response.graph.graph_id &&
       <ArchitectureInspection key={JSON.stringify([inspected.sessionId, inspected.graphId, inspected.node?.id, inspected.boundary, inspected.parameterId, Boolean(inspected.structureOnly)])} context={props}
-        graph={response.graph} diagnostics={diagnostics.getSnapshot().records} inventory={result.inventory} selected={inspected} onClose={() => setInspected(null)} />}
+        graph={response.graph} diagnostics={diagnostics.getSnapshot().records} inventory={result.inventory} selected={inspected} onParameterChange={(parameterId) => setInspected((previous) => previous ? { ...previous, parameterId } : null)} onClose={() => setInspected(null)} />}
   </>;
 }

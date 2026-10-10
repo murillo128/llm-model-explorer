@@ -19,7 +19,7 @@ from .validation import GraphError, serialized_size
 if TYPE_CHECKING:
     from .core import GraphBuilder
 
-REVISION = "exact-component-roles-4"
+REVISION = "exact-component-roles-5"
 LOG = logging.getLogger(__name__)
 
 
@@ -32,6 +32,8 @@ class Candidate:
     nodes: list[r.ArchitectureTemplateNodeRole] = field(default_factory=list)
     parameters: dict[str, str] = field(default_factory=dict)
     valid: bool = True
+    navigation_family: str | None = None
+    label: str | None = None
 
 
 class ComponentTemplates:
@@ -42,9 +44,18 @@ class ComponentTemplates:
         self.parameter_keys: dict[str, str] = {}
 
     def begin(
-        self, node_id: str, base: str, family: str, role: Literal["attention", "mlp", "layer"]
+        self,
+        node_id: str,
+        base: str,
+        family: str,
+        role: Literal["attention", "mlp", "layer"],
+        *,
+        navigation_family: str | None = None,
+        label: str | None = None,
     ) -> None:
-        self.candidates[node_id] = Candidate(node_id, base + ".", family, role)
+        self.candidates[node_id] = Candidate(
+            node_id, base + ".", family, role, navigation_family=navigation_family, label=label
+        )
 
     def observe(
         self,
@@ -163,19 +174,31 @@ class ComponentTemplates:
                 scope, _ = index.order.get(candidate.node_id, (None, -1))
                 if scope is None:
                     raise GraphError("invalid_graph", "No declared template scope.")
-                families[(candidate.family, scope, signature)].append(instance)
+                families[
+                    (candidate.navigation_family or candidate.family, scope, signature)
+                ].append(instance)
                 remaining -= size + 1
             except (GraphError, ValueError):
                 omitted = True
         templates: list[r.ArchitectureTemplate] = []
+        counts: dict[tuple[str, str], int] = defaultdict(int)
+        for family, scope, _ in families:
+            counts[(family, scope)] += 1
         for (family, scope, _), instances in families.items():
             if len(instances) < 2:
                 continue
             instances.sort(key=lambda i: index.order[i.node_id][1])
             candidate = self.candidates[instances[0].node_id]
+            scope_key = builder.navigation_for(scope)
+            navigation = (
+                {"navigation_key": builder.navigation_key("template", family + ":" + scope_key)}
+                if scope_key and counts[(family, scope)] == 1
+                else {}
+            )
             template = r.ArchitectureTemplate(
+                **navigation,
                 id=builder.record_id("template", family + ":" + scope + ":" + instances[0].node_id),
-                label=family.replace("_", " "),
+                label=candidate.label or candidate.family.replace("_", " "),
                 component_role=candidate.role,
                 revision=REVISION,
                 provenance=builder.producer.provenance(),

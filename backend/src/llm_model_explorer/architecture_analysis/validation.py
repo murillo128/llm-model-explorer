@@ -259,6 +259,12 @@ def validate_packed_binding(
 
 def validate_graph(graph: r.ArchitectureGraph, context: BindingContext) -> None:
     """Require schema-valid records; check all cross-record and inventory semantics."""
+    for records in (graph.nodes, graph.repetitions, graph.templates or []):
+        unique(
+            (record for record in records if record.navigation_key is not None), "navigation_key"
+        )
+    for node in graph.nodes:
+        unique((port for port in node.ports if port.navigation_key is not None), "navigation_key")
     nodes = unique(graph.nodes)
     params = unique(graph.parameters)
     unique([*graph.nodes, *graph.parameters, *graph.edges, *graph.repetitions])

@@ -73,6 +73,23 @@ provenance and no invented module reference. Semantic document changes bump the
 affected description revision and use ordinary startup/cache validation; all
 graph-local hashes may change while logical tensor identities remain unchanged.
 
+## Producer-owned navigation identity
+
+The shared builder derives navigation keys from its real construction keys and
+local port IDs, including nodes added by invocation/generation wrappers. The
+namespace separates producer description and semantic scope from content and
+ordinary revision changes; incompatible interpretations must use a distinct
+namespace. Keep invocation-qualified construction keys when importing native
+subgraphs: two uses of the same weights remain distinct components.
+
+Declared family/scope keys and typed variants establish template correspondence.
+If a declared family splits into multiple incompatible signatures without a
+unique declared variant, omit its navigation key rather than infer identity from
+the first member or changing membership. Equivalence validation remains separate
+and unchanged. Routed-expert compaction preserves every concrete navigation key.
+The analyzer core and generated schema revision invalidate old cached graphs;
+numeric artifact identities and computation are unaffected.
+
 ## Optional component equivalence annotations
 
 Packaged descriptions may opt into the API's verified shared structures. Open
@@ -96,7 +113,7 @@ graph. Never read weights, execute operations or infer weight equality to decide
 a family. Parameter bindings and logical tensor identities stay attached to the
 real instance, including verified aliases and unavailable inspections.
 
-The current annotation definition is `exact-component-roles-3`. The analyzer core
+The current annotation definition is `exact-component-roles-5`. The analyzer core
 revision and generated graph-schema revision invalidate structured startup cache
 entries; numeric artifact keys and logical tensor identities are unchanged.
 

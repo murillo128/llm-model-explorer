@@ -1,3 +1,7 @@
+import { captureBookmark } from '../architecture-explorer/navigation-bookmark';
+import { GraphView } from '../architecture-explorer/graph';
+import { validateSchema } from '../api/validation';
+import architecture from '../../../api/fixtures/architecture.json';
 import { afterEach, expect, it, vi } from 'vitest';
 import { ApiClient } from '../api/client';
 import { deferred, json, memoryStorage, models, sessionA, tensors } from '../test/shell-fixtures';
@@ -191,7 +195,7 @@ it.each([
 it('retains only presentation primitives through one accepted attempt and clears them on navigation', async () => {
   const { controller, client } = await setup();
   controller.switchExplorer('Architecture Explorer');
-  const bookmark = { expanded: ['semantic:block'], focus: null, selection: 'semantic:weight', camera: { x: 1, y: 2, zoom: 3 } };
+  const bookmark = captureBookmark(validateSchema('ArchitectureAvailableResponse', architecture.response).graph, new GraphView());
   controller.presentation.register(controller.getSnapshot().view, () => bookmark);
   vi.mocked(client.createSession).mockResolvedValueOnce({ ...sessionA, id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', model_revision: 'B' });
   Events.instances[0]!.state('B'); await tick(); Events.instances.at(-1)!.state('B', 2); await tick();
