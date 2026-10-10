@@ -7,6 +7,7 @@ import { bodyId, bodyRangeId } from './repeated-body';
 import { componentScope } from './scope';
 import { projectionOptions, snapshotView } from './scope-navigation';
 import { projectGraph } from './projection';
+import type { Projection } from './projection';
 import { interfaceIndex } from './interfaces';
 import type { BoundarySelection } from './interfaces';
 import { overviewExpansion } from './overview';
@@ -96,6 +97,16 @@ class Navigation {
       const first = rep.instances.find((i) => i.node_id === stack.instances[0]?.node_id)!.index;
       for (const node of stack.instances[0]!.nodes) this.locators.set(indexedNodeId(id, node.node_id),
         { type: 'indexed', repetition: rep.navigation_key, family: stack.template.navigation_key, role: node.role, first });
+    }
+  }
+  captureRanges(projection: Projection) {
+    // Window sides and explicitly expanded instances can split a repetition.
+    // Read the actual typed ranges, including splits around unrelated siblings.
+    for (const node of projection.nodes) {
+      if (node.presentation !== 'range' || node.nestedRepetition || !node.instances?.length) continue;
+      const repetition = this.graph.repetitions.find((r) => r.id === node.repetitionId)?.navigation_key;
+      if (repetition) this.locators.set(node.id, { type: 'repeat', repetition,
+        first: node.instances[0]!.index, last: node.instances.at(-1)!.index });
     }
   }
   source(id: string | undefined): Source | undefined {
@@ -193,8 +204,10 @@ function presentation(graph: Graph, view: GraphSnapshot) {
 function captureView(graph: Graph, view: GraphSnapshot, anchor?: CameraAnchor): PortableView {
   anchor ??= view.cameraAnchor ?? view.restoreCamera;
   const nav = new Navigation(graph, view.repetitions);
+  const projection = presentation(graph, view);
+  nav.captureRanges(projection);
   const sourceEdge = graph.edges.find((e) => e.id === view.edge);
-  const connection = view.edge && presentation(graph, view).edges.find((e) => e.id === view.edge);
+  const connection = view.edge && projection.edges.find((e) => e.id === view.edge);
   const paths = connection ? connection.paths.map((path) => path.map((e) => {
     const source = nav.endpoint(e.source.node_id, e.source.port_id), target = nav.endpoint(e.target.node_id, e.target.port_id);
     return source && target ? { source, target, kind: e.kind } : undefined;
@@ -228,6 +241,7 @@ function captureView(graph: Graph, view: GraphSnapshot, anchor?: CameraAnchor): 
 
 export function captureBookmark(graph: Graph, view: GraphView, inspected?: ArchitectureSelection | null, inventory?: components['schemas']['TensorInventory']): ArchitectureBookmark {
   const nav = new Navigation(graph), template = graph.templates?.find((t) => t.id === view.shared?.templateId);
+  if (inspected?.boundary) nav.captureRanges(presentation(graph, view));
   const node = inspected?.node && nav.source(inspected.node.id);
   const parameter = graph.parameters.find((p) => p.id === inspected?.parameterId);
   const tensorId = parameter?.inspection.status === 'available' ? parameter.inspection.tensor_id : undefined;
@@ -272,7 +286,8 @@ function restoreView(graph: Graph, saved: PortableView): { view: GraphView; fall
     view.repetitions[rep.id] = { start, count: Math.min(Math.max(1, window.count), rep.instances.length - start) };
   }
   if (saved.shared === null) {
-    view.scope = undefined; view.selected = null; view.focus = null; fallback = true;
+    if (view.selectionMode !== 'source') { view.scope = undefined; view.selected = null; view.focus = null; }
+    fallback = true;
   } else if (saved.shared) {
     const template = only(graph.templates?.filter((t) => t.navigation_key === saved.shared!.family) ?? []);
     const anchor = nav.resolveSource(saved.shared.anchor), instance = nav.resolveSource(saved.shared.instance ?? undefined);
@@ -281,8 +296,10 @@ function restoreView(graph: Graph, saved: PortableView): { view: GraphView; fall
       view.shared = { templateId: template.id, anchorId: anchor, instanceId: instance ?? null };
       view.scope = anchor; view.selectionMode = instance ? 'source' : 'structure';
     } else {
-      // Never promote a neutral structure or a removed concrete binding to layer zero.
-      view.scope = undefined; view.selected = null; view.focus = null; fallback = true;
+      // Keep the independently resolved concrete source/ancestor. A neutral
+      // structure must never inherit its display anchor as a concrete binding.
+      if (!saved.shared.instance) { view.scope = undefined; view.selected = null; view.focus = null; }
+      fallback = true;
     }
   }
   view.boundary = nav.resolveBoundary(saved.boundary);

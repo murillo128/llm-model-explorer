@@ -4,7 +4,8 @@ import { validateSchema } from '../api/validation';
 import { GraphView, GraphViews } from './graph';
 import type { Graph } from './graph';
 import { captureBookmark, restoreBookmark, restoreInspection } from './navigation-bookmark';
-import { backFromComponent, enterComponent } from './scope-navigation';
+import { backFromComponent, enterComponent, projectionOptions } from './scope-navigation';
+import { projectGraph } from './projection';
 import { enterSharedStructure } from './shared-structure';
 import { indexedNodeId } from './indexed-repetition';
 import { interfaceIndex } from './interfaces';
@@ -122,7 +123,54 @@ it.each([null, 2])('keeps Shared structure neutral or exactly bound to nonzero i
   expect(restored.selectionMode).toBe(instance === null ? 'structure' : 'source');
   next.templates![0]!.instances = next.templates![0]!.instances.slice(0, 1);
   const missing = restoreBookmark(next, captureBookmark(old, view));
-  if (instance !== null) { expect(missing.shared).toBeUndefined(); expect(missing.selected).toBeNull(); }
+  if (instance !== null) {
+    expect(missing.shared).toBeUndefined();
+    // The source still exists even though it no longer belongs to the family.
+    expect(missing.selected).toBe('layer-2.attention-new');
+    expect(missing.scope).toBe('layer-2.attention-new');
+  }
+});
+
+it('retains the surviving ancestor when a concrete Shared subtree disappears', () => {
+  const old = revision(makeTemplateFixture(), '-old'), next = revision(makeTemplateFixture(), '-new');
+  const view = new GraphView();
+  enterSharedStructure(view, old.templates![0]!, 'layer-2.attention-old');
+  const removed = new Set(next.templates![0]!.instances.find((i) => i.node_id === 'layer-2.attention-new')!.nodes.map((n) => n.node_id));
+  next.nodes = next.nodes.filter((n) => !removed.has(n.id));
+  for (const node of next.nodes) if (node.kind === 'group') node.children = node.children.filter((id) => !removed.has(id));
+  next.edges = next.edges.filter((e) => !removed.has(e.source.node_id) && !removed.has(e.target.node_id));
+  next.templates = [];
+  expect(next.nodes.some((n) => n.id === 'layer-2-new')).toBe(true);
+  const restored = restoreBookmark(next, captureBookmark(old, view));
+  expect(restored.shared).toBeUndefined();
+  expect(restored.selected).toBe('layer-2-new');
+  expect(restored.scope).toBe('layer-2-new');
+  expect(restored.selectionMode).toBe('source');
+  expect(restored.restoreCamera?.target).toBe('layer-2-new');
+  expect(restored.notice).toContain('nearest');
+});
+
+it('does not promote a neutral Shared view when its family disappears', () => {
+  const old = revision(makeTemplateFixture(), '-old'), next = revision(makeTemplateFixture(), '-new');
+  const view = new GraphView();
+  enterSharedStructure(view, old.templates![0]!, null);
+  next.templates = [];
+  const restored = restoreBookmark(next, captureBookmark(old, view));
+  expect(restored.shared).toBeUndefined(); expect(restored.scope).toBeUndefined();
+  expect(restored.selected).toBeNull(); expect(restored.initialOverview).toBe(true);
+});
+
+it.each(['0:1', '4:5'])('preserves compressed range %s beside an open repetition window', (range) => {
+  const old = revision(makeIndexedFixture(6), '-old'), next = revision(makeIndexedFixture(6), '-new');
+  const view = new GraphView(['model-old']);
+  view.repetitions = { 'layers-old': { start: 2, count: 2 } };
+  view.selected = `repeat:layers-old:${range}`;
+  expect(projectGraph(old, projectionOptions(view)).nodes.some((n) => n.id === view.selected)).toBe(true);
+  const restored = restoreBookmark(next, captureBookmark(old, view));
+  expect(projectGraph(next, projectionOptions(restored)).nodes.some((n) => n.id === `repeat:layers-new:${range}`)).toBe(true);
+  expect(restored.selected).toBe(`repeat:layers-new:${range}`);
+  expect(restored.repetitions).toEqual({ 'layers-new': { start: 2, count: 2 } });
+  expect(restored.notice).toBeUndefined();
 });
 
 it('restores an indexed role and clamps a shrinking concrete repetition window', () => {
