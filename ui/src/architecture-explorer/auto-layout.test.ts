@@ -14,6 +14,22 @@ import { connectionSet, endpointKey, projectGraph, type ProjectionOptions } from
 import { cardMetrics, cardSummary } from './card-summary';
 
 const tolerance = 0.01;
+it('preserves record signatures through boundary projection and connection labels', async () => {
+  const graph = interfaceFixture('visual');
+  const signature = 'Observation {frames, state, available_actions}';
+  for (const node of graph.nodes) for (const port of node.ports) {
+    port.shape = null; port.value_type = signature;
+  }
+  for (const options of [{ expanded: [] }, { expanded: ['encoder'] }, { expanded: [], scope: 'patch preparation' }]) {
+    const layout = await layoutGraph(graph, { ...options, dimensions: true });
+    const ports = layout.projection.nodes.flatMap((node) => node.ports);
+    expect(ports.length).toBeGreaterThan(0);
+    expect(ports.every((port) => port.shape === null && port.value_type === signature)).toBe(true);
+    expect(layout.routes.length).toBeGreaterThan(0);
+    for (const route of layout.routes) expect(route.labels?.flatMap((label) => label.lines)).toEqual([signature]);
+  }
+});
+
 const equals = (a: Point, b: Point) => Math.abs(a.x - b.x) < tolerance && Math.abs(a.y - b.y) < tolerance;
 function box(layout: Layout, id: string): Box {
   const result = layout.boxes.find((b) => b.id === id);

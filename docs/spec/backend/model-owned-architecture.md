@@ -42,6 +42,11 @@ parameter references, explanatory descriptions/formulas and scalar metadata.
 Operations require a name but names are open-ended: an unfamiliar operation is
 still displayable. Ports and dimensions reuse the architecture API's records:
 constant, declared symbol, display-only expression, or explicitly unknown.
+Ports may also declare `value_type`, a bounded display-only type or record field
+signature such as `Action {id: int, data: {x?: int, y?: int}}`. A record can retain
+`shape: null` without claiming to be a scalar or a tensor of unknown rank. Known
+tensor dimensions remain in `shape`; signatures are not parsed or executed and
+do not establish runtime type compatibility. Omit the annotation when unknown.
 Expressions and formulas are **never evaluated**. Group crossings are explicit
 ports; all repeated instances are written into the file. Repetition metadata
 only groups existing instances; it is not a loop or template interpreter.

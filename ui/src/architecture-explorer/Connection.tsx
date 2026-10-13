@@ -2,7 +2,7 @@ import { useContext, useLayoutEffect, useRef } from 'react';
 import type { PointerEvent } from 'react';
 import type { Edge, EdgeProps } from '@xyflow/react';
 import type { Graph, Route } from './graph';
-import { formatShape } from './graph';
+import { formatPort } from './graph';
 import type { Endpoint, ProjectedEdge, ProjectedNode, Projection } from './projection';
 import { endpointKey } from './projection';
 import { depthIndex } from './indexed-repetition';
@@ -130,7 +130,7 @@ export function ConnectionInspection({ graph, edge, node, trigger, onClose, insp
           {path.map((segment) => <div key={segment.id}>
             <p><strong>Source:</strong> {endpointText(segment.source)}<br /><code>{endpointKey(segment.source)}</code></p>
             <p><strong>Destination:</strong> {endpointText(segment.target)}<br /><code>{endpointKey(segment.target)}</code></p>
-            <p>{formatShape(records.get(segment.source.node_id)!.ports.find((p) => p.id === segment.source.port_id)!.shape)} → {formatShape(records.get(segment.target.node_id)!.ports.find((p) => p.id === segment.target.port_id)!.shape)}</p>
+            <p>{formatPort(records.get(segment.source.node_id)!.ports.find((p) => p.id === segment.source.port_id)!)} → {formatPort(records.get(segment.target.node_id)!.ports.find((p) => p.id === segment.target.port_id)!)}</p>
             <p>Original edge: <code>{segment.id}</code> · {segment.kind}</p>
           </div>)}
         </details>)}

@@ -115,6 +115,42 @@ def test_schema_is_reproducible_and_example_is_not_a_runtime_graph() -> None:
     assert all("inspection" not in p and "storage" not in p for p in value["parameters"])
 
 
+def test_record_port_signatures_survive_import_without_inventing_tensor_rank() -> None:
+    signature = "Action {id: int, data: {x?: int, y?: int}}"
+    value = document()
+    value["parameters"] = []
+    value["nodes"] = [
+        {
+            "id": node_id,
+            "kind": "state",
+            "label": node_id,
+            "ports": [
+                {
+                    "id": "action",
+                    "label": "action",
+                    "direction": direction,
+                    "shape": None,
+                    "value_type": signature,
+                }
+            ],
+        }
+        for node_id, direction in [("policy", "output"), ("environment", "input")]
+    ]
+    value["edges"] = [
+        {
+            "id": "action",
+            "source": {"node_id": "policy", "port_id": "action"},
+            "target": {"node_id": "environment", "port_id": "action"},
+        }
+    ]
+    result = analyze_definition(definition(value), inputs())
+    assert result.status == "complete", result.diagnostics
+    assert result.graph is not None
+    ports = [port for node in result.graph.document()["nodes"] for port in node["ports"]]
+    assert len(ports) == 2
+    assert all(port["shape"] is None and port["value_type"] == signature for port in ports)
+
+
 @pytest.mark.parametrize("extra", ["python", "include", "$ref", "graph_id", "producer"])
 def test_top_level_executable_or_runtime_fields_are_rejected(extra: str) -> None:
     value = document()

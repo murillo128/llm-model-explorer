@@ -53,7 +53,9 @@ export function projectInterfaces(graph: Graph, base: Projection, options: Proje
     let port = owner.ports.find((p) => p.id === id);
     if (!port) {
       port = { id, label: exact ? sourcePort(exact).label : item.label, direction: item.direction,
-        shape: sourcePort(exact ?? item.endpoint).shape, endpoints: exact ? [exact] : [] };
+        shape: sourcePort(exact ?? item.endpoint).shape,
+        ...(sourcePort(exact ?? item.endpoint).value_type ? { value_type: sourcePort(exact ?? item.endpoint).value_type! } : {}),
+        endpoints: exact ? [exact] : [] };
       owner.ports.push(port);
     }
     if (!port.endpoints.some((p) => key(p) === key(item.endpoint))) port.endpoints.push(item.endpoint);

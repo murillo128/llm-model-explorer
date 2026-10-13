@@ -1028,6 +1028,12 @@ def fixtures():
     cases.extend(additional_cases)
     compact_response, compact_additional = compact_cases(inventory)
     cases.extend(compact_additional)
+    case('record-port-signature', [set_('graph/nodes/1/ports/0/shape', None),
+        set_('graph/nodes/1/ports/0/value_type', 'Action {id: int, data: {x?: int, y?: int}}')], True)
+    case('typed-tensor-port', [set_('graph/nodes/1/ports/0/value_type', 'float32')], True)
+    for name, value in [('empty-port-type', ''), ('null-port-type', None),
+                        ('oversized-port-type', 'x' * 1025)]:
+        case(name, [set_('graph/nodes/1/ports/0/value_type', value)], schema_valid=False)
     # Large-size tests use repeated fixed chunks, never a 32 MiB fixture/object allocation.
     bounds = [dict(name='exact-limit', chunk_bytes=4096, repeat=8192, tail_bytes=0, valid=True),
               dict(name='one-byte-over', chunk_bytes=4096, repeat=8192, tail_bytes=1, valid=False)]

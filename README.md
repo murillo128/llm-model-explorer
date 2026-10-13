@@ -118,6 +118,14 @@ origins directly, with CORS and exposed operation IDs, without an API proxy.
 For local UI development use `npm run dev` and edit `ui/public/runtime-config.json`;
 allow the resulting Vite origin explicitly on the backend.
 
+When updating, publish the UI build on every host or static directory that serves
+it, including a reverse proxy's separate document root. Rebuilding the development
+or LAN copy does not update those copies. For a subpath deployment, build with
+`npm run build -- --base=/llm-model-explorer/` and preserve that deployment's
+`runtime-config.json`. Deploy assets before `index.html`, then refresh open tabs
+once to load the new client. Old clients may reject a newer backend's response
+schema; automatic model refresh does not update the application JavaScript.
+
 The PoC has **no authentication** and is intended for a trusted network or otherwise
 trusted environment. Model files are read-only. Sessions survive refresh while
 the backend stays alive, but backend restart discards them. Complete artifacts

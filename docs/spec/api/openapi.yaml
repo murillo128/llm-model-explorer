@@ -1559,6 +1559,11 @@ components:
           $ref: '#/components/schemas/ArchitectureName'
         shape:
           $ref: '#/components/schemas/ArchitectureShape'
+        value_type:
+          $ref: '#/components/schemas/ArchitectureName'
+          description: Optional display-only value type or record field signature. With
+            null shape this describes a value without a declared tensor shape; it
+            does not assert a scalar or infer dimensions. Never evaluated.
     ArchitectureModuleReference:
       type: object
       additionalProperties: false

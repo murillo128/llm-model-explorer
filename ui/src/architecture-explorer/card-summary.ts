@@ -1,5 +1,5 @@
 import type { Graph, GraphNode } from './graph';
-import { formatShape } from './graph';
+import { formatPort } from './graph';
 import type { ProjectedNode } from './projection';
 
 export type Parameter = Graph['parameters'][number];
@@ -63,7 +63,7 @@ export function cardMetrics(node: ProjectedNode, summary: CardSummary, dimension
   const metadataTop = portStart + portRows * portGap + 4;
   const rowHeight = dimensions ? 42 : 26;
   const portLabels = Object.fromEntries(node.ports.map((port) => {
-    const characters = Math.max((port.interfaceLabel ?? port.label).length, dimensions ? formatShape(port.shape).length : 0);
+    const characters = Math.max((port.interfaceLabel ?? port.label).length, dimensions ? formatPort(port).length : 0);
     return [port.id, { width: Math.min(120, characters * 6.1 + 2), height: labelHeight,
       top: raisedPorts.has(port.id) ? raisedTop : centeredTop, clearance: 4, raised: raisedPorts.has(port.id) }];
   })) as Record<string, { width: number; height: number; top: number; clearance: number; raised: boolean }>;

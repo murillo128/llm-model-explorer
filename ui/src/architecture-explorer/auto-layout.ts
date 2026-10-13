@@ -2,7 +2,7 @@ import ELK from 'elkjs/lib/elk-api.js';
 import elkWorkerUrl from 'elkjs/lib/elk-worker.min.js?url';
 import type { ELK as ElkEngine, ElkNode, ElkExtendedEdge, LayoutOptions } from 'elkjs/lib/elk-api';
 import type { Box, Graph, Layout, Point, PortPosition, Route } from './graph';
-import { formatShape } from './graph';
+import { formatPort } from './graph';
 import { cardMetrics, cardSummary } from './card-summary';
 import { endpointKey, projectGraph } from './projection';
 import type { ProjectionOptions } from './projection';
@@ -142,8 +142,8 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
   }
   const edgeIds = new Map<string, string>();
   const labelLines = new Map<string, string[]>();
-  const portShapes = new Map(projection.nodes.flatMap((node) => node.ports.map((port) =>
-    [endpointKey({ node_id: node.id, port_id: port.id }), port.shape] as const)));
+  const portValues = new Map(projection.nodes.flatMap((node) => node.ports.map((port) =>
+    [endpointKey({ node_id: node.id, port_id: port.id }), port] as const)));
   for (const [index, edge] of projection.edges.entries()) {
     if (edge.relationship?.kind === 'return') continue;
     const source = endpoints.get(endpointKey(edge.source)), target = endpoints.get(endpointKey(edge.target));
@@ -152,8 +152,8 @@ async function layoutWithRowSpace(graph: Graph, options: ProjectionOptions, bott
     edgeIds.set(id, edge.id);
     const layoutEdge: ElkExtendedEdge = { id, sources: [source], targets: [target] };
     if (options.dimensions) {
-      const sourceShape = formatShape(portShapes.get(endpointKey(edge.source))!);
-      const targetShape = formatShape(portShapes.get(endpointKey(edge.target))!);
+      const sourceShape = formatPort(portValues.get(endpointKey(edge.source))!);
+      const targetShape = formatPort(portValues.get(endpointKey(edge.target))!);
       const bound = (line: string) => line.length > 80 ? `${line.slice(0, 79)}…` : line;
       const lines = sourceShape === targetShape ? [bound(sourceShape)] : [bound(`source ${sourceShape}`), bound(`target ${targetShape}`)];
       labelLines.set(id, lines);

@@ -165,3 +165,9 @@ export function formatShape(shape: Shape): string {
   return '[' + shape.map((d) => d.kind === 'constant' ? String(d.value) : d.kind === 'symbol' ? d.name :
     d.kind === 'expression' ? `(${d.text})` : `? (${d.reason})`).join(' × ') + ']';
 }
+
+/** Record signatures are author descriptions, not tensor dimensions or executable types. */
+export function formatPort(port: { shape: Shape; value_type?: string }): string {
+  if (!port.value_type) return formatShape(port.shape);
+  return port.shape === null ? port.value_type : `${port.value_type} ${formatShape(port.shape)}`;
+}

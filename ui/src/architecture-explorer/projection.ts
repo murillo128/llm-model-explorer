@@ -13,6 +13,7 @@ type SourceEdge = Graph['edges'][number];
 type SourcePort = GraphNode['ports'][number];
 export interface ProjectedPort {
   id: string; label: string; direction: 'input' | 'output'; shape: SourcePort['shape'];
+  value_type?: string;
   /** Exact source endpoints represented by this presentation alias. */
   endpoints: Endpoint[];
   interfaces?: string[];
@@ -237,7 +238,8 @@ function projectSourceGraph(graph: Graph, options: ProjectionOptions): Projectio
     const id = owner.id === original.node_id ? original.port_id : `${direction}:${signal}`;
     let projected = owner.ports.find((p) => p.id === id);
     if (!projected) {
-      projected = { id, label: port.label, direction: owner.expanded ? port.direction : direction, shape: port.shape, endpoints: [] };
+      projected = { id, label: port.label, direction: owner.expanded ? port.direction : direction, shape: port.shape,
+        ...(port.value_type ? { value_type: port.value_type } : {}), endpoints: [] };
       owner.ports.push(projected);
     }
     if (!projected.endpoints.some((p) => endpointKey(p) === endpointKey(original))) projected.endpoints.push(original);

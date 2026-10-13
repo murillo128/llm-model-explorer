@@ -2,7 +2,7 @@ import { layoutGraph } from './auto-layout';
 import { expect, it, vi } from 'vitest';
 import fixture from '../../../api/fixtures/architecture.json';
 import { validateSchema } from '../api/validation';
-import { formatShape, GraphViews } from './graph';
+import { formatPort, formatShape, GraphViews } from './graph';
 import { projectGraph } from './projection';
 import { requestLayout } from './layout';
 import { referenceFixture, references } from '../../tests/architecture-fixtures';
@@ -72,6 +72,11 @@ it('renders dimensions as text, distinguishing scalar, unknown, symbol and expre
   expect(formatShape([{ kind: 'constant', value: 3 }, { kind: 'symbol', name: 'B' },
     { kind: 'expression', text: 'window.alert(1)', symbols: [] }, { kind: 'unknown', reason: 'unresolved' }]))
     .toBe('[3 × B × (window.alert(1)) × ? (unresolved)]');
+  expect(formatPort({ shape: null, value_type: 'Action {id: int, x?: int, y?: int}' }))
+    .toBe('Action {id: int, x?: int, y?: int}');
+  expect(formatPort({ shape: [{ kind: 'constant', value: 64 }], value_type: 'uint8' })).toBe('uint8 [64]');
+  expect(formatPort({ shape: null })).toBe('? (unknown rank)');
+  expect(formatPort({ shape: [] })).toBe('scalar');
 });
 it('retains an exact repetition presentation across remounts, but clears obsolete ranges and replacement graphs', () => {
   const views = new GraphViews(), view = views.get('a', graph);

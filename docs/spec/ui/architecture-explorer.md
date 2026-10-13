@@ -207,6 +207,13 @@ graph retrieval and numeric lifetimes, source/projection records, generated
 coordinates/routes, layout invocation count and camera. Explicit reveal,
 expansion, presentation preferences and camera commands retain their effects.
 
+Port and connection dimension labels show a supplied `value_type` signature as
+literal text. When its shape is null, show the signature instead of `unknown rank`;
+when dimensions are declared, show both. Unannotated ports keep the existing
+scalar/known/unknown shape labels. Preserve the annotation through group, external
+and passive-interface projection. Bounded canvas labels retain full text in
+tooltips and component/connection inspection; no type signature is executable.
+
 ## Source-preserving visible projection
 
 Keep the decoded source graph unchanged. Visible presentation records retain source node IDs, repetition/instance identity, and exact original edge/port references. Compose boundary forwarding without traversing computational operations. Model, stack, layer, MLP and state focus are expansion/filter states of the same canvas, with an explicit return to global context. Stack window size depends on the view/context rather than a globally fixed layer count.

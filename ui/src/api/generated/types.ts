@@ -715,6 +715,8 @@ export interface components {
             direction: "input" | "output";
             label: components["schemas"]["ArchitectureName"];
             shape: components["schemas"]["ArchitectureShape"];
+            /** @description Optional display-only value type or record field signature. With null shape this describes a value without a declared tensor shape; it does not assert a scalar or infer dimensions. Never evaluated. */
+            value_type?: components["schemas"]["ArchitectureName"];
         };
         ArchitectureModuleReference: {
             /**

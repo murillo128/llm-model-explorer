@@ -6,6 +6,13 @@ The static Architecture Explorer contract is published in `openapi.yaml` with sh
 
 The graph describes architecture, not execution. [Backend analysis](../backend/architecture-analysis.md) owns semantic truth and [UI behavior](../ui/architecture-explorer.md) owns layout and interaction. JSON contains bounded structural metadata only. Weights continue to use the existing progressive binary endpoints.
 
+Ports may include `value_type`, a display-only type or record field signature
+bounded to 1,024 characters. It is preserved across graph serialization and
+projection, never parsed or evaluated. With `shape: null` it describes a value
+without a declared tensor shape; with known dimensions it supplements them.
+Without this optional annotation, null shape retains its unknown-rank meaning.
+The annotation does not establish runtime type compatibility between endpoints.
+
 ## Prepared architecture endpoint
 
 Add `GET /sessions/{session_id}/architecture`, operation ID `getArchitecture`, using the existing session parameter, error schema, and `Cache-Control: no-store` convention. It reads the result prepared for the exact pinned model snapshot. For a fresh snapshot without a prepared entry, this request awaits bounded off-event-loop preparation using that exact pinned source and the existing structured cache. Concurrent requests share preparation; subsequent requests reuse its terminal outcome. It never executes a model or downloads anything. It has no request body, operation ID, polling protocol, or WebSocket counterpart.

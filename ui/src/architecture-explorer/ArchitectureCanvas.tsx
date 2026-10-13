@@ -11,7 +11,7 @@ import type { LayoutResult } from './useLayoutRequest';
 import { cardMetrics, cardSummary, ownParameters } from './card-summary';
 import type { CardSummary as Summary } from './card-summary';
 import { CardParameters, SummaryText } from './CardSummary';
-import { formatShape } from './graph';
+import { formatPort } from './graph';
 import { useCanvasCallback } from './useCanvasCallback';
 import { useGraphView } from './useGraphView';
 import { selectComponent, toggleComponent } from './component-actions';
@@ -112,8 +112,8 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
         <button className="architecture-port nodrag nopan" data-node-id={node.id} data-port-id={port.id}
           data-absolute-x={position.absoluteX} data-absolute-y={position.absoluteY}
           data-emphasized={active} aria-label={`${port.direction} port ${node.label}: ${port.interfaceLabel ?? port.label}`}
-          title={`${port.direction}: ${port.interfaceLabel ?? port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
-          aria-description={data.dimensions ? formatShape(port.shape) : undefined}
+          title={`${port.direction}: ${port.interfaceLabel ?? port.label}${data.dimensions ? ` ${formatPort(port)}` : ''}`}
+          aria-description={data.dimensions ? formatPort(port) : undefined}
           style={{ left: position.x, top: position.y, width: hit, height: hit }}
           onPointerDown={(event) => event.stopPropagation()} onPointerEnter={() => interaction.hover({ port: target })}
           onPointerLeave={() => interaction.hover(null)} onFocus={() => interaction.focus({ port: target })} onBlur={() => interaction.focus(null)}
@@ -124,10 +124,10 @@ const OperationNode = memo(function OperationNode({ data, selected }: NodeProps<
               height: Math.max(labelTop + position.label.height, hit / 2) - labelTop }} />
           <span className="architecture-port-label" data-emphasized={active} data-raised={position.label.raised}
             data-layout-bounds={JSON.stringify(position.label)}
-            title={`${port.direction}: ${port.interfaceLabel ?? port.label}${data.dimensions ? ` ${formatShape(port.shape)}` : ''}`}
+            title={`${port.direction}: ${port.interfaceLabel ?? port.label}${data.dimensions ? ` ${formatPort(port)}` : ''}`}
             style={{ left: labelLeft, top: labelTop,
               width: position.label.width, height: position.label.height }}>
-            {port.interfaceLabel ?? port.label}{data.dimensions && <span className="architecture-port-shape">{formatShape(port.shape)}</span>}
+            {port.interfaceLabel ?? port.label}{data.dimensions && <span className="architecture-port-shape">{formatPort(port)}</span>}
           </span>
         </button>
         {(['source', 'target'] as const).map((type) => <Handle key={type} type={type} id={`${type}:${port.id}`}

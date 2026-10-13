@@ -29999,6 +29999,112 @@
           ]
         }
       ]
+    },
+    {
+      "name": "record-port-signature",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "ports",
+            "0",
+            "shape"
+          ],
+          "value": null
+        },
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "ports",
+            "0",
+            "value_type"
+          ],
+          "value": "Action {id: int, data: {x?: int, y?: int}}"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "typed-tensor-port",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "ports",
+            "0",
+            "value_type"
+          ],
+          "value": "float32"
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "empty-port-type",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "ports",
+            "0",
+            "value_type"
+          ],
+          "value": ""
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "null-port-type",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "ports",
+            "0",
+            "value_type"
+          ],
+          "value": null
+        }
+      ],
+      "context_edits": []
+    },
+    {
+      "name": "oversized-port-type",
+      "valid": false,
+      "schema_valid": false,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "nodes",
+            "1",
+            "ports",
+            "0",
+            "value_type"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ],
+      "context_edits": []
     }
   ],
   "byte_cases": [

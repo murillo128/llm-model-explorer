@@ -7,7 +7,7 @@ import { modelSuppliedExplanation, type Diagnostic } from '../app/model-diagnost
 import { Lifetime } from '../app/lifetime';
 import { TensorExplorer } from '../explorers/TensorExplorer';
 import type { ArchitectureSelection } from './ArchitectureCanvas';
-import { formatShape } from './graph';
+import { formatPort, formatShape } from './graph';
 import type { Graph } from './graph';
 import { ownParameters } from './card-summary';
 import { interfaceIndex, resolveInterfaceEndpoints } from './interfaces';
@@ -97,7 +97,7 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
       </p>)}</details>}
       {node.description && <p>{node.description}</p>}
       {node.formula && <pre>{node.formula}</pre>}
-      {node.ports.map((p) => <p key={p.id}>{p.direction} {p.label}: {formatShape(p.shape)}</p>)}
+      {node.ports.map((p) => <p key={p.id}>{p.direction} {p.label}: {formatPort(p)}</p>)}
       {!!selected.filteredInputs?.length && <p>Declared inputs without internal consumers: {selected.filteredInputs.join(', ')}. Their branches are filtered in the compact graph; enable Unused interfaces to show them.</p>}
       {node.references.map((r, i) => r.kind === 'module' ? <p key={i}>Module: {r.name}</p> : r.kind === 'tokenizer' ? <p key={i}>Tokenizer context for this model</p> : null)}
       {node.attributes.map((a, i) => <div key={i}><p>{a.name}: {JSON.stringify(a.value)}</p><Provenance records={a.provenance} /></div>)}
@@ -137,7 +137,7 @@ function InterfaceDetails({ graph, selected }: { graph: Graph; selected: Archite
       <summary>{node.label} · interface metadata</summary>
       <p>{node.id} · {node.kind}{node.operation && ` · ${node.operation}`}{node.parent_id && ` · parent ${node.parent_id}`}</p>
       {node.description && <p>{node.description}</p>}
-      {node.ports.map((p) => <p key={p.id}>{p.direction} {p.label} · {p.id}: {formatShape(p.shape)}</p>)}
+      {node.ports.map((p) => <p key={p.id}>{p.direction} {p.label} · {p.id}: {formatPort(p)}</p>)}
       {node.attributes.map((a, i) => <div key={i}>{a.name}: {JSON.stringify(a.value)}<Provenance records={a.provenance} /></div>)}
       <Provenance records={node.provenance} />
       {graph.edges.filter((e) => e.source.node_id === node.id || e.target.node_id === node.id).map((e) => <div key={e.id}>

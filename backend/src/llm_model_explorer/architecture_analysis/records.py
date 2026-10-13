@@ -3,7 +3,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_REVISION = "69e6b6a19b27d953677a5aedb7489ac0a3ad8d23167290c052b4dbeff04c2a10"
+SCHEMA_REVISION = "f6646d76052075f84104ae660abc677fcb263ec85c5e2f0aaedf485314574c1c"
 
 
 class Record(BaseModel):
@@ -84,6 +84,7 @@ class ArchitecturePort(Record):
     direction: Literal["input", "output"]
     label: ArchitectureName
     shape: ArchitectureShape
+    value_type: ArchitectureName | None = None
 
 
 class ArchitectureModuleReference(Record):
