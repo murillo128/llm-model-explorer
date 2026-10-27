@@ -10,8 +10,9 @@ from .dependencies import get_services, get_sessions, get_settings
 from .model_files import ModelError
 from .neuron_execution import Unavailable, admit
 from .neuron_execution.activations import subscribe_activations
+from .neuron_execution.comparisons import subscribe_comparisons
 from .session_routes import LifecycleRoute
-from .stream_metadata import Control, ModelRevision, NeuronId, Size
+from .stream_metadata import Control, ModelRevision, NeuronComparisonOptions, NeuronId, Size
 from .streaming import LMEXResponse
 
 router = APIRouter(route_class=LifecycleRoute)
@@ -22,6 +23,34 @@ class NeuronActivationsRequest(Control):
     module_id: NeuronId
     neuron_indices: list[Size]
     token_ids: list[Size]
+
+
+class NeuronComparisonRequest(NeuronActivationsRequest, NeuronComparisonOptions):
+    pass
+
+
+@router.post("/sessions/{session_id}/neuron-comparisons")
+async def neuron_comparisons(
+    session_id: UUID, body: NeuronComparisonRequest, request: Request
+) -> LMEXResponse:
+    runtime = get_services(request).neurons
+    if runtime is None:
+        raise ModelError("unsupported_representation", "Neuron runtime is not configured.")
+    options = NeuronComparisonOptions.model_validate(
+        body.model_dump(include={"conditions", "top_k", "max_new_tokens", "decoding"})
+    )
+    result, consumer = await subscribe_comparisons(
+        get_sessions(request),
+        runtime,
+        get_settings(request).model_root,
+        session_id,
+        body.model_revision,
+        body.module_id,
+        tuple(body.neuron_indices),
+        tuple(body.token_ids),
+        options,
+    )
+    return LMEXResponse(consumer, lambda: result.metadata(consumer))
 
 
 @router.post("/sessions/{session_id}/neuron-activations")

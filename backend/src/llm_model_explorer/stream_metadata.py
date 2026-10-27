@@ -288,8 +288,73 @@ class NeuronSection(Control):
     byte_length: Size
 
 
-class NeuronActivationsMetadata(Control):
-    kind: Literal["neuron_activations"]
+class NeuronBaselineCondition(Control):
+    id: Literal["baseline"]
+    mode: Literal["baseline"]
+
+
+class NeuronIntervention(Control):
+    id: NeuronId
+    scope: Literal["prompt", "continuation", "all"]
+
+    @model_validator(mode="after")
+    def identity(self) -> Self:
+        if self.id == "baseline":
+            raise ValueError("reserved baseline identity")
+        return self
+
+
+class NeuronZeroCondition(NeuronIntervention):
+    mode: Literal["zero"]
+
+
+Float32Parameter = Annotated[float, Field(ge=-3.4028234663852886e38, le=3.4028234663852886e38)]
+
+
+class NeuronScaleCondition(NeuronIntervention):
+    mode: Literal["scale"]
+    factor: Float32Parameter
+
+
+class NeuronAddCondition(NeuronIntervention):
+    mode: Literal["add"]
+    delta: Float32Parameter
+
+
+NeuronCondition = Annotated[
+    NeuronBaselineCondition | NeuronZeroCondition | NeuronScaleCondition | NeuronAddCondition,
+    Field(discriminator="mode"),
+]
+
+
+class NeuronComparisonOptions(Control):
+    conditions: list[NeuronCondition]
+    top_k: PositiveSize
+    max_new_tokens: Size
+    decoding: Literal["greedy"]
+
+    @model_validator(mode="after")
+    def condition_order(self) -> Self:
+        if (
+            not self.conditions
+            or self.conditions[0].mode != "baseline"
+            or any(c.mode == "baseline" for c in self.conditions[1:])
+            or len({c.id for c in self.conditions}) != len(self.conditions)
+        ):
+            raise ValueError("comparison requires one initial baseline and unique condition IDs")
+        return self
+
+    def check_limits(self, limits: NeuronLimits, prompt_length: int) -> None:
+        if (
+            len(self.conditions) > limits.max_conditions
+            or self.top_k > limits.max_top_k
+            or self.max_new_tokens > limits.max_new_tokens
+            or prompt_length + self.max_new_tokens > limits.context_length
+        ):
+            raise ValueError("comparison exceeds effective limits")
+
+
+class NeuronMetadata(Control):
     session_id: Text
     model_id: Text
     model_revision: ModelRevision
@@ -305,7 +370,7 @@ class NeuronActivationsMetadata(Control):
     byte_length: Size
 
     @model_validator(mode="after")
-    def geometry(self) -> Self:
+    def selection(self) -> Self:
         UUID(self.session_id)
         if (
             len(self.token_ids) > self.limits.max_input_tokens
@@ -314,16 +379,76 @@ class NeuronActivationsMetadata(Control):
             or any(i >= self.module.intermediate_size for i in self.neuron_indices)
         ):
             raise ValueError("neuron selection")
+        return self
+
+    def check_section(self, name: str, shape: list[int]) -> None:
         section = self.sections[0]
-        shape = [len(self.token_ids), len(self.neuron_indices)]
         if (
-            section.name != "activations"
+            section.name != name
             or section.shape != shape
             or section.offset != 0
             or section.byte_length != 4 * _product(shape)
             or section.byte_length != self.byte_length
         ):
-            raise ValueError("neuron activation geometry")
+            raise ValueError("neuron section geometry")
+
+
+class NeuronActivationsMetadata(NeuronMetadata):
+    kind: Literal["neuron_activations"]
+
+    @model_validator(mode="after")
+    def geometry(self) -> Self:
+        self.check_section("activations", [len(self.token_ids), len(self.neuron_indices)])
+        return self
+
+
+class NeuronContinuation(Control):
+    condition_id: NeuronId
+    token_ids: Annotated[list[Size], Field(max_length=64)]
+    text: Annotated[str, Field(max_length=1048576)]
+    finish_reason: Literal["not_requested", "eos", "length"]
+
+
+class NeuronComparisonMetadata(NeuronMetadata, NeuronComparisonOptions):
+    kind: Literal["neuron_comparison"]
+    candidate_token_ids: Annotated[list[Size], Field(min_length=1, max_length=80)]
+    top_token_ids: Annotated[list[list[Size]], Field(min_length=1, max_length=4)]
+    continuations: Annotated[list[NeuronContinuation], Field(min_length=1, max_length=4)]
+
+    @model_validator(mode="after")
+    def comparison(self) -> Self:
+        self.check_limits(self.limits, len(self.token_ids))
+        candidates, tops = self.candidate_token_ids, self.top_token_ids
+        count = len(self.conditions)
+        if (
+            candidates != sorted(set(candidates))
+            or any(i >= self.limits.vocabulary_size for i in candidates)
+            or len(tops) != count
+            or any(len(row) != self.top_k or len(set(row)) != self.top_k for row in tops)
+            or candidates != sorted({i for row in tops for i in row})
+            or len(self.continuations) != count
+        ):
+            raise ValueError("comparison candidates or condition correspondence")
+        eos = self.limits.eos_token_ids
+        for condition, continuation in zip(self.conditions, self.continuations, strict=True):
+            ids, reason = continuation.token_ids, continuation.finish_reason
+            if (
+                continuation.condition_id != condition.id
+                or len(ids) > self.max_new_tokens
+                or any(i >= self.limits.vocabulary_size for i in ids)
+            ):
+                raise ValueError("continuation identity or bounds")
+            if self.max_new_tokens == 0:
+                if reason != "not_requested" or ids or continuation.text:
+                    raise ValueError("generation not requested")
+            elif reason == "eos":
+                if not ids or ids[-1] not in eos or any(i in eos for i in ids[:-1]):
+                    raise ValueError("EOS stopping")
+            elif (
+                reason != "length" or len(ids) != self.max_new_tokens or any(i in eos for i in ids)
+            ):
+                raise ValueError("length stopping")
+        self.check_section("probabilities", [count, len(candidates)])
         return self
 
 
@@ -335,6 +460,7 @@ Metadata = (
     | InputEmbeddingsStatisticsMetadata
     | InputEmbeddingsDistributionsMetadata
     | NeuronActivationsMetadata
+    | NeuronComparisonMetadata
 )
 METADATA: TypeAdapter[Metadata] = TypeAdapter(Annotated[Metadata, Field(discriminator="kind")])
 
