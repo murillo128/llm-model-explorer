@@ -443,6 +443,9 @@ test.beforeEach(async ({ page }, info) => {
   page.on('request', (r) => { if (r.url().startsWith(backend)) observed.push(new URL(r.url()).pathname); });
   await page.addInitScript(installProbe, { capturePixels: false });
   await page.addInitScript(installArchitectureProbe);
+  if (info.title.includes('neuron experiment capture comparison and cancellation')) {
+    await installNeuronStreamObserver(page);
+  }
   await page.goto('/');
   timing.bodyStarted = performance.now();
 });
@@ -1656,15 +1659,15 @@ function neuronWire(bytes: Buffer) {
   return { metadata, values: Array.from({ length: data.length / 4 }, (_, i) => data.readFloatLE(i * 4)) };
 }
 
-async function observeNextNeuronStream(page: Page) {
-  await page.evaluate(() => {
-    const chunks: number[][] = [];
-    (window as any).__neuronStreamBytes = chunks;
+async function installNeuronStreamObserver(page: Page) {
+  // ApiClient binds fetch during construction, so install before page startup.
+  await page.addInitScript(() => {
     const fetch = window.fetch;
     window.fetch = async (...args) => {
       const input = args[0];
-      const observe = /neuron-(activations|comparisons)$/.test(input instanceof Request ? input.url : String(input));
-      if (observe) window.fetch = fetch;
+      const pending = (window as any).__neuronStreamObservation;
+      const observe = pending?.armed && /neuron-(activations|comparisons)$/.test(input instanceof Request ? input.url : String(input));
+      if (observe) pending.armed = false;
       const response = await fetch(...args);
       if (observe && response.body) {
         // Observe only the application's reads. Do not clone, drain or replace
@@ -1675,7 +1678,7 @@ async function observeNextNeuronStream(page: Page) {
           const reader = getReader.apply(body, options), read = reader.read;
           reader.read = async (...options: any[]) => {
             const result = await read.apply(reader, options);
-            if (result.value) chunks.push(Array.from(result.value));
+            if (result.value) pending.chunks.push(Array.from(result.value));
             return result;
           };
           return reader;
@@ -1684,13 +1687,17 @@ async function observeNextNeuronStream(page: Page) {
       return response;
     };
   });
-  return async () => neuronWire(Buffer.from(await page.evaluate(() => (window as any).__neuronStreamBytes.flat())));
+}
+
+async function observeNextNeuronStream(page: Page) {
+  await page.evaluate(() => { (window as any).__neuronStreamObservation = { armed: true, chunks: [] }; });
+  return async () => neuronWire(Buffer.from(await page.evaluate(() => (window as any).__neuronStreamObservation.chunks.flat())));
 }
 
 test('complete local reference [smollm2] neuron experiment capture comparison and cancellation', { tag: '@extended' }, async ({ page }, info) => {
   const capabilitiesResponse = page.waitForResponse(r => r.url().endsWith('/neuron-capabilities') && r.status() === 200);
   await selectGraph(page);
-  const capabilities = await (await capabilitiesResponse).json() as import('../src/api/generated/types').components['schemas']['NeuronCapabilities'];
+  const capabilities = await (await fetch((await capabilitiesResponse).url())).json() as import('../src/api/generated/types').components['schemas']['NeuronCapabilities'];
   expect(capabilities.observation.status).toBe('available');
   const module = capabilities.modules.find(item => item.layer_index === 7)!;
   await page.setViewportSize({ width: 1440, height: 960 });
