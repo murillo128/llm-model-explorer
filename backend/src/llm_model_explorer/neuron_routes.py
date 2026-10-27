@@ -9,9 +9,45 @@ from fastapi.responses import JSONResponse
 from .dependencies import get_services, get_sessions, get_settings
 from .model_files import ModelError
 from .neuron_execution import Unavailable, admit
+from .neuron_execution.activations import subscribe_activations
 from .session_routes import LifecycleRoute
+from .stream_metadata import Control, ModelRevision, NeuronId, Size
+from .streaming import LMEXResponse
 
 router = APIRouter(route_class=LifecycleRoute)
+
+
+class NeuronActivationsRequest(Control):
+    model_revision: ModelRevision
+    module_id: NeuronId
+    neuron_indices: list[Size]
+    token_ids: list[Size]
+
+
+@router.post("/sessions/{session_id}/neuron-activations")
+async def neuron_activations(
+    session_id: UUID, body: NeuronActivationsRequest, request: Request
+) -> LMEXResponse:
+    runtime = get_services(request).neurons
+    if runtime is None:
+        raise ModelError("unsupported_representation", "Neuron runtime is not configured.")
+    sessions = get_sessions(request)
+    result, consumer = await subscribe_activations(
+        sessions,
+        runtime,
+        get_settings(request).model_root,
+        session_id,
+        body.model_revision,
+        body.module_id,
+        tuple(body.neuron_indices),
+        tuple(body.token_ids),
+    )
+
+    async def metadata() -> object:
+        await sessions.work.run(result.selection.model.source.check_unchanged)
+        return result.metadata
+
+    return LMEXResponse(consumer, metadata)
 
 
 @router.get("/sessions/{session_id}/neuron-capabilities")

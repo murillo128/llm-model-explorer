@@ -8,27 +8,24 @@ import asyncio
 import gc
 import json
 import weakref
-from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
 from threading import Event
-from typing import Any, cast
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
 import torch
 from fastapi.testclient import TestClient
-from tokenizers import Tokenizer, models  # type: ignore[import-untyped]
-from transformers import LlamaConfig, LlamaForCausalLM, PreTrainedTokenizerFast
+from neuron_fixtures import TOKENS, direct, reference_activations, request, source_for
+from neuron_fixtures import tiny as tiny
 
 from llm_model_explorer.app import create_app
 from llm_model_explorer.artifacts import ArtifactSpec
 from llm_model_explorer.execution import BlockingWork
 from llm_model_explorer.model_files import ModelError
-from llm_model_explorer.models import ModelCatalogue
 from llm_model_explorer.neuron_execution import (
     AdmittedModel,
-    NeuronInput,
     NeuronLease,
     NeuronRuntime,
     Unavailable,
@@ -41,66 +38,6 @@ from llm_model_explorer.services import open_services
 from llm_model_explorer.settings import Settings
 from llm_model_explorer.tensor_source import ModelSource
 
-TOKENS = (4, 2, 4)
-
-
-@pytest.fixture
-def tiny(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple[Settings, Path, Any]]:
-    root = tmp_path / "models"
-    directory = root / "SmolLM2-135M"
-    directory.mkdir(parents=True)
-    config = dict(
-        admission.REFERENCE,
-        vocab_size=32,
-        hidden_size=8,
-        intermediate_size=16,
-        num_hidden_layers=2,
-        num_attention_heads=2,
-        num_key_value_heads=1,
-        max_position_embeddings=32,
-    )
-    monkeypatch.setattr(admission, "REFERENCE", config)
-    with torch.random.fork_rng():
-        torch.manual_seed(173)
-        reference: Any = LlamaForCausalLM(  # type: ignore[no-untyped-call]
-            LlamaConfig(**config, attn_implementation="eager")  # type: ignore[no-untyped-call]
-        )
-        reference.eval()
-    reference.save_pretrained(directory, safe_serialization=True)
-    (directory / "config.json").write_text(
-        json.dumps(
-            dict(
-                config,
-                _name_or_path=admission.REPOSITORY,
-                _commit_hash=admission.REVISION,
-            )
-        )
-    )
-    vocabulary = {f"token-{i}": i for i in range(32)}
-    tokenizer = PreTrainedTokenizerFast(  # type: ignore[no-untyped-call]
-        tokenizer_object=Tokenizer(models.WordLevel(vocabulary, unk_token="token-0")),
-        unk_token="token-0",
-        eos_token="token-0",
-    )
-    tokenizer.save_pretrained(directory)
-    yield Settings(model_root=root, cache_dir=tmp_path / "cache"), directory, reference
-
-
-def source_for(settings: Settings) -> ModelSource:
-    catalogue = ModelCatalogue(settings.model_root)
-    return catalogue.discover()[0].pin()
-
-
-def request(model: AdmittedModel) -> NeuronInput:
-    return NeuronInput(
-        model, model.source.model_revision, model.modules[0]["module_id"], (1, 0), TOKENS
-    )
-
-
-def direct(reference: Any) -> torch.Tensor:
-    with torch.inference_mode():
-        return cast(torch.Tensor, reference(torch.tensor([TOKENS]), use_cache=False).logits)
-
 
 def test_real_forward_exact_bindings_and_operation_local_hooks(
     tiny: tuple[Settings, Path, Any],
@@ -108,20 +45,7 @@ def test_real_forward_exact_bindings_and_operation_local_hooks(
     settings, _, reference = tiny
     admitted = admit(source_for(settings), settings.model_root, "cpu")
     expected = direct(reference)
-    # Independent mathematical oracle at the input of the reference MLP.
-    activations = []
-    mlp = reference.model.layers[1].mlp
-
-    def oracle(_module: Any, args: Any) -> None:
-        x = args[0]
-        activations.append(
-            torch.nn.functional.silu(torch.nn.functional.linear(x, mlp.gate_proj.weight))
-            * torch.nn.functional.linear(x, mlp.up_proj.weight)
-        )
-
-    handle = mlp.register_forward_pre_hook(oracle)
-    direct(reference)
-    handle.remove()
+    activations = reference_activations(reference, TOKENS, 1)
     assert len(admitted.modules) == 2
     module = admitted.modules[1]
     assert module["module"] == {"kind": "module", "name": "model.layers.1.mlp"}
@@ -150,7 +74,7 @@ def test_real_forward_exact_bindings_and_operation_local_hooks(
 
             actual = await execution.run(request(admitted), Cancellation(), observe)
             torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-7)
-            torch.testing.assert_close(captured[0], activations[0], rtol=1e-6, atol=1e-7)
+            torch.testing.assert_close(captured[0], activations, rtol=1e-6, atol=1e-7)
             assert not actual.requires_grad
             assert torch.equal(rng, torch.random.get_rng_state())
 
