@@ -1668,9 +1668,11 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   expect(Number.isFinite(Number(await value.textContent()))).toBe(true);
   for (const width of [1440, 760]) {
     await page.setViewportSize({ width, height: 960 });
+    if (width === 760) await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
     await activations.scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath(`neuron-activation-${width}.png`) });
     expect(await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight])).toEqual([width, 960]);
+    if (width === 760) await page.getByRole('button', { name: 'Expand browser', exact: true }).click();
   }
   // The prompt survives an invalid coordinate and a concrete-module switch.
   const annotatedPrompt = (await prompt.textContent())!;
@@ -1696,11 +1698,13 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   await expect(experiment.getByRole('article')).toHaveCount(3);
   for (const width of [1440, 760]) {
     await page.setViewportSize({ width, height: 960 });
+    if (width === 760) await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
     await probabilities.scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath(`neuron-comparison-${width}.png`) });
     await experiment.locator('.experiment-continuations').scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath(`neuron-continuations-${width}.png`) });
     expect(await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight])).toEqual([width, 960]);
+    if (width === 760) await page.getByRole('button', { name: 'Expand browser', exact: true }).click();
   }
   // Run again sends the same recipe, without a new tokenization or hidden BOS.
   const rerun = page.waitForRequest(r => r.url().endsWith('/neuron-comparisons'));
@@ -1716,13 +1720,25 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   await cancelled;
   await expect(status).toHaveAttribute('data-experiment-status', 'cancelled');
   for (const width of [1440, 760]) {
-    await page.setViewportSize({ width, height: 960 }); await status.scrollIntoViewIfNeeded();
+    await page.setViewportSize({ width, height: 960 });
+    if (width === 760) await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
+    await status.scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath(`neuron-cancelled-${width}.png`) });
+    if (width === 760) await page.getByRole('button', { name: 'Expand browser', exact: true }).click();
   }
   await experiment.getByRole('spinbutton', { name: 'New tokens' }).fill('0');
   await experiment.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(status).toHaveAttribute('data-experiment-status', 'complete', { timeout: 60_000 });
   await expect(experiment.getByText('No generation requested.', { exact: true })).toHaveCount(3);
+  const download = page.waitForEvent('download');
+  await experiment.getByRole('button', { name: 'Export configuration', exact: true }).click();
+  const file = await download, stream = (await file.createReadStream())!;
+  let recipe = ''; for await (const chunk of stream) recipe += chunk.toString();
+  const manifest = JSON.parse(recipe);
+  expect(manifest).toMatchObject({ format: 'llmex-neuron-experiment', format_revision: 1,
+    token_ids: tokens, neuron_indices: [427], max_new_tokens: 0, decoding: 'greedy' });
+  expect(manifest).not.toHaveProperty('user_text'); expect(manifest).not.toHaveProperty('continuations');
+  await file.delete();
   await page.setViewportSize({ width: 1440, height: 960 });
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
   await page.getByRole('button', { name: 'Back to graph' }).click();
