@@ -12,10 +12,12 @@ The specification is split along the three system boundaries: backend, API contr
 - [`backend/architecture-analysis.md`](backend/architecture-analysis.md): static semantic analysis, family coverage, parameter binding, and verification requirements.
 - [`backend/model-owned-architecture.md`](backend/model-owned-architecture.md): checkpoint-owned JSON definitions, native bindings, limits and trust boundary.
 - [`backend/sessions-and-execution.md`](backend/sessions-and-execution.md): sessions, prepared architecture lookup, explicit computation, cancellation, and scheduling.
+- [`backend/neuron-execution.md`](backend/neuron-execution.md): bounded native SmolLM2 execution, isolation, integrity and privacy.
 - [`backend/artifact-cache.md`](backend/artifact-cache.md): numeric and structured artifacts, identity, publication, and invalidation.
 - [`api/openapi.yaml`](api/openapi.yaml): published machine-readable HTTP endpoint, schema, identifier, and status-code contract.
 - [`api/contract.md`](api/contract.md): API ownership and shared HTTP, tensor, tokenizer, embedding, and architecture semantics.
 - [`api/architecture-explorer.md`](api/architecture-explorer.md): accepted architecture endpoint, graph records, capability separation, bounds, and conformance requirements.
+- [`api/neuron-explorer.md`](api/neuron-explorer.md): neuron capabilities, experimental semantics, cross-field validation and LMEX layouts.
 - [`api/binary-streaming.md`](api/binary-streaming.md): binary framing, payload layouts, and terminal behavior.
 - [`ui/architecture.md`](ui/architecture.md): React composition, explorer integration, and renderer boundaries.
 - [`ui/rendering.md`](ui/rendering.md): tensor rendering rules and visual encoding.
@@ -23,6 +25,7 @@ The specification is split along the three system boundaries: backend, API contr
 - [`ui/tensor-explorer.md`](ui/tensor-explorer.md): tensor navigation, matrix geometry, camera, inspection, and scientific guardrails.
 - [`ui/tokenizer-explorer.md`](ui/tokenizer-explorer.md): live prompt/tokenization and input-embedding inspection.
 - [`ui/architecture-explorer.md`](ui/architecture-explorer.md): global graph navigation, grouping, dimensions, and modal inspection.
+- [`ui/neuron-explorer.md`](ui/neuron-explorer.md): neuron selection, weights, signed activations, comparisons and explicit configuration export within Architecture Explorer.
 
 ## Authority and delivery status
 
@@ -31,3 +34,7 @@ These documents describe accepted design. `api/openapi.yaml` remains authoritati
 Architecture Explorer is a separate increment, not an expansion of an already executing issue. Existing matrix-camera and tokenizer-continuity requirements remain in force. Its graph camera does not replace or constrain the Matrix Explorer camera.
 
 Cross-cutting styling belongs in `ui/visual-language.md`; component behavior belongs in its dedicated specification. A specific accepted component rule controls over a generic visual-language rule for that component.
+
+The neuron increment publishes specifications, OpenAPI, conformance fixtures and
+generated bindings ahead of runtime and UI implementation. Its contracts do not
+establish real-model execution or complete local reference acceptance.

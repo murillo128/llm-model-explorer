@@ -818,3 +818,10 @@ inspectable. Visible bounds include only the actual compact bodies and their
 attached return/bypass/state gutters; hidden copies and collapsed state helpers
 do not reserve space. Model, Shared and repetition actions use the same range
 correspondence and require explicit concrete selection for numerical inspection.
+
+## Separately admitted neuron execution
+
+The [neuron view](neuron-explorer.md) is an accepted increment within this workspace.
+Its explicit capability descriptor authorizes runtime actions independently from
+the static graph. The static navigation and weight-inspection rules above remain
+in force; descriptive graph records alone never enable execution.

@@ -17,7 +17,8 @@ export interface DecoderCallbacks {
 }
 
 /** Independent from fetch and React. Storage is a 12-byte header, <=1 MiB JSON,
- * and a 4-byte distribution word. DATA is never staged in a frame-sized buffer. */
+ * a 4-byte numeric word and at most 80 probabilities for row validation.
+ * DATA is never staged in a frame-sized buffer. */
 export class LmexDecoder {
   private readonly header = new Uint8Array(12);
   private headerUsed = 0;
@@ -34,6 +35,7 @@ export class LmexDecoder {
   private wordUsed = 0;
   private rowSum = 0;
   private columnSum = 0;
+  private neuronRow: number[] = [];
 
   constructor(private readonly callbacks: DecoderCallbacks = {}) {}
 
@@ -57,7 +59,7 @@ export class LmexDecoder {
         const bytes = chunk.subarray(position, position + n);
         if (this.type === 2) {
           requireProtocol(this.received + n <= this.metadata!.byte_length, 'DATA overrun');
-          this.checkCounts(bytes);
+          this.checkValues(bytes);
           this.callbacks.onData?.(bytes, this.received);
           this.received += n;
         } else {
@@ -146,24 +148,43 @@ export class LmexDecoder {
     this.control = new Uint8Array(0);
   }
 
-  private checkCounts(bytes: Uint8Array): void {
-    if (this.metadata?.kind !== 'tensor_distributions' && this.metadata?.kind !== 'input_embeddings_distributions') return;
+  private checkValues(bytes: Uint8Array): void {
+    if (this.metadata?.kind !== 'tensor_distributions' && this.metadata?.kind !== 'input_embeddings_distributions'
+      && this.metadata?.kind !== 'neuron_activations' && this.metadata?.kind !== 'neuron_comparison') return;
     const m = this.metadata;
-    const accept = (count: number, endOffset: number) => {
-      requireProtocol(m.domain_minimum !== null || count === 0, 'Nonzero count in null domain');
-      if (endOffset <= m.sections[0].byte_length) this.rowSum = safeSize(this.rowSum + count);
-      else this.columnSum = safeSize(this.columnSum + count);
+    const accept = (view: DataView, offset: number, endOffset: number) => {
+      if (m.kind === 'neuron_activations' || m.kind === 'neuron_comparison') {
+        const value = view.getFloat32(offset, true);
+        requireProtocol(Number.isFinite(value), 'Non-finite neuron result');
+        if (m.kind === 'neuron_comparison') {
+          requireProtocol(value >= 0 && value <= 1, 'Invalid neuron probability');
+          this.neuronRow.push(value);
+          if (this.neuronRow.length === m.candidate_token_ids.length) {
+            requireProtocol(this.neuronRow.reduce((a, b) => a + b, 0) <= 1 + 1e-6, 'Invalid neuron probability sum');
+            const ranked = m.candidate_token_ids.map((id, i) => ({ id, probability: this.neuronRow[i]! }))
+              .sort((a, b) => b.probability - a.probability || a.id - b.id);
+            const row = endOffset / (4 * this.neuronRow.length) - 1;
+            requireProtocol(m.top_token_ids[row]!.every((id, i) => id === ranked[i]!.id), 'Invalid neuron top-k ranking');
+            this.neuronRow = [];
+          }
+        }
+      } else {
+        const count = view.getUint32(offset, true);
+        requireProtocol(m.domain_minimum !== null || count === 0, 'Nonzero count in null domain');
+        if (endOffset <= m.sections[0].byte_length) this.rowSum = safeSize(this.rowSum + count);
+        else this.columnSum = safeSize(this.columnSum + count);
+      }
     };
     let i = 0;
     while (this.wordUsed > 0 && i < bytes.length) {
       this.word[this.wordUsed++] = bytes[i++]!;
       if (this.wordUsed === 4) {
-        accept(new DataView(this.word.buffer).getUint32(0, true), this.received + i);
+        accept(new DataView(this.word.buffer), 0, this.received + i);
         this.wordUsed = 0;
       }
     }
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    for (; i + 4 <= bytes.length; i += 4) accept(view.getUint32(i, true), this.received + i + 4);
+    for (; i + 4 <= bytes.length; i += 4) accept(view, i, this.received + i + 4);
     while (i < bytes.length) this.word[this.wordUsed++] = bytes[i++]!;
   }
 }

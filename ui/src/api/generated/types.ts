@@ -295,6 +295,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{session_id}/neuron-capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read independently admitted neuron execution capabilities
+         * @description Accepted contract; see neuron-explorer.md for admission, cross-field constraints, identity, privacy and LMEX layouts. Runtime implementation is delivered separately.
+         */
+        get: operations["getNeuronCapabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{session_id}/neuron-activations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Observe signed prompt activations of one concrete MLP
+         * @description Accepted contract; see neuron-explorer.md for admission, cross-field constraints, identity, privacy and LMEX layouts. Runtime implementation is delivered separately.
+         */
+        post: operations["streamNeuronActivations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{session_id}/neuron-comparisons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compare baseline and bounded activation interventions
+         * @description Accepted contract; see neuron-explorer.md for admission, cross-field constraints, identity, privacy and LMEX layouts. Runtime implementation is delivered separately.
+         */
+        post: operations["streamNeuronComparison"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/{operation_id}": {
         parameters: {
             query?: never;
@@ -639,8 +705,220 @@ export interface components {
              */
             kind: "input_embeddings_distributions";
         });
+        NeuronFeatureAvailable: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "available";
+        };
+        NeuronFeatureUnavailable: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            status: "unavailable";
+            reason: {
+                /** @enum {string} */
+                code: "unsupported_model" | "unsupported_representation" | "tokenizer_unavailable" | "runtime_unavailable";
+                message: string;
+                recovery: string;
+            };
+        };
+        NeuronFeature: components["schemas"]["NeuronFeatureAvailable"] | components["schemas"]["NeuronFeatureUnavailable"];
+        NeuronExecution: {
+            /** @constant */
+            family: "smollm2";
+            /** @constant */
+            adapter: "smollm2_native";
+            adapter_version: string;
+            runtime_version: string;
+            torch_version: string;
+            device: string;
+            /** @constant */
+            dtype: "float32";
+        };
+        NeuronLimits: {
+            /** @constant */
+            max_modules_per_request: 1;
+            /** @constant */
+            max_neurons: 8;
+            max_input_tokens: number;
+            max_new_tokens: number;
+            /** @constant */
+            max_conditions: 4;
+            max_top_k: number;
+            context_length: number;
+            vocabulary_size: number;
+            eos_token_ids: number[];
+        };
+        NeuronWeightBinding: {
+            tensor_id: string;
+            /** @enum {string} */
+            axis: "row" | "column";
+            shape: number[];
+        };
+        NeuronModule: {
+            module_id: string;
+            module: components["schemas"]["ArchitectureModuleReference"];
+            layer_index: number;
+            intermediate_size: number;
+            hidden_size: number;
+            /** @constant */
+            point: "post_activation_product_pre_down_proj";
+            weights: {
+                gate: components["schemas"]["NeuronWeightBinding"];
+                up: components["schemas"]["NeuronWeightBinding"];
+                down: components["schemas"]["NeuronWeightBinding"];
+            };
+            graph_binding?: {
+                graph_id: components["schemas"]["ArchitectureId"];
+                node_id: components["schemas"]["ArchitectureId"];
+            };
+        };
+        NeuronCapabilities: {
+            /** Format: uuid */
+            session_id: string;
+            model_id: string;
+            model_revision: components["schemas"]["ModelRevision"];
+            observation: components["schemas"]["NeuronFeature"];
+            intervention: components["schemas"]["NeuronFeature"];
+            generation: components["schemas"]["NeuronFeature"];
+            execution: components["schemas"]["NeuronExecution"] | null;
+            limits: components["schemas"]["NeuronLimits"] | null;
+            modules: components["schemas"]["NeuronModule"][];
+        };
+        NeuronActivationsRequest: {
+            model_revision: components["schemas"]["ModelRevision"];
+            module_id: string;
+            neuron_indices: number[];
+            token_ids: number[];
+        };
+        NeuronBaselineCondition: {
+            /** @constant */
+            id: "baseline";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "baseline";
+        };
+        NeuronZeroCondition: {
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "zero";
+            /** @enum {string} */
+            scope: "prompt" | "continuation" | "all";
+        };
+        NeuronScaleCondition: {
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "scale";
+            /** @enum {string} */
+            scope: "prompt" | "continuation" | "all";
+            factor: number;
+        };
+        NeuronAddCondition: {
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "add";
+            /** @enum {string} */
+            scope: "prompt" | "continuation" | "all";
+            delta: number;
+        };
+        NeuronCondition: components["schemas"]["NeuronBaselineCondition"] | components["schemas"]["NeuronZeroCondition"] | components["schemas"]["NeuronScaleCondition"] | components["schemas"]["NeuronAddCondition"];
+        NeuronComparisonRequest: {
+            model_revision: components["schemas"]["ModelRevision"];
+            module_id: string;
+            neuron_indices: number[];
+            token_ids: number[];
+            conditions: components["schemas"]["NeuronCondition"][];
+            top_k: number;
+            max_new_tokens: number;
+            /** @constant */
+            decoding: "greedy";
+        };
+        NeuronSection: {
+            /** @enum {string} */
+            name: "activations" | "probabilities";
+            shape: number[];
+            offset: number;
+            byte_length: number;
+        };
+        NeuronContinuation: {
+            condition_id: string;
+            token_ids: number[];
+            text: string;
+            /** @enum {string} */
+            finish_reason: "not_requested" | "eos" | "length";
+        };
+        NeuronActivationsMetadata: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "neuron_activations";
+            /** Format: uuid */
+            session_id: string;
+            model_id: string;
+            model_revision: components["schemas"]["ModelRevision"];
+            execution: components["schemas"]["NeuronExecution"];
+            limits: components["schemas"]["NeuronLimits"];
+            module: components["schemas"]["NeuronModule"];
+            token_ids: number[];
+            neuron_indices: number[];
+            /** @constant */
+            dtype: "float32";
+            /** @constant */
+            byte_order: "little";
+            /** @constant */
+            layout: "c";
+            sections: components["schemas"]["NeuronSection"][];
+            byte_length: number;
+        };
+        NeuronComparisonMetadata: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "neuron_comparison";
+            /** Format: uuid */
+            session_id: string;
+            model_id: string;
+            model_revision: components["schemas"]["ModelRevision"];
+            execution: components["schemas"]["NeuronExecution"];
+            limits: components["schemas"]["NeuronLimits"];
+            module: components["schemas"]["NeuronModule"];
+            token_ids: number[];
+            neuron_indices: number[];
+            /** @constant */
+            dtype: "float32";
+            /** @constant */
+            byte_order: "little";
+            /** @constant */
+            layout: "c";
+            sections: components["schemas"]["NeuronSection"][];
+            byte_length: number;
+            conditions: components["schemas"]["NeuronCondition"][];
+            top_k: number;
+            max_new_tokens: number;
+            /** @constant */
+            decoding: "greedy";
+            candidate_token_ids: number[];
+            top_token_ids: number[][];
+            continuations: components["schemas"]["NeuronContinuation"][];
+        };
         /** @description JSON payload of META_JSON; never a JSON encoding of numeric DATA. */
-        StreamMetadata: components["schemas"]["TensorMetadata"] | components["schemas"]["InputEmbeddingsMetadata"] | components["schemas"]["InputEmbeddingsDistributionsMetadata"] | components["schemas"]["InputEmbeddingsStatisticsMetadata"] | components["schemas"]["TensorStatisticsMetadata"] | components["schemas"]["TensorDistributionsMetadata"];
+        StreamMetadata: components["schemas"]["NeuronActivationsMetadata"] | components["schemas"]["NeuronComparisonMetadata"] | components["schemas"]["TensorMetadata"] | components["schemas"]["InputEmbeddingsMetadata"] | components["schemas"]["InputEmbeddingsDistributionsMetadata"] | components["schemas"]["InputEmbeddingsStatisticsMetadata"] | components["schemas"]["TensorStatisticsMetadata"] | components["schemas"]["TensorDistributionsMetadata"];
         /** @description Advisory PROGRESS_JSON payload. When total is present, completed <= total. Does not change metadata. */
         StreamProgress: {
             completed: components["schemas"]["SafeInteger"];
@@ -1470,6 +1748,82 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["InputEmbeddingsRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["BinaryStream"];
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModelChanged"];
+            422: components["responses"]["Unprocessable"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ResourceExhausted"];
+        };
+    };
+    getNeuronCapabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded independent capabilities for the pinned session */
+            200: {
+                headers: {
+                    "Cache-Control": components["headers"]["NoStore"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NeuronCapabilities"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModelChanged"];
+            422: components["responses"]["Unprocessable"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ResourceExhausted"];
+        };
+    };
+    streamNeuronActivations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NeuronActivationsRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["BinaryStream"];
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModelChanged"];
+            422: components["responses"]["Unprocessable"];
+            500: components["responses"]["InternalError"];
+            503: components["responses"]["ResourceExhausted"];
+        };
+    };
+    streamNeuronComparison: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: components["parameters"]["SessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NeuronComparisonRequest"];
             };
         };
         responses: {
