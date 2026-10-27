@@ -1698,7 +1698,7 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
     await page.setViewportSize({ width, height: 960 });
     await probabilities.scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath(`neuron-comparison-${width}.png`) });
-    await experiment.getByRole('heading', { name: 'Free continuations · separate contexts' }).scrollIntoViewIfNeeded();
+    await experiment.locator('.experiment-continuations').scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath(`neuron-continuations-${width}.png`) });
     expect(await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight])).toEqual([width, 960]);
   }

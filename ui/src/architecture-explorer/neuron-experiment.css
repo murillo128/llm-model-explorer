@@ -1,4 +1,5 @@
 .neuron-experiment-card { min-width: 0; min-height: 100%; font-size: 13px; }
+.neuron-experiment { scroll-padding-block-start: 48px; }
 .neuron-experiment-heading { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 16px; min-height: 40px; padding: 8px 12px; border-bottom: 1px solid var(--ui-border); background: var(--ui-surface-soft); }
 .neuron-experiment h2 { font-size: 14px; margin: 0; }
 .neuron-experiment-heading > span, .experiment-target, .experiment-limits, .experiment-note { color: var(--ui-text-muted); font-size: 12px; }
@@ -50,7 +51,7 @@
 .experiment-snapshot dt { margin-top: 8px; font-weight: 600; }
 .experiment-export label { display: flex; align-items: center; gap: 6px; }
 @media (max-width: 1100px) {
-  .architecture-neuron-layout.has-neuron-experiment { grid-template-rows: minmax(100px, 1fr) minmax(130px, 1fr) minmax(250px, 3fr); }
+  .architecture-neuron-layout.has-neuron-experiment { grid-template-rows: minmax(160px, 1fr) minmax(130px, 1fr) minmax(220px, 3fr); }
   .neuron-experiment-heading { gap: 8px; flex-wrap: wrap; }
   .neuron-experiment-body { padding: 8px; }
   .experiment-condition { grid-template-columns: 1fr 1fr; }
