@@ -11,7 +11,7 @@ import './matrix-explorer.css';
 
 /** Transport-free scientific composition. The parent owns operation status/errors. */
 export function MatrixExplorer({ source, header, label = 'Matrix; scroll to inspect all values',
-  onCellSelect, onRowSelect, onColumnSelect, onRenderingStateChange, highlightedRow = null, selectedRows, revealRow }: MatrixExplorerProps) {
+  onCellSelect, onRowSelect, onColumnSelect, onRenderingStateChange, highlightedRow = null, selectedRows, selectedColumns, revealRow, revealColumn }: MatrixExplorerProps) {
   const host = useRef<HTMLDivElement>(null);
   const currentViewport = useRef<MatrixViewport | null>(null);
   const [inspection, setInspection] = useState<Inspection | null>(null);
@@ -119,6 +119,10 @@ export function MatrixExplorer({ source, header, label = 'Matrix; scroll to insp
   useLayoutEffect(() => {
     if (revealRow) currentViewport.current?.revealRow(revealRow.row);
   }, [revealRow, source]);
+  useLayoutEffect(() => { currentViewport.current?.setSelectedColumns(selectedColumns); }, [selectedColumns, source]);
+  useLayoutEffect(() => {
+    if (revealColumn) currentViewport.current?.revealColumn(revealColumn.column);
+  }, [revealColumn, source]);
   // Context/slot/callback changes do not restart subscriptions or upload weights.
   useLayoutEffect(() => {
     host.current?.querySelector('.matrix-scroll')?.setAttribute('aria-label', label);

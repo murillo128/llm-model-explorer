@@ -1575,3 +1575,61 @@ test('shared structure production [templates] neutral mode, distinct instance we
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
   await recordGraph(page, info, 'shared-instance-weight-cancelled', graph);
 });
+
+// One real checkpoint journey owns the HTTP/inventory/matrix boundary. The small
+// contract browser fixture owns invalid indices and deliberately stale replies.
+test('complete local reference [smollm2] neuron selection and native weight navigation', { tag: '@extended' }, async ({ page }, info) => {
+  const capabilityResponse = page.waitForResponse(r => r.url().endsWith('/neuron-capabilities') && r.status() === 200);
+  const graph = await selectGraph(page);
+  const cap = await (await fetch((await capabilityResponse).url())).json() as import('../src/api/generated/types').components['schemas']['NeuronCapabilities'];
+  expect(cap.observation.status).toBe('available');
+  const module = cap.modules.find(item => item.layer_index === 7)!;
+  expect(module).toBeTruthy();
+  // Test oracle may locate the semantic source module; product entry still needs
+  // the backend's optional verified graph_binding, never a name-derived join.
+  const node = graph.nodes.find(item => item.references.some(ref => ref.kind === 'module' && ref.name === module.module.name))!;
+  expect(node).toBeTruthy();
+  const canvas = page.getByLabel('Architecture graph', { exact: true });
+  for (const width of [1440, 760]) {
+    await page.setViewportSize({ width, height: 960 });
+    await findComponent(page, node.id);
+    await expect(canvas).toHaveAttribute('aria-busy', 'false');
+    const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+    const layout = await canvas.getAttribute('data-layout-count');
+    await page.getByRole('button', { name: 'Inspect selected', exact: true }).click();
+    if (module.graph_binding) {
+      expect(module.graph_binding).toEqual({ graph_id: graph.graph_id, node_id: node.id });
+      await page.getByRole('button', { name: 'Explore neurons', exact: true }).click();
+    } else {
+      await expect(page.getByRole('button', { name: 'Explore neurons', exact: true })).toHaveCount(0);
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Neurons', exact: true }).click();
+      await page.getByLabel('Concrete MLP').selectOption(module.module_id);
+    }
+    await page.getByRole('spinbutton', { name: 'Intermediate index' }).fill('427');
+    await expect(page.getByLabel('Neuron inspector', { exact: true })).toContainText(module.module.name);
+    if (width === 760) await page.locator('.neuron-inspector-scroll').evaluate(element => { element.scrollTop = 140; });
+    await page.screenshot({ path: info.outputPath(`neuron-reference-inspector-${width}.png`) });
+    for (const projection of ['gate', 'up', 'down'] as const) {
+      const binding = module.weights[projection];
+      const data = page.waitForResponse(r => r.url().endsWith(`/tensors/${binding.tensor_id}/data`) && r.status() === 200);
+      await page.getByRole('button', { name: `Open ${projection} weight` }).click();
+      await data;
+      await expect(page.locator('[data-result="tensor"]')).toHaveCount(0);
+      await expect(page.locator('[data-result="statistics"]')).toHaveCount(0);
+      await expect(page.locator('[data-result="distributions"]')).toHaveCount(0);
+      const axis = projection === 'down' ? 'columns' : 'rows';
+      await expect(page.locator(`.matrix-scroll .matrix-selected-${axis}`)).toHaveAttribute(`data-${axis}`, '427:428');
+      await expect(page.getByRole('dialog')).toContainText(`highlighted ${binding.axis} 427`);
+      await nativeCamera(page);
+      if (projection === 'down') await page.screenshot({ path: info.outputPath(`neuron-reference-weight-${width}.png`) });
+      await page.keyboard.press('Escape');
+      await released(page);
+    }
+    await page.getByRole('button', { name: 'Back to graph' }).click();
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+    expect(await canvas.getAttribute('data-layout-count')).toBe(layout);
+    expect(await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight])).toEqual([width, 960]);
+  }
+  expect(observed.some(path => /neuron-(activations|comparisons)$/.test(path))).toBe(false);
+});

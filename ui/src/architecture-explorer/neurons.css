@@ -1,0 +1,31 @@
+.architecture-neuron-layout { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; min-height: 0; }
+.architecture-neuron-layout.neuron-open { grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); gap: 12px; }
+.neuron-entry { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--ui-border); font-size: 12px; }
+.neuron-entry span { color: var(--ui-text-muted); }
+.neuron-inspector { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+.neuron-inspector > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; background: var(--ui-surface-soft); border-bottom: 1px solid var(--ui-border); }
+.neuron-inspector h2 { margin: 0; font-size: 14px; }
+.neuron-inspector h3 { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; margin: 20px 0 8px; }
+.neuron-inspector-scroll { padding: 12px; overflow: auto; min-height: 0; font-size: 13px; overflow-wrap: anywhere; }
+.neuron-inspector p { margin: 8px 0; line-height: 20px; }
+.neuron-inspector button, .neuron-inspector input, .neuron-inspector select, .neuron-entry button { border: 1px solid var(--ui-border); border-radius: 4px; padding: 6px 8px; color: var(--ui-text); background: var(--ui-surface); font: inherit; }
+.neuron-inspector button:focus-visible, .neuron-inspector input:focus-visible, .neuron-inspector select:focus-visible, .neuron-inspector h2:focus-visible, .neuron-entry button:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.neuron-inspector button:disabled { opacity: .5; }
+.neuron-module, .neuron-index { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.neuron-module select { width: 100%; min-width: 0; }
+.neuron-context { font-size: 12px; color: var(--ui-text-muted); }
+.neuron-index input { width: 120px; font-family: ui-monospace, monospace; }
+.neuron-formula { margin-top: 16px; padding: 12px 0; border-block: 1px solid var(--ui-border); }
+.neuron-formula code { font-size: 13px; }
+.neuron-formula p, .neuron-explanation { color: var(--ui-text-muted); font-size: 12px; }
+.neuron-weights { list-style: none; padding: 0; margin: 0; }
+.neuron-weights li { display: flex; align-items: start; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--ui-border); }
+.neuron-weights li > div { flex: 1; min-width: 0; }
+.neuron-weights code, .neuron-weights span { display: block; font-size: 11px; margin-top: 4px; }
+.neuron-weights span { color: var(--ui-text-muted); }
+.neuron-experiment { grid-column: 1 / -1; min-width: 0; min-height: 0; overflow: auto; }
+.architecture-neuron-layout.has-neuron-experiment { grid-template-rows: minmax(180px, 2fr) minmax(0, 3fr); }
+@media (max-width: 1100px) {
+  .architecture-neuron-layout.neuron-open { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(160px, 2fr) minmax(0, 3fr); gap: 8px; }
+  .architecture-neuron-layout.has-neuron-experiment { grid-template-rows: minmax(160px, 1fr) minmax(160px, 1fr) minmax(180px, 2fr); }
+}
