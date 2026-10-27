@@ -18,7 +18,7 @@ export interface NeuronViewState {
   scroll: number;
 }
 
-/** Stable composition boundary for the experimental view. No inferred graph/tensor identity. */
+/** Stable composition boundary. Empty indices disable execution during invalid edits without discarding the prompt. */
 export interface NeuronSelectionContext extends Pick<ExplorerContextValue, 'client' | 'session' | 'selection'> {
   capabilities: S['NeuronCapabilities'];
   module: NeuronModule;

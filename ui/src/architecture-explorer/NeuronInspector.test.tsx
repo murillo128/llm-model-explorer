@@ -42,7 +42,8 @@ it('opens a concrete layer-7 neuron, validates index edits and navigates all thr
   const input = screen.getByRole('spinbutton', { name: 'Intermediate index' });
   await user.clear(input); await user.type(input, '3');
   expect(screen.getByRole('alert')).toHaveTextContent('0 to 2');
-  expect(screen.queryByLabelText('Experiment selection')).not.toBeInTheDocument();
+  // Keep the experiment editor mounted, but provide no actionable indices.
+  expect(screen.getByLabelText('Experiment selection').textContent).toBe('mlp-7:');
   expect(screen.getByRole('button', { name: 'Open gate weight' })).toBeDisabled();
   await user.clear(input); await user.type(input, '2');
   await user.selectOptions(screen.getByLabelText('Concrete MLP'), 'mlp-7');
@@ -68,7 +69,7 @@ it('offers explicit module selection without graph linkage and local unavailable
   await screen.findByRole('button', { name: 'Inspect concrete MLP' });
   await user.click(screen.getByRole('button', { name: 'Neurons' }));
   await user.selectOptions(await screen.findByLabelText('Concrete MLP'), 'mlp-7');
-  expect(screen.getByText(/Tokenizer unavailable/)).toBeInTheDocument();
+  expect(screen.getByText(/Tokenizer unavailable\. Weights and graph/)).toBeInTheDocument();
   view.unmount();
   getCapabilities.mockResolvedValue(unavailableNeurons);
   render(<ArchitectureExplorer {...props} />);

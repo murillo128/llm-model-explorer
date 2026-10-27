@@ -1,0 +1,59 @@
+.neuron-experiment-card { min-width: 0; min-height: 100%; font-size: 13px; }
+.neuron-experiment-heading { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 16px; min-height: 40px; padding: 8px 12px; border-bottom: 1px solid var(--ui-border); background: var(--ui-surface-soft); }
+.neuron-experiment h2 { font-size: 14px; margin: 0; }
+.neuron-experiment-heading > span, .experiment-target, .experiment-limits, .experiment-note { color: var(--ui-text-muted); font-size: 12px; }
+.neuron-experiment-body { padding: 12px; display: grid; gap: 10px; min-width: 0; }
+.neuron-experiment p { margin: 0; line-height: 1.5; }
+.neuron-experiment h3 { font-size: 14px; margin: 8px 0; }
+.neuron-experiment h4 { margin: 0; font-size: 13px; }
+.neuron-experiment .prompt-tokenizer { gap: 6px; }
+.neuron-experiment .tokenizer-help { font-size: 12px; }
+.neuron-experiment .tokenizer-editor { height: 108px; min-height: 86px; resize: vertical; }
+.neuron-experiment .tokenizer-editor .cm-content { padding: 6px 12px 22px; }
+.neuron-experiment button, .neuron-experiment select, .neuron-experiment input { font: inherit; color: var(--ui-text); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 4px; padding: 5px 8px; }
+.neuron-experiment button:disabled { opacity: .5; cursor: default; }
+.neuron-experiment :is(button, input, select, summary, [tabindex]):focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.experiment-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.experiment-modes { display: flex; gap: 4px; }
+.experiment-modes [aria-pressed="true"] { background: var(--ui-surface-soft); border-color: var(--ui-accent); font-weight: 600; }
+.experiment-run { margin-left: auto; font-weight: 600 !important; }
+.experiment-conditions { margin: 0; padding: 8px; min-width: 0; border: 1px solid var(--ui-border); border-radius: 6px; }
+.experiment-conditions legend { padding: 0 6px; font-weight: 600; }
+.experiment-baseline { display: flex; gap: 16px; padding: 4px 0 8px; }
+.experiment-baseline span { color: var(--ui-text-muted); }
+.experiment-condition { display: grid; grid-template-columns: minmax(70px, .6fr) minmax(145px, 1fr) minmax(80px, .6fr) minmax(140px, 1fr) auto; align-items: end; gap: 8px; padding: 8px 0; border-top: 1px solid var(--ui-border); }
+.experiment-condition label, .experiment-options label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.experiment-condition :is(input, select) { width: 100%; min-width: 0; }
+.experiment-condition > strong { align-self: center; overflow-wrap: anywhere; }
+.experiment-zero { align-self: center; font-family: ui-monospace, monospace; }
+.experiment-options, .experiment-export { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.experiment-options input { width: 90px; }
+.experiment-status { min-height: 20px; }
+.experiment-validation, .experiment-stale { padding: 8px; border-left: 3px solid var(--ui-accent); background: var(--ui-surface-soft); }
+.experiment-result { display: grid; gap: 10px; min-width: 0; border-top: 1px solid var(--ui-border); padding-top: 8px; }
+.experiment-result-heading { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.experiment-result-heading > span { font-size: 12px; color: var(--ui-text-muted); }
+.experiment-table-scroll { overflow: auto; max-height: 320px; border: 1px solid var(--ui-border); border-radius: 4px; }
+.experiment-table-scroll table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; text-align: left; }
+.experiment-table-scroll th, .experiment-table-scroll td { padding: 8px 12px; border-bottom: 1px solid var(--ui-border); white-space: nowrap; }
+.experiment-table-scroll th { font-weight: 600; }
+.experiment-table-scroll thead { background: var(--ui-surface-soft); }
+.experiment-table-scroll td { font-family: ui-monospace, monospace; }
+.experiment-table-scroll small { display: block; font: inherit; font-size: 11px; color: var(--ui-text-muted); }
+.experiment-table-scroll caption { text-align: left; padding: 8px; color: var(--ui-text-muted); font-size: 12px; }
+.experiment-table-scroll .experiment-token { white-space: pre; }
+.experiment-continuations { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.experiment-continuations article { padding: 12px; border: 1px solid var(--ui-border); border-radius: 6px; min-width: 0; }
+.experiment-continuations article > p { color: var(--ui-text-muted); font-size: 12px; margin-top: 6px; }
+.experiment-continuations pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px / 1.6 ui-monospace, monospace; }
+.experiment-snapshot dd { margin-left: 0; overflow-wrap: anywhere; font: 12px / 1.6 ui-monospace, monospace; }
+.experiment-snapshot dt { margin-top: 8px; font-weight: 600; }
+.experiment-export label { display: flex; align-items: center; gap: 6px; }
+@media (max-width: 1100px) {
+  .architecture-neuron-layout.has-neuron-experiment { grid-template-rows: minmax(100px, 1fr) minmax(130px, 1fr) minmax(250px, 3fr); }
+  .neuron-experiment-heading { gap: 8px; flex-wrap: wrap; }
+  .neuron-experiment-body { padding: 8px; }
+  .experiment-condition { grid-template-columns: 1fr 1fr; }
+  .experiment-condition > strong { grid-column: 1 / -1; }
+  .experiment-conditions { padding: 6px; }
+}
