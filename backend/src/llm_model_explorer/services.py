@@ -11,6 +11,7 @@ from .execution import BlockingWork
 from .materialization import LogicalTensorService
 from .model_events import ModelObserver
 from .models import ModelCatalogue
+from .neuron_execution import NeuronRuntime
 from .operations import OperationRuntime
 from .sessions import SessionRegistry
 from .settings import Settings
@@ -30,6 +31,7 @@ class Services:
     logical_tensors: LogicalTensorService | None = None
     architectures: ArchitectureService | None = None
     model_observer: ModelObserver | None = None
+    neurons: NeuronRuntime | None = None
 
 
 @asynccontextmanager
@@ -41,6 +43,7 @@ async def open_services(
     sessions = None
     architectures = None
     observer = None
+    neurons = None
     try:
         artifacts = await work.run(
             ArtifactStore, settings.cache_dir, model_root=settings.model_root
@@ -48,6 +51,7 @@ async def open_services(
         catalogue = ModelCatalogue(settings.model_root)
         operations = OperationRuntime(artifacts, work, settings.device)
         sessions = SessionRegistry(catalogue, work, operations)
+        neurons = NeuronRuntime(operations.scheduler, settings.device)
         architectures = ArchitectureService(artifacts, work, stop=startup_stop)
         await architectures.prepare(catalogue)
         observer = ModelObserver(catalogue, work)
@@ -61,6 +65,7 @@ async def open_services(
             logical_tensors=LogicalTensorService(operations),
             architectures=architectures,
             model_observer=observer,
+            neurons=neurons,
         )
     finally:
         try:
@@ -72,7 +77,11 @@ async def open_services(
                     await sessions.aclose()
         finally:
             try:
-                if architectures is not None:
-                    await architectures.aclose()
+                try:
+                    if neurons is not None:
+                        await neurons.aclose()
+                finally:
+                    if architectures is not None:
+                        await architectures.aclose()
             finally:
                 await work.aclose()

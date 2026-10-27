@@ -108,6 +108,13 @@ def test_unknown_tensor_and_model_binding(settings: Settings) -> None:
     [
         (MemoryError(), 503, "resource_exhausted"),
         (OSError("/private/model/path"), 500, "internal_error"),
+        (
+            ModelError(
+                "internal_error", "Non-finite result.", 500, details={"reason": "numerical_failure"}
+            ),
+            500,
+            "internal_error",
+        ),
     ],
 )
 def test_safe_errors(
@@ -122,5 +129,7 @@ def test_safe_errors(
         response = client.post("/sessions", json={"model_id": "anything"})
         assert response.status_code == status
         assert response.json()["code"] == code
+        if isinstance(error, ModelError):
+            assert response.json()["details"] == {"reason": "numerical_failure"}
         assert "/private" not in response.text
         assert response.headers["cache-control"] == "no-store"

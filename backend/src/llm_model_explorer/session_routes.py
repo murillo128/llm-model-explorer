@@ -24,6 +24,7 @@ class LifecycleRoute(APIRoute):
         handler = super().get_route_handler()
 
         async def handle(request: Request) -> Response:
+            details = None
             try:
                 return await handler(request)
             except RequestValidationError as exc:
@@ -34,13 +35,14 @@ class LifecycleRoute(APIRoute):
                 )
             except ModelError as exc:
                 code, status, message = exc.code, exc.status, str(exc)
+                details = exc.details
             except MemoryError:
                 code, status, message = "resource_exhausted", 503, "Insufficient runtime memory."
             except Exception:
                 logger.exception("Session/operation request failed")
                 code, status, message = "internal_error", 500, "Unable to complete request."
             return JSONResponse(
-                {"code": code, "message": message},
+                {"code": code, "message": message, **({"details": details} if details else {})},
                 status_code=status,
                 headers={"Cache-Control": "no-store"},
             )

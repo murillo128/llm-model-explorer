@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .architecture_routes import router as architecture_router
 from .embedding_routes import router as embedding_router
 from .model_routes import router as model_router
+from .neuron_routes import router as neuron_router
 from .services import Services, open_services
 from .session_routes import router as session_router
 from .settings import Settings
@@ -66,6 +67,7 @@ def create_app(
         tokenizer_router,
         tensor_router,
         embedding_router,
+        neuron_router,
         *routers,
     ):
         app.include_router(router)
