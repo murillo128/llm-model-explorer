@@ -1,6 +1,6 @@
 # Issue #320: neuron inspector evidence
 
-Source revision: `16d0dd34cabd28a7f78e58f67bb1d8ba28e8580c`. Screenshots were captured on 2026-10-27 from
+Source revision: `3d7d6233675d9f28ff1305e8c6aa4e70dce6250a`. Screenshots were captured on 2026-10-27 from
 the production Vite build with the real FastAPI backend, Chromium/SwiftShader,
 DPR 1, and the complete local `HuggingFaceTB/SmolLM2-135M` Base checkpoint at
 revision `93efa2f097d58c2a74874c7e644dbc9b0cee75a2`. No model artifacts are included.
@@ -51,6 +51,9 @@ nonzero layer, and rejects structural/ambiguous mappings in unit tests.
   boundary at both viewports. It does not certify activation/intervention math or
   complete reference acceptance for the whole Neuron Explorer epic.
 
+Initial implementation results at `869a2de72cfc84444cec68e8c32439de8c5859c4`
+(before the audit repairs below):
+
 | Check | Observed result |
 | --- | --- |
 | API validator | OpenAPI valid; 81 neuron cases, 8 neuron payloads and 138 wire fixtures validated, alongside the existing contract cases |
@@ -80,6 +83,48 @@ Integration freshness: rebased onto `22373118f4664d0cae188bff87430b75172576a1`
 source, `npm run check` passed again (1,267 unit tests), both neuron component
 browser cases passed, and the real checkpoint journey passed again; the four
 screenshots above were recaptured against that backend.
+
+## Audit repair validation
+
+The audit of `869a2de72cfc84444cec68e8c32439de8c5859c4` found two response-order
+defects. Two controlled-response cases in `ui/tests/neuron-inspector.spec.ts`
+use the existing contract fixture and real React/matrix composition:
+
+- At 1440 × 960, hold graph retrieval while capabilities and inventory arrive.
+  Open a layer-7 weight and begin its progressive data stream, then release the
+  graph. The same dialog, matrix canvas, neuron panel and experiment target must
+  remain mounted, with the same three live requests and no cancellations. New
+  bytes must still reach the original matrix; explicit close owns cancellation.
+- At 760 × 960, save an actual 140 px inspector offset, leave the explorer and
+  return with capabilities held until the graph is ready. Release capabilities
+  and require the saved offset/module/index. Then scroll to 80 px and switch again
+  to prove restoration does not overwrite subsequent user scrolling.
+
+These browser cases own DOM lifetime and native scroll clamping, which jsdom does
+not reproduce. Against the unchanged audited source, both failed at the intended
+assertions: graph arrival removed the dialog; delayed capabilities produced
+scroll 0 instead of 140. With the repair, the original panel, composition target,
+dialog and matrix canvas remain connected; the same three requests stay active,
+new tensor bytes reach the original matrix, and explicit close cancels them.
+The delayed-capability case restores 140, then preserves a later user offset of
+80 through another explorer switch.
+
+The layout now has one stable React composition across graph retrieval states;
+only its graph pane changes. Scroll restoration waits for capability content and
+runs once, while loading scroll events cannot overwrite the saved position.
+
+Fresh validation on `3d7d6233675d9f28ff1305e8c6aa4e70dce6250a`:
+
+| Check | Result |
+| --- | --- |
+| `npm run check` | Generated bindings, typecheck, lint, 1,267 UI tests and build passed |
+| `npm run test:browser -- tests/neuron-inspector.spec.ts --project=desktop` | All four cases passed, including both new regressions |
+| Architecture inspection, shell, refresh and pane-loading browser specs | All 28 desktop/narrow cases passed |
+| Real SmolLM2 production-browser journey | Passed at both viewports; all four screenshots recaptured |
+
+The preceding 458-case run remains historical implementation evidence. The 32
+browser cases above are the scoped fresh repair validation; the full backend or
+aggregate integration portfolios are not claimed here.
 
 ## Reproduction
 
