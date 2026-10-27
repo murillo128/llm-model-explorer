@@ -8,6 +8,7 @@ import type { RuntimeConfig } from './runtime-config';
 import { uuidPattern, validateResponse, validateSchema } from './validation';
 import type { Metadata } from './validation';
 import { watchModel } from './model-events';
+import { validateNeuronAssociation, validateNeuronRequest } from './neuron-validation';
 import type { ModelObserver } from './model-events';
 
 export type RequestActivity = { id: symbol; phase: 'start' | 'response' | 'end'; failure?: ApiFailure | undefined; quiet?: boolean };
@@ -178,6 +179,26 @@ export class ApiClient {
     validateSchema('InputEmbeddingsRequest', body);
     const token_ids = [...body.token_ids];
     return this.stream(`${this.sessionPath(session)}/embeddings/distributions`, token_ids, 'input_embeddings_distributions', options, { token_ids });
+  }
+  streamNeuronActivations(session: Schemas['Session'], capabilities: Schemas['NeuronCapabilities'], body: Schemas['NeuronActivationsRequest'], options: StreamOptions = {}): StreamOperation {
+    validateSchema('NeuronActivationsRequest', body);
+    return this.neuronStream(session, capabilities, body, 'neuron_activations', options);
+  }
+  streamNeuronComparison(session: Schemas['Session'], capabilities: Schemas['NeuronCapabilities'], body: Schemas['NeuronComparisonRequest'], options: StreamOptions = {}): StreamOperation {
+    validateSchema('NeuronComparisonRequest', body);
+    return this.neuronStream(session, capabilities, body, 'neuron_comparison', options);
+  }
+  private neuronStream(session: Schemas['Session'], capabilities: Schemas['NeuronCapabilities'], body: Schemas['NeuronActivationsRequest'] | Schemas['NeuronComparisonRequest'], kind: 'neuron_activations' | 'neuron_comparison', options: StreamOptions): StreamOperation {
+    requireProtocol(capabilities.session_id === session.id && capabilities.model_id === session.model_id
+      && capabilities.model_revision === session.model_revision, 'Neuron capability identity mismatch');
+    validateNeuronRequest(body, capabilities);
+    const request = structuredClone(body), admitted = structuredClone(capabilities), pinned = { ...session };
+    const endpoint = kind === 'neuron_activations' ? 'neuron-activations' : 'neuron-comparisons';
+    return this.stream(`${this.sessionPath(session.id)}/${endpoint}`, request.token_ids, kind, { ...options, onMetadata: metadata => {
+      requireProtocol(metadata.kind === 'neuron_activations' || metadata.kind === 'neuron_comparison', 'Unexpected neuron metadata');
+      validateNeuronAssociation(metadata, pinned, admitted, request);
+      options.onMetadata?.(metadata);
+    } }, request);
   }
   private stream(path: string, identity: string | readonly number[], kind: Metadata['kind'], options: StreamOptions, body?: Schemas['InputEmbeddingsRequest']): StreamOperation {
     const controller = new AbortController();

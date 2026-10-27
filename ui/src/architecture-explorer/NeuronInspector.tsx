@@ -49,7 +49,7 @@ export function NeuronInspector({ context, capabilities: result, inventory, stat
           </select>
         </label>}
         {state.moduleId && !module && <p role="status">The previous module is unavailable in this session. Choose a current module.</p>}
-        {module && <SelectedNeuron key={module.module_id} context={context} capabilities={capabilities} module={module} index={state.index}
+        {module && <SelectedNeuron context={context} capabilities={capabilities} module={module} index={state.index}
           inventory={inventory} onIndex={index => onChange({ index })} tokenizerAvailable={tokenizerAvailable} experiment={experiment} experimentTarget={experimentTarget} />}
       </>}
     </div>
@@ -62,15 +62,15 @@ function SelectedNeuron({ context, capabilities, module, index, inventory, onInd
   experiment?: ((context: NeuronSelectionContext) => ReactNode) | undefined;
   experimentTarget: HTMLDivElement | null;
 }) {
-  const [draft, setDraft] = useState({ index, value: String(index) });
+  const [draft, setDraft] = useState({ moduleId: module.module_id, index, value: String(index) });
   // Invalid text is local editing state. A changed authoritative coordinate always
   // supersedes it, so the displayed index and actionable binding cannot diverge.
-  const input = draft.index === index ? draft.value : String(index);
+  const input = draft.moduleId === module.module_id && draft.index === index ? draft.value : String(index);
   const [weight, setWeight] = useState<{ projection: ProjectionWeight; trigger: HTMLElement } | null>(null);
   const valid = input.trim() !== '' && validNeuronIndex(Number(input), module);
   const lifetime = useChildLifetime(context.selection);
-  const selected = useMemo<NeuronSelectionContext | null>(() => lifetime && valid ? {
-    client: context.client, session: context.session, selection: lifetime, capabilities, module, neuronIndices: [index],
+  const selected = useMemo<NeuronSelectionContext | null>(() => lifetime ? {
+    client: context.client, session: context.session, selection: lifetime, capabilities, module, neuronIndices: valid ? [index] : [],
   } : null, [context.client, context.session, lifetime, capabilities, module, index, valid]);
   const bound = inventory && weight && neuronWeight(module, weight.projection, inventory);
   return <>
@@ -80,7 +80,7 @@ function SelectedNeuron({ context, capabilities, module, index, inventory, onInd
         onChange={event => {
           const value = event.target.value;
           const accepted = value.trim() !== '' && validNeuronIndex(Number(value), module);
-          setDraft({ index: accepted ? Number(value) : index, value });
+          setDraft({ moduleId: module.module_id, index: accepted ? Number(value) : index, value });
           if (accepted) onIndex(Number(value));
         }} />
     </label>

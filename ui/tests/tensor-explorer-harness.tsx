@@ -105,6 +105,9 @@ window.fetch = async (input, options) => {
     return json({ models, diagnostics: [] });
   }
   if (path === '/sessions') return json(architectureMode && JSON.parse(String(options?.body)).model_id === sessionB.model_id ? sessionB : sessionA, 201);
+  // Inspector-only scenarios now compose the real prompt surface. Empty input
+  // has no tokens and must not enter the numeric-stream fixture queue.
+  if (neuronMode && path.endsWith('/tokenize')) return json({ ...JSON.parse(String(options?.body)), tokens: [] });
   if (path.endsWith('/neuron-capabilities')) {
     await responses.capabilities.wait();
     const session = path.includes(sessionB.id) ? sessionB : sessionA;

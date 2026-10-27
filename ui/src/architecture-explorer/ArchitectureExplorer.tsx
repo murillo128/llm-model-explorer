@@ -2,6 +2,7 @@ import { captureBookmark, restoreInspection } from './navigation-bookmark';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { NeuronInspector } from './NeuronInspector';
+import { NeuronExperiment } from './NeuronExperiment';
 import { useNeuronCapabilities } from './useNeuronCapabilities';
 import { neuronForInspection } from './neuron-selection';
 import type { NeuronModule, NeuronSelectionContext, NeuronViewState } from './neuron-selection';
@@ -60,6 +61,7 @@ function SessionArchitectureExplorer(props: Props) {
     changeNeuron({ open: false });
     if (neuronTrigger.current?.isConnected) neuronTrigger.current.focus({ preventScroll: true });
   };
+  const experimentView = props.neuronExperiment ?? ((context: NeuronSelectionContext) => <NeuronExperiment context={context} tokenizerAvailable={props.tokenizerAvailable} />);
   useEffect(() => {
     const request = new Lifetime();
     const fail = (message: string) => {
@@ -122,8 +124,8 @@ function SessionArchitectureExplorer(props: Props) {
     <span>{capabilities.capabilities?.observation.status === 'unavailable' ? 'Neuron execution unavailable' : 'Concrete MLP coordinates and linked weights'}</span>
   </div></>;
   const panel = neuron.open && <NeuronInspector context={props} capabilities={capabilities} inventory={result.inventory} state={neuron}
-    onChange={changeNeuron} onBack={closeNeuron} tokenizerAvailable={props.tokenizerAvailable} experiment={props.neuronExperiment} experimentTarget={experimentTarget} />;
-  const experiment = <div ref={setExperimentTarget} className="neuron-experiment" aria-label="Neuron experiment" hidden={!neuron.open || !props.neuronExperiment} />;
+    onChange={changeNeuron} onBack={closeNeuron} tokenizerAvailable={props.tokenizerAvailable} experiment={experimentView} experimentTarget={experimentTarget} />;
+  const experiment = <div ref={setExperimentTarget} className="neuron-experiment" aria-label="Neuron experiment" hidden={!neuron.open || !neuron.moduleId} />;
   const matchedModule = inspected && neuronForInspection(capabilities.capabilities, inspected);
   // Graph retrieval replaces only this first pane. The neuron panel and its
   // independent weight consumers must retain their positions and lifetimes.
@@ -131,7 +133,7 @@ function SessionArchitectureExplorer(props: Props) {
     {browserTarget && (!response || response.status === 'unavailable') && createPortal(<p className="architecture-browser-state" role={result.error ? 'alert' : 'status'}>
       {result.error ? 'Architecture browser unavailable. Retry retrieval.' : !response ? 'Retrieving prepared architecture…' : unavailable[response.reason]}
     </p>, browserTarget)}
-    <div className={`architecture-neuron-layout${neuron.open ? ' neuron-open' : ''}${neuron.open && props.neuronExperiment ? ' has-neuron-experiment' : ''}`}>
+    <div className={`architecture-neuron-layout${neuron.open ? ' neuron-open' : ''}${neuron.open && neuron.moduleId ? ' has-neuron-experiment' : ''}`}>
     {response?.status === 'available' ? <ArchitectureCanvas key={JSON.stringify([session.id, response.model_id, response.graph.graph_id])} graph={response.graph} notices={band}
       modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspected(null)} onInspect={(value) => { setInspected(value); onInspect?.(value); }} />
       : <div tabIndex={-1} className="architecture-explorer explorer-card architecture-empty" aria-label="Architecture capability">

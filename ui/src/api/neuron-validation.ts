@@ -4,6 +4,30 @@ import { requireProtocol } from './errors';
 type S = components['schemas'];
 type NeuronMetadata = S['NeuronActivationsMetadata'] | S['NeuronComparisonMetadata'];
 
+// JSON object member order is not part of the wire contract; array order is.
+function sameRecord(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const left = a as Record<string, unknown>, right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every(key => Object.hasOwn(right, key) && sameRecord(left[key], right[key]));
+}
+
+/** Producer metadata must describe this exact admitted request, not just equal-sized data. */
+export function validateNeuronAssociation(metadata: NeuronMetadata, session: S['Session'],
+  capabilities: S['NeuronCapabilities'], request: S['NeuronActivationsRequest'] | S['NeuronComparisonRequest']): void {
+  requireProtocol(metadata.session_id === session.id && metadata.model_id === session.model_id
+    && metadata.model_revision === session.model_revision && metadata.model_revision === request.model_revision
+    && sameRecord(metadata.module, capabilities.modules.find(module => module.module_id === request.module_id))
+    && sameRecord(metadata.execution, capabilities.execution) && sameRecord(metadata.limits, capabilities.limits)
+    && sameRecord(metadata.neuron_indices, request.neuron_indices) && sameRecord(metadata.token_ids, request.token_ids), 'Neuron response identity mismatch');
+  if ('conditions' in request) requireProtocol(metadata.kind === 'neuron_comparison'
+    && sameRecord(metadata.conditions, request.conditions) && metadata.top_k === request.top_k
+    && metadata.max_new_tokens === request.max_new_tokens && metadata.decoding === request.decoding, 'Neuron comparison configuration mismatch');
+  else requireProtocol(metadata.kind === 'neuron_activations', 'Unexpected neuron result kind');
+}
+
 function limits(value: S['NeuronLimits']): void {
   requireProtocol(value.max_input_tokens === Math.min(512, value.context_length)
     && value.max_new_tokens === Math.min(64, value.context_length - 1)

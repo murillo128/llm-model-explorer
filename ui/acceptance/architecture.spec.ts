@@ -1633,3 +1633,114 @@ test('complete local reference [smollm2] neuron selection and native weight navi
   }
   expect(observed.some(path => /neuron-(activations|comparisons)$/.test(path))).toBe(false);
 });
+
+// The real boundary is deliberately one experiment, not a replay of backend
+// numerical permutations. Input/result contents stay in memory, except the
+// issue-required screenshots of this public, test-authored prompt.
+test('complete local reference [smollm2] neuron experiment capture comparison and cancellation', { tag: '@extended' }, async ({ page }, info) => {
+  const capabilitiesResponse = page.waitForResponse(r => r.url().endsWith('/neuron-capabilities') && r.status() === 200);
+  await selectGraph(page);
+  const capabilities = await (await capabilitiesResponse).json() as import('../src/api/generated/types').components['schemas']['NeuronCapabilities'];
+  expect(capabilities.observation.status).toBe('available');
+  const module = capabilities.modules.find(item => item.layer_index === 7)!;
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.getByRole('button', { name: 'Neurons', exact: true }).click();
+  await page.getByLabel('Concrete MLP').selectOption(module.module_id);
+  await page.getByRole('spinbutton', { name: 'Intermediate index' }).fill('427');
+  const experiment = page.getByRole('region', { name: 'Experiment', exact: true });
+  const prompt = experiment.getByRole('textbox', { name: 'Prompt', exact: true });
+  const source = 'The capital of France is';
+  const tokenized = page.waitForResponse(r => r.url().endsWith('/tokenize') && r.request().postDataJSON().text === source);
+  await prompt.fill(source);
+  const tokens = (await (await tokenized).json()).tokens.map((token: { id: number }) => token.id);
+  await expect(experiment.getByRole('button', { name: 'Run', exact: true })).toBeEnabled();
+  const capture = page.waitForRequest(r => r.url().endsWith('/neuron-activations'));
+  const camera = await page.locator('.react-flow__viewport').getAttribute('style');
+  const run = experiment.getByRole('button', { name: 'Run', exact: true });
+  await run.focus(); await page.keyboard.press('Enter');
+  expect((await capture).postDataJSON()).toEqual({ model_revision: capabilities.model_revision, module_id: module.module_id, neuron_indices: [427], token_ids: tokens });
+  const status = experiment.locator('[data-experiment-status]');
+  await expect(status).toHaveAttribute('data-experiment-status', 'complete', { timeout: 60_000 });
+  const activations = experiment.getByRole('region', { name: 'Signed activation values by prompt position' });
+  await expect(activations.getByRole('row')).toHaveCount(tokens.length + 1);
+  const value = activations.locator('td span[tabindex]').first();
+  await value.focus(); await expect(value).toBeFocused();
+  expect(Number.isFinite(Number(await value.textContent()))).toBe(true);
+  for (const width of [1440, 760]) {
+    await page.setViewportSize({ width, height: 960 });
+    if (width === 760) await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
+    await activations.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath(`neuron-activation-${width}.png`) });
+    expect(await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight])).toEqual([width, 960]);
+    if (width === 760) await page.getByRole('button', { name: 'Expand browser', exact: true }).click();
+  }
+  // The prompt survives an invalid coordinate and a concrete-module switch.
+  const annotatedPrompt = (await prompt.textContent())!;
+  await page.getByRole('spinbutton', { name: 'Intermediate index' }).fill('');
+  await expect(prompt).toHaveText(annotatedPrompt);
+  await expect(experiment.getByRole('button', { name: 'Run', exact: true })).toBeDisabled();
+  await page.getByRole('spinbutton', { name: 'Intermediate index' }).fill('427');
+  await page.getByLabel('Concrete MLP').selectOption(capabilities.modules[8]!.module_id);
+  await expect(prompt).toHaveText(annotatedPrompt);
+  await expect(experiment.getByText(/Previous result is stale/)).toBeVisible();
+  await page.getByLabel('Concrete MLP').selectOption(module.module_id);
+  await page.getByRole('spinbutton', { name: 'Intermediate index' }).fill('427');
+  expect(observed.filter(path => /neuron-activations$/.test(path))).toHaveLength(1);
+  await experiment.getByRole('button', { name: 'Compare', exact: true }).click();
+  await experiment.getByRole('spinbutton', { name: 'New tokens' }).fill('8');
+  const compare = page.waitForRequest(r => r.url().endsWith('/neuron-comparisons'));
+  await experiment.getByRole('button', { name: 'Run', exact: true }).click();
+  expect((await compare).postDataJSON()).toMatchObject({ token_ids: tokens, neuron_indices: [427], decoding: 'greedy', max_new_tokens: 8,
+    conditions: [{ id: 'baseline', mode: 'baseline' }, { id: 'zero', mode: 'zero', scope: 'all' }, { id: 'scale', mode: 'scale', factor: 2, scope: 'all' }] });
+  await expect(status).toHaveAttribute('data-experiment-status', 'complete', { timeout: 60_000 });
+  const probabilities = experiment.getByRole('region', { name: 'Next-token probabilities and percentage-point deltas' });
+  await expect(probabilities).toContainText('pp');
+  await expect(experiment.getByRole('article')).toHaveCount(3);
+  for (const width of [1440, 760]) {
+    await page.setViewportSize({ width, height: 960 });
+    if (width === 760) await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
+    await probabilities.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath(`neuron-comparison-${width}.png`) });
+    await experiment.locator('.experiment-continuations').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath(`neuron-continuations-${width}.png`) });
+    expect(await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight])).toEqual([width, 960]);
+    if (width === 760) await page.getByRole('button', { name: 'Expand browser', exact: true }).click();
+  }
+  // Run again sends the same recipe, without a new tokenization or hidden BOS.
+  const rerun = page.waitForRequest(r => r.url().endsWith('/neuron-comparisons'));
+  await experiment.getByRole('button', { name: 'Run again', exact: true }).click();
+  expect((await rerun).postDataJSON()).toEqual((await compare).postDataJSON());
+  await expect(status).toHaveAttribute('data-experiment-status', 'complete', { timeout: 60_000 });
+  await experiment.getByRole('spinbutton', { name: 'New tokens' }).fill('64');
+  const started = page.waitForResponse(r => r.url().endsWith('/neuron-comparisons'));
+  await experiment.getByRole('button', { name: 'Run', exact: true }).click();
+  const operationId = (await started).headers()['x-operation-id'];
+  const cancelled = page.waitForRequest(r => r.method() === 'DELETE' && r.url().endsWith(`/operations/${operationId}`));
+  await experiment.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await cancelled;
+  await expect(status).toHaveAttribute('data-experiment-status', 'cancelled');
+  for (const width of [1440, 760]) {
+    await page.setViewportSize({ width, height: 960 });
+    if (width === 760) await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
+    await status.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath(`neuron-cancelled-${width}.png`) });
+    if (width === 760) await page.getByRole('button', { name: 'Expand browser', exact: true }).click();
+  }
+  await experiment.getByRole('spinbutton', { name: 'New tokens' }).fill('0');
+  await experiment.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(status).toHaveAttribute('data-experiment-status', 'complete', { timeout: 60_000 });
+  await expect(experiment.getByText('No generation requested.', { exact: true })).toHaveCount(3);
+  const download = page.waitForEvent('download');
+  await experiment.getByRole('button', { name: 'Export configuration', exact: true }).click();
+  const file = await download, stream = (await file.createReadStream())!;
+  let recipe = ''; for await (const chunk of stream) recipe += chunk.toString();
+  const manifest = JSON.parse(recipe);
+  expect(manifest).toMatchObject({ format: 'llmex-neuron-experiment', format_revision: 1,
+    token_ids: tokens, neuron_indices: [427], max_new_tokens: 0, decoding: 'greedy' });
+  expect(manifest).not.toHaveProperty('user_text'); expect(manifest).not.toHaveProperty('continuations');
+  await file.delete();
+  await page.setViewportSize({ width: 1440, height: 960 });
+  expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
+  await page.getByRole('button', { name: 'Back to graph' }).click();
+  await expect(experiment).toHaveCount(0);
+});
