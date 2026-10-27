@@ -4,7 +4,7 @@ import asyncio
 import traceback
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, cast
 
 import torch
 from torch.utils.hooks import RemovableHandle
@@ -104,11 +104,27 @@ class NeuronLease:
         module = next((m for m in self.admitted.modules if m["module_id"] == module_id), None)
         if module is None:
             raise ModelError("validation_error", "Unknown neuron module.")
-        down = self._model.model.layers[module["layer_index"]].mlp.down_proj
+        try:
+            mlp = self._model.model.layers[module["layer_index"]].mlp
+            width, hidden = module["intermediate_size"], module["hidden_size"]
+            for role in ("gate", "up", "down"):
+                projection = getattr(mlp, role + "_proj")
+                shape = (hidden, width) if role == "down" else (width, hidden)
+                if tuple(projection.weight.shape) != shape:
+                    raise ValueError("projection geometry")
+            down = mlp.down_proj
+        except (AttributeError, IndexError, ValueError):
+            raise ModelError(
+                "unsupported_representation", "Runtime MLP bindings are incompatible."
+            ) from None
 
         def invoke(_module: torch.nn.Module, args: tuple[torch.Tensor, ...]) -> Any:
             self.cancellation.check()
+            if len(args) != 1 or not isinstance(args[0], torch.Tensor):
+                raise ModelError("unsupported_representation", "Unexpected MLP projection input.")
             values = args[0]
+            if values.ndim != 3 or values.shape[0] != 1 or values.shape[2] != width:
+                raise ModelError("unsupported_representation", "Unexpected MLP activation shape.")
             if not torch.isfinite(values).all():
                 raise numerical_failure()
             replacement = callback(values)
@@ -233,6 +249,7 @@ class NeuronRuntime:
     ) -> T:
         lease = None
         failure: Exception | None = None
+        result: T | None = None
         try:
             with torch.inference_mode(), torch.autocast(self.device.split(":")[0], enabled=False):
                 admitted.source.check_unchanged()
@@ -279,8 +296,11 @@ class NeuronRuntime:
         # Raise outside the framework exception context: even a retained public
         # error must not retain a failed model, prompt or activation via traceback.
         if failure is not None:
+            # A post-compute source/synchronization failure must also release
+            # the completed operation's buffers from this retained traceback.
+            result = None
             raise failure
-        return result
+        return cast(T, result)
 
     async def aclose(self) -> None:
         self._closed = True

@@ -1,6 +1,8 @@
 """Strict Python representations of the accepted LMEX control schemas."""
 
+import re
 from typing import Annotated, Literal, Self
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
@@ -186,6 +188,145 @@ class InputEmbeddingsDistributionsMetadata(DistributionsFields):
         return self
 
 
+NeuronId = Annotated[str, Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._~-]+$")]
+ModelRevision = Annotated[str, Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")]
+PositiveSize = Annotated[Size, Field(ge=1)]
+
+
+class NeuronExecution(Control):
+    family: Literal["smollm2"]
+    adapter: Literal["smollm2_native"]
+    adapter_version: Annotated[Text, Field(max_length=128)]
+    runtime_version: Annotated[Text, Field(max_length=128)]
+    torch_version: Annotated[Text, Field(max_length=128)]
+    device: Annotated[str, Field(pattern=r"^(cpu|cuda:[0-9]+)$")]
+    dtype: Literal["float32"]
+
+
+class NeuronLimits(Control):
+    max_modules_per_request: Literal[1]
+    max_neurons: Literal[8]
+    max_input_tokens: Annotated[PositiveSize, Field(le=512)]
+    max_new_tokens: Annotated[Size, Field(le=64)]
+    max_conditions: Literal[4]
+    max_top_k: Annotated[PositiveSize, Field(le=20)]
+    context_length: PositiveSize
+    vocabulary_size: PositiveSize
+    eos_token_ids: Annotated[list[Size], Field(max_length=64)]
+
+    @model_validator(mode="after")
+    def bounds(self) -> Self:
+        if (
+            self.max_input_tokens != min(512, self.context_length)
+            or self.max_new_tokens != min(64, self.context_length - 1)
+            or self.max_top_k != min(20, self.vocabulary_size)
+            or self.eos_token_ids != sorted(set(self.eos_token_ids))
+            or any(i >= self.vocabulary_size for i in self.eos_token_ids)
+        ):
+            raise ValueError("neuron limits")
+        return self
+
+
+class NeuronWeightBinding(Control):
+    tensor_id: Annotated[Text, Field(max_length=256)]
+    axis: Literal["row", "column"]
+    shape: Annotated[list[Size], Field(min_length=2, max_length=2)]
+
+
+class NeuronWeights(Control):
+    gate: NeuronWeightBinding
+    up: NeuronWeightBinding
+    down: NeuronWeightBinding
+
+
+class NeuronModuleReference(Control):
+    kind: Literal["module"]
+    name: Annotated[Text, Field(max_length=1024)]
+
+
+class NeuronGraphBinding(Control):
+    graph_id: Annotated[
+        Text, Field(max_length=256, pattern=re.compile(r"^(?!\.{1,2}$)[A-Za-z0-9._~-]+$"))
+    ]
+    node_id: Annotated[
+        Text, Field(max_length=256, pattern=re.compile(r"^(?!\.{1,2}$)[A-Za-z0-9._~-]+$"))
+    ]
+
+
+class NeuronModule(Control):
+    module_id: NeuronId
+    module: NeuronModuleReference
+    layer_index: Annotated[Size, Field(le=63)]
+    intermediate_size: PositiveSize
+    hidden_size: PositiveSize
+    point: Literal["post_activation_product_pre_down_proj"]
+    weights: NeuronWeights
+    graph_binding: NeuronGraphBinding | None = None
+
+    @model_validator(mode="after")
+    def bindings(self) -> Self:
+        if "graph_binding" in self.model_fields_set and self.graph_binding is None:
+            raise ValueError("null graph binding")
+        width, hidden = self.intermediate_size, self.hidden_size
+        ids = []
+        for role in ("gate", "up", "down"):
+            binding = getattr(self.weights, role)
+            if binding.axis != ("column" if role == "down" else "row") or binding.shape != (
+                [hidden, width] if role == "down" else [width, hidden]
+            ):
+                raise ValueError("neuron weight geometry")
+            ids.append(binding.tensor_id)
+        if len(set(ids)) != 3 or width * hidden * 4 > SAFE_INTEGER:
+            raise ValueError("neuron weight identity or size")
+        return self
+
+
+class NeuronSection(Control):
+    name: Literal["activations", "probabilities"]
+    shape: Annotated[list[Size], Field(min_length=2, max_length=2)]
+    offset: Size
+    byte_length: Size
+
+
+class NeuronActivationsMetadata(Control):
+    kind: Literal["neuron_activations"]
+    session_id: Text
+    model_id: Text
+    model_revision: ModelRevision
+    execution: NeuronExecution
+    limits: NeuronLimits
+    module: NeuronModule
+    token_ids: Annotated[list[Size], Field(min_length=1, max_length=512)]
+    neuron_indices: Annotated[list[Size], Field(min_length=1, max_length=8)]
+    dtype: Literal["float32"]
+    byte_order: Literal["little"]
+    layout: Literal["c"]
+    sections: Annotated[list[NeuronSection], Field(min_length=1, max_length=1)]
+    byte_length: Size
+
+    @model_validator(mode="after")
+    def geometry(self) -> Self:
+        UUID(self.session_id)
+        if (
+            len(self.token_ids) > self.limits.max_input_tokens
+            or any(i >= self.limits.vocabulary_size for i in self.token_ids)
+            or len(set(self.neuron_indices)) != len(self.neuron_indices)
+            or any(i >= self.module.intermediate_size for i in self.neuron_indices)
+        ):
+            raise ValueError("neuron selection")
+        section = self.sections[0]
+        shape = [len(self.token_ids), len(self.neuron_indices)]
+        if (
+            section.name != "activations"
+            or section.shape != shape
+            or section.offset != 0
+            or section.byte_length != 4 * _product(shape)
+            or section.byte_length != self.byte_length
+        ):
+            raise ValueError("neuron activation geometry")
+        return self
+
+
 Metadata = (
     TensorMetadata
     | InputEmbeddingsMetadata
@@ -193,6 +334,7 @@ Metadata = (
     | TensorDistributionsMetadata
     | InputEmbeddingsStatisticsMetadata
     | InputEmbeddingsDistributionsMetadata
+    | NeuronActivationsMetadata
 )
 METADATA: TypeAdapter[Metadata] = TypeAdapter(Annotated[Metadata, Field(discriminator="kind")])
 
