@@ -96,7 +96,9 @@ class LMEXResponse(Response):
             await write(self.writer.cancelled())
         except Exception as exc:
             if isinstance(exc, ModelError):
-                error = {"code": exc.code, "message": str(exc)}
+                error: dict[str, object] = {"code": exc.code, "message": str(exc)}
+                if exc.details is not None:
+                    error["details"] = exc.details
             elif isinstance(exc, MemoryError) or (
                 isinstance(exc, OSError) and exc.errno in {errno.ENOSPC, errno.EDQUOT, errno.ENOMEM}
             ):
