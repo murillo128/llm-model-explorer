@@ -74,6 +74,16 @@ class CiEntrypointsTest(unittest.TestCase):
             "LMEX_CONTRACT_PYTHON": str(self.root / "bin/contract-python"),
         }
         self.env.pop("CI_FAIL_COMMAND", None)
+        # These synthetic launch scenarios own their reference configuration.
+        # An outer full-checkpoint acceptance run must not promote the routine
+        # scenarios to full; the explicit promotion test below supplies its own.
+        for key in (
+            "LMEX_REFERENCE_MODEL_DIR",
+            "LMEX_ARCHITECTURE_REFERENCES",
+            "LMEX_LORA_REFERENCE_MODEL_ROOT",
+            "LMEX_REQUIRE_ARCHITECTURE_REFERENCES",
+        ):
+            self.env.pop(key, None)
 
     def plan(self, *paths):
         changed = self.root / "paths.json"
@@ -88,6 +98,7 @@ class CiEntrypointsTest(unittest.TestCase):
                 "--output",
                 str(destination),
             ],
+            env=self.env,
             check=True,
             capture_output=True,
         )
@@ -326,7 +337,14 @@ class CiEntrypointsTest(unittest.TestCase):
         )
 
     def test_shared_http_helper_runs_tcp_and_architecture_reference_browser(self):
-        for name in ("network", "architecture", "native_packages", "embeddings", "lora_reference"):
+        for name in (
+            "network",
+            "architecture",
+            "native_packages",
+            "embeddings",
+            "lora_reference",
+            "neuron_reference",
+        ):
             (self.root / f"acceptance/test_{name}.py").touch()
         plan = self.plan("acceptance/test_network.py")
         result, commands = self.run_gate("--routine", "--main-ci", "--plan", str(plan))
@@ -335,13 +353,14 @@ class CiEntrypointsTest(unittest.TestCase):
             command for command in commands if command[:3] == ["python", "-m", "pytest"]
         )
         self.assertEqual(
-            selected[3:8],
+            selected[3:9],
             [
                 "acceptance/test_architecture.py",
                 "acceptance/test_embeddings.py",
                 "acceptance/test_lora_reference.py",
                 "acceptance/test_native_packages.py",
                 "acceptance/test_network.py",
+                "acceptance/test_neuron_reference.py",
             ],
         )
         self.assertIn(["npm", "run", "build"], commands)
@@ -392,6 +411,7 @@ class CiEntrypointsTest(unittest.TestCase):
                         "--github-output",
                         str(output),
                     ],
+                    env=self.env,
                     check=True,
                     capture_output=True,
                 )

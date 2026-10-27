@@ -8,6 +8,7 @@ import type { RuntimeConfig } from './runtime-config';
 import { uuidPattern, validateResponse, validateSchema } from './validation';
 import type { Metadata } from './validation';
 import { watchModel } from './model-events';
+import { validateNeuronAssociation, validateNeuronRequest } from './neuron-validation';
 import type { ModelObserver } from './model-events';
 
 export type RequestActivity = { id: symbol; phase: 'start' | 'response' | 'end'; failure?: ApiFailure | undefined; quiet?: boolean };
@@ -39,7 +40,7 @@ async function readJson(response: Response, limit?: number): Promise<unknown> {
   requireProtocol(mediaType(response) === 'application/json', 'Expected application/json');
   try {
     if (limit === undefined) return JSON.parse(await response.text());
-    requireProtocol(response.body, 'Missing architecture response body');
+    requireProtocol(response.body, 'Missing JSON response body');
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8', { fatal: true });
     let size = 0, text = '';
@@ -48,7 +49,7 @@ async function readJson(response: Response, limit?: number): Promise<unknown> {
         const { value, done } = await reader.read();
         if (done) break;
         size += value.byteLength;
-        requireProtocol(size <= limit, 'Architecture exceeds the 32 MiB limit');
+        requireProtocol(size <= limit, limit === architectureByteLimit ? 'Architecture exceeds the 32 MiB limit' : 'Neuron capabilities exceed the 1 MiB limit');
         text += decoder.decode(value, { stream: true });
       }
       return JSON.parse(text + decoder.decode());
@@ -98,6 +99,7 @@ export class ApiClient {
   }
   private async request<T>(path: string, method: string, status: number, schema?: Parameters<typeof validateResponse>[0], body?: unknown, signal?: AbortSignal): Promise<T> {
     let response: Response | undefined;
+    const limit = schema === 'getArchitecture' ? architectureByteLimit : schema === 'getNeuronCapabilities' ? 1_048_576 : undefined;
     const activity = this.activity(signal, method === 'DELETE');
     activity('start');
     try {
@@ -107,9 +109,9 @@ export class ApiClient {
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
       activity('response');
-      await checkStatus(response, status, schema === 'getArchitecture' ? architectureByteLimit : undefined);
+      await checkStatus(response, status, limit);
       if (!schema) return undefined as T;
-      const result = await readJson(response, schema === 'getArchitecture' ? architectureByteLimit : undefined);
+      const result = await readJson(response, limit);
       validateResponse(schema, result);
       return result as T;
     } catch (error) {
@@ -139,6 +141,12 @@ export class ApiClient {
   async getArchitecture(id: string, context: ArchitectureContext, signal?: AbortSignal) {
     const response = await this.request<Schemas['ArchitectureResponse']>(`${this.sessionPath(id)}/architecture`, 'GET', 200, 'getArchitecture', undefined, signal);
     return validateArchitecture(response, context);
+  }
+  async getNeuronCapabilities(session: Schemas['Session'], signal?: AbortSignal) {
+    const response = await this.request<Schemas['NeuronCapabilities']>(`${this.sessionPath(session.id)}/neuron-capabilities`, 'GET', 200, 'getNeuronCapabilities', undefined, signal);
+    requireProtocol(response.session_id === session.id && response.model_id === session.model_id
+      && response.model_revision === session.model_revision, 'Neuron capability identity mismatch');
+    return response;
   }
   tokenize(id: string, body: Schemas['TokenizeRequest'], signal?: AbortSignal) {
     validateSchema('TokenizeRequest', body);
@@ -171,6 +179,26 @@ export class ApiClient {
     validateSchema('InputEmbeddingsRequest', body);
     const token_ids = [...body.token_ids];
     return this.stream(`${this.sessionPath(session)}/embeddings/distributions`, token_ids, 'input_embeddings_distributions', options, { token_ids });
+  }
+  streamNeuronActivations(session: Schemas['Session'], capabilities: Schemas['NeuronCapabilities'], body: Schemas['NeuronActivationsRequest'], options: StreamOptions = {}): StreamOperation {
+    validateSchema('NeuronActivationsRequest', body);
+    return this.neuronStream(session, capabilities, body, 'neuron_activations', options);
+  }
+  streamNeuronComparison(session: Schemas['Session'], capabilities: Schemas['NeuronCapabilities'], body: Schemas['NeuronComparisonRequest'], options: StreamOptions = {}): StreamOperation {
+    validateSchema('NeuronComparisonRequest', body);
+    return this.neuronStream(session, capabilities, body, 'neuron_comparison', options);
+  }
+  private neuronStream(session: Schemas['Session'], capabilities: Schemas['NeuronCapabilities'], body: Schemas['NeuronActivationsRequest'] | Schemas['NeuronComparisonRequest'], kind: 'neuron_activations' | 'neuron_comparison', options: StreamOptions): StreamOperation {
+    requireProtocol(capabilities.session_id === session.id && capabilities.model_id === session.model_id
+      && capabilities.model_revision === session.model_revision, 'Neuron capability identity mismatch');
+    validateNeuronRequest(body, capabilities);
+    const request = structuredClone(body), admitted = structuredClone(capabilities), pinned = { ...session };
+    const endpoint = kind === 'neuron_activations' ? 'neuron-activations' : 'neuron-comparisons';
+    return this.stream(`${this.sessionPath(session.id)}/${endpoint}`, request.token_ids, kind, { ...options, onMetadata: metadata => {
+      requireProtocol(metadata.kind === 'neuron_activations' || metadata.kind === 'neuron_comparison', 'Unexpected neuron metadata');
+      validateNeuronAssociation(metadata, pinned, admitted, request);
+      options.onMetadata?.(metadata);
+    } }, request);
   }
   private stream(path: string, identity: string | readonly number[], kind: Metadata['kind'], options: StreamOptions, body?: Schemas['InputEmbeddingsRequest']): StreamOperation {
     const controller = new AbortController();

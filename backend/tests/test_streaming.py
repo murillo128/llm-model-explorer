@@ -168,7 +168,9 @@ def test_socket_progress_two_consumers_delete_and_cache_hit(tmp_path: Path) -> N
     run(scenario())
 
 
-@pytest.mark.parametrize("mode", ["early-error", "early-cancel", "mid-error", "disconnect"])
+@pytest.mark.parametrize(
+    "mode", ["early-error", "early-cancel", "mid-error", "disconnect", "numerical-error"]
+)
 def test_socket_terminal_paths(tmp_path: Path, mode: str) -> None:
     async def scenario() -> None:
         async with runtime(tmp_path) as service:
@@ -186,6 +188,13 @@ def test_socket_terminal_paths(tmp_path: Path, mode: str) -> None:
                 try:
                     if mode == "early-error":
                         raise OSError("/private/metadata")
+                    if mode == "numerical-error":
+                        raise ModelError(
+                            "internal_error",
+                            "Non-finite result.",
+                            500,
+                            details={"reason": "numerical_failure"},
+                        )
                     if mode == "early-cancel":
                         await asyncio.Event().wait()
                     return metadata()
@@ -224,6 +233,8 @@ def test_socket_terminal_paths(tmp_path: Path, mode: str) -> None:
                         kind, payload = await frames.next()
                         assert kind == 5
                         assert json.loads(payload)["code"] == "internal_error"
+                        if mode == "numerical-error":
+                            assert json.loads(payload)["details"] == {"reason": "numerical_failure"}
                         assert b"/private" not in payload
                     if mode != "disconnect":
                         await frames.end()

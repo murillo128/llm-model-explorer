@@ -1,0 +1,3552 @@
+{
+  "bases": {
+    "capabilities": {
+      "session_id": "12345678-1234-1234-1234-123456789abc",
+      "model_id": "synthetic-codec-fixture",
+      "model_revision": "fixture_revision",
+      "observation": {
+        "status": "available"
+      },
+      "intervention": {
+        "status": "available"
+      },
+      "generation": {
+        "status": "available"
+      },
+      "execution": {
+        "family": "smollm2",
+        "adapter": "smollm2_native",
+        "adapter_version": "fixture-1",
+        "runtime_version": "fixture-1",
+        "torch_version": "fixture",
+        "device": "cpu",
+        "dtype": "float32"
+      },
+      "limits": {
+        "max_modules_per_request": 1,
+        "max_neurons": 8,
+        "max_input_tokens": 512,
+        "max_new_tokens": 64,
+        "max_conditions": 4,
+        "max_top_k": 5,
+        "context_length": 1024,
+        "vocabulary_size": 5,
+        "eos_token_ids": [
+          4
+        ]
+      },
+      "modules": [
+        {
+          "module_id": "mlp-7",
+          "module": {
+            "kind": "module",
+            "name": "model.layers.7.mlp"
+          },
+          "layer_index": 7,
+          "intermediate_size": 3,
+          "hidden_size": 2,
+          "point": "post_activation_product_pre_down_proj",
+          "weights": {
+            "gate": {
+              "tensor_id": "gate7",
+              "axis": "row",
+              "shape": [
+                3,
+                2
+              ]
+            },
+            "up": {
+              "tensor_id": "up7",
+              "axis": "row",
+              "shape": [
+                3,
+                2
+              ]
+            },
+            "down": {
+              "tensor_id": "down7",
+              "axis": "column",
+              "shape": [
+                2,
+                3
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "observation": {
+      "model_revision": "fixture_revision",
+      "module_id": "mlp-7",
+      "neuron_indices": [
+        2,
+        0
+      ],
+      "token_ids": [
+        1,
+        1
+      ]
+    },
+    "comparison": {
+      "model_revision": "fixture_revision",
+      "module_id": "mlp-7",
+      "neuron_indices": [
+        2,
+        0
+      ],
+      "token_ids": [
+        1,
+        1
+      ],
+      "conditions": [
+        {
+          "id": "baseline",
+          "mode": "baseline"
+        },
+        {
+          "id": "zero-prompt",
+          "mode": "zero",
+          "scope": "prompt"
+        }
+      ],
+      "top_k": 2,
+      "max_new_tokens": 0,
+      "decoding": "greedy"
+    },
+    "activations": {
+      "session_id": "12345678-1234-1234-1234-123456789abc",
+      "model_id": "synthetic-codec-fixture",
+      "model_revision": "fixture_revision",
+      "execution": {
+        "family": "smollm2",
+        "adapter": "smollm2_native",
+        "adapter_version": "fixture-1",
+        "runtime_version": "fixture-1",
+        "torch_version": "fixture",
+        "device": "cpu",
+        "dtype": "float32"
+      },
+      "limits": {
+        "max_modules_per_request": 1,
+        "max_neurons": 8,
+        "max_input_tokens": 512,
+        "max_new_tokens": 64,
+        "max_conditions": 4,
+        "max_top_k": 5,
+        "context_length": 1024,
+        "vocabulary_size": 5,
+        "eos_token_ids": [
+          4
+        ]
+      },
+      "module": {
+        "module_id": "mlp-7",
+        "module": {
+          "kind": "module",
+          "name": "model.layers.7.mlp"
+        },
+        "layer_index": 7,
+        "intermediate_size": 3,
+        "hidden_size": 2,
+        "point": "post_activation_product_pre_down_proj",
+        "weights": {
+          "gate": {
+            "tensor_id": "gate7",
+            "axis": "row",
+            "shape": [
+              3,
+              2
+            ]
+          },
+          "up": {
+            "tensor_id": "up7",
+            "axis": "row",
+            "shape": [
+              3,
+              2
+            ]
+          },
+          "down": {
+            "tensor_id": "down7",
+            "axis": "column",
+            "shape": [
+              2,
+              3
+            ]
+          }
+        }
+      },
+      "token_ids": [
+        1,
+        1
+      ],
+      "neuron_indices": [
+        2,
+        0
+      ],
+      "dtype": "float32",
+      "byte_order": "little",
+      "layout": "c",
+      "kind": "neuron_activations",
+      "byte_length": 16,
+      "sections": [
+        {
+          "name": "activations",
+          "shape": [
+            2,
+            2
+          ],
+          "offset": 0,
+          "byte_length": 16
+        }
+      ]
+    },
+    "probabilities": {
+      "session_id": "12345678-1234-1234-1234-123456789abc",
+      "model_id": "synthetic-codec-fixture",
+      "model_revision": "fixture_revision",
+      "execution": {
+        "family": "smollm2",
+        "adapter": "smollm2_native",
+        "adapter_version": "fixture-1",
+        "runtime_version": "fixture-1",
+        "torch_version": "fixture",
+        "device": "cpu",
+        "dtype": "float32"
+      },
+      "limits": {
+        "max_modules_per_request": 1,
+        "max_neurons": 8,
+        "max_input_tokens": 512,
+        "max_new_tokens": 64,
+        "max_conditions": 4,
+        "max_top_k": 5,
+        "context_length": 1024,
+        "vocabulary_size": 5,
+        "eos_token_ids": [
+          4
+        ]
+      },
+      "module": {
+        "module_id": "mlp-7",
+        "module": {
+          "kind": "module",
+          "name": "model.layers.7.mlp"
+        },
+        "layer_index": 7,
+        "intermediate_size": 3,
+        "hidden_size": 2,
+        "point": "post_activation_product_pre_down_proj",
+        "weights": {
+          "gate": {
+            "tensor_id": "gate7",
+            "axis": "row",
+            "shape": [
+              3,
+              2
+            ]
+          },
+          "up": {
+            "tensor_id": "up7",
+            "axis": "row",
+            "shape": [
+              3,
+              2
+            ]
+          },
+          "down": {
+            "tensor_id": "down7",
+            "axis": "column",
+            "shape": [
+              2,
+              3
+            ]
+          }
+        }
+      },
+      "token_ids": [
+        1,
+        1
+      ],
+      "neuron_indices": [
+        2,
+        0
+      ],
+      "dtype": "float32",
+      "byte_order": "little",
+      "layout": "c",
+      "conditions": [
+        {
+          "id": "baseline",
+          "mode": "baseline"
+        },
+        {
+          "id": "zero-prompt",
+          "mode": "zero",
+          "scope": "prompt"
+        }
+      ],
+      "top_k": 2,
+      "max_new_tokens": 0,
+      "decoding": "greedy",
+      "kind": "neuron_comparison",
+      "byte_length": 24,
+      "sections": [
+        {
+          "name": "probabilities",
+          "shape": [
+            2,
+            3
+          ],
+          "offset": 0,
+          "byte_length": 24
+        }
+      ],
+      "candidate_token_ids": [
+        0,
+        1,
+        2
+      ],
+      "top_token_ids": [
+        [
+          1,
+          2
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "continuations": [
+        {
+          "condition_id": "baseline",
+          "token_ids": [],
+          "text": "",
+          "finish_reason": "not_requested"
+        },
+        {
+          "condition_id": "zero-prompt",
+          "token_ids": [],
+          "text": "",
+          "finish_reason": "not_requested"
+        }
+      ]
+    },
+    "unavailable": {
+      "session_id": "12345678-1234-1234-1234-123456789abc",
+      "model_id": "synthetic-codec-fixture",
+      "model_revision": "fixture_revision",
+      "observation": {
+        "status": "unavailable",
+        "reason": {
+          "code": "unsupported_model",
+          "message": "Unsupported model.",
+          "recovery": "Select local native SmolLM2 Base."
+        }
+      },
+      "intervention": {
+        "status": "unavailable",
+        "reason": {
+          "code": "unsupported_model",
+          "message": "Unsupported model.",
+          "recovery": "Select local native SmolLM2 Base."
+        }
+      },
+      "generation": {
+        "status": "unavailable",
+        "reason": {
+          "code": "unsupported_model",
+          "message": "Unsupported model.",
+          "recovery": "Select local native SmolLM2 Base."
+        }
+      },
+      "execution": null,
+      "limits": null,
+      "modules": []
+    }
+  },
+  "cases": [
+    {
+      "name": "capabilities",
+      "base": "capabilities",
+      "schema": "NeuronCapabilities",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "observation",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "comparison",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "activations",
+      "base": "activations",
+      "schema": "NeuronActivationsMetadata",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "probabilities",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "reordered-neurons-valid",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "neuron_indices"
+          ],
+          [
+            0,
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "maximum-prompt",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "token_ids"
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "one-token",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "token_ids"
+          ],
+          [
+            0
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "maximum-generation",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "max_new_tokens"
+          ],
+          64
+        ]
+      ]
+    },
+    {
+      "name": "vocabulary-top-k",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "top_k"
+          ],
+          5
+        ]
+      ]
+    },
+    {
+      "name": "baseline-only",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions"
+          ],
+          [
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "four-conditions",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions"
+          ],
+          [
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            },
+            {
+              "id": "zero-prompt",
+              "mode": "zero",
+              "scope": "prompt"
+            },
+            {
+              "id": "scale",
+              "mode": "scale",
+              "scope": "all",
+              "factor": -2
+            },
+            {
+              "id": "add",
+              "mode": "add",
+              "scope": "continuation",
+              "delta": 1
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "intervention-availability-False",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [],
+      "context_edits": [
+        [
+          [
+            "intervention"
+          ],
+          {
+            "status": "unavailable",
+            "reason": {
+              "code": "runtime_unavailable",
+              "message": "Capability unavailable.",
+              "recovery": "Use an admitted runtime."
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "intervention-availability-True",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions"
+          ],
+          [
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            }
+          ]
+        ]
+      ],
+      "context_edits": [
+        [
+          [
+            "intervention"
+          ],
+          {
+            "status": "unavailable",
+            "reason": {
+              "code": "runtime_unavailable",
+              "message": "Capability unavailable.",
+              "recovery": "Use an admitted runtime."
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "generation-availability-False",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "max_new_tokens"
+          ],
+          1
+        ]
+      ],
+      "context_edits": [
+        [
+          [
+            "generation"
+          ],
+          {
+            "status": "unavailable",
+            "reason": {
+              "code": "runtime_unavailable",
+              "message": "Capability unavailable.",
+              "recovery": "Use an admitted runtime."
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "generation-availability-True",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [],
+      "context_edits": [
+        [
+          [
+            "generation"
+          ],
+          {
+            "status": "unavailable",
+            "reason": {
+              "code": "runtime_unavailable",
+              "message": "Capability unavailable.",
+              "recovery": "Use an admitted runtime."
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "eight-neurons",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "neuron_indices"
+          ],
+          [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        ]
+      ],
+      "context_edits": [
+        [
+          [
+            "modules",
+            0,
+            "intermediate_size"
+          ],
+          8
+        ],
+        [
+          [
+            "modules",
+            0,
+            "weights",
+            "gate",
+            "shape"
+          ],
+          [
+            8,
+            2
+          ]
+        ],
+        [
+          [
+            "modules",
+            0,
+            "weights",
+            "up",
+            "shape"
+          ],
+          [
+            8,
+            2
+          ]
+        ],
+        [
+          [
+            "modules",
+            0,
+            "weights",
+            "down",
+            "shape"
+          ],
+          [
+            2,
+            8
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "empty-prompt",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "token_ids"
+          ],
+          []
+        ]
+      ]
+    },
+    {
+      "name": "too-many-tokens",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "token_ids"
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "negative-token",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "token_ids"
+          ],
+          [
+            -1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "token-exclusive-upper",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "token_ids"
+          ],
+          [
+            5
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "boolean-token",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "token_ids"
+          ],
+          [
+            true
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "unsafe-token",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "token_ids"
+          ],
+          [
+            9007199254740992
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "empty-neurons",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "neuron_indices"
+          ],
+          []
+        ]
+      ]
+    },
+    {
+      "name": "duplicate-neurons",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "neuron_indices"
+          ],
+          [
+            2,
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "neuron-exclusive-upper",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "neuron_indices"
+          ],
+          [
+            3
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "too-many-neurons",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "neuron_indices"
+          ],
+          [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "unknown-module",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "module_id"
+          ],
+          "mlp-8"
+        ]
+      ]
+    },
+    {
+      "name": "stale-revision",
+      "base": "observation",
+      "schema": "NeuronActivationsRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "model_revision"
+          ],
+          "other"
+        ]
+      ]
+    },
+    {
+      "name": "baseline-not-first",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "conditions"
+          ],
+          [
+            {
+              "id": "zero-prompt",
+              "mode": "zero",
+              "scope": "prompt"
+            },
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "duplicate-baseline",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "conditions"
+          ],
+          [
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            },
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "duplicate-condition-id",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "conditions"
+          ],
+          [
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            },
+            {
+              "id": "zero-prompt",
+              "mode": "zero",
+              "scope": "prompt"
+            },
+            {
+              "id": "zero-prompt",
+              "mode": "zero",
+              "scope": "prompt"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "too-many-conditions",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "conditions"
+          ],
+          [
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            },
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            },
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            },
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            },
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "no-baseline",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "conditions"
+          ],
+          [
+            {
+              "id": "zero-prompt",
+              "mode": "zero",
+              "scope": "prompt"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "baseline-mutation",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "conditions",
+            0
+          ],
+          {
+            "id": "baseline",
+            "mode": "baseline",
+            "factor": 2
+          }
+        ]
+      ]
+    },
+    {
+      "name": "mixed-intervention",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "s",
+            "mode": "scale",
+            "scope": "all",
+            "factor": 2,
+            "delta": 1
+          }
+        ]
+      ]
+    },
+    {
+      "name": "missing-factor",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "s",
+            "mode": "scale",
+            "scope": "all"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "float32-overflow-factor",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "s",
+            "mode": "scale",
+            "scope": "all",
+            "factor": 1e+39
+          }
+        ]
+      ]
+    },
+    {
+      "name": "invalid-scope",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "conditions",
+            1,
+            "scope"
+          ],
+          "generated"
+        ]
+      ]
+    },
+    {
+      "name": "negative-generation",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "max_new_tokens"
+          ],
+          -1
+        ]
+      ]
+    },
+    {
+      "name": "too-many-new-tokens",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "max_new_tokens"
+          ],
+          65
+        ]
+      ]
+    },
+    {
+      "name": "zero-top-k",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "top_k"
+          ],
+          0
+        ]
+      ]
+    },
+    {
+      "name": "too-large-top-k",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "top_k"
+          ],
+          21
+        ]
+      ]
+    },
+    {
+      "name": "top-k-vocabulary",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "top_k"
+          ],
+          6
+        ]
+      ]
+    },
+    {
+      "name": "sampling",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "decoding"
+          ],
+          "sample"
+        ]
+      ]
+    },
+    {
+      "name": "scale--2-prompt",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "changed",
+            "mode": "scale",
+            "scope": "prompt",
+            "factor": -2
+          }
+        ]
+      ]
+    },
+    {
+      "name": "scale--2-continuation",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "changed",
+            "mode": "scale",
+            "scope": "continuation",
+            "factor": -2
+          }
+        ]
+      ]
+    },
+    {
+      "name": "scale--2-all",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "changed",
+            "mode": "scale",
+            "scope": "all",
+            "factor": -2
+          }
+        ]
+      ]
+    },
+    {
+      "name": "scale-0-prompt",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "changed",
+            "mode": "scale",
+            "scope": "prompt",
+            "factor": 0
+          }
+        ]
+      ]
+    },
+    {
+      "name": "scale-0-continuation",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "changed",
+            "mode": "scale",
+            "scope": "continuation",
+            "factor": 0
+          }
+        ]
+      ]
+    },
+    {
+      "name": "scale-0-all",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "changed",
+            "mode": "scale",
+            "scope": "all",
+            "factor": 0
+          }
+        ]
+      ]
+    },
+    {
+      "name": "add--1-prompt",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "changed",
+            "mode": "add",
+            "scope": "prompt",
+            "delta": -1
+          }
+        ]
+      ]
+    },
+    {
+      "name": "add--1-continuation",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "changed",
+            "mode": "add",
+            "scope": "continuation",
+            "delta": -1
+          }
+        ]
+      ]
+    },
+    {
+      "name": "add--1-all",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "conditions",
+            1
+          ],
+          {
+            "id": "changed",
+            "mode": "add",
+            "scope": "all",
+            "delta": -1
+          }
+        ]
+      ]
+    },
+    {
+      "name": "activation-shape",
+      "base": "activations",
+      "schema": "NeuronActivationsMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "sections",
+            0,
+            "shape"
+          ],
+          [
+            1,
+            4
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "activation-offset",
+      "base": "activations",
+      "schema": "NeuronActivationsMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "sections",
+            0,
+            "offset"
+          ],
+          4
+        ]
+      ]
+    },
+    {
+      "name": "activation-section-bytes",
+      "base": "activations",
+      "schema": "NeuronActivationsMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "sections",
+            0,
+            "byte_length"
+          ],
+          12
+        ]
+      ]
+    },
+    {
+      "name": "activation-total-bytes",
+      "base": "activations",
+      "schema": "NeuronActivationsMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "byte_length"
+          ],
+          12
+        ]
+      ]
+    },
+    {
+      "name": "activation-section-name",
+      "base": "activations",
+      "schema": "NeuronActivationsMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "sections",
+            0,
+            "name"
+          ],
+          "probabilities"
+        ]
+      ]
+    },
+    {
+      "name": "candidate-order",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "candidate_token_ids"
+          ],
+          [
+            1,
+            0,
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "candidate-range",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "candidate_token_ids"
+          ],
+          [
+            0,
+            1,
+            5
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "candidate-union",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "candidate_token_ids"
+          ],
+          [
+            0,
+            1,
+            3
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "top-k-count",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "top_token_ids",
+            0
+          ],
+          [
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "top-k-duplicate",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "top_token_ids",
+            0
+          ],
+          [
+            1,
+            1
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "continuation-order",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "continuations"
+          ],
+          [
+            {
+              "condition_id": "zero-prompt",
+              "token_ids": [],
+              "text": "",
+              "finish_reason": "not_requested"
+            },
+            {
+              "condition_id": "baseline",
+              "token_ids": [],
+              "text": "",
+              "finish_reason": "not_requested"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "continuation-range",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "continuations",
+            0,
+            "token_ids"
+          ],
+          [
+            5
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "no-generation-reason",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "continuations",
+            0,
+            "finish_reason"
+          ],
+          "length"
+        ]
+      ]
+    },
+    {
+      "name": "comparison-shape",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "sections",
+            0,
+            "shape"
+          ],
+          [
+            3,
+            2
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "wrong-weight-axis",
+      "base": "capabilities",
+      "schema": "NeuronCapabilities",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "modules",
+            0,
+            "weights",
+            "down",
+            "axis"
+          ],
+          "row"
+        ]
+      ]
+    },
+    {
+      "name": "wrong-weight-shape",
+      "base": "capabilities",
+      "schema": "NeuronCapabilities",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "modules",
+            0,
+            "weights",
+            "gate",
+            "shape"
+          ],
+          [
+            2,
+            3
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "duplicated-module",
+      "base": "capabilities",
+      "schema": "NeuronCapabilities",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "modules"
+          ],
+          [
+            {
+              "module_id": "mlp-7",
+              "module": {
+                "kind": "module",
+                "name": "model.layers.7.mlp"
+              },
+              "layer_index": 7,
+              "intermediate_size": 3,
+              "hidden_size": 2,
+              "point": "post_activation_product_pre_down_proj",
+              "weights": {
+                "gate": {
+                  "tensor_id": "gate7",
+                  "axis": "row",
+                  "shape": [
+                    3,
+                    2
+                  ]
+                },
+                "up": {
+                  "tensor_id": "up7",
+                  "axis": "row",
+                  "shape": [
+                    3,
+                    2
+                  ]
+                },
+                "down": {
+                  "tensor_id": "down7",
+                  "axis": "column",
+                  "shape": [
+                    2,
+                    3
+                  ]
+                }
+              }
+            },
+            {
+              "module_id": "mlp-7",
+              "module": {
+                "kind": "module",
+                "name": "model.layers.7.mlp"
+              },
+              "layer_index": 7,
+              "intermediate_size": 3,
+              "hidden_size": 2,
+              "point": "post_activation_product_pre_down_proj",
+              "weights": {
+                "gate": {
+                  "tensor_id": "gate7",
+                  "axis": "row",
+                  "shape": [
+                    3,
+                    2
+                  ]
+                },
+                "up": {
+                  "tensor_id": "up7",
+                  "axis": "row",
+                  "shape": [
+                    3,
+                    2
+                  ]
+                },
+                "down": {
+                  "tensor_id": "down7",
+                  "axis": "column",
+                  "shape": [
+                    2,
+                    3
+                  ]
+                }
+              }
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "wrong-effective-limit",
+      "base": "capabilities",
+      "schema": "NeuronCapabilities",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "limits",
+            "max_input_tokens"
+          ],
+          513
+        ]
+      ]
+    },
+    {
+      "name": "EOS-range",
+      "base": "capabilities",
+      "schema": "NeuronCapabilities",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "limits",
+            "eos_token_ids"
+          ],
+          [
+            5
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "unavailable-with-modules",
+      "base": "capabilities",
+      "schema": "NeuronCapabilities",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "observation"
+          ],
+          {
+            "status": "unavailable",
+            "reason": {
+              "code": "unsupported_model",
+              "message": "Unsupported",
+              "recovery": "Select native SmolLM2 Base"
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "context-total-4",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "max_new_tokens"
+          ],
+          4
+        ]
+      ],
+      "context_edits": [
+        [
+          [
+            "limits",
+            "context_length"
+          ],
+          6
+        ],
+        [
+          [
+            "limits",
+            "max_input_tokens"
+          ],
+          6
+        ],
+        [
+          [
+            "limits",
+            "max_new_tokens"
+          ],
+          5
+        ]
+      ]
+    },
+    {
+      "name": "context-total-5",
+      "base": "comparison",
+      "schema": "NeuronComparisonRequest",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "max_new_tokens"
+          ],
+          5
+        ]
+      ],
+      "context_edits": [
+        [
+          [
+            "limits",
+            "context_length"
+          ],
+          6
+        ],
+        [
+          [
+            "limits",
+            "max_input_tokens"
+          ],
+          6
+        ],
+        [
+          [
+            "limits",
+            "max_new_tokens"
+          ],
+          5
+        ]
+      ]
+    },
+    {
+      "name": "stopping-[2, 4]-eos",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "max_new_tokens"
+          ],
+          2
+        ],
+        [
+          [
+            "continuations"
+          ],
+          [
+            {
+              "condition_id": "baseline",
+              "token_ids": [
+                2,
+                4
+              ],
+              "text": "fixture",
+              "finish_reason": "eos"
+            },
+            {
+              "condition_id": "zero-prompt",
+              "token_ids": [
+                2,
+                4
+              ],
+              "text": "fixture",
+              "finish_reason": "eos"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "stopping-[2, 3]-length",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": true,
+      "edits": [
+        [
+          [
+            "max_new_tokens"
+          ],
+          2
+        ],
+        [
+          [
+            "continuations"
+          ],
+          [
+            {
+              "condition_id": "baseline",
+              "token_ids": [
+                2,
+                3
+              ],
+              "text": "fixture",
+              "finish_reason": "length"
+            },
+            {
+              "condition_id": "zero-prompt",
+              "token_ids": [
+                2,
+                3
+              ],
+              "text": "fixture",
+              "finish_reason": "length"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "stopping-[4, 2]-eos",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "max_new_tokens"
+          ],
+          2
+        ],
+        [
+          [
+            "continuations"
+          ],
+          [
+            {
+              "condition_id": "baseline",
+              "token_ids": [
+                4,
+                2
+              ],
+              "text": "fixture",
+              "finish_reason": "eos"
+            },
+            {
+              "condition_id": "zero-prompt",
+              "token_ids": [
+                4,
+                2
+              ],
+              "text": "fixture",
+              "finish_reason": "eos"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "stopping-[2]-length",
+      "base": "probabilities",
+      "schema": "NeuronComparisonMetadata",
+      "valid": false,
+      "edits": [
+        [
+          [
+            "max_new_tokens"
+          ],
+          2
+        ],
+        [
+          [
+            "continuations"
+          ],
+          [
+            {
+              "condition_id": "baseline",
+              "token_ids": [
+                2
+              ],
+              "text": "fixture",
+              "finish_reason": "length"
+            },
+            {
+              "condition_id": "zero-prompt",
+              "token_ids": [
+                2
+              ],
+              "text": "fixture",
+              "finish_reason": "length"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "unavailable",
+      "base": "unavailable",
+      "schema": "NeuronCapabilities",
+      "valid": true,
+      "edits": []
+    }
+  ],
+  "numeric": {
+    "activations": [
+      -1.0,
+      2.0,
+      0.0,
+      -3.0
+    ],
+    "probabilities": [
+      0.125,
+      0.5,
+      0.25,
+      0.5,
+      0.125,
+      0.25
+    ],
+    "full_vocabulary_probabilities": [
+      [
+        0.125,
+        0.5,
+        0.25,
+        0.0625,
+        0.0625
+      ],
+      [
+        0.5,
+        0.125,
+        0.25,
+        0.0625,
+        0.0625
+      ]
+    ],
+    "probability_deltas": [
+      0.375,
+      -0.375,
+      0.0
+    ],
+    "percentage_point_deltas": [
+      37.5,
+      -37.5,
+      0.0
+    ]
+  },
+  "payload_cases": [
+    {
+      "name": "activations",
+      "base": "activations",
+      "data_hex": "000080bf0000004000000000000040c0",
+      "valid": true
+    },
+    {
+      "name": "probabilities",
+      "base": "probabilities",
+      "data_hex": "0000003e0000003f0000803e0000003f0000003e0000803e",
+      "valid": true
+    },
+    {
+      "name": "nan-activation",
+      "base": "activations",
+      "data_hex": "0000c07f0000004000000000000040c0",
+      "valid": false
+    },
+    {
+      "name": "infinite-activation",
+      "base": "activations",
+      "data_hex": "0000807f0000004000000000000040c0",
+      "valid": false
+    },
+    {
+      "name": "probability-above-one",
+      "base": "probabilities",
+      "data_hex": "000000400000003f0000803e0000003f0000003e0000803e",
+      "valid": false
+    },
+    {
+      "name": "negative-probability",
+      "base": "probabilities",
+      "data_hex": "cdccccbd0000003f0000803e0000003f0000003e0000803e",
+      "valid": false
+    },
+    {
+      "name": "probability-sum",
+      "base": "probabilities",
+      "data_hex": "0000803e0000403f0000003f0000003f0000003e0000803e",
+      "valid": false
+    },
+    {
+      "name": "top-order",
+      "base": "probabilities",
+      "data_hex": "0000003f0000003e0000803e0000003f0000003e0000803e",
+      "valid": false
+    }
+  ],
+  "association_cases": [
+    {
+      "field": "token_ids",
+      "value": [
+        1,
+        1
+      ],
+      "valid": true
+    },
+    {
+      "field": "session_id",
+      "value": "22345678-1234-1234-1234-123456789abc",
+      "valid": false
+    },
+    {
+      "field": "model_id",
+      "value": "different",
+      "valid": false
+    },
+    {
+      "field": "model_revision",
+      "value": "other",
+      "valid": false
+    },
+    {
+      "field": "token_ids",
+      "value": [
+        1,
+        2
+      ],
+      "valid": false
+    },
+    {
+      "field": "neuron_indices",
+      "value": [
+        0,
+        2
+      ],
+      "valid": false
+    },
+    {
+      "field": "module",
+      "value": {
+        "module_id": "mlp-8",
+        "module": {
+          "kind": "module",
+          "name": "model.layers.7.mlp"
+        },
+        "layer_index": 7,
+        "intermediate_size": 3,
+        "hidden_size": 2,
+        "point": "post_activation_product_pre_down_proj",
+        "weights": {
+          "gate": {
+            "tensor_id": "gate7",
+            "axis": "row",
+            "shape": [
+              3,
+              2
+            ]
+          },
+          "up": {
+            "tensor_id": "up7",
+            "axis": "row",
+            "shape": [
+              3,
+              2
+            ]
+          },
+          "down": {
+            "tensor_id": "down7",
+            "axis": "column",
+            "shape": [
+              2,
+              3
+            ]
+          }
+        }
+      },
+      "valid": false
+    },
+    {
+      "field": "conditions",
+      "value": [
+        {
+          "id": "zero-prompt",
+          "mode": "zero",
+          "scope": "prompt"
+        },
+        {
+          "id": "baseline",
+          "mode": "baseline"
+        }
+      ],
+      "valid": false
+    },
+    {
+      "field": "top_k",
+      "value": 1,
+      "valid": false
+    },
+    {
+      "field": "max_new_tokens",
+      "value": 1,
+      "valid": false
+    }
+  ],
+  "wire_cases": [
+    {
+      "name": "neuron-activations",
+      "wire_hex": "4c4d4558010000003a0400007b22627974655f6c656e677468223a31362c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c22657865637574696f6e223a7b2261646170746572223a22736d6f6c6c6d325f6e6174697665222c22616461707465725f76657273696f6e223a22666978747572652d31222c22646576696365223a22637075222c226474797065223a22666c6f61743332222c2266616d696c79223a22736d6f6c6c6d32222c2272756e74696d655f76657273696f6e223a22666978747572652d31222c22746f7263685f76657273696f6e223a2266697874757265227d2c226b696e64223a226e6575726f6e5f61637469766174696f6e73222c226c61796f7574223a2263222c226c696d697473223a7b22636f6e746578745f6c656e677468223a313032342c22656f735f746f6b656e5f696473223a5b345d2c226d61785f636f6e646974696f6e73223a342c226d61785f696e7075745f746f6b656e73223a3531322c226d61785f6d6f64756c65735f7065725f72657175657374223a312c226d61785f6e6575726f6e73223a382c226d61785f6e65775f746f6b656e73223a36342c226d61785f746f705f6b223a352c22766f636162756c6172795f73697a65223a357d2c226d6f64656c5f6964223a2273796e7468657469632d636f6465632d66697874757265222c226d6f64656c5f7265766973696f6e223a22666978747572655f7265766973696f6e222c226d6f64756c65223a7b2268696464656e5f73697a65223a322c22696e7465726d6564696174655f73697a65223a332c226c617965725f696e646578223a372c226d6f64756c65223a7b226b696e64223a226d6f64756c65222c226e616d65223a226d6f64656c2e6c61796572732e372e6d6c70227d2c226d6f64756c655f6964223a226d6c702d37222c22706f696e74223a22706f73745f61637469766174696f6e5f70726f647563745f7072655f646f776e5f70726f6a222c2277656967687473223a7b22646f776e223a7b2261786973223a22636f6c756d6e222c227368617065223a5b322c335d2c2274656e736f725f6964223a22646f776e37227d2c2267617465223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a226761746537227d2c227570223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a22757037227d7d7d2c226e6575726f6e5f696e6469636573223a5b322c305d2c2273656374696f6e73223a5b7b22627974655f6c656e677468223a31362c226e616d65223a2261637469766174696f6e73222c226f6666736574223a302c227368617065223a5b322c325d7d5d2c2273657373696f6e5f6964223a2231323334353637382d313233342d313233342d313233342d313233343536373839616263222c22746f6b656e5f696473223a5b312c315d7d4c4d45580200000010000000000080bf0000004000000000000040c04c4d45580400000000000000",
+      "expected": {
+        "outcome": "complete",
+        "metadata": {
+          "session_id": "12345678-1234-1234-1234-123456789abc",
+          "model_id": "synthetic-codec-fixture",
+          "model_revision": "fixture_revision",
+          "execution": {
+            "family": "smollm2",
+            "adapter": "smollm2_native",
+            "adapter_version": "fixture-1",
+            "runtime_version": "fixture-1",
+            "torch_version": "fixture",
+            "device": "cpu",
+            "dtype": "float32"
+          },
+          "limits": {
+            "max_modules_per_request": 1,
+            "max_neurons": 8,
+            "max_input_tokens": 512,
+            "max_new_tokens": 64,
+            "max_conditions": 4,
+            "max_top_k": 5,
+            "context_length": 1024,
+            "vocabulary_size": 5,
+            "eos_token_ids": [
+              4
+            ]
+          },
+          "module": {
+            "module_id": "mlp-7",
+            "module": {
+              "kind": "module",
+              "name": "model.layers.7.mlp"
+            },
+            "layer_index": 7,
+            "intermediate_size": 3,
+            "hidden_size": 2,
+            "point": "post_activation_product_pre_down_proj",
+            "weights": {
+              "gate": {
+                "tensor_id": "gate7",
+                "axis": "row",
+                "shape": [
+                  3,
+                  2
+                ]
+              },
+              "up": {
+                "tensor_id": "up7",
+                "axis": "row",
+                "shape": [
+                  3,
+                  2
+                ]
+              },
+              "down": {
+                "tensor_id": "down7",
+                "axis": "column",
+                "shape": [
+                  2,
+                  3
+                ]
+              }
+            }
+          },
+          "token_ids": [
+            1,
+            1
+          ],
+          "neuron_indices": [
+            2,
+            0
+          ],
+          "dtype": "float32",
+          "byte_order": "little",
+          "layout": "c",
+          "kind": "neuron_activations",
+          "byte_length": 16,
+          "sections": [
+            {
+              "name": "activations",
+              "shape": [
+                2,
+                2
+              ],
+              "offset": 0,
+              "byte_length": 16
+            }
+          ]
+        },
+        "data_hex": "000080bf0000004000000000000040c0"
+      }
+    },
+    {
+      "name": "neuron-activations-missing-terminal",
+      "wire_hex": "4c4d4558010000003a0400007b22627974655f6c656e677468223a31362c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c22657865637574696f6e223a7b2261646170746572223a22736d6f6c6c6d325f6e6174697665222c22616461707465725f76657273696f6e223a22666978747572652d31222c22646576696365223a22637075222c226474797065223a22666c6f61743332222c2266616d696c79223a22736d6f6c6c6d32222c2272756e74696d655f76657273696f6e223a22666978747572652d31222c22746f7263685f76657273696f6e223a2266697874757265227d2c226b696e64223a226e6575726f6e5f61637469766174696f6e73222c226c61796f7574223a2263222c226c696d697473223a7b22636f6e746578745f6c656e677468223a313032342c22656f735f746f6b656e5f696473223a5b345d2c226d61785f636f6e646974696f6e73223a342c226d61785f696e7075745f746f6b656e73223a3531322c226d61785f6d6f64756c65735f7065725f72657175657374223a312c226d61785f6e6575726f6e73223a382c226d61785f6e65775f746f6b656e73223a36342c226d61785f746f705f6b223a352c22766f636162756c6172795f73697a65223a357d2c226d6f64656c5f6964223a2273796e7468657469632d636f6465632d66697874757265222c226d6f64656c5f7265766973696f6e223a22666978747572655f7265766973696f6e222c226d6f64756c65223a7b2268696464656e5f73697a65223a322c22696e7465726d6564696174655f73697a65223a332c226c617965725f696e646578223a372c226d6f64756c65223a7b226b696e64223a226d6f64756c65222c226e616d65223a226d6f64656c2e6c61796572732e372e6d6c70227d2c226d6f64756c655f6964223a226d6c702d37222c22706f696e74223a22706f73745f61637469766174696f6e5f70726f647563745f7072655f646f776e5f70726f6a222c2277656967687473223a7b22646f776e223a7b2261786973223a22636f6c756d6e222c227368617065223a5b322c335d2c2274656e736f725f6964223a22646f776e37227d2c2267617465223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a226761746537227d2c227570223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a22757037227d7d7d2c226e6575726f6e5f696e6469636573223a5b322c305d2c2273656374696f6e73223a5b7b22627974655f6c656e677468223a31362c226e616d65223a2261637469766174696f6e73222c226f6666736574223a302c227368617065223a5b322c325d7d5d2c2273657373696f6e5f6964223a2231323334353637382d313233342d313233342d313233342d313233343536373839616263222c22746f6b656e5f696473223a5b312c315d7d4c4d45580200000010000000000080bf0000004000000000000040c0",
+      "expected": {
+        "outcome": "reject"
+      }
+    },
+    {
+      "name": "neuron-probabilities",
+      "wire_hex": "4c4d455801000000ce0500007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c2263616e6469646174655f746f6b656e5f696473223a5b302c312c325d2c22636f6e646974696f6e73223a5b7b226964223a22626173656c696e65222c226d6f6465223a22626173656c696e65227d2c7b226964223a227a65726f2d70726f6d7074222c226d6f6465223a227a65726f222c2273636f7065223a2270726f6d7074227d5d2c22636f6e74696e756174696f6e73223a5b7b22636f6e646974696f6e5f6964223a22626173656c696e65222c2266696e6973685f726561736f6e223a226e6f745f726571756573746564222c2274657874223a22222c22746f6b656e5f696473223a5b5d7d2c7b22636f6e646974696f6e5f6964223a227a65726f2d70726f6d7074222c2266696e6973685f726561736f6e223a226e6f745f726571756573746564222c2274657874223a22222c22746f6b656e5f696473223a5b5d7d5d2c226465636f64696e67223a22677265656479222c226474797065223a22666c6f61743332222c22657865637574696f6e223a7b2261646170746572223a22736d6f6c6c6d325f6e6174697665222c22616461707465725f76657273696f6e223a22666978747572652d31222c22646576696365223a22637075222c226474797065223a22666c6f61743332222c2266616d696c79223a22736d6f6c6c6d32222c2272756e74696d655f76657273696f6e223a22666978747572652d31222c22746f7263685f76657273696f6e223a2266697874757265227d2c226b696e64223a226e6575726f6e5f636f6d70617269736f6e222c226c61796f7574223a2263222c226c696d697473223a7b22636f6e746578745f6c656e677468223a313032342c22656f735f746f6b656e5f696473223a5b345d2c226d61785f636f6e646974696f6e73223a342c226d61785f696e7075745f746f6b656e73223a3531322c226d61785f6d6f64756c65735f7065725f72657175657374223a312c226d61785f6e6575726f6e73223a382c226d61785f6e65775f746f6b656e73223a36342c226d61785f746f705f6b223a352c22766f636162756c6172795f73697a65223a357d2c226d61785f6e65775f746f6b656e73223a302c226d6f64656c5f6964223a2273796e7468657469632d636f6465632d66697874757265222c226d6f64656c5f7265766973696f6e223a22666978747572655f7265766973696f6e222c226d6f64756c65223a7b2268696464656e5f73697a65223a322c22696e7465726d6564696174655f73697a65223a332c226c617965725f696e646578223a372c226d6f64756c65223a7b226b696e64223a226d6f64756c65222c226e616d65223a226d6f64656c2e6c61796572732e372e6d6c70227d2c226d6f64756c655f6964223a226d6c702d37222c22706f696e74223a22706f73745f61637469766174696f6e5f70726f647563745f7072655f646f776e5f70726f6a222c2277656967687473223a7b22646f776e223a7b2261786973223a22636f6c756d6e222c227368617065223a5b322c335d2c2274656e736f725f6964223a22646f776e37227d2c2267617465223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a226761746537227d2c227570223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a22757037227d7d7d2c226e6575726f6e5f696e6469636573223a5b322c305d2c2273656374696f6e73223a5b7b22627974655f6c656e677468223a32342c226e616d65223a2270726f626162696c6974696573222c226f6666736574223a302c227368617065223a5b322c335d7d5d2c2273657373696f6e5f6964223a2231323334353637382d313233342d313233342d313233342d313233343536373839616263222c22746f6b656e5f696473223a5b312c315d2c22746f705f6b223a322c22746f705f746f6b656e5f696473223a5b5b312c325d2c5b302c325d5d7d4c4d455802000000180000000000003e0000003f0000803e0000003f0000003e0000803e4c4d45580400000000000000",
+      "expected": {
+        "outcome": "complete",
+        "metadata": {
+          "session_id": "12345678-1234-1234-1234-123456789abc",
+          "model_id": "synthetic-codec-fixture",
+          "model_revision": "fixture_revision",
+          "execution": {
+            "family": "smollm2",
+            "adapter": "smollm2_native",
+            "adapter_version": "fixture-1",
+            "runtime_version": "fixture-1",
+            "torch_version": "fixture",
+            "device": "cpu",
+            "dtype": "float32"
+          },
+          "limits": {
+            "max_modules_per_request": 1,
+            "max_neurons": 8,
+            "max_input_tokens": 512,
+            "max_new_tokens": 64,
+            "max_conditions": 4,
+            "max_top_k": 5,
+            "context_length": 1024,
+            "vocabulary_size": 5,
+            "eos_token_ids": [
+              4
+            ]
+          },
+          "module": {
+            "module_id": "mlp-7",
+            "module": {
+              "kind": "module",
+              "name": "model.layers.7.mlp"
+            },
+            "layer_index": 7,
+            "intermediate_size": 3,
+            "hidden_size": 2,
+            "point": "post_activation_product_pre_down_proj",
+            "weights": {
+              "gate": {
+                "tensor_id": "gate7",
+                "axis": "row",
+                "shape": [
+                  3,
+                  2
+                ]
+              },
+              "up": {
+                "tensor_id": "up7",
+                "axis": "row",
+                "shape": [
+                  3,
+                  2
+                ]
+              },
+              "down": {
+                "tensor_id": "down7",
+                "axis": "column",
+                "shape": [
+                  2,
+                  3
+                ]
+              }
+            }
+          },
+          "token_ids": [
+            1,
+            1
+          ],
+          "neuron_indices": [
+            2,
+            0
+          ],
+          "dtype": "float32",
+          "byte_order": "little",
+          "layout": "c",
+          "conditions": [
+            {
+              "id": "baseline",
+              "mode": "baseline"
+            },
+            {
+              "id": "zero-prompt",
+              "mode": "zero",
+              "scope": "prompt"
+            }
+          ],
+          "top_k": 2,
+          "max_new_tokens": 0,
+          "decoding": "greedy",
+          "kind": "neuron_comparison",
+          "byte_length": 24,
+          "sections": [
+            {
+              "name": "probabilities",
+              "shape": [
+                2,
+                3
+              ],
+              "offset": 0,
+              "byte_length": 24
+            }
+          ],
+          "candidate_token_ids": [
+            0,
+            1,
+            2
+          ],
+          "top_token_ids": [
+            [
+              1,
+              2
+            ],
+            [
+              0,
+              2
+            ]
+          ],
+          "continuations": [
+            {
+              "condition_id": "baseline",
+              "token_ids": [],
+              "text": "",
+              "finish_reason": "not_requested"
+            },
+            {
+              "condition_id": "zero-prompt",
+              "token_ids": [],
+              "text": "",
+              "finish_reason": "not_requested"
+            }
+          ]
+        },
+        "data_hex": "0000003e0000003f0000803e0000003f0000003e0000803e"
+      }
+    },
+    {
+      "name": "neuron-probabilities-missing-terminal",
+      "wire_hex": "4c4d455801000000ce0500007b22627974655f6c656e677468223a32342c22627974655f6f72646572223a226c6974746c65222c2263616e6469646174655f746f6b656e5f696473223a5b302c312c325d2c22636f6e646974696f6e73223a5b7b226964223a22626173656c696e65222c226d6f6465223a22626173656c696e65227d2c7b226964223a227a65726f2d70726f6d7074222c226d6f6465223a227a65726f222c2273636f7065223a2270726f6d7074227d5d2c22636f6e74696e756174696f6e73223a5b7b22636f6e646974696f6e5f6964223a22626173656c696e65222c2266696e6973685f726561736f6e223a226e6f745f726571756573746564222c2274657874223a22222c22746f6b656e5f696473223a5b5d7d2c7b22636f6e646974696f6e5f6964223a227a65726f2d70726f6d7074222c2266696e6973685f726561736f6e223a226e6f745f726571756573746564222c2274657874223a22222c22746f6b656e5f696473223a5b5d7d5d2c226465636f64696e67223a22677265656479222c226474797065223a22666c6f61743332222c22657865637574696f6e223a7b2261646170746572223a22736d6f6c6c6d325f6e6174697665222c22616461707465725f76657273696f6e223a22666978747572652d31222c22646576696365223a22637075222c226474797065223a22666c6f61743332222c2266616d696c79223a22736d6f6c6c6d32222c2272756e74696d655f76657273696f6e223a22666978747572652d31222c22746f7263685f76657273696f6e223a2266697874757265227d2c226b696e64223a226e6575726f6e5f636f6d70617269736f6e222c226c61796f7574223a2263222c226c696d697473223a7b22636f6e746578745f6c656e677468223a313032342c22656f735f746f6b656e5f696473223a5b345d2c226d61785f636f6e646974696f6e73223a342c226d61785f696e7075745f746f6b656e73223a3531322c226d61785f6d6f64756c65735f7065725f72657175657374223a312c226d61785f6e6575726f6e73223a382c226d61785f6e65775f746f6b656e73223a36342c226d61785f746f705f6b223a352c22766f636162756c6172795f73697a65223a357d2c226d61785f6e65775f746f6b656e73223a302c226d6f64656c5f6964223a2273796e7468657469632d636f6465632d66697874757265222c226d6f64656c5f7265766973696f6e223a22666978747572655f7265766973696f6e222c226d6f64756c65223a7b2268696464656e5f73697a65223a322c22696e7465726d6564696174655f73697a65223a332c226c617965725f696e646578223a372c226d6f64756c65223a7b226b696e64223a226d6f64756c65222c226e616d65223a226d6f64656c2e6c61796572732e372e6d6c70227d2c226d6f64756c655f6964223a226d6c702d37222c22706f696e74223a22706f73745f61637469766174696f6e5f70726f647563745f7072655f646f776e5f70726f6a222c2277656967687473223a7b22646f776e223a7b2261786973223a22636f6c756d6e222c227368617065223a5b322c335d2c2274656e736f725f6964223a22646f776e37227d2c2267617465223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a226761746537227d2c227570223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a22757037227d7d7d2c226e6575726f6e5f696e6469636573223a5b322c305d2c2273656374696f6e73223a5b7b22627974655f6c656e677468223a32342c226e616d65223a2270726f626162696c6974696573222c226f6666736574223a302c227368617065223a5b322c335d7d5d2c2273657373696f6e5f6964223a2231323334353637382d313233342d313233342d313233342d313233343536373839616263222c22746f6b656e5f696473223a5b312c315d2c22746f705f6b223a322c22746f705f746f6b656e5f696473223a5b5b312c325d2c5b302c325d5d7d4c4d455802000000180000000000003e0000003f0000803e0000003f0000003e0000803e",
+      "expected": {
+        "outcome": "reject"
+      }
+    },
+    {
+      "name": "neuron-short-complete",
+      "wire_hex": "4c4d4558010000003a0400007b22627974655f6c656e677468223a31362c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c22657865637574696f6e223a7b2261646170746572223a22736d6f6c6c6d325f6e6174697665222c22616461707465725f76657273696f6e223a22666978747572652d31222c22646576696365223a22637075222c226474797065223a22666c6f61743332222c2266616d696c79223a22736d6f6c6c6d32222c2272756e74696d655f76657273696f6e223a22666978747572652d31222c22746f7263685f76657273696f6e223a2266697874757265227d2c226b696e64223a226e6575726f6e5f61637469766174696f6e73222c226c61796f7574223a2263222c226c696d697473223a7b22636f6e746578745f6c656e677468223a313032342c22656f735f746f6b656e5f696473223a5b345d2c226d61785f636f6e646974696f6e73223a342c226d61785f696e7075745f746f6b656e73223a3531322c226d61785f6d6f64756c65735f7065725f72657175657374223a312c226d61785f6e6575726f6e73223a382c226d61785f6e65775f746f6b656e73223a36342c226d61785f746f705f6b223a352c22766f636162756c6172795f73697a65223a357d2c226d6f64656c5f6964223a2273796e7468657469632d636f6465632d66697874757265222c226d6f64656c5f7265766973696f6e223a22666978747572655f7265766973696f6e222c226d6f64756c65223a7b2268696464656e5f73697a65223a322c22696e7465726d6564696174655f73697a65223a332c226c617965725f696e646578223a372c226d6f64756c65223a7b226b696e64223a226d6f64756c65222c226e616d65223a226d6f64656c2e6c61796572732e372e6d6c70227d2c226d6f64756c655f6964223a226d6c702d37222c22706f696e74223a22706f73745f61637469766174696f6e5f70726f647563745f7072655f646f776e5f70726f6a222c2277656967687473223a7b22646f776e223a7b2261786973223a22636f6c756d6e222c227368617065223a5b322c335d2c2274656e736f725f6964223a22646f776e37227d2c2267617465223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a226761746537227d2c227570223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a22757037227d7d7d2c226e6575726f6e5f696e6469636573223a5b322c305d2c2273656374696f6e73223a5b7b22627974655f6c656e677468223a31362c226e616d65223a2261637469766174696f6e73222c226f6666736574223a302c227368617065223a5b322c325d7d5d2c2273657373696f6e5f6964223a2231323334353637382d313233342d313233342d313233342d313233343536373839616263222c22746f6b656e5f696473223a5b312c315d7d4c4d45580200000004000000000080bf4c4d45580400000000000000",
+      "expected": {
+        "outcome": "reject"
+      }
+    },
+    {
+      "name": "neuron-partial-cancel",
+      "wire_hex": "4c4d4558010000003a0400007b22627974655f6c656e677468223a31362c22627974655f6f72646572223a226c6974746c65222c226474797065223a22666c6f61743332222c22657865637574696f6e223a7b2261646170746572223a22736d6f6c6c6d325f6e6174697665222c22616461707465725f76657273696f6e223a22666978747572652d31222c22646576696365223a22637075222c226474797065223a22666c6f61743332222c2266616d696c79223a22736d6f6c6c6d32222c2272756e74696d655f76657273696f6e223a22666978747572652d31222c22746f7263685f76657273696f6e223a2266697874757265227d2c226b696e64223a226e6575726f6e5f61637469766174696f6e73222c226c61796f7574223a2263222c226c696d697473223a7b22636f6e746578745f6c656e677468223a313032342c22656f735f746f6b656e5f696473223a5b345d2c226d61785f636f6e646974696f6e73223a342c226d61785f696e7075745f746f6b656e73223a3531322c226d61785f6d6f64756c65735f7065725f72657175657374223a312c226d61785f6e6575726f6e73223a382c226d61785f6e65775f746f6b656e73223a36342c226d61785f746f705f6b223a352c22766f636162756c6172795f73697a65223a357d2c226d6f64656c5f6964223a2273796e7468657469632d636f6465632d66697874757265222c226d6f64656c5f7265766973696f6e223a22666978747572655f7265766973696f6e222c226d6f64756c65223a7b2268696464656e5f73697a65223a322c22696e7465726d6564696174655f73697a65223a332c226c617965725f696e646578223a372c226d6f64756c65223a7b226b696e64223a226d6f64756c65222c226e616d65223a226d6f64656c2e6c61796572732e372e6d6c70227d2c226d6f64756c655f6964223a226d6c702d37222c22706f696e74223a22706f73745f61637469766174696f6e5f70726f647563745f7072655f646f776e5f70726f6a222c2277656967687473223a7b22646f776e223a7b2261786973223a22636f6c756d6e222c227368617065223a5b322c335d2c2274656e736f725f6964223a22646f776e37227d2c2267617465223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a226761746537227d2c227570223a7b2261786973223a22726f77222c227368617065223a5b332c325d2c2274656e736f725f6964223a22757037227d7d7d2c226e6575726f6e5f696e6469636573223a5b322c305d2c2273656374696f6e73223a5b7b22627974655f6c656e677468223a31362c226e616d65223a2261637469766174696f6e73222c226f6666736574223a302c227368617065223a5b322c325d7d5d2c2273657373696f6e5f6964223a2231323334353637382d313233342d313233342d313233342d313233343536373839616263222c22746f6b656e5f696473223a5b312c315d7d4c4d45580200000004000000000080bf4c4d45580600000000000000",
+      "expected": {
+        "outcome": "cancelled"
+      }
+    }
+  ]
+}

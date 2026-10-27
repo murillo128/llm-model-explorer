@@ -1,5 +1,6 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useState } from 'react';
+import { InspectionDialog } from './InspectionDialog';
+import { useChildLifetime } from './useChildLifetime';
 import type { components } from '../api/generated/types';
 import type { ExplorerContextValue } from '../app/explorer-context';
 import { DiagnosticDetails } from '../app/ModelDiagnostics';
@@ -17,29 +18,14 @@ function Provenance({ records }: { records: S['ArchitectureProvenance'][] }) {
   return <ul>{records.map((p, i) => <li key={i}>{p.kind}: {p.source}{p.revision && ` · revision ${p.revision}`}{p.rule && ` · rule ${p.rule}`}</li>)}</ul>;
 }
 
-/** Publish only effect-owned generations, including a fresh one after StrictMode replay. */
-function useChildLifetime(parent: Lifetime) {
-  const [lifetime, setLifetime] = useState<Lifetime | null>(null);
-  useLayoutEffect(() => {
-    const current = new Lifetime();
-    const detach = parent.onDispose(current.dispose);
-    // Children may subscribe only after their effect-owned lifetime is installed.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLifetime(current);
-    return () => { current.dispose(); detach(); };
-  }, [parent]);
-  return lifetime;
-}
-
 /** One modal generation; numeric children never own the graph's selection lifetime. */
-export function ArchitectureInspection({ context, graph, inventory, selected, onClose, onParameterChange, diagnostics: findings = [] }: {
+export function ArchitectureInspection({ context, graph, inventory, selected, onClose, onParameterChange, diagnostics: findings = [], onExploreNeurons }: {
   context: ExplorerContextValue; graph: Graph; inventory: S['TensorInventory'];
   selected: ArchitectureSelection; onClose: () => void;
   diagnostics?: Diagnostic[];
+  onExploreNeurons?: (() => void) | undefined;
   onParameterChange?: (id: string) => void;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const title = useId();
   const lifetime = useChildLifetime(context.selection);
   const [choice, setChoice] = useState(selected.parameterId ?? '');
   const { node } = selected;
@@ -60,28 +46,9 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
     (modelInspection || (selected.boundary?.endpoints.length ? Boolean(d.nodeId && boundaryNodes.has(d.nodeId)) :
       Boolean(node && d.nodeId === node.id) || Boolean(d.parameterId && parameterIds.has(d.parameterId)))));
   const close = () => { lifetime?.dispose(); onClose(); };
-  useLayoutEffect(() => {
-    const element = dialog.current!;
-    element.showModal();
-    return () => {
-      element.close();
-      if (selected.trigger.isConnected) selected.trigger.focus({ preventScroll: true });
-    };
-  }, [selected.trigger]);
-  return createPortal(<dialog ref={dialog} className="architecture-inspection" aria-labelledby={title}
-    onCancel={(event) => { event.preventDefault(); close(); }}
-    onKeyDownCapture={(event) => {
-      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
-      if (event.key === 'Tab') {
-        const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button, select, input, textarea, a[href], [tabindex]'))
-          .filter((element) => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0);
-        const first = controls[0], last = controls.at(-1);
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-      }
-    }}>
-    <header className="architecture-inspection-heading"><h2 id={title}>{selected.boundary ? 'Interface inspection' : node?.label ?? 'Model'}</h2><button autoFocus onClick={close} aria-label="Close inspection">×</button></header>
+  return <InspectionDialog heading={selected.boundary ? 'Interface inspection' : node?.label ?? 'Model'} trigger={selected.trigger} onClose={close}>
     <div className="architecture-inspection-details">
+      {onExploreNeurons && <button onClick={() => { lifetime?.dispose(); onExploreNeurons(); }}>Explore neurons</button>}
       {modelInspection && <section aria-label="Model architecture information">
         <h3>Architecture</h3><p>Graph: <code>{graph.graph_id}</code></p>
         <p>{graph.coverage === 'partial' ? 'Partial architecture coverage' : 'Complete within declared scope'} · {graph.scope.replaceAll('_', ' ')}</p>
@@ -119,7 +86,7 @@ export function ArchitectureInspection({ context, graph, inventory, selected, on
       {diagnostics.length > 0 && <section aria-label="Applicable architecture diagnostics"><h3>Diagnostics</h3><DiagnosticDetails records={diagnostics} /></section>}
     </div>
     {lifetime?.isCurrent() && tensor && (tensor.rank === 1 || tensor.rank === 2) && <InspectionWeight key={choice} context={context} tensor={tensor} parent={lifetime} />}
-  </dialog>, document.body);
+  </InspectionDialog>;
 }
 
 function InterfaceDetails({ graph, selected }: { graph: Graph; selected: ArchitectureSelection }) {

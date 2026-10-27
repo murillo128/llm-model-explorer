@@ -10,6 +10,7 @@ import { Lifetime } from '../app/lifetime';
 import { ArchitectureExplorer } from './ArchitectureExplorer';
 import { ModelDiagnostics } from '../app/model-diagnostics';
 import { GraphViews } from './graph';
+import { unavailableNeurons } from '../test/neuron-fixture';
 
 vi.mock('./ArchitectureCanvas', () => ({ ArchitectureCanvas: ({ modelId, notices }: { modelId: string; notices: ReactNode }) => <div>{notices}Graph for {modelId}</div> }));
 const response = validateSchema('ArchitectureResponse', fixture.response);
@@ -18,6 +19,7 @@ const inventory = validateSchema('TensorInventory', fixture.context.inventory);
 function setup() {
   const client = new ApiClient({ backendBaseUrl: 'https://example.test' });
   vi.spyOn(client, 'listTensors').mockResolvedValue(inventory);
+  vi.spyOn(client, 'getNeuronCapabilities').mockResolvedValue({ ...unavailableNeurons, session_id: session.id, model_id: session.model_id, model_revision: session.model_revision });
   const retrieve = vi.spyOn(client, 'getArchitecture');
   const selection = new Lifetime();
   const diagnostics = new ModelDiagnostics(); diagnostics.activate(session);

@@ -17,6 +17,8 @@ import yaml
 
 from architecture_conformance import (apply_edits, bounded_size, fixtures as architecture_fixtures,
                                       validate_architecture)
+from neuron_conformance import (apply_edits as neuron_edits, fixtures as neuron_fixtures,
+                                request as neuron_request, validate_neuron, validate_payload)
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / 'docs/spec/api/openapi.yaml'
@@ -24,6 +26,7 @@ GOLDEN = ROOT / 'api/fixtures/conformance.json'
 EMBEDDINGS_GOLDEN = ROOT / 'api/fixtures/embeddings.json'
 EMBEDDING_ANALYSIS_GOLDEN = ROOT / 'api/fixtures/embedding-analysis.json'
 ARCHITECTURE_GOLDEN = ROOT / 'api/fixtures/architecture.json'
+NEURON_GOLDEN = ROOT / 'api/fixtures/neurons.json'
 SAFE = 2**53 - 1
 U32 = 2**32 - 1
 
@@ -46,6 +49,14 @@ def product(shape):
 
 def semantics(schema, value):
     """Only cross-field JSON checks; there is deliberately no wire reader here."""
+    if schema.startswith('Neuron') or (schema == 'StreamMetadata' and
+                                      value['kind'] in ('neuron_activations', 'neuron_comparison')):
+        if schema == 'StreamMetadata':
+            schema = {'neuron_activations': 'NeuronActivationsMetadata',
+                      'neuron_comparison': 'NeuronComparisonMetadata'}[value['kind']]
+        validate_neuron(schema, value)
+        require(len(json_bytes(value)) <= 1048576, 'unsupported_size')
+        return
     if schema in ('StreamMetadata', 'TensorMetadata', 'TensorStatisticsMetadata',
                   'TensorDistributionsMetadata', 'InputEmbeddingsMetadata',
                   'InputEmbeddingsStatisticsMetadata', 'InputEmbeddingsDistributionsMetadata'):
@@ -653,15 +664,63 @@ def main():
     expected_operations = {'listModels', 'watchModel', 'createSession', 'getSession', 'deleteSession',
                            'listTensors', 'streamTensor', 'streamTensorStatistics',
                            'streamTensorDistributions', 'streamInputEmbeddings',
-                           'streamInputEmbeddingsStatistics', 'streamInputEmbeddingsDistributions', 'tokenize', 'cancelOperation', 'getArchitecture'}
+                           'streamInputEmbeddingsStatistics', 'streamInputEmbeddingsDistributions', 'tokenize', 'cancelOperation', 'getArchitecture',
+                           'getNeuronCapabilities', 'streamNeuronActivations', 'streamNeuronComparison'}
     operations = [op for item in document['paths'].values() for method, op in item.items()
                   if method in ('get', 'post', 'delete')]
-    require(len(operations) == 15 and {op['operationId'] for op in operations} == expected_operations,
+    require(len(operations) == 18 and {op['operationId'] for op in operations} == expected_operations,
             'operation set changed')
     golden = fixtures()
     embeddings = embedding_fixtures(document)
     embedding_analysis = embedding_analysis_fixtures()
     architecture = architecture_fixtures()
+    neurons = neuron_fixtures(frame)
+    for case in neurons['cases']:
+        value = neuron_edits(neurons['bases'][case['base']], case['edits'])
+        context = neuron_edits(neurons['bases']['capabilities'], case.get('context_edits', []))
+        try:
+            validate_instance(document, case['schema'], value)
+            if case['schema'] in ('NeuronActivationsRequest', 'NeuronComparisonRequest'):
+                validate_instance(document, 'NeuronCapabilities', context)
+                require(context['observation']['status'] == 'available', 'unsupported_representation')
+                require(value['model_revision'] == context['model_revision'], 'model_content_changed')
+                neuron_request(value, context['limits'], context['modules'][0])
+                if 'conditions' in value:
+                    require(len(value['conditions']) == 1 or context['intervention']['status'] == 'available',
+                            'unsupported_representation')
+                    require(value['max_new_tokens'] == 0 or context['generation']['status'] == 'available',
+                            'unsupported_representation')
+        except (ValidationError, ValueError):
+            require(not case['valid'], f"valid neuron case rejected: {case['name']}")
+        else:
+            require(case['valid'], f"invalid neuron case accepted: {case['name']}")
+    for case in neurons['payload_cases']:
+        try:
+            validate_payload(neurons['bases'][case['base']], bytes.fromhex(case['data_hex']))
+        except ValueError:
+            require(not case['valid'], f"valid neuron payload rejected: {case['name']}")
+        else:
+            require(case['valid'], f"invalid neuron payload accepted: {case['name']}")
+    for scalar in (float('nan'), float('inf'), -float('inf')):
+        invalid = deepcopy(neurons['bases']['comparison'])
+        invalid['conditions'][1] = dict(id='s', mode='scale', scope='all', factor=scalar)
+        try:
+            validate_instance(document, 'NeuronComparisonRequest', invalid)
+        except (ValidationError, ValueError):
+            pass
+        else:
+            raise ValueError('non-finite neuron parameter accepted')
+    for base in ('activations', 'probabilities'):
+        validate_instance(document, 'StreamMetadata', neurons['bases'][base])
+    for path in ('neuron-capabilities', 'neuron-activations', 'neuron-comparisons'):
+        endpoint = document['paths']['/sessions/{session_id}/' + path]
+        method = 'get' if path == 'neuron-capabilities' else 'post'
+        statuses = {'200', '404', '409', '422', '503', '500'}
+        if method == 'post':
+            statuses.add('400')
+            require(endpoint[method]['responses']['200'] == {'$ref': '#/components/responses/BinaryStream'},
+                    'neuron LMEX response')
+        require(set(endpoint[method]['responses']) == statuses, 'neuron HTTP responses')
     for case in architecture['cases']:
         value = apply_edits(architecture[case.get('base', 'response')], case['edits'])
         context = apply_edits(architecture['context'], case['context_edits'])
@@ -720,7 +779,8 @@ def main():
     # Literal framing oracle independent from struct.pack arguments.
     require(frame(6).hex() == '4c4d45580600000000000000', 'header oracle')
     for path, fixture in [(GOLDEN, golden), (EMBEDDINGS_GOLDEN, embeddings),
-                          (ARCHITECTURE_GOLDEN, architecture), (EMBEDDING_ANALYSIS_GOLDEN, embedding_analysis)]:
+                          (ARCHITECTURE_GOLDEN, architecture), (EMBEDDING_ANALYSIS_GOLDEN, embedding_analysis),
+                          (NEURON_GOLDEN, neurons)]:
         rendered = json.dumps(fixture, ensure_ascii=False, allow_nan=False, indent=2) + '\n'
         if args.write:
             path.write_text(rendered)
@@ -730,7 +790,8 @@ def main():
     print(f"OpenAPI 3.1 valid; {references} references resolved; "
           f"{len(golden['schema_cases']) + len(embeddings['schema_cases']) + len(embedding_analysis['schema_cases'])} instance cases checked; "
           f"{len(architecture['cases'])} architecture cases checked; "
-          f"{len(golden['wire_cases']) + len(embeddings['wire_cases']) + len(embedding_analysis['wire_cases'])} wire fixtures "
+          f"{len(neurons['cases'])} neuron cases and {len(neurons['payload_cases'])} neuron payloads checked; "
+          f"{len(golden['wire_cases']) + len(embeddings['wire_cases']) + len(embedding_analysis['wire_cases']) + len(neurons['wire_cases'])} wire fixtures "
           f"{'written' if args.write else 'reproducible'}.")
 
 

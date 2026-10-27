@@ -6,6 +6,7 @@ HTTP framing and tokenization remain the production implementations.
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
 import tempfile
@@ -29,7 +30,7 @@ from llm_model_explorer.tensor_source import ModelSource
 from acceptance.fixtures import generate
 
 
-def application(root: Path, origin: str, device: str = "cpu"):
+def application(root: Path, origin: str, device: str = "cpu", model_root: Path | None = None):
     control = {"kind": "", "mode": "", "entered": False, "released": False}
     counts = Counter()
     timings = {}
@@ -179,8 +180,33 @@ def application(root: Path, origin: str, device: str = "cpu"):
             subscription.replace(None)
         return {"disconnected": True}
 
+    @router.get("/__test/neuron-state")
+    async def neuron_state():
+        # Read-only acceptance observer. Never shipped by the production CLI;
+        # no prompts, activations or outputs leave operation memory here.
+        runtime = app.state.services.neurons
+        async with runtime._lock:
+            model = runtime._model
+            digest = hashlib.sha256()
+            if model is not None:
+                for name, parameter in sorted(model.named_parameters()):
+                    digest.update(name.encode() + b"\0")
+                    digest.update(parameter.detach().cpu().contiguous().numpy().tobytes())
+            return {
+                "loaded": model is not None,
+                "instance": id(model) if model is not None else None,
+                "weights_sha256": digest.hexdigest() if model is not None else None,
+                "hooks": sum(
+                    len(module._forward_hooks) + len(module._forward_pre_hooks)
+                    for module in model.modules()
+                )
+                if model is not None
+                else 0,
+                "tasks": len(runtime._tasks),
+            }
+
     settings = Settings(
-        model_root=root / "models",
+        model_root=model_root or root / "models",
         cache_dir=root / "cache",
         cors_origins=(origin,),
         device=device,
@@ -195,6 +221,7 @@ def main():
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--origin", default="http://127.0.0.1:4175")
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--model-root", type=Path)
     parser.add_argument("--polish", action="store_true")
     parser.add_argument("--kimi-architecture-fixture", action="store_true")
     args = parser.parse_args()
@@ -203,7 +230,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="lmex-acceptance-") as temporary:
         root = args.root or Path(temporary)
         fixture_started = time.monotonic()
-        if not (root / "models").exists():
+        if args.model_root is None and not (root / "models").exists():
             if args.polish:
                 from acceptance.polish_fixtures import generate as generate_polish
 
@@ -220,7 +247,7 @@ def main():
             flush=True,
         )
         uvicorn.run(
-            application(root, args.origin, args.device),
+            application(root, args.origin, args.device, args.model_root),
             host="127.0.0.1",
             port=args.port,
             log_level="warning",

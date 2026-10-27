@@ -2,6 +2,7 @@ import Ajv2020 from 'ajv/dist/2020';
 import schemas from './generated/schemas.json';
 import type { components } from './generated/types';
 import { requireProtocol } from './errors';
+import { validateNeuronFields } from './neuron-validation';
 
 type Schemas = components['schemas'];
 export type Metadata = Schemas['StreamMetadata'];
@@ -24,7 +25,9 @@ export function product(shape: number[]): number {
 
 function crossFields(name: string, value: unknown): void {
   if (name === 'StreamMetadata') {
-    crossFields(({ tensor: 'TensorMetadata', input_embeddings: 'InputEmbeddingsMetadata', input_embeddings_statistics: 'InputEmbeddingsStatisticsMetadata', input_embeddings_distributions: 'InputEmbeddingsDistributionsMetadata', tensor_statistics: 'TensorStatisticsMetadata', tensor_distributions: 'TensorDistributionsMetadata' })[(value as Metadata).kind], value);
+    crossFields(({ tensor: 'TensorMetadata', input_embeddings: 'InputEmbeddingsMetadata', input_embeddings_statistics: 'InputEmbeddingsStatisticsMetadata', input_embeddings_distributions: 'InputEmbeddingsDistributionsMetadata', tensor_statistics: 'TensorStatisticsMetadata', tensor_distributions: 'TensorDistributionsMetadata', neuron_activations: 'NeuronActivationsMetadata', neuron_comparison: 'NeuronComparisonMetadata' })[(value as Metadata).kind], value);
+  } else if (name.startsWith('Neuron')) {
+    validateNeuronFields(name, value);
   } else if (name === 'TensorMetadata' || name === 'InputEmbeddingsMetadata') {
     const m = value as Schemas['TensorMetadata'] | Schemas['InputEmbeddingsMetadata'];
     requireProtocol(m.byte_length === safeSize(product(m.shape) * 4), 'Tensor byte length differs from shape');
@@ -90,4 +93,5 @@ export function validateResponse(name: keyof typeof schemas.$defs, value: unknow
   requireProtocol(ajv.getSchema(`contract#/$defs/${name}`)!(value), `Invalid ${name} response`);
   if (name === 'listTensors') crossFields('TensorInventory', value);
   if (name === 'tokenize') crossFields('TokenizeResponse', value);
+  if (name === 'getNeuronCapabilities') crossFields('NeuronCapabilities', value);
 }

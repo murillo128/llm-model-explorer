@@ -6,6 +6,9 @@ import { contractInventory, contractResponse, referenceFixture } from './archite
 const architectureCases = JSON.parse(readFileSync(new URL('../../api/fixtures/architecture.json', import.meta.url), 'utf8')) as {
   compact_response: typeof contractResponse;
 };
+const neuronCases = JSON.parse(readFileSync(new URL('../../api/fixtures/neurons.json', import.meta.url), 'utf8')) as {
+  bases: { unavailable: import('../src/api/generated/types').components['schemas']['NeuronCapabilities'] };
+};
 
 async function backend(context: BrowserContext) {
   const visual = referenceFixture('vjepa2');
@@ -22,6 +25,9 @@ async function backend(context: BrowserContext) {
       model_id: r.request().postDataJSON().model_id, model_revision: 'snapshot_A',
     } });
     const isVisual = path.includes('bbbbbbbb');
+    if (path.endsWith('/neuron-capabilities')) return r.fulfill({ json: { ...neuronCases.bases.unavailable,
+      session_id: isVisual ? 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' : 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      model_id: isVisual ? visual.model_id : contractResponse.model_id, model_revision: 'snapshot_A' } });
     if (path.endsWith('/tensors')) return r.fulfill({ json: isVisual ? { tensors: [], coverage: 'partial', diagnostics: [{ code: 'partial', message: 'Fixture has no native weights.' }] } : contractInventory });
     if (path.endsWith('/architecture')) return r.fulfill({ json: isVisual ? visual : contractResponse });
     return r.fulfill({ status: 404, json: { code: 'session_not_found', message: 'Session not found' } });

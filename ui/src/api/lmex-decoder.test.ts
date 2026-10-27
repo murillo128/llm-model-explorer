@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import fixtures from '../../../api/fixtures/conformance.json';
 import embeddings from '../../../api/fixtures/embeddings.json';
 import analysis from '../../../api/fixtures/embedding-analysis.json';
+import neurons from '../../../api/fixtures/neurons.json';
 import { prepareWireCheck } from './testing/wire-conformance';
 import { LmexDecoder } from './lmex-decoder';
 import { ApiFailure } from './errors';
@@ -36,7 +37,7 @@ function* lengths(bytes: Uint8Array, sizes: number[]) {
 }
 
 describe('shared wire conformance', () => {
-  for (const fixture of [...fixtures.wire_cases, ...embeddings.wire_cases, ...analysis.wire_cases]) {
+  for (const fixture of [...fixtures.wire_cases, ...embeddings.wire_cases, ...analysis.wire_cases, ...neurons.wire_cases]) {
     it(`${fixture.name}: coalesced, every split, single bytes, Fibonacci and seeded random chunks`, () => {
       const bytes = unaligned(fixture.wire_hex);
       const check = prepareWireCheck(fixture);

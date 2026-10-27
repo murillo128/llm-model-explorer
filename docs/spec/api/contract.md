@@ -38,6 +38,9 @@ The currently published API includes the proof-of-concept operations and the acc
 | Look up input embeddings | `POST /sessions/{session_id}/embeddings` | Binary stream |
 | Analyze input embedding statistics | `POST /sessions/{session_id}/embeddings/statistics` | Binary stream |
 | Analyze input embedding row/column distributions | `POST /sessions/{session_id}/embeddings/distributions` | Binary stream |
+| Neuron capabilities | `GET /sessions/{session_id}/neuron-capabilities` | JSON |
+| Observe neuron activations | `POST /sessions/{session_id}/neuron-activations` | Binary stream |
+| Compare neuron interventions | `POST /sessions/{session_id}/neuron-comparisons` | Binary stream |
 | Cancel long operation | `DELETE /operations/{operation_id}` | Empty |
 
 The published architecture addition is `GET /sessions/{session_id}/architecture` (`getArchitecture`), returning the prepared structural result under the [architecture contract](architecture-explorer.md#prepared-architecture-endpoint). It uses the demand-preparation and terminal-retrieval lifecycle defined there, without a numerical long operation. No generic operation endpoint is introduced.
@@ -263,3 +266,10 @@ Shape dimensions, ranks, lengths, counts, indices, and offsets are nonnegative s
 - Progress requires `completed <= total` when a positive `total` is supplied.
 
 Schemas validate local structure; implementations also check products, sums, ordering, source-dependent constraints, and token spans. Shared fixtures include valid/invalid cross-field cases. Architecture reference closure, symbolic dimensions, union states, and bounded graph JSON add their own checks without changing these numerical rules.
+
+## Bounded neuron execution
+
+[The neuron contract](neuron-explorer.md) owns the independently typed capabilities,
+requests, experimental semantics, error specialization and cross-field validation.
+These endpoints are published ahead of runtime implementation. They reuse sessions
+and LMEX without granting executability to a static architecture graph.

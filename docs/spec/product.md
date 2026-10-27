@@ -25,7 +25,15 @@ Matrix exploration supports viewport zoom and navigation while preserving exact 
 
 Architecture Explorer adds a static, exhaustive, navigable description of supported local checkpoints. It explains components, recognizable mathematical operations, their data dependencies, known/symbolic dimensions, and references to weights. It reuses the existing explorers rather than replacing them. Its domain rules belong in [architecture analysis](backend/architecture-analysis.md), its transport in the [architecture API contract](api/architecture-explorer.md), and its interaction in the [Architecture Explorer specification](ui/architecture-explorer.md).
 
-Implementation and reference-checkpoint validation status are recorded in [integrated acceptance evidence](../../acceptance/architecture-evidence.md). It performs no inference, tracing, activation capture, token generation, or interactive execution. Future links to other explorers are represented by semantic resource references, not fictional execution results or unimplemented endpoints.
+Implementation and reference-checkpoint validation status are recorded in [integrated acceptance evidence](../../acceptance/architecture-evidence.md). The static architecture capability performs no inference, tracing, activation capture, token generation, or interactive execution. Future links to other explorers are represented by semantic resource references, not fictional execution results or unimplemented endpoints.
+
+Neuron exploration is a separately accepted increment inside Architecture Explorer:
+real signed MLP activations and bounded baseline/zero/scale/add comparisons on the
+complete local native SmolLM2-135M Base checkpoint. Execution eligibility is
+independent from static graphs, tokenizer and tensor availability. Its boundaries
+are [backend execution](backend/neuron-execution.md), [API semantics and transport](api/neuron-explorer.md)
+and [the integrated view](ui/neuron-explorer.md). This publishes the contract;
+runtime/UI implementation and complete-checkpoint evidence are separate deliveries.
 
 ## Local adapter compositions and quantized checkpoints
 
@@ -76,10 +84,10 @@ limits, provenance and lifecycle. This adds no inference or training execution.
 
 Tensor and weight values remain exact unless an explicit operation produces a different logical representation. Visualization never mutates model values. The backend owns mathematical truth and storage-format knowledge; the frontend owns presentation; the API remains an independent contract.
 
-Large numeric payloads are binary and progressive. Structural graphs contain metadata, not numeric tensor values. Multiple UI sessions may be active independently. Architecture availability, semantic completeness, tokenizer availability, and numeric-weight inspection are separate capabilities; unsupported architecture or quantization must not disable an otherwise supported existing capability.
+Large numeric payloads are binary and progressive. Structural graphs contain metadata, not numeric tensor values. Multiple UI sessions may be active independently. Architecture availability, semantic completeness, tokenizer availability, numeric-weight inspection and neuron execution are separate capabilities; unsupported architecture or quantization must not disable an otherwise supported existing capability.
 
 ## Future direction and exclusions
 
-Later work may extend the same system to step-by-step inference, attention, matrix/vector computations, activations, generation, KV cache, sampling, and intermediate state. Inference remains UI-driven, including a future Play mode requesting successive steps. Static startup analysis is not such an inference step.
+Beyond the bounded neuron increment, later work may extend the same system to step-by-step inference, attention, matrix/vector computations, general activation capture/generation, KV-cache inspection, sampling, and intermediate state. Inference remains UI-driven, including a future Play mode requesting successive steps. Static startup analysis is not such an inference step.
 
 Inference, runtime attention maps, execution timelines, interactive matrix multiplication, authentication, remote model downloads, automatic cache garbage collection, public backwards-compatible API versioning, and non-HF formats are not added by the architecture increment. A diagram of attention is not a calculated attention map. No new quantization decoder or arbitrary-rank numeric slicing is required merely to describe architecture.

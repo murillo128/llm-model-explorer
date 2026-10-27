@@ -7,6 +7,35 @@ This directory contains validation tooling and generated examples, not a second
 contract or an application codec. No model download, server, PyTorch, or GPU is
 needed.
 
+## Neuron contract extension
+
+[`fixtures/neurons.json`](fixtures/neurons.json) publishes the bounded
+[neuron contract](../docs/spec/api/neuron-explorer.md). `bases` holds small synthetic
+capabilities, requests and metadata; `cases` applies ordered path/replacement
+edits, optionally to a separate capability context. Schema, source-dependent
+request and cross-field checks have distinct ownership. `payload_cases` carries
+literal signed activations and probability bytes, with non-finite, range, sum and
+ranking failures. The five-token vocabulary includes probability mass outside
+the candidate union, detecting accidental top-k renormalization. These values are
+independent codec oracles, not a claimed SmolLM2 forward pass.
+
+The test plan is to reject wrong section dimensions/offsets/bytes, invalid or
+excess IDs, mutable/reordered baseline conditions, candidate/continuation order,
+non-finite parameters/results and context overflow at the independent API boundary.
+Nearest valid prompt, generation, neuron and condition bounds remain accepted.
+The existing UI LMEX suite consumes the six representative new-kind wire cases
+with its existing chunk/EOF checks; it retains the full common framing matrix.
+The UI conformance test consumes the compact schema/context and payload cases.
+The API validator checks reproducibility. Generated types plus existing client
+and backend codec regressions protect unaffected consumers. No inference route,
+execution adapter or neuron view is implemented by this contract delivery.
+
+`association_cases` is a separate requirement for the later execution clients:
+even valid wire results must match the current request and capability snapshot.
+Backend neuron producers will adopt these new schemas/fixtures in their runtime
+delivery; the existing Python writer tests continue to cover its published
+implemented kinds. Neither fixture success nor bindings establish runtime support.
+
 From the repository root, using Python 3.12:
 
 ```sh

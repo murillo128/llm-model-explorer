@@ -18,10 +18,18 @@ HASH_CHUNK_BYTES = 1024 * 1024
 class ModelError(Exception):
     """A path-free error reusable by HTTP and future stream delivery adapters."""
 
-    def __init__(self, code: str, message: str, status: int = 422) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        status: int = 422,
+        *,
+        details: dict[str, object] | None = None,
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.status = status
+        self.details = details
 
 
 def invalid(message: str = "Invalid local model metadata.") -> ModelError:

@@ -224,6 +224,7 @@ class SelectionTest(unittest.TestCase):
             "polish",
             "reference",
             "lora_reference",
+            "neuron_reference",
         ):
             self.assertIn(f"acceptance/test_{name}.py", files)
         self.assertIn("integration", plan["extended"])
@@ -379,6 +380,23 @@ class SelectionTest(unittest.TestCase):
         plan = selector.select(["ui/src/architecture-explorer/ArchitectureControls.tsx"])
         self.assertIn("lora-reference.spec.ts", selector.targets(plan, "integration"))
         self.assertIn("acceptance/test_lora_reference.py", selector.network_targets(plan))
+
+    def test_neuron_reference_follows_its_actual_consumers(self):
+        for path in (
+            "ui/acceptance/architecture.spec.ts",
+            "ui/src/architecture-explorer/NeuronExperiment.tsx",
+            "acceptance/architecture_reference.py",
+            "backend/src/llm_model_explorer/neuron_execution/runtime.py",
+        ):
+            with self.subTest(path=path):
+                plan = selector.select([path])
+                targets = selector.network_targets(plan)
+                self.assertTrue(
+                    "acceptance" in targets or "acceptance/test_neuron_reference.py" in targets
+                )
+        plan = selector.select(["acceptance/test_neuron_reference.py"])
+        self.assertEqual(selector.network_targets(plan), ["acceptance/test_neuron_reference.py"])
+        self.assertEqual(selector.targets(plan, "integration"), [])
 
     def test_extended_only_routine_and_reference_full_do_not_launch_duplicate_phases(self):
         plan = selector.select(["ui/acceptance/lora-reference.spec.ts"])

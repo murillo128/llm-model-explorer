@@ -3,6 +3,7 @@
 import json
 import struct
 from collections.abc import Callable
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,9 @@ EMBEDDINGS: dict[str, Any] = json.loads(
 
 ANALYSIS: dict[str, Any] = json.loads(
     (Path(__file__).resolve().parents[2] / "api/fixtures/embedding-analysis.json").read_text()
+)
+NEURONS: dict[str, Any] = json.loads(
+    (Path(__file__).resolve().parents[2] / "api/fixtures/neurons.json").read_text()
 )
 
 
@@ -40,7 +44,10 @@ def metadata(length: int = 8) -> dict[str, object]:
     "case",
     [
         c
-        for c in FIXTURES["wire_cases"] + EMBEDDINGS["wire_cases"] + ANALYSIS["wire_cases"]
+        for c in FIXTURES["wire_cases"]
+        + EMBEDDINGS["wire_cases"]
+        + ANALYSIS["wire_cases"]
+        + NEURONS["wire_cases"]
         if c["expected"]["outcome"] != "reject"
     ],
     ids=lambda c: c["name"],
@@ -91,6 +98,30 @@ def test_shared_control_schemas(case: dict[str, Any]) -> None:
     else:
         with pytest.raises(ValueError):
             validate(case["value"])
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        c
+        for c in NEURONS["cases"]
+        if c["schema"] in ("NeuronActivationsMetadata", "NeuronComparisonMetadata")
+    ],
+    ids=lambda c: c["name"],
+)
+def test_shared_neuron_schema(case: dict[str, Any]) -> None:
+    value = deepcopy(NEURONS["bases"][case["base"]])
+    for path, replacement in case["edits"]:
+        target = value
+        for key in path[:-1]:
+            target = target[key]
+        target[path[-1]] = replacement
+
+    if case["valid"]:
+        METADATA.validate_python(value)
+    else:
+        with pytest.raises(ValueError):
+            METADATA.validate_python(value)
 
 
 def test_non_ascii_and_minimal_copy() -> None:
