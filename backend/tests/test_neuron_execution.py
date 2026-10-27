@@ -5,7 +5,9 @@ fixed reviewed checkpoint. These tests do not attest full reference acceptance.
 """
 
 import asyncio
+import gc
 import json
+import weakref
 from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
@@ -482,6 +484,40 @@ def test_failure_removes_hooks_and_keeps_runtime_recoverable(
                 request(admitted), Cancellation(), lambda lease: lease.forward(TOKENS)
             )
             torch.testing.assert_close(actual, direct(reference), rtol=1e-6, atol=1e-7)
+        finally:
+            await execution.aclose()
+            await work.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_failed_load_does_not_keep_model_alive_in_error_traceback(
+    tiny: tuple[Settings, Path, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings, _, _ = tiny
+    admitted = admit(source_for(settings), settings.model_root, "cpu")
+    models_alive: list[weakref.ReferenceType[Any]] = []
+    original = runtime.load_model
+
+    def fail(model: AdmittedModel, cancellation: Cancellation) -> Any:
+        loaded = original(model, cancellation)
+        models_alive.append(weakref.ref(loaded))
+        raise torch.OutOfMemoryError("Failure after allocation")
+
+    monkeypatch.setattr(runtime, "load_model", fail)
+
+    async def scenario() -> None:
+        work = BlockingWork()
+        execution = NeuronRuntime(DeviceScheduler(work), "cpu")
+        try:
+            with pytest.raises(ModelError) as error:
+                await execution.run(request(admitted), Cancellation(), lambda _: None)
+            assert error.value.code == "resource_exhausted"
+            gc.collect()
+            # Retaining a public error must not retain the failed model or permit
+            # a second resident instance when the next operation loads a model.
+            assert models_alive[0]() is None
         finally:
             await execution.aclose()
             await work.aclose()

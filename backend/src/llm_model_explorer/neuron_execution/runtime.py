@@ -1,6 +1,7 @@
 """One app-owned native instance; an exclusive lease covers each complete experiment."""
 
 import asyncio
+import traceback
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -231,6 +232,7 @@ class NeuronRuntime:
         operation: Callable[[NeuronLease], T],
     ) -> T:
         lease = None
+        failure: Exception | None = None
         try:
             with torch.inference_mode(), torch.autocast(self.device.split(":")[0], enabled=False):
                 admitted.source.check_unchanged()
@@ -246,27 +248,39 @@ class NeuronRuntime:
                 result = operation(lease)
                 admitted.source.check_unchanged()
                 cancellation.check()
-                return result
-        except (ModelError, OperationCancelled):
+        except (ModelError, OperationCancelled) as exc:
             self._model, self._key = None, None
-            raise
+            failure = (
+                ModelError(exc.code, str(exc), exc.status, details=exc.details)
+                if isinstance(exc, ModelError)
+                else OperationCancelled()
+            )
+            traceback.clear_frames(exc.__traceback__)
         except Exception as exc:
             self._model, self._key = None, None
-            raise execution_failure(exc) from None
+            failure = execution_failure(exc)
+            traceback.clear_frames(exc.__traceback__)
         finally:
             try:
                 if self.device != "cpu":
                     torch.cuda.synchronize(self.device)
                 admitted.source.check_unchanged()
-            except ModelError:
+            except ModelError as exc:
                 self._model, self._key = None, None
-                raise
+                failure = ModelError(exc.code, str(exc), exc.status, details=exc.details)
+                traceback.clear_frames(exc.__traceback__)
             except Exception as exc:
                 self._model, self._key = None, None
-                raise execution_failure(exc) from None
+                failure = execution_failure(exc)
+                traceback.clear_frames(exc.__traceback__)
             finally:
                 if lease is not None:
                     lease.close()
+        # Raise outside the framework exception context: even a retained public
+        # error must not retain a failed model, prompt or activation via traceback.
+        if failure is not None:
+            raise failure
+        return result
 
     async def aclose(self) -> None:
         self._closed = True

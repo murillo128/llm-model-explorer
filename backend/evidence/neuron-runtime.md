@@ -52,7 +52,7 @@ SmolLM2 checkpoint acceptance or CUDA numerical acceptance.
 | No implicit full-model load; invalid requests allocate nothing | Weight reader/loader sentinels during capabilities and static inspection; selection, vocabulary, revision and size failures before the loader/operation |
 | Shared mutable hooks or stale content contaminate another operation | Intervention followed by an independent baseline; two session consumers; unchanged weight bytes; repeated pins reuse once, changed content reloads and matches a separately updated direct model |
 | Unsafe early cancellation releases active work | Controlled thread events during loading and an active hook, queue cancellation, repeated task cancellation, session deletion, disconnect and shutdown; next baseline equals the direct model |
-| Exceptions/OOM/non-finite results poison reuse or leak diagnostics | Injected hook failures plus clean subsequent forwards; finite-value guard; HTTP and real TCP LMEX error-detail cases; controlled CUDA queue/synchronization OOM double |
+| Exceptions/OOM/non-finite results poison reuse or leak diagnostics | Injected hook failures plus clean subsequent forwards; finite-value guard; HTTP and real TCP LMEX error-detail cases; controlled CUDA queue/synchronization OOM double; a retained-error/weak-reference regression proves failed models are released |
 
 The tiny geometry override exists only in the test fixture. Production has no
 test-model admission option. The CUDA scheduling/OOM double proves coordination,
@@ -60,9 +60,11 @@ not hardware execution. Existing operation/stream tests retain shared-consumer,
 backpressure, cancellation and terminal behavior coverage.
 
 Validation uses locked dependencies with an isolated writable uv cache. The focused
-neuron suite contains 33 cases; the final scoped neuron, sessions, operations,
-streaming, app and CLI run passes 101 cases. Ruff, format checks and strict mypy
-pass. Dependency and packaging declarations are unchanged. From `backend/`:
+neuron suite passes 34 cases, alongside scoped sessions, operations, streaming,
+app and CLI checks. The retained-error regression failed before the traceback
+cleanup fix and passes after it. Ruff, format checks and strict mypy pass.
+Dependency and packaging declarations are unchanged. Final revision-bound wheel
+and cross-version results are recorded in the PR. From `backend/`:
 
 ```sh
 uv run --locked pytest tests/test_neuron_execution.py tests/test_sessions.py tests/test_operations.py tests/test_session_operations.py tests/test_streaming.py tests/test_app.py tests/test_cli.py -q --durations=10
