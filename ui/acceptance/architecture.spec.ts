@@ -1656,6 +1656,37 @@ function neuronWire(bytes: Buffer) {
   return { metadata, values: Array.from({ length: data.length / 4 }, (_, i) => data.readFloatLE(i * 4)) };
 }
 
+async function observeNextNeuronStream(page: Page) {
+  await page.evaluate(() => {
+    const chunks: number[][] = [];
+    (window as any).__neuronStreamBytes = chunks;
+    const fetch = window.fetch;
+    window.fetch = async (...args) => {
+      const input = args[0];
+      const observe = /neuron-(activations|comparisons)$/.test(input instanceof Request ? input.url : String(input));
+      if (observe) window.fetch = fetch;
+      const response = await fetch(...args);
+      if (observe && response.body) {
+        // Observe only the application's reads. Do not clone, drain or replace
+        // the stream: an extra consumer would change cancellation semantics.
+        // This also retains the existing resource probe's getReader wrapper.
+        const body: any = response.body, getReader = body.getReader;
+        body.getReader = (...options: any[]) => {
+          const reader = getReader.apply(body, options), read = reader.read;
+          reader.read = async (...options: any[]) => {
+            const result = await read.apply(reader, options);
+            if (result.value) chunks.push(Array.from(result.value));
+            return result;
+          };
+          return reader;
+        };
+      }
+      return response;
+    };
+  });
+  return async () => neuronWire(Buffer.from(await page.evaluate(() => (window as any).__neuronStreamBytes.flat())));
+}
+
 test('complete local reference [smollm2] neuron experiment capture comparison and cancellation', { tag: '@extended' }, async ({ page }, info) => {
   const capabilitiesResponse = page.waitForResponse(r => r.url().endsWith('/neuron-capabilities') && r.status() === 200);
   await selectGraph(page);
@@ -1674,7 +1705,7 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   const tokens = (await (await tokenized).json()).tokens.map((token: { id: number }) => token.id);
   await expect(experiment.getByRole('button', { name: 'Run', exact: true })).toBeEnabled();
   const capture = page.waitForRequest(r => r.url().endsWith('/neuron-activations'));
-  const capturedResponse = page.waitForResponse(r => r.url().endsWith('/neuron-activations')).then(r => r.body());
+  const capturedResponse = await observeNextNeuronStream(page);
   const camera = await page.locator('.react-flow__viewport').getAttribute('style');
   const run = experiment.getByRole('button', { name: 'Run', exact: true });
   await run.focus(); await page.keyboard.press('Enter');
@@ -1683,7 +1714,7 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   await expect(status).toHaveAttribute('data-experiment-status', 'complete', { timeout: 60_000 });
   const activations = experiment.getByRole('region', { name: 'Signed activation values by prompt position' });
   await expect(activations.getByRole('row')).toHaveCount(tokens.length + 1);
-  const captured = neuronWire(await capturedResponse);
+  const captured = await capturedResponse();
   expect(captured.metadata).toMatchObject({ session_id: capabilities.session_id, model_revision: capabilities.model_revision,
     module, token_ids: tokens, neuron_indices: [427] });
   for (let position = 0; position < tokens.length; position++) {
@@ -1718,7 +1749,7 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   await experiment.getByRole('button', { name: 'Compare', exact: true }).click();
   await experiment.getByRole('spinbutton', { name: 'New tokens' }).fill('8');
   const compare = page.waitForRequest(r => r.url().endsWith('/neuron-comparisons'));
-  const comparedResponse = page.waitForResponse(r => r.url().endsWith('/neuron-comparisons')).then(r => r.body());
+  const comparedResponse = await observeNextNeuronStream(page);
   await experiment.getByRole('button', { name: 'Run', exact: true }).click();
   expect((await compare).postDataJSON()).toMatchObject({ token_ids: tokens, neuron_indices: [427], decoding: 'greedy', max_new_tokens: 8,
     conditions: [{ id: 'baseline', mode: 'baseline' }, { id: 'zero', mode: 'zero', scope: 'all' }, { id: 'scale', mode: 'scale', factor: 2, scope: 'all' }] });
@@ -1726,7 +1757,7 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   const probabilities = experiment.getByRole('region', { name: 'Next-token probabilities and percentage-point deltas' });
   await expect(probabilities).toContainText('pp');
   await expect(experiment.getByRole('article')).toHaveCount(3);
-  const compared = neuronWire(await comparedResponse);
+  const compared = await comparedResponse();
   expect(compared.metadata.conditions).toEqual((await compare).postDataJSON().conditions);
   const candidates: number[] = compared.metadata.candidate_token_ids;
   await expect(probabilities.locator('tbody tr')).toHaveCount(candidates.length);
@@ -1775,11 +1806,11 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   await experiment.getByRole('spinbutton', { name: 'New tokens' }).fill('0');
   await experiment.getByRole('button', { name: 'Remove zero', exact: true }).click();
   await experiment.getByRole('button', { name: 'Remove scale', exact: true }).click();
-  const cleanResponse = page.waitForResponse(r => r.url().endsWith('/neuron-comparisons')).then(r => r.body());
+  const cleanResponse = await observeNextNeuronStream(page);
   await experiment.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(status).toHaveAttribute('data-experiment-status', 'complete', { timeout: 60_000 });
   await expect(experiment.getByText('No generation requested.', { exact: true })).toHaveCount(1);
-  const clean = neuronWire(await cleanResponse);
+  const clean = await cleanResponse();
   expect(clean.metadata.conditions).toEqual([{ id: 'baseline', mode: 'baseline' }]);
   for (const [column, token] of (clean.metadata.candidate_token_ids as number[]).entries()) {
     expect(clean.values[column]).toBe(compared.values[candidates.indexOf(token)]);
