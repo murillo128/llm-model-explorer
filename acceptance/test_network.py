@@ -31,12 +31,14 @@ class Service:
         startup_timeout=30,
         kimi_architecture_fixture=False,
         client_timeout=20,
+        observe_neurons=False,
     ):
         self.root = root
         self.startup_timeout = startup_timeout
         self.device = device
         self.model_root = model_root
         self.kimi_architecture_fixture = kimi_architecture_fixture
+        self.observe_neurons = observe_neurons
         if model_root is None and not kimi_architecture_fixture:
             generate(root / "models")
         with socket.socket() as sock:
@@ -76,6 +78,8 @@ class Service:
                 str(self.port),
                 "--kimi-architecture-fixture",
             ]
+        elif self.model_root is not None and self.observe_neurons:
+            command.extend(["--model-root", str(self.model_root)])
         elif self.model_root is not None:
             command = [
                 sys.executable,

@@ -258,6 +258,18 @@ the complete-local-reference manifest, strict no-skip gate, coverage boundaries,
 and [current evidence](architecture-evidence.md). Ordinary fixture success does
 not complete the actual Qwen/V-JEPA/SmolLM2 reference gate.
 
+## Neuron Explorer
+
+The [neuron acceptance report and usage guide](neuron-explorer-evidence.md) records
+the complete local SmolLM2 Base CPU journey, its independent baseline oracle,
+resident and on-disk weight integrity, screenshots, and execution limits. Supply
+the existing architecture-reference manifest with a `smollm2` entry. The new
+`test_neuron_reference.py` uses the real HTTP service and a read-only test-process
+weight digest observer; its `/__test` endpoint is absent from the production CLI.
+Browser scenarios use the production CLI and built UI, including native revision
+replacement. Missing reference input skips these checks; required-reference mode
+fails, and an invalid supplied checkpoint never counts as acceptance.
+
 ## Test harness timing
 
 Backend and HTTP entrypoints print `pytest --durations=25`; JUnit and exit-code

@@ -4,7 +4,7 @@ import { revealTensor } from '../tests/tensor-tree-helpers';
 import { test, expect } from '@playwright/test';
 import type { Page, TestInfo } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
@@ -443,6 +443,9 @@ test.beforeEach(async ({ page }, info) => {
   page.on('request', (r) => { if (r.url().startsWith(backend)) observed.push(new URL(r.url()).pathname); });
   await page.addInitScript(installProbe, { capturePixels: false });
   await page.addInitScript(installArchitectureProbe);
+  if (info.title.includes('neuron experiment capture comparison and cancellation')) {
+    await installNeuronStreamObserver(page);
+  }
   await page.goto('/');
   timing.bodyStarted = performance.now();
 });
@@ -1637,10 +1640,64 @@ test('complete local reference [smollm2] neuron selection and native weight navi
 // The real boundary is deliberately one experiment, not a replay of backend
 // numerical permutations. Input/result contents stay in memory, except the
 // issue-required screenshots of this public, test-authored prompt.
+function neuronWire(bytes: Buffer) {
+  // Independent bounded LMEX observation, not the application's decoder. The
+  // API suite owns malformed frames; here we bind actual bytes to DOM cells.
+  const records: { kind: number; payload: Buffer }[] = [];
+  for (let offset = 0; offset < bytes.length;) {
+    expect(bytes.toString('ascii', offset, offset + 4)).toBe('LMEX');
+    const length = bytes.readUInt32LE(offset + 8);
+    records.push({ kind: bytes[offset + 4]!, payload: bytes.subarray(offset + 12, offset + 12 + length) });
+    offset += 12 + length;
+    expect(offset).toBeLessThanOrEqual(bytes.length);
+  }
+  expect(records[0]!.kind).toBe(1); expect(records.at(-1)).toEqual({ kind: 4, payload: Buffer.alloc(0) });
+  expect(records.slice(1, -1).every(record => record.kind === 2)).toBe(true);
+  const metadata = JSON.parse(records[0]!.payload.toString());
+  const data = Buffer.concat(records.slice(1, -1).map(record => record.payload));
+  expect(data.length).toBe(metadata.byte_length);
+  return { metadata, values: Array.from({ length: data.length / 4 }, (_, i) => data.readFloatLE(i * 4)) };
+}
+
+async function installNeuronStreamObserver(page: Page) {
+  // ApiClient binds fetch during construction, so install before page startup.
+  await page.addInitScript(() => {
+    const fetch = window.fetch;
+    window.fetch = async (...args) => {
+      const input = args[0];
+      const pending = (window as any).__neuronStreamObservation;
+      const observe = pending?.armed && /neuron-(activations|comparisons)$/.test(input instanceof Request ? input.url : String(input));
+      if (observe) pending.armed = false;
+      const response = await fetch(...args);
+      if (observe && response.body) {
+        // Observe only the application's reads. Do not clone, drain or replace
+        // the stream: an extra consumer would change cancellation semantics.
+        // This also retains the existing resource probe's getReader wrapper.
+        const body: any = response.body, getReader = body.getReader;
+        body.getReader = (...options: any[]) => {
+          const reader = getReader.apply(body, options), read = reader.read;
+          reader.read = async (...options: any[]) => {
+            const result = await read.apply(reader, options);
+            if (result.value) pending.chunks.push(Array.from(result.value));
+            return result;
+          };
+          return reader;
+        };
+      }
+      return response;
+    };
+  });
+}
+
+async function observeNextNeuronStream(page: Page) {
+  await page.evaluate(() => { (window as any).__neuronStreamObservation = { armed: true, chunks: [] }; });
+  return async () => neuronWire(Buffer.from(await page.evaluate(() => (window as any).__neuronStreamObservation.chunks.flat())));
+}
+
 test('complete local reference [smollm2] neuron experiment capture comparison and cancellation', { tag: '@extended' }, async ({ page }, info) => {
   const capabilitiesResponse = page.waitForResponse(r => r.url().endsWith('/neuron-capabilities') && r.status() === 200);
   await selectGraph(page);
-  const capabilities = await (await capabilitiesResponse).json() as import('../src/api/generated/types').components['schemas']['NeuronCapabilities'];
+  const capabilities = await (await fetch((await capabilitiesResponse).url())).json() as import('../src/api/generated/types').components['schemas']['NeuronCapabilities'];
   expect(capabilities.observation.status).toBe('available');
   const module = capabilities.modules.find(item => item.layer_index === 7)!;
   await page.setViewportSize({ width: 1440, height: 960 });
@@ -1655,6 +1712,7 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   const tokens = (await (await tokenized).json()).tokens.map((token: { id: number }) => token.id);
   await expect(experiment.getByRole('button', { name: 'Run', exact: true })).toBeEnabled();
   const capture = page.waitForRequest(r => r.url().endsWith('/neuron-activations'));
+  const capturedResponse = await observeNextNeuronStream(page);
   const camera = await page.locator('.react-flow__viewport').getAttribute('style');
   const run = experiment.getByRole('button', { name: 'Run', exact: true });
   await run.focus(); await page.keyboard.press('Enter');
@@ -1663,6 +1721,15 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   await expect(status).toHaveAttribute('data-experiment-status', 'complete', { timeout: 60_000 });
   const activations = experiment.getByRole('region', { name: 'Signed activation values by prompt position' });
   await expect(activations.getByRole('row')).toHaveCount(tokens.length + 1);
+  const captured = await capturedResponse();
+  expect(captured.metadata).toMatchObject({ session_id: capabilities.session_id, model_revision: capabilities.model_revision,
+    module, token_ids: tokens, neuron_indices: [427] });
+  for (let position = 0; position < tokens.length; position++) {
+    const row = activations.locator('tbody tr').nth(position);
+    await expect(row.locator('th')).toHaveText(String(position));
+    await expect(row.locator('td').first()).toHaveText(String(tokens[position]));
+    expect(Number(await row.locator('td span[tabindex]').textContent())).toBe(captured.values[position]);
+  }
   const value = activations.locator('td span[tabindex]').first();
   await value.focus(); await expect(value).toBeFocused();
   expect(Number.isFinite(Number(await value.textContent()))).toBe(true);
@@ -1689,6 +1756,7 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   await experiment.getByRole('button', { name: 'Compare', exact: true }).click();
   await experiment.getByRole('spinbutton', { name: 'New tokens' }).fill('8');
   const compare = page.waitForRequest(r => r.url().endsWith('/neuron-comparisons'));
+  const comparedResponse = await observeNextNeuronStream(page);
   await experiment.getByRole('button', { name: 'Run', exact: true }).click();
   expect((await compare).postDataJSON()).toMatchObject({ token_ids: tokens, neuron_indices: [427], decoding: 'greedy', max_new_tokens: 8,
     conditions: [{ id: 'baseline', mode: 'baseline' }, { id: 'zero', mode: 'zero', scope: 'all' }, { id: 'scale', mode: 'scale', factor: 2, scope: 'all' }] });
@@ -1696,6 +1764,22 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
   const probabilities = experiment.getByRole('region', { name: 'Next-token probabilities and percentage-point deltas' });
   await expect(probabilities).toContainText('pp');
   await expect(experiment.getByRole('article')).toHaveCount(3);
+  const compared = await comparedResponse();
+  expect(compared.metadata.conditions).toEqual((await compare).postDataJSON().conditions);
+  const candidates: number[] = compared.metadata.candidate_token_ids;
+  await expect(probabilities.locator('tbody tr')).toHaveCount(candidates.length);
+  for (const [column, token] of candidates.entries()) {
+    const row = probabilities.locator('tbody tr').nth(column);
+    await expect(row.locator('th')).toHaveText(String(token));
+    for (let condition = 0; condition < 3; condition++) {
+      const value = compared.values[condition * candidates.length + column]!;
+      await expect(row.locator('td span').nth(condition)).toHaveAttribute('title',
+        `Probability ${value}; delta ${value - compared.values[column]!}`);
+    }
+  }
+  for (const continuation of compared.metadata.continuations) {
+    await expect(experiment.getByRole('article', { name: `${continuation.condition_id} continuation` }).locator('pre')).toHaveText(continuation.text);
+  }
   for (const width of [1440, 760]) {
     await page.setViewportSize({ width, height: 960 });
     if (width === 760) await page.getByRole('button', { name: 'Collapse browser', exact: true }).click();
@@ -1727,20 +1811,89 @@ test('complete local reference [smollm2] neuron experiment capture comparison an
     if (width === 760) await page.getByRole('button', { name: 'Expand browser', exact: true }).click();
   }
   await experiment.getByRole('spinbutton', { name: 'New tokens' }).fill('0');
+  await experiment.getByRole('button', { name: 'Remove zero', exact: true }).click();
+  await experiment.getByRole('button', { name: 'Remove scale', exact: true }).click();
+  const cleanResponse = await observeNextNeuronStream(page);
   await experiment.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(status).toHaveAttribute('data-experiment-status', 'complete', { timeout: 60_000 });
-  await expect(experiment.getByText('No generation requested.', { exact: true })).toHaveCount(3);
+  await expect(experiment.getByText('No generation requested.', { exact: true })).toHaveCount(1);
+  const clean = await cleanResponse();
+  expect(clean.metadata.conditions).toEqual([{ id: 'baseline', mode: 'baseline' }]);
+  for (const [column, token] of (clean.metadata.candidate_token_ids as number[]).entries()) {
+    expect(clean.values[column]).toBe(compared.values[candidates.indexOf(token)]);
+  }
   const download = page.waitForEvent('download');
   await experiment.getByRole('button', { name: 'Export configuration', exact: true }).click();
   const file = await download, stream = (await file.createReadStream())!;
   let recipe = ''; for await (const chunk of stream) recipe += chunk.toString();
   const manifest = JSON.parse(recipe);
   expect(manifest).toMatchObject({ format: 'llmex-neuron-experiment', format_revision: 1,
-    token_ids: tokens, neuron_indices: [427], max_new_tokens: 0, decoding: 'greedy' });
+    token_ids: tokens, neuron_indices: [427], max_new_tokens: 0, decoding: 'greedy',
+    model_revision: capabilities.model_revision, session_id: capabilities.session_id, module,
+    conditions: [{ id: 'baseline', mode: 'baseline' }] });
+  expect(Buffer.byteLength(recipe)).toBeLessThanOrEqual(1024 * 1024);
+  expect(manifest).not.toHaveProperty('activations'); expect(manifest).not.toHaveProperty('probabilities');
   expect(manifest).not.toHaveProperty('user_text'); expect(manifest).not.toHaveProperty('continuations');
   await file.delete();
   await page.setViewportSize({ width: 1440, height: 960 });
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
   await page.getByRole('button', { name: 'Back to graph' }).click();
   await expect(experiment).toHaveCount(0);
+});
+
+test('complete local reference [smollm2] rejects late neuron capabilities after native revision replacement', { tag: '@extended' }, async ({ page }, info) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1440, height: 960 });
+  let old: any, release!: () => void, delivered!: () => void;
+  const barrier = new Promise<void>(resolve => { release = resolve; });
+  const finished = new Promise<void>(resolve => { delivered = resolve; });
+  // Hold an actual supported response, using the existing hot-reload harness
+  // pattern. No fake capabilities, SSE message or alternative refresh mechanism.
+  await page.route('**/neuron-capabilities', async route => {
+    const response = await route.fetch(); old = await response.json();
+    await barrier;
+    try { await route.fulfill({ response }); } finally { delivered(); }
+  }, { times: 1 });
+  await selectGraph(page);
+  await expect.poll(() => old?.observation.status).toBe('available');
+  await page.getByRole('button', { name: 'Neurons', exact: true }).click();
+  await expect(page.getByText('Retrieving neuron capabilities…')).toBeVisible();
+  const replacement = page.waitForResponse(r => r.url().endsWith('/neuron-capabilities') && !r.url().includes(old.session_id));
+  // Atomic replacement breaks the temporary hard link. Never mutate the
+  // operator's read-only checkpoint. A nonzero dropout configuration fails
+  // execution admission while retaining model identity and static capabilities.
+  const directory = readdirSync(join(root, 'model-root'))[0]!;
+  const path = join(root, 'model-root', directory, 'config.json');
+  const config = JSON.parse(readFileSync(path, 'utf8'));
+  writeFileSync(`${path}.tmp`, JSON.stringify({ ...config, attention_dropout: 0.125 }));
+  renameSync(`${path}.tmp`, path);
+  const current = await (await replacement).json();
+  expect(current.session_id).not.toBe(old.session_id);
+  expect(current.model_revision).not.toBe(old.model_revision);
+  expect(current.model_id).toBe(old.model_id);
+  expect(current.observation.status).toBe('unavailable');
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  if (!await page.getByLabel('Neuron inspector', { exact: true }).count()) {
+    await page.getByRole('button', { name: 'Neurons', exact: true }).click();
+  }
+  const inspector = page.getByLabel('Neuron inspector', { exact: true });
+  await expect(inspector).toContainText(current.observation.reason.message);
+  release(); await finished;
+  await expect(inspector).toContainText(current.observation.reason.message);
+  await expect(page.getByLabel('Concrete MLP')).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Experiment', exact: true })).toHaveCount(0);
+  expect((await fetch(`${backend}/sessions/${old.session_id}`)).status).toBe(404);
+  await page.screenshot({ path: info.outputPath('neuron-revision-unavailable-1440.png') });
+  await page.getByRole('button', { name: 'Back to graph' }).click();
+  const graphResponse = await fetch(`${backend}/sessions/${current.session_id}/architecture`);
+  const graph = (await graphResponse.json()).graph as Graph;
+  const parameter = graph.parameters.find(item => item.inspection.status === 'available' && item.logical_shape?.length === 2)!;
+  await openParameter(page, graph, parameter);
+  await expect(page.locator('.matrix-scroll canvas')).toBeVisible();
+  await nativeCamera(page);
+  await page.keyboard.press('Escape'); await released(page);
+  await info.attach('neuron-revision-replacement', { contentType: 'application/json', body: JSON.stringify({
+    previous: { session: old.session_id, revision: old.model_revision, status: old.observation.status },
+    current: { session: current.session_id, revision: current.model_revision, status: current.observation.status },
+  }) });
 });

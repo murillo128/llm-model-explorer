@@ -112,6 +112,7 @@ HTTP_LEAVES = {
     "acceptance/test_embeddings.py",
     "acceptance/test_lora_reference.py",
     "acceptance/test_native_packages.py",
+    "acceptance/test_neuron_reference.py",
     "acceptance/test_polish.py",
     "acceptance/test_reference.py",
     "acceptance/test_report.py",
@@ -694,7 +695,7 @@ def network_targets(plan):
         "native": ("network", "polish"),
         "tokenizer-layout": ("network", "embeddings"),
         "bindings": ("embeddings", "polish", "reference"),
-        "architecture": ("architecture", "native_packages"),
+        "architecture": ("architecture", "native_packages", "neuron_reference"),
         "lora-reference": ("architecture", "lora_reference", "reference"),
         "product": ("network", "embeddings", "polish", "distribution_scales", "reference"),
     }

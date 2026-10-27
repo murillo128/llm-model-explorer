@@ -24,7 +24,7 @@ compatibility scope, reasons and exact tested revisions.
 
 Maintain the finite cross-boundary/shared/leaf classifications when adding imports,
 exports, fixture inputs or subprocess preparation. The inspected snapshot has
-23 backend, 42 component, 58 UI-unit and ten HTTP leaf files. Their names are
+23 backend, 42 component, 58 UI-unit and eleven HTTP leaf files. Their names are
 explicit; creating a similarly named file cannot silently acquire leaf status.
 Native target unions are deterministic and deduplicated; `tests` dominates narrower
 backend file selections. Known test-only fixture routes retain ordinary Python
@@ -44,6 +44,7 @@ Chromium, UI build and browser servers.
 | Grouping preparation, dense/Qwen/V-JEPA test metadata and fixture JSON | Producer export preparation and independently reviewed Node semantic fingerprints; architecture HTTP/browser family. The semantic JSON and TypeScript oracle remain actual inputs. |
 | `architecture_fixtures.py` and `polish_fixtures.py` | Architecture/template/native-package family plus HTTP polish. The polish-only helper selects HTTP polish; ordinary tensor/tokenizer browser setup does not use its optional server branch. |
 | Architecture/quantized/reference oracle modules | Their architecture/LoRA/Base-reference TCP/browser families, including truthful absent/supplied-invalid prerequisites. |
+| Neuron reference acceptance | `test_neuron_reference.py` is an isolated HTTP leaf. Architecture UI/browser and reference-oracle changes include it through the architecture network owner; backend runtime and shared server inputs retain full integration selection. Tiny numerical oracles remain backend-owned. |
 | Shared UI helpers and JSON/HTML/support outside reviewed leaves | Existing conservative shared fallback retains component and production consumers, including controls/pointer/invariants/native camera/tensor-tree imports. This over-selection is an accepted cost tradeoff, not a new dependency engine. |
 
 These rows represent inspected calls/imports/fixture inputs, not runtime import
