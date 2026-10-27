@@ -12,7 +12,7 @@ import type { MatrixSource, MatrixUpdates } from './types';
 const fake = vi.hoisted(() => ({ fail: false, transferFails: false, views: [] as {
   options: MatrixViewportOptions; upload: ReturnType<typeof vi.fn>; transfer: ReturnType<typeof vi.fn>;
   fitWidth: ReturnType<typeof vi.fn>; revealRow: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn>; refresh: ReturnType<typeof vi.fn>;
-  setSelectedRows: ReturnType<typeof vi.fn>;
+  setSelectedRows: ReturnType<typeof vi.fn>; setSelectedColumns: ReturnType<typeof vi.fn>; revealColumn: ReturnType<typeof vi.fn>;
 }[] }));
 vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
   matrix;
@@ -24,13 +24,15 @@ vi.mock('../rendering/matrix-viewport', () => ({ MatrixViewport: class {
     const transfer = vi.fn(() => { if (fake.transferFails) throw new Error('Invalid transfer'); });
     this.matrix = { renderer: { upload, setTransfer: transfer } };
     this.dispose = vi.fn(() => { options.onInspection?.(null); host.replaceChildren(); });
-    fake.views.push({ options, upload, transfer, fitWidth: this.fitWidth, revealRow: this.revealRow, dispose: this.dispose, refresh: this.refresh, setSelectedRows: this.setSelectedRows });
+    fake.views.push({ options, upload, transfer, fitWidth: this.fitWidth, revealRow: this.revealRow, dispose: this.dispose, refresh: this.refresh, setSelectedRows: this.setSelectedRows, setSelectedColumns: this.setSelectedColumns, revealColumn: this.revealColumn });
   }
   fitWidth = vi.fn();
   revealRow = vi.fn();
   refresh = vi.fn();
   setLinkedRow = vi.fn();
   setSelectedRows = vi.fn();
+  setSelectedColumns = vi.fn();
+  revealColumn = vi.fn();
   setDistributionDomain = vi.fn();
   dispose;
 } }));
@@ -239,4 +241,19 @@ it('replaces and clears controlled rows without a subscription, upload, inspecti
   expect(fake.views).toHaveLength(1);
   expect(data.updates).toHaveLength(1);
   for (const action of [viewport.upload, viewport.transfer, viewport.fitWidth, viewport.revealRow, viewport.refresh, inspect]) expect(action).not.toHaveBeenCalled();
+});
+
+it('updates column context and header slots without re-subscribing, uploading or resetting the camera', () => {
+  const data = source(), intent = { column: 2 };
+  const view = render(<MatrixExplorer source={data} selectedColumns={[2]} revealColumn={intent} />);
+  view.rerender(<MatrixExplorer source={data} selectedColumns={[1]} revealColumn={intent} header="Down projection" />);
+  const viewport = fake.views[0]!;
+  expect(viewport.setSelectedColumns).toHaveBeenLastCalledWith([1]);
+  expect(viewport.revealColumn).toHaveBeenCalledExactlyOnceWith(2);
+  view.rerender(<MatrixExplorer source={data} />);
+  expect(viewport.setSelectedColumns).toHaveBeenLastCalledWith(undefined);
+  expect(fake.views).toHaveLength(1);
+  expect(data.updates).toHaveLength(1);
+  expect(viewport.upload).not.toHaveBeenCalled();
+  expect(viewport.fitWidth).not.toHaveBeenCalled();
 });

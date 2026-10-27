@@ -18,13 +18,14 @@ export class MatrixRowSelection {
   private intervals: [number, number][] = [];
   private readonly surfaces;
 
-  constructor(private readonly viewport: MatrixViewport) {
-    this.surfaces = [viewport.matrix.renderer, ...(viewport.rows ? [viewport.rows] : [])]
+  constructor(private readonly viewport: MatrixViewport, private readonly axis: 'rows' | 'columns' = 'rows') {
+    const profile = axis === 'rows' ? viewport.rows : viewport.columns;
+    this.surfaces = [viewport.matrix.renderer, ...(profile ? [profile] : [])]
       .map(renderer => ({ renderer, guides: [] as SVGSVGElement[] }));
   }
 
   setRows(rows: readonly number[] = []) {
-    this.intervals = selectedRowIntervals(rows, this.viewport.matrix.renderer.geometry.rows);
+    this.intervals = selectedRowIntervals(rows, this.viewport.matrix.renderer.geometry[this.axis]);
     this.refresh();
   }
 
@@ -34,13 +35,16 @@ export class MatrixRowSelection {
       let used = 0;
       if (view && renderer.state === 'ready' && this.viewport.matrix.renderer.state === 'ready') {
         for (const [from, to] of this.intervals) {
-          const start = rasterEdge(from, view.y, view.scaleY), end = rasterEdge(to, view.y, view.scaleY);
-          const top = Math.max(0, start), bottom = Math.min(view.height, end);
-          if (bottom <= top || view.width <= 0) continue;
+          const rows = this.axis === 'rows';
+          const start = rasterEdge(from, rows ? view.y : view.x, rows ? view.scaleY : view.scaleX);
+          const end = rasterEdge(to, rows ? view.y : view.x, rows ? view.scaleY : view.scaleX);
+          const extent = rows ? view.height : view.width;
+          const first = Math.max(0, start), last = Math.min(extent, end);
+          if (last <= first || (rows ? view.width : view.height) <= 0) continue;
           let guide = guides[used++];
           if (!guide) {
             guide = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            guide.setAttribute('class', 'matrix-selected-rows');
+            guide.setAttribute('class', `matrix-selected-${this.axis}`);
             guide.setAttribute('aria-hidden', 'true');
             Object.assign(guide.style, { position: 'absolute', pointerEvents: 'none', overflow: 'hidden', display: 'block' });
             const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -52,20 +56,24 @@ export class MatrixRowSelection {
             guides.push(guide);
             renderer.canvas.parentElement!.append(guide);
           }
-          guide.dataset.rows = `${from}:${to}`;
-          const width = view.width, height = bottom - top;
+          guide.dataset[this.axis] = `${from}:${to}`;
+          const width = rows ? view.width : last - first, height = rows ? last - first : view.height;
           // SVG units are device pixels. Draw inside the clipped raster box:
           // CSS borders impose a minimum box size and round fractional widths,
           // so they cannot represent singleton rows at native scale / high DPR.
           guide.setAttribute('viewBox', `0 0 ${width} ${height}`);
-          guide.firstElementChild!.setAttribute('d', [
+          guide.firstElementChild!.setAttribute('d', (rows ? [
             `M0.5 0V${height} M${width - 0.5} 0V${height}`,
             ...(start >= 0 ? [`M0 0.5H${width}`] : []),
-            ...(end <= view.height ? [`M0 ${height - 0.5}H${width}`] : []),
-          ].join(' '));
+            ...(end <= extent ? [`M0 ${height - 0.5}H${width}`] : []),
+          ] : [
+            `M0 0.5H${width} M0 ${height - 0.5}H${width}`,
+            ...(start >= 0 ? [`M0.5 0V${height}`] : []),
+            ...(end <= extent ? [`M${width - 0.5} 0V${height}`] : []),
+          ]).join(' '));
           Object.assign(guide.style, {
-            left: `${parseFloat(renderer.canvas.style.left || '0')}px`,
-            top: `${parseFloat(renderer.canvas.style.top || '0') + top / view.dpr}px`,
+            left: `${parseFloat(renderer.canvas.style.left || '0') + (rows ? 0 : first / view.dpr)}px`,
+            top: `${parseFloat(renderer.canvas.style.top || '0') + (rows ? first / view.dpr : 0)}px`,
             width: `${width / view.dpr}px`, height: `${height / view.dpr}px`,
           });
         }

@@ -1,3 +1,4 @@
+import type { NeuronViewState } from './neuron-selection';
 import { restoreBookmark } from './navigation-bookmark';
 import type { ArchitectureBookmark, CameraAnchor } from './navigation-bookmark';
 import { bodyProjectionIds } from './repeated-body';
@@ -79,7 +80,16 @@ export class GraphView {
 /** Owned by the mounted backend shell, retained across explorer/session switches. No graph copies. */
 export class GraphViews {
   private readonly views = new Map<string, GraphView>();
-  clear() { this.views.clear(); }
+  private neuron: NeuronViewState | undefined;
+  clear() { this.views.clear(); this.neuron = undefined; }
+  neuronView(session: components['schemas']['Session']): NeuronViewState {
+    if (!this.neuron || this.neuron.sessionId !== session.id || this.neuron.modelId !== session.model_id
+      || this.neuron.modelRevision !== session.model_revision) {
+      this.neuron = { sessionId: session.id, modelId: session.model_id, modelRevision: session.model_revision,
+        open: false, moduleId: null, index: 0, scroll: 0 };
+    }
+    return this.neuron;
+  }
   get(model: string, graph: Graph, bookmark?: ArchitectureBookmark): GraphView {
     const key = JSON.stringify([model, graph.graph_id]);
     let view = this.views.get(key);

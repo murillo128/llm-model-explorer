@@ -39,7 +39,7 @@ async function readJson(response: Response, limit?: number): Promise<unknown> {
   requireProtocol(mediaType(response) === 'application/json', 'Expected application/json');
   try {
     if (limit === undefined) return JSON.parse(await response.text());
-    requireProtocol(response.body, 'Missing architecture response body');
+    requireProtocol(response.body, 'Missing JSON response body');
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8', { fatal: true });
     let size = 0, text = '';
@@ -48,7 +48,7 @@ async function readJson(response: Response, limit?: number): Promise<unknown> {
         const { value, done } = await reader.read();
         if (done) break;
         size += value.byteLength;
-        requireProtocol(size <= limit, 'Architecture exceeds the 32 MiB limit');
+        requireProtocol(size <= limit, limit === architectureByteLimit ? 'Architecture exceeds the 32 MiB limit' : 'Neuron capabilities exceed the 1 MiB limit');
         text += decoder.decode(value, { stream: true });
       }
       return JSON.parse(text + decoder.decode());
@@ -98,6 +98,7 @@ export class ApiClient {
   }
   private async request<T>(path: string, method: string, status: number, schema?: Parameters<typeof validateResponse>[0], body?: unknown, signal?: AbortSignal): Promise<T> {
     let response: Response | undefined;
+    const limit = schema === 'getArchitecture' ? architectureByteLimit : schema === 'getNeuronCapabilities' ? 1_048_576 : undefined;
     const activity = this.activity(signal, method === 'DELETE');
     activity('start');
     try {
@@ -107,9 +108,9 @@ export class ApiClient {
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
       activity('response');
-      await checkStatus(response, status, schema === 'getArchitecture' ? architectureByteLimit : undefined);
+      await checkStatus(response, status, limit);
       if (!schema) return undefined as T;
-      const result = await readJson(response, schema === 'getArchitecture' ? architectureByteLimit : undefined);
+      const result = await readJson(response, limit);
       validateResponse(schema, result);
       return result as T;
     } catch (error) {
@@ -139,6 +140,12 @@ export class ApiClient {
   async getArchitecture(id: string, context: ArchitectureContext, signal?: AbortSignal) {
     const response = await this.request<Schemas['ArchitectureResponse']>(`${this.sessionPath(id)}/architecture`, 'GET', 200, 'getArchitecture', undefined, signal);
     return validateArchitecture(response, context);
+  }
+  async getNeuronCapabilities(session: Schemas['Session'], signal?: AbortSignal) {
+    const response = await this.request<Schemas['NeuronCapabilities']>(`${this.sessionPath(session.id)}/neuron-capabilities`, 'GET', 200, 'getNeuronCapabilities', undefined, signal);
+    requireProtocol(response.session_id === session.id && response.model_id === session.model_id
+      && response.model_revision === session.model_revision, 'Neuron capability identity mismatch');
+    return response;
   }
   tokenize(id: string, body: Schemas['TokenizeRequest'], signal?: AbortSignal) {
     validateSchema('TokenizeRequest', body);

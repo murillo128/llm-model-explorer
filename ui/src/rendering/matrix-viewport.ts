@@ -34,6 +34,7 @@ export class MatrixViewport {
   private columnScale?: DistributionScale;
   private scrollbars?: MatrixScrollbars;
   private rowSelection?: MatrixRowSelection;
+  private columnSelection?: MatrixRowSelection;
   private readonly observer: ResizeObserver;
 
   constructor(readonly host: HTMLElement, descriptor: TensorDescriptor, options: MatrixViewportOptions = {}) {
@@ -87,19 +88,22 @@ export class MatrixViewport {
       };
       layout();
       this.matrix = new TensorViewport(this.main, descriptor, { ...options, zoom: descriptor.rank === 2, onStateChange: (state) => {
-        if (state !== 'ready') { this.zoomSelection?.cancel(); this.inspection?.clear(); this.rowSelection?.refresh(); }
+        if (state !== 'ready') { this.zoomSelection?.cancel(); this.inspection?.clear(); this.rowSelection?.refresh(); this.columnSelection?.refresh(); }
         options.onStateChange?.(state);
       }, onViewChange: (view) => {
         layout();
         this.align(view);
-        this.rowSelection?.refresh();
+        this.rowSelection?.refresh(); this.columnSelection?.refresh();
         this.scrollbars?.refresh();
         this.zoomSelection?.refresh();
         this.inspection?.refresh();
       } });
       this.scrollbars = new MatrixScrollbars(this.main, descriptor.rank === 1 ? this.main : host);
       this.matrix.attachOverlay(this.scrollbars.element);
-      if (descriptor.rank === 2) this.rowSelection = new MatrixRowSelection(this);
+      if (descriptor.rank === 2) {
+        this.rowSelection = new MatrixRowSelection(this);
+        this.columnSelection = new MatrixRowSelection(this, 'columns');
+      }
       if (descriptor.rank === 2 && options.onInspection) this.inspection = new MatrixInspection(this, options.onInspection);
       if (descriptor.rank === 2 && descriptor.numel > 0) this.zoomSelection = new MatrixZoomSelection(this,
         (active) => this.inspection?.suspend(active));
@@ -163,12 +167,14 @@ export class MatrixViewport {
   refresh() { this.matrix.refresh(); }
   fitWidth() { this.matrix.fitWidth(); }
   revealRow(row: number) { this.matrix.revealRow(row); }
+  revealColumn(column: number) { this.matrix.revealColumn(column); }
   setDistributionDomain(domain: DistributionDomain) {
     this.rowScale?.setDomain(domain);
     this.columnScale?.setDomain(domain);
   }
   setLinkedRow(row: number | null) { this.inspection?.setLinkedRow(row); }
   setSelectedRows(rows?: readonly number[]) { this.rowSelection?.setRows(rows); }
+  setSelectedColumns(columns?: readonly number[]) { this.columnSelection?.setRows(columns); }
 
   private restoreHost() {
     this.host.classList.remove('matrix-surfaces');
@@ -184,6 +190,7 @@ export class MatrixViewport {
     this.cameraNavigation?.dispose();
     this.inspection?.dispose();
     this.rowSelection?.dispose();
+    this.columnSelection?.dispose();
     this.scrollbars?.dispose();
     this.matrix.dispose();
     this.rows?.dispose();

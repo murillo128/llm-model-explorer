@@ -1,5 +1,10 @@
 import { captureBookmark, restoreInspection } from './navigation-bookmark';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { NeuronInspector } from './NeuronInspector';
+import { useNeuronCapabilities } from './useNeuronCapabilities';
+import { neuronForInspection } from './neuron-selection';
+import type { NeuronModule, NeuronSelectionContext, NeuronViewState } from './neuron-selection';
 import { createPortal } from 'react-dom';
 import type { ExplorerContextValue } from '../app/explorer-context';
 import { Lifetime } from '../app/lifetime';
@@ -24,10 +29,11 @@ const unavailable = {
 };
 type Props = ExplorerContextValue & {
   diagnostics?: ModelDiagnostics;
+  neuronExperiment?: (context: NeuronSelectionContext) => ReactNode;
   views: GraphViews; tokenizerAvailable: boolean; onInspect?: ((selection: ArchitectureSelection) => void) | undefined;
 };
 export function ArchitectureExplorer(props: Props) {
-  return <SessionArchitectureExplorer key={JSON.stringify([props.session.id, props.session.model_id])} {...props} />;
+  return <SessionArchitectureExplorer key={JSON.stringify([props.session.id, props.session.model_id, props.session.model_revision])} {...props} />;
 }
 function SessionArchitectureExplorer(props: Props) {
   const browserTarget = useArchitectureBrowserTarget();
@@ -35,13 +41,30 @@ function SessionArchitectureExplorer(props: Props) {
   const [localDiagnostics] = useState(() => { const store = new ModelDiagnostics(); store.activate(session); return store; });
   const diagnostics = props.diagnostics ?? localDiagnostics;
   const [inspected, setInspected] = useState<ArchitectureSelection | null>(null);
-  const [result, setResult] = useState<{ response?: Response; inventory?: components['schemas']['TensorInventory']; error?: string }>({});
+  const [result, setResult] = useState<{ response?: Response; inventory?: components['schemas']['TensorInventory'] | undefined; error?: string }>({});
   const [retry, setRetry] = useState(0);
+  const capabilities = useNeuronCapabilities(props);
+  const [experimentTarget, setExperimentTarget] = useState<HTMLDivElement | null>(null);
+  const [neuron, setNeuron] = useState(() => ({ ...views.neuronView(session) }));
+  const neuronTrigger = useRef<HTMLElement | null>(null);
+  const changeNeuron = (patch: Partial<NeuronViewState>) => {
+    Object.assign(views.neuronView(session), patch);
+    setNeuron(previous => ({ ...previous, ...patch }));
+  };
+  const openNeuron = (trigger: HTMLElement, module?: NeuronModule) => {
+    neuronTrigger.current = trigger;
+    setInspected(null);
+    changeNeuron({ open: true, ...(module && module.module_id !== neuron.moduleId ? { moduleId: module.module_id, index: 0, scroll: 0 } : {}) });
+  };
+  const closeNeuron = () => {
+    changeNeuron({ open: false });
+    if (neuronTrigger.current?.isConnected) neuronTrigger.current.focus({ preventScroll: true });
+  };
   useEffect(() => {
     const request = new Lifetime();
     const fail = (message: string) => {
       diagnostics.observe(session, 'Architecture', [finding(session.model_id, session.id, 'Architecture', { code: 'retrieval_failed', message }, 'error')]);
-      setResult({ error: message });
+      setResult(previous => ({ inventory: previous.inventory, error: message }));
     };
     const detach = selection.onDispose(request.dispose);
     const timeout = setTimeout(() => {
@@ -49,6 +72,7 @@ function SessionArchitectureExplorer(props: Props) {
     }, 120_000);
     // Inventory is required to validate actionable parameter bindings; no tensor bytes or tokenization.
     void client.listTensors(session.id, request.signal).then(request.guard(async (inventory) => {
+      setResult(previous => ({ ...previous, inventory }));
       diagnostics.observe(session, 'Tensor inventory', inventory.diagnostics.map((d) => finding(session.model_id, session.id, 'Tensor inventory', d, 'warning')));
       try {
         const response = await client.getArchitecture(session.id, { modelId: session.model_id }, request.signal);
@@ -93,12 +117,19 @@ function SessionArchitectureExplorer(props: Props) {
     if (!graph || !props.refreshPresentation) return;
     return props.refreshPresentation.register(selection, () => captureBookmark(graph, views.get(session.model_id, graph), inspected, result.inventory));
   }, [graph, props.refreshPresentation, selection, views, session.model_id, inspected, result.inventory]);
-  const band = <DiagnosticBand store={diagnostics} />;
+  const band = <><DiagnosticBand store={diagnostics} /><div className="neuron-entry">
+    <button aria-expanded={neuron.open} onClick={event => openNeuron(event.currentTarget)}>Neurons</button>
+    <span>{capabilities.capabilities?.observation.status === 'unavailable' ? 'Neuron execution unavailable' : 'Concrete MLP coordinates and linked weights'}</span>
+  </div></>;
+  const panel = neuron.open && <NeuronInspector context={props} capabilities={capabilities} inventory={result.inventory} state={neuron}
+    onChange={changeNeuron} onBack={closeNeuron} tokenizerAvailable={props.tokenizerAvailable} experiment={props.neuronExperiment} experimentTarget={experimentTarget} />;
+  const experiment = <div ref={setExperimentTarget} className="neuron-experiment" aria-label="Neuron experiment" hidden={!neuron.open || !props.neuronExperiment} />;
+  const matchedModule = inspected && neuronForInspection(capabilities.capabilities, inspected);
   if (!response || response.status === 'unavailable') return <>
     {browserTarget && createPortal(<p className="architecture-browser-state" role={result.error ? 'alert' : 'status'}>
       {result.error ? 'Architecture browser unavailable. Retry retrieval.' : !response ? 'Retrieving prepared architecture…' : unavailable[response.reason]}
     </p>, browserTarget)}
-    <div tabIndex={-1} className="architecture-explorer explorer-card architecture-empty" aria-label="Architecture capability">
+    <div className={`architecture-neuron-layout${neuron.open ? ' neuron-open' : ''}${neuron.open && props.neuronExperiment ? ' has-neuron-experiment' : ''}`}><div tabIndex={-1} className="architecture-explorer explorer-card architecture-empty" aria-label="Architecture capability">
     <header className="architecture-empty-heading">Architecture</header>
     {band}
     <div className="architecture-capability-state">
@@ -111,12 +142,15 @@ function SessionArchitectureExplorer(props: Props) {
           {response.requires_restart && response.reason !== 'restart_required' && <p>Restart the backend to prepare this model again.</p>}</div>}
     </div>
     </div>
+    {panel}{experiment}</div>
   </>;
   return <>
-    <ArchitectureCanvas key={JSON.stringify([session.id, response.model_id, response.graph.graph_id])} graph={response.graph} notices={band}
+    <div className={`architecture-neuron-layout${neuron.open ? ' neuron-open' : ''}${neuron.open && props.neuronExperiment ? ' has-neuron-experiment' : ''}`}><ArchitectureCanvas key={JSON.stringify([session.id, response.model_id, response.graph.graph_id])} graph={response.graph} notices={band}
       modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspected(null)} onInspect={(value) => { setInspected(value); onInspect?.(value); }} />
+    {panel}{experiment}</div>
     {inspected && result.inventory && inspected.sessionId === session.id && inspected.modelId === response.model_id && inspected.graphId === response.graph.graph_id &&
       <ArchitectureInspection key={JSON.stringify([inspected.sessionId, inspected.graphId, inspected.node?.id, inspected.boundary, inspected.parameterId, Boolean(inspected.structureOnly)])} context={props}
+        onExploreNeurons={matchedModule ? () => openNeuron(inspected.trigger, matchedModule) : undefined}
         graph={response.graph} diagnostics={diagnostics.getSnapshot().records} inventory={result.inventory} selected={inspected} onParameterChange={(parameterId) => setInspected((previous) => previous ? { ...previous, parameterId } : null)} onClose={() => setInspected(null)} />}
   </>;
 }

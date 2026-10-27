@@ -46,9 +46,12 @@ export interface MatrixExplorerProps {
   /** Controlled native row positions, independent of inspection and navigation.
    * Invalid entries are ignored; omitted/empty clears the display-only guides. */
   readonly selectedRows?: readonly number[] | undefined;
+  /** Native column outlines, with the same lifetime/geometry rules as selectedRows. */
+  readonly selectedColumns?: readonly number[] | undefined;
+  readonly revealColumn?: { readonly column: number } | null | undefined;
   /** New object identity requests minimal vertical reveal, preserving scale/X/focus.
    * Keep stable across renders; omit on source/generation replacement. */
-  readonly revealRow?: { readonly row: number } | null;
+  readonly revealRow?: { readonly row: number } | null | undefined;
   /** Hover/focus selection, cleared with null on leave, blur or replacement. */
   readonly onCellSelect?: (cell: MatrixCell | null) => void;
   readonly onRowSelect?: (row: number | null) => void;

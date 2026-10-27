@@ -153,6 +153,20 @@ export class TensorViewport {
     this.refresh();
   }
 
+  /** Reveal a linked logical column without changing scale, Y or camera history. */
+  revealColumn(column: number) {
+    if (this.disposed || !Number.isInteger(column) || column < 0 || column >= this.renderer.geometry.columns) return;
+    this.refresh();
+    const view = this.renderer.view;
+    if (!view) return;
+    const left = column * view.scaleX / view.dpr;
+    const right = (column + 1) * view.scaleX / view.dpr;
+    const width = view.width / view.dpr;
+    if (left < this.host.scrollLeft || right - left > width) this.host.scrollLeft = left;
+    else if (right > this.host.scrollLeft + width) this.host.scrollLeft = right - width;
+    this.refresh();
+  }
+
   zoomAt(scale: number, cssX: number, cssY: number) {
     this.wheelGesture.reset();
     this.zoom(scale, cssX, cssY);
