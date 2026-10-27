@@ -202,6 +202,14 @@ Both results retain the existing 1 MiB control limit, four-byte DATA alignment,
 request identity validation and common ERROR/CANCELLED/COMPLETE behavior. Only
 successful validation through body EOF establishes a complete auxiliary result.
 
+## Neuron results
+
+`neuron_activations` and `neuron_comparison` use the bounded float32 sections and
+identity/order rules in [the neuron contract](neuron-explorer.md#lmex-layouts).
+Their numeric payloads use ordinary little-endian DATA; every value is finite.
+Headers may precede computation, with no PROGRESS until exact META is available.
+The existing control limit, incremental delivery and terminal rules apply.
+
 ## Progress result
 
 `PROGRESS_JSON` is optional and advisory, and validates against `StreamProgress` in `openapi.yaml`. Its UTF-8 JSON payload has:

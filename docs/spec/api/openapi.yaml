@@ -430,6 +430,101 @@ paths:
           $ref: "#/components/responses/ResourceExhausted"
         '500':
           $ref: "#/components/responses/InternalError"
+  /sessions/{session_id}/neuron-capabilities:
+    parameters:
+    - $ref: '#/components/parameters/SessionId'
+    get:
+      operationId: getNeuronCapabilities
+      tags:
+      - Neurons
+      summary: Read independently admitted neuron execution capabilities
+      description: Accepted contract; see neuron-explorer.md for admission, cross-field
+        constraints, identity, privacy and LMEX layouts. Runtime implementation is delivered
+        separately.
+      responses:
+        '200':
+          description: Bounded independent capabilities for the pinned session
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NeuronCapabilities'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ModelChanged'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '503':
+          $ref: '#/components/responses/ResourceExhausted'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /sessions/{session_id}/neuron-activations:
+    parameters:
+    - $ref: '#/components/parameters/SessionId'
+    post:
+      operationId: streamNeuronActivations
+      tags:
+      - Neurons
+      summary: Observe signed prompt activations of one concrete MLP
+      description: Accepted contract; see neuron-explorer.md for admission, cross-field
+        constraints, identity, privacy and LMEX layouts. Runtime implementation is delivered
+        separately.
+      responses:
+        '200':
+          $ref: '#/components/responses/BinaryStream'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ModelChanged'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '503':
+          $ref: '#/components/responses/ResourceExhausted'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NeuronActivationsRequest'
+  /sessions/{session_id}/neuron-comparisons:
+    parameters:
+    - $ref: '#/components/parameters/SessionId'
+    post:
+      operationId: streamNeuronComparison
+      tags:
+      - Neurons
+      summary: Compare baseline and bounded activation interventions
+      description: Accepted contract; see neuron-explorer.md for admission, cross-field
+        constraints, identity, privacy and LMEX layouts. Runtime implementation is delivered
+        separately.
+      responses:
+        '200':
+          $ref: '#/components/responses/BinaryStream'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ModelChanged'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '503':
+          $ref: '#/components/responses/ResourceExhausted'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NeuronComparisonRequest'
   /operations/{operation_id}:
     parameters:
       - $ref: "#/components/parameters/OperationId"
@@ -1355,9 +1450,728 @@ components:
             properties:
               domain_maximum:
                 type: number
+    NeuronFeatureAvailable:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          const: available
+    NeuronFeatureUnavailable:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      - reason
+      properties:
+        status:
+          type: string
+          const: unavailable
+        reason:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - recovery
+          properties:
+            code:
+              type: string
+              enum:
+              - unsupported_model
+              - unsupported_representation
+              - tokenizer_unavailable
+              - runtime_unavailable
+            message:
+              type: string
+              minLength: 1
+              maxLength: 2048
+            recovery:
+              type: string
+              minLength: 1
+              maxLength: 2048
+    NeuronFeature:
+      oneOf:
+      - $ref: '#/components/schemas/NeuronFeatureAvailable'
+      - $ref: '#/components/schemas/NeuronFeatureUnavailable'
+      discriminator:
+        propertyName: status
+        mapping:
+          available: '#/components/schemas/NeuronFeatureAvailable'
+          unavailable: '#/components/schemas/NeuronFeatureUnavailable'
+    NeuronExecution:
+      type: object
+      additionalProperties: false
+      required:
+      - family
+      - adapter
+      - adapter_version
+      - runtime_version
+      - torch_version
+      - device
+      - dtype
+      properties:
+        family:
+          type: string
+          const: smollm2
+        adapter:
+          type: string
+          const: smollm2_native
+        adapter_version:
+          type: string
+          minLength: 1
+          maxLength: 128
+        runtime_version:
+          type: string
+          minLength: 1
+          maxLength: 128
+        torch_version:
+          type: string
+          minLength: 1
+          maxLength: 128
+        device:
+          type: string
+          pattern: ^(cpu|cuda:[0-9]+)$
+        dtype:
+          type: string
+          const: float32
+    NeuronLimits:
+      type: object
+      additionalProperties: false
+      required:
+      - max_modules_per_request
+      - max_neurons
+      - max_input_tokens
+      - max_new_tokens
+      - max_conditions
+      - max_top_k
+      - context_length
+      - vocabulary_size
+      - eos_token_ids
+      properties:
+        max_modules_per_request:
+          type: integer
+          const: 1
+        max_neurons:
+          type: integer
+          const: 8
+        max_input_tokens:
+          type: integer
+          minimum: 1
+          maximum: 512
+        max_new_tokens:
+          type: integer
+          minimum: 0
+          maximum: 64
+        max_conditions:
+          type: integer
+          const: 4
+        max_top_k:
+          type: integer
+          minimum: 1
+          maximum: 20
+        context_length:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        vocabulary_size:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        eos_token_ids:
+          type: array
+          minItems: 0
+          maxItems: 64
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          uniqueItems: true
+    NeuronWeightBinding:
+      type: object
+      additionalProperties: false
+      required:
+      - tensor_id
+      - axis
+      - shape
+      properties:
+        tensor_id:
+          type: string
+          minLength: 1
+          maxLength: 256
+        axis:
+          type: string
+          enum:
+          - row
+          - column
+        shape:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+    NeuronModule:
+      type: object
+      additionalProperties: false
+      required:
+      - module_id
+      - module
+      - layer_index
+      - intermediate_size
+      - hidden_size
+      - point
+      - weights
+      properties:
+        module_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9._~-]+$
+        module:
+          $ref: '#/components/schemas/ArchitectureModuleReference'
+        layer_index:
+          type: integer
+          minimum: 0
+          maximum: 63
+        intermediate_size:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        hidden_size:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        point:
+          type: string
+          const: post_activation_product_pre_down_proj
+        weights:
+          type: object
+          additionalProperties: false
+          required:
+          - gate
+          - up
+          - down
+          properties:
+            gate:
+              $ref: '#/components/schemas/NeuronWeightBinding'
+            up:
+              $ref: '#/components/schemas/NeuronWeightBinding'
+            down:
+              $ref: '#/components/schemas/NeuronWeightBinding'
+        graph_binding:
+          type: object
+          additionalProperties: false
+          required:
+          - graph_id
+          - node_id
+          properties:
+            graph_id:
+              $ref: '#/components/schemas/ArchitectureId'
+            node_id:
+              $ref: '#/components/schemas/ArchitectureId'
+    NeuronCapabilities:
+      type: object
+      additionalProperties: false
+      required:
+      - session_id
+      - model_id
+      - model_revision
+      - observation
+      - intervention
+      - generation
+      - execution
+      - limits
+      - modules
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        model_id:
+          type: string
+          minLength: 1
+        model_revision:
+          $ref: '#/components/schemas/ModelRevision'
+        observation:
+          $ref: '#/components/schemas/NeuronFeature'
+        intervention:
+          $ref: '#/components/schemas/NeuronFeature'
+        generation:
+          $ref: '#/components/schemas/NeuronFeature'
+        execution:
+          oneOf:
+          - $ref: '#/components/schemas/NeuronExecution'
+          - type: 'null'
+        limits:
+          oneOf:
+          - $ref: '#/components/schemas/NeuronLimits'
+          - type: 'null'
+        modules:
+          type: array
+          minItems: 0
+          maxItems: 64
+          items:
+            $ref: '#/components/schemas/NeuronModule'
+    NeuronActivationsRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - model_revision
+      - module_id
+      - neuron_indices
+      - token_ids
+      properties:
+        model_revision:
+          $ref: '#/components/schemas/ModelRevision'
+        module_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9._~-]+$
+        neuron_indices:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          uniqueItems: true
+        token_ids:
+          type: array
+          minItems: 1
+          maxItems: 512
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+    NeuronBaselineCondition:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - mode
+      properties:
+        id:
+          type: string
+          const: baseline
+        mode:
+          type: string
+          const: baseline
+    NeuronZeroCondition:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - mode
+      - scope
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9._~-]+$
+          not:
+            const: baseline
+        mode:
+          type: string
+          const: zero
+        scope:
+          type: string
+          enum:
+          - prompt
+          - continuation
+          - all
+    NeuronScaleCondition:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - mode
+      - scope
+      - factor
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9._~-]+$
+          not:
+            const: baseline
+        mode:
+          type: string
+          const: scale
+        scope:
+          type: string
+          enum:
+          - prompt
+          - continuation
+          - all
+        factor:
+          type: number
+          minimum: -3.4028234663852886e+38
+          maximum: 3.4028234663852886e+38
+    NeuronAddCondition:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - mode
+      - scope
+      - delta
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9._~-]+$
+          not:
+            const: baseline
+        mode:
+          type: string
+          const: add
+        scope:
+          type: string
+          enum:
+          - prompt
+          - continuation
+          - all
+        delta:
+          type: number
+          minimum: -3.4028234663852886e+38
+          maximum: 3.4028234663852886e+38
+    NeuronCondition:
+      oneOf:
+      - $ref: '#/components/schemas/NeuronBaselineCondition'
+      - $ref: '#/components/schemas/NeuronZeroCondition'
+      - $ref: '#/components/schemas/NeuronScaleCondition'
+      - $ref: '#/components/schemas/NeuronAddCondition'
+      discriminator:
+        propertyName: mode
+        mapping:
+          baseline: '#/components/schemas/NeuronBaselineCondition'
+          zero: '#/components/schemas/NeuronZeroCondition'
+          scale: '#/components/schemas/NeuronScaleCondition'
+          add: '#/components/schemas/NeuronAddCondition'
+    NeuronComparisonRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - model_revision
+      - module_id
+      - neuron_indices
+      - token_ids
+      - conditions
+      - top_k
+      - max_new_tokens
+      - decoding
+      properties:
+        model_revision:
+          $ref: '#/components/schemas/ModelRevision'
+        module_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9._~-]+$
+        neuron_indices:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          uniqueItems: true
+        token_ids:
+          type: array
+          minItems: 1
+          maxItems: 512
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+        conditions:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/NeuronCondition'
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 20
+        max_new_tokens:
+          type: integer
+          minimum: 0
+          maximum: 64
+        decoding:
+          type: string
+          const: greedy
+    NeuronSection:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - shape
+      - offset
+      - byte_length
+      properties:
+        name:
+          type: string
+          enum:
+          - activations
+          - probabilities
+        shape:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+        offset:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        byte_length:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+    NeuronContinuation:
+      type: object
+      additionalProperties: false
+      required:
+      - condition_id
+      - token_ids
+      - text
+      - finish_reason
+      properties:
+        condition_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9._~-]+$
+        token_ids:
+          type: array
+          minItems: 0
+          maxItems: 64
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+        text:
+          type: string
+          maxLength: 1048576
+        finish_reason:
+          type: string
+          enum:
+          - not_requested
+          - eos
+          - length
+    NeuronActivationsMetadata:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - session_id
+      - model_id
+      - model_revision
+      - execution
+      - limits
+      - module
+      - token_ids
+      - neuron_indices
+      - dtype
+      - byte_order
+      - layout
+      - sections
+      - byte_length
+      properties:
+        kind:
+          type: string
+          const: neuron_activations
+        session_id:
+          type: string
+          format: uuid
+        model_id:
+          type: string
+          minLength: 1
+        model_revision:
+          $ref: '#/components/schemas/ModelRevision'
+        execution:
+          $ref: '#/components/schemas/NeuronExecution'
+        limits:
+          $ref: '#/components/schemas/NeuronLimits'
+        module:
+          $ref: '#/components/schemas/NeuronModule'
+        token_ids:
+          type: array
+          minItems: 1
+          maxItems: 512
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+        neuron_indices:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          uniqueItems: true
+        dtype:
+          type: string
+          const: float32
+        byte_order:
+          type: string
+          const: little
+        layout:
+          type: string
+          const: c
+        sections:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/NeuronSection'
+        byte_length:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+    NeuronComparisonMetadata:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - session_id
+      - model_id
+      - model_revision
+      - execution
+      - limits
+      - module
+      - token_ids
+      - neuron_indices
+      - dtype
+      - byte_order
+      - layout
+      - sections
+      - byte_length
+      - conditions
+      - top_k
+      - max_new_tokens
+      - decoding
+      - candidate_token_ids
+      - top_token_ids
+      - continuations
+      properties:
+        kind:
+          type: string
+          const: neuron_comparison
+        session_id:
+          type: string
+          format: uuid
+        model_id:
+          type: string
+          minLength: 1
+        model_revision:
+          $ref: '#/components/schemas/ModelRevision'
+        execution:
+          $ref: '#/components/schemas/NeuronExecution'
+        limits:
+          $ref: '#/components/schemas/NeuronLimits'
+        module:
+          $ref: '#/components/schemas/NeuronModule'
+        token_ids:
+          type: array
+          minItems: 1
+          maxItems: 512
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+        neuron_indices:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          uniqueItems: true
+        dtype:
+          type: string
+          const: float32
+        byte_order:
+          type: string
+          const: little
+        layout:
+          type: string
+          const: c
+        sections:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/NeuronSection'
+        byte_length:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        conditions:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/NeuronCondition'
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 20
+        max_new_tokens:
+          type: integer
+          minimum: 0
+          maximum: 64
+        decoding:
+          type: string
+          const: greedy
+        candidate_token_ids:
+          type: array
+          minItems: 1
+          maxItems: 80
+          items:
+            type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          uniqueItems: true
+        top_token_ids:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            type: array
+            minItems: 1
+            maxItems: 20
+            items:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+            uniqueItems: true
+        continuations:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/NeuronContinuation'
     StreamMetadata:
       description: JSON payload of META_JSON; never a JSON encoding of numeric DATA.
       oneOf:
+        - $ref: "#/components/schemas/NeuronActivationsMetadata"
+        - $ref: "#/components/schemas/NeuronComparisonMetadata"
         - $ref: "#/components/schemas/TensorMetadata"
         - $ref: "#/components/schemas/InputEmbeddingsMetadata"
         - $ref: "#/components/schemas/InputEmbeddingsDistributionsMetadata"
@@ -1367,6 +2181,8 @@ components:
       discriminator:
         propertyName: kind
         mapping:
+          neuron_activations: "#/components/schemas/NeuronActivationsMetadata"
+          neuron_comparison: "#/components/schemas/NeuronComparisonMetadata"
           tensor: "#/components/schemas/TensorMetadata"
           input_embeddings: "#/components/schemas/InputEmbeddingsMetadata"
           input_embeddings_distributions: "#/components/schemas/InputEmbeddingsDistributionsMetadata"
