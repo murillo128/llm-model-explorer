@@ -47,11 +47,7 @@ def metadata(length: int = 8) -> dict[str, object]:
         for c in FIXTURES["wire_cases"]
         + EMBEDDINGS["wire_cases"]
         + ANALYSIS["wire_cases"]
-        + [
-            c
-            for c in NEURONS["wire_cases"]
-            if c["name"] in ("neuron-activations", "neuron-partial-cancel")
-        ]
+        + NEURONS["wire_cases"]
         if c["expected"]["outcome"] != "reject"
     ],
     ids=lambda c: c["name"],
@@ -106,16 +102,21 @@ def test_shared_control_schemas(case: dict[str, Any]) -> None:
 
 @pytest.mark.parametrize(
     "case",
-    [c for c in NEURONS["cases"] if c["schema"] == "NeuronActivationsMetadata"],
+    [
+        c
+        for c in NEURONS["cases"]
+        if c["schema"] in ("NeuronActivationsMetadata", "NeuronComparisonMetadata")
+    ],
     ids=lambda c: c["name"],
 )
-def test_shared_neuron_activation_schema(case: dict[str, Any]) -> None:
+def test_shared_neuron_schema(case: dict[str, Any]) -> None:
     value = deepcopy(NEURONS["bases"][case["base"]])
     for path, replacement in case["edits"]:
         target = value
         for key in path[:-1]:
             target = target[key]
         target[path[-1]] = replacement
+
     if case["valid"]:
         METADATA.validate_python(value)
     else:
