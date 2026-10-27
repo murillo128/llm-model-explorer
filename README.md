@@ -8,15 +8,21 @@ The project is intentionally split into three independent system boundaries: a P
 
 The initial reference model is `HuggingFaceTB/SmolLM2-135M` Base.
 
-The implemented application retains the two proof-of-concept capabilities and adds the accepted static architecture view:
+The implemented application retains the two proof-of-concept capabilities and adds the accepted architecture view with bounded neuron experiments:
 
 - **Tensor Explorer**: discover model tensors through a hierarchical list and open complete 1D or 2D tensors for progressive visualization.
 - **Architecture Explorer**: inspect a prepared static graph, expand concrete layers, show dimensions, and inspect available native weights in the existing Matrix Explorer modal. Descriptions cover selected Qwen3, Qwen3.5, V-JEPA 2 encoder/predictor, and SmolLM2 variants; [local checkpoint acceptance and evidence](acceptance/architecture.md) are tracked separately from implementation.
 - **Tokenizer Explorer**: run the real Hugging Face tokenizer associated with the selected model, inspect its inline annotations, and progressively view the exact input-embedding rows for the current token sequence.
 
+Inside Architecture Explorer, **Neurons** selects a concrete SmolLM2 Base MLP and
+intermediate coordinate, opens its three linked weights, observes signed prompt
+activations, and compares baseline with zero/scale/add interventions and greedy
+continuations. See [usage and measured limits](acceptance/neuron-explorer-evidence.md).
+Execution support is admitted independently from static graph/tensor support.
+
 The detailed behavior of these explorers lives in their dedicated specifications. The general architecture must already support the later move to step-by-step inference without replacing the backend model, API boundary, session model, streaming mechanism, artifact cache, or renderer boundary.
 
-Future work will extend the same architecture to execution of transformer layers, attention and matrix/vector operations, plus activations, token generation, KV cache, sampling and other intermediate inference state. Execution remains UI-driven: even a continuous Play mode is conceptually a sequence of explicit steps requested by the UI rather than an autonomous backend process.
+Future work will extend the same architecture to general step-by-step execution of transformer layers, attention and matrix/vector operations, KV-cache inspection, sampling and other intermediate inference state. The bounded neuron experiment does not implement those general execution controls.
 
 ## Model-owned architecture definitions
 
