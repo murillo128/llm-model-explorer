@@ -1,6 +1,6 @@
 # Issue #320: neuron inspector evidence
 
-Source revision: `235ec74ff8351b6d9f5e777cd523722625a577f9`. Screenshots were captured on 2026-10-27 from
+Source revision: `16d0dd34cabd28a7f78e58f67bb1d8ba28e8580c`. Screenshots were captured on 2026-10-27 from
 the production Vite build with the real FastAPI backend, Chromium/SwiftShader,
 DPR 1, and the complete local `HuggingFaceTB/SmolLM2-135M` Base checkpoint at
 revision `93efa2f097d58c2a74874c7e644dbc9b0cee75a2`. No model artifacts are included.
@@ -74,6 +74,12 @@ tests/architecture-shell.spec.ts`. Unit/fast validation used `npm run api:check`
 `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`. These are
 scoped child results, not a claim that the full backend/integration or all
 reference portfolios have run. The aggregate epic retains those CI gates.
+
+Integration freshness: rebased onto `22373118f4664d0cae188bff87430b75172576a1`
+(#319). The UI tree is unchanged by that integration update. On the rebased
+source, `npm run check` passed again (1,267 unit tests), both neuron component
+browser cases passed, and the real checkpoint journey passed again; the four
+screenshots above were recaptured against that backend.
 
 ## Reproduction
 
