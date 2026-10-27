@@ -82,6 +82,15 @@ const requests: Request[] = [];
 const cancelled: string[] = [];
 let releaseCatalogue: (() => void) | undefined;
 const catalogue = { paused: false, failed: false, resume() { this.paused = false; releaseCatalogue?.(); } };
+function responseControl() {
+  const pending: (() => void)[] = [];
+  return {
+    paused: false,
+    async wait() { if (this.paused) await new Promise<void>(resolve => pending.push(resolve)); },
+    resume() { this.paused = false; for (const release of pending.splice(0)) release(); },
+  };
+}
+const responses = { architecture: responseControl(), capabilities: responseControl() };
 const originalFetch = window.fetch.bind(window);
 window.fetch = async (input, options) => {
   metrics.fetches++;
@@ -97,10 +106,14 @@ window.fetch = async (input, options) => {
   }
   if (path === '/sessions') return json(architectureMode && JSON.parse(String(options?.body)).model_id === sessionB.model_id ? sessionB : sessionA, 201);
   if (path.endsWith('/neuron-capabilities')) {
+    await responses.capabilities.wait();
     const session = path.includes(sessionB.id) ? sessionB : sessionA;
     return json({ ...(neuronMode ? neuronCapabilities : unavailableNeurons), session_id: session.id, model_id: session.model_id, model_revision: session.model_revision });
   }
-  if (neuronMode && path.endsWith('/architecture')) return json({ ...neuronArchitecture, model_id: sessionA.model_id });
+  if (neuronMode && path.endsWith('/architecture')) {
+    await responses.architecture.wait();
+    return json({ ...neuronArchitecture, model_id: sessionA.model_id });
+  }
   if (architectureMode && path.endsWith('/architecture')) return json(inspectionFixture(tensors, path.includes(sessionB.id) ? sessionB.model_id : sessionA.model_id, loraMode));
   if (path.endsWith('/tensors')) return json({ tensors, coverage: architectureMode ? 'partial' : 'complete', diagnostics: architectureMode ? [{ code: 'partial', message: 'Packed weights are metadata only.' }] : [] });
   if (path === `/sessions/${sessionA.id}`) return json(sessionA);
@@ -150,9 +163,9 @@ function pixels(renderer: GridRenderer) {
 const root = createRoot(document.getElementById('root')!);
 const app = <App config={{ backendBaseUrl: 'https://fixture.example' }} />;
 root.render(new URLSearchParams(location.search).has('strict') ? <StrictMode>{app}</StrictMode> : app);
-window.explorerFixture = { catalogue, DistributionRenderer, tensors, metrics, renderers, requests, cancelled, callbacks, emit, end, metadata, data, pixels, unmount: () => root.unmount() };
+window.explorerFixture = { catalogue, responses, DistributionRenderer, tensors, metrics, renderers, requests, cancelled, callbacks, emit, end, metadata, data, pixels, unmount: () => root.unmount() };
 declare global { interface Window { explorerFixture: {
-  catalogue: typeof catalogue; DistributionRenderer: typeof DistributionRenderer; tensors: typeof tensors; metrics: typeof metrics; renderers: typeof renderers; requests: typeof requests;
+  catalogue: typeof catalogue; responses: typeof responses; DistributionRenderer: typeof DistributionRenderer; tensors: typeof tensors; metrics: typeof metrics; renderers: typeof renderers; requests: typeof requests;
   cancelled: typeof cancelled; callbacks: typeof callbacks; emit: typeof emit; end: typeof end;
   metadata: typeof metadata; data: typeof data; pixels: typeof pixels; unmount: () => void;
 } } }

@@ -22,11 +22,20 @@ export function NeuronInspector({ context, capabilities: result, inventory, stat
   const heading = useRef<HTMLHeadingElement>(null);
   const capabilities = result.capabilities;
   const module = capabilities?.modules.find(item => item.module_id === state.moduleId);
-  const initialScroll = useRef(state.scroll);
-  useLayoutEffect(() => { heading.current?.focus(); if (scroll.current) scroll.current.scrollTop = initialScroll.current; }, []);
+  const pendingScroll = useRef<number | null>(state.scroll);
+  useLayoutEffect(() => { heading.current?.focus(); }, []);
+  useLayoutEffect(() => {
+    // Loading content has no scroll range. Restore once its real content is
+    // laid out, then let later user scrolling own the offset.
+    if (!capabilities || !scroll.current || pendingScroll.current === null) return;
+    scroll.current.scrollTop = pendingScroll.current;
+    pendingScroll.current = null;
+  }, [capabilities]);
   return <section className="neuron-inspector explorer-card" aria-label="Neuron inspector">
     <header><h2 ref={heading} tabIndex={-1}>Neuron inspector</h2><button onClick={onBack}>Back to graph</button></header>
-    <div className="neuron-inspector-scroll" ref={scroll} onScroll={event => onChange({ scroll: event.currentTarget.scrollTop })}>
+    <div className="neuron-inspector-scroll" ref={scroll} onScroll={event => {
+      if (capabilities && pendingScroll.current === null) onChange({ scroll: event.currentTarget.scrollTop });
+    }}>
       {!capabilities && (result.error ? <p role="alert">{result.error} <button onClick={result.retry}>Retry neuron capabilities</button></p> : <p role="status">Retrieving neuron capabilities…</p>)}
       {capabilities && <>
         {(['observation', 'intervention', 'generation'] as const).map(name => {

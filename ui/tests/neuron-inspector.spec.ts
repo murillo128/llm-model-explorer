@@ -2,6 +2,79 @@ import { expect, test } from '@playwright/test';
 import { findComponent } from './architecture-controls';
 import { nativeCamera } from './native-camera';
 
+test('graph arrival preserves an active neuron weight inspection and its streams', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html?architecture&neurons`);
+  await page.evaluate(() => { window.explorerFixture.responses.architecture.paused = true; });
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('lab/alpha');
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  await page.getByRole('button', { name: 'Neurons', exact: true }).click();
+  await page.getByLabel('Concrete MLP').selectOption('mlp-7');
+  await page.getByRole('spinbutton', { name: 'Intermediate index' }).fill('2');
+  await page.getByRole('button', { name: 'Open gate weight' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Layer 7 · gate weight' });
+  await expect(dialog).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.explorerFixture.requests.length)).toBe(3);
+  await page.evaluate(() => {
+    const f = window.explorerFixture;
+    f.emit(0, 1, f.metadata(0)); f.data(0, [1, -2]);
+  });
+  const canvas = dialog.locator('.matrix-scroll canvas');
+  await expect(canvas).toBeVisible();
+  const elements = await Promise.all([dialog.elementHandle(), canvas.elementHandle(),
+    page.getByLabel('Neuron inspector', { exact: true }).elementHandle(),
+    page.getByLabel('Neuron experiment', { exact: true }).elementHandle()]);
+  const requestIds = await page.evaluate(() => window.explorerFixture.requests.map(r => r.id));
+  await page.evaluate(() => { window.explorerFixture.responses.architecture.resume(); });
+  await expect(page.getByLabel('Architecture graph', { exact: true })).toHaveAttribute('aria-busy', 'false');
+  await expect(dialog).toBeVisible();
+  for (const element of elements) expect(await element!.evaluate(node => node.isConnected)).toBe(true);
+  expect(await page.evaluate(() => ({ ids: window.explorerFixture.requests.map(r => r.id),
+    cancelled: window.explorerFixture.cancelled }))).toEqual({ ids: requestIds, cancelled: [] });
+  await page.evaluate(() => { window.explorerFixture.data(0, [3, -4, 5, -6]); });
+  await expect.poll(() => page.evaluate(() => window.explorerFixture.renderers.findLast(r => r.state === 'ready' && r.geometry.rows === 3 && r.geometry.columns === 2)?.readCell(2, 1)))
+    .toEqual({ state: 'finite', row: 2, column: 1, value: -6 });
+  await page.keyboard.press('Escape');
+  await expect.poll(() => page.evaluate(() => [...window.explorerFixture.cancelled].sort())).toEqual([...requestIds].sort());
+});
+
+test('delayed capabilities restore neuron inspector scroll after explorer switching', async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 960 });
+  await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html?architecture&neurons`);
+  await page.getByRole('combobox', { name: 'Model', exact: true }).selectOption('lab/alpha');
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  const graph = page.getByLabel('Architecture graph', { exact: true });
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  await page.getByRole('button', { name: 'Neurons', exact: true }).click();
+  await page.getByLabel('Concrete MLP').selectOption('mlp-7');
+  const index = page.getByRole('spinbutton', { name: 'Intermediate index' });
+  await index.fill('2');
+  const scroller = page.locator('.neuron-inspector-scroll');
+  await scroller.evaluate(node => { node.scrollTop = 140; });
+  await expect.poll(() => scroller.evaluate(node => node.scrollTop)).toBe(140);
+  await page.evaluate(() => { window.explorerFixture.responses.capabilities.paused = true; });
+  await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  await expect(scroller).toContainText('Retrieving neuron capabilities');
+  expect(await scroller.evaluate(node => node.scrollTop)).toBe(0);
+  await page.evaluate(() => { window.explorerFixture.responses.capabilities.resume(); });
+  await expect(page.getByLabel('Concrete MLP')).toHaveValue('mlp-7');
+  await expect(index).toHaveValue('2');
+  await expect.poll(() => scroller.evaluate(node => node.scrollTop)).toBe(140);
+  // Subsequent user scroll becomes the saved offset; restoration is not repeated.
+  await scroller.evaluate(node => { node.scrollTop = 80; });
+  await expect.poll(() => scroller.evaluate(node => node.scrollTop)).toBe(80);
+  await page.getByRole('button', { name: 'Neurons', exact: true }).click();
+  expect(await scroller.evaluate(node => node.scrollTop)).toBe(80);
+  await page.getByRole('button', { name: 'Tensor Explorer', exact: true }).click();
+  await page.getByRole('button', { name: 'Architecture Explorer', exact: true }).click();
+  await expect(graph).toHaveAttribute('aria-busy', 'false');
+  await expect(page.getByLabel('Concrete MLP')).toHaveValue('mlp-7');
+  await expect(index).toHaveValue('2');
+  await expect.poll(() => scroller.evaluate(node => node.scrollTop)).toBe(80);
+});
+
 for (const width of [1440, 760]) test(`neuron inspector preserves a concrete binding and graph context at ${width}px`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: 960 });
   await page.goto(`http://127.0.0.1:${Number(process.env.UI_TEST_PORT ?? 4173) + 1}/tests/tensor-explorer.html?architecture&neurons`);

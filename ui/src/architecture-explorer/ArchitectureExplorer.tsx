@@ -125,11 +125,16 @@ function SessionArchitectureExplorer(props: Props) {
     onChange={changeNeuron} onBack={closeNeuron} tokenizerAvailable={props.tokenizerAvailable} experiment={props.neuronExperiment} experimentTarget={experimentTarget} />;
   const experiment = <div ref={setExperimentTarget} className="neuron-experiment" aria-label="Neuron experiment" hidden={!neuron.open || !props.neuronExperiment} />;
   const matchedModule = inspected && neuronForInspection(capabilities.capabilities, inspected);
-  if (!response || response.status === 'unavailable') return <>
-    {browserTarget && createPortal(<p className="architecture-browser-state" role={result.error ? 'alert' : 'status'}>
+  // Graph retrieval replaces only this first pane. The neuron panel and its
+  // independent weight consumers must retain their positions and lifetimes.
+  return <>
+    {browserTarget && (!response || response.status === 'unavailable') && createPortal(<p className="architecture-browser-state" role={result.error ? 'alert' : 'status'}>
       {result.error ? 'Architecture browser unavailable. Retry retrieval.' : !response ? 'Retrieving prepared architecture…' : unavailable[response.reason]}
     </p>, browserTarget)}
-    <div className={`architecture-neuron-layout${neuron.open ? ' neuron-open' : ''}${neuron.open && props.neuronExperiment ? ' has-neuron-experiment' : ''}`}><div tabIndex={-1} className="architecture-explorer explorer-card architecture-empty" aria-label="Architecture capability">
+    <div className={`architecture-neuron-layout${neuron.open ? ' neuron-open' : ''}${neuron.open && props.neuronExperiment ? ' has-neuron-experiment' : ''}`}>
+    {response?.status === 'available' ? <ArchitectureCanvas key={JSON.stringify([session.id, response.model_id, response.graph.graph_id])} graph={response.graph} notices={band}
+      modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspected(null)} onInspect={(value) => { setInspected(value); onInspect?.(value); }} />
+      : <div tabIndex={-1} className="architecture-explorer explorer-card architecture-empty" aria-label="Architecture capability">
     <header className="architecture-empty-heading">Architecture</header>
     {band}
     <div className="architecture-capability-state">
@@ -141,14 +146,9 @@ function SessionArchitectureExplorer(props: Props) {
           </ul>}
           {response.requires_restart && response.reason !== 'restart_required' && <p>Restart the backend to prepare this model again.</p>}</div>}
     </div>
-    </div>
+    </div>}
     {panel}{experiment}</div>
-  </>;
-  return <>
-    <div className={`architecture-neuron-layout${neuron.open ? ' neuron-open' : ''}${neuron.open && props.neuronExperiment ? ' has-neuron-experiment' : ''}`}><ArchitectureCanvas key={JSON.stringify([session.id, response.model_id, response.graph.graph_id])} graph={response.graph} notices={band}
-      modelId={response.model_id} sessionId={session.id} view={views.get(response.model_id, response.graph)} onDismissInspection={() => setInspected(null)} onInspect={(value) => { setInspected(value); onInspect?.(value); }} />
-    {panel}{experiment}</div>
-    {inspected && result.inventory && inspected.sessionId === session.id && inspected.modelId === response.model_id && inspected.graphId === response.graph.graph_id &&
+    {response?.status === 'available' && inspected && result.inventory && inspected.sessionId === session.id && inspected.modelId === response.model_id && inspected.graphId === response.graph.graph_id &&
       <ArchitectureInspection key={JSON.stringify([inspected.sessionId, inspected.graphId, inspected.node?.id, inspected.boundary, inspected.parameterId, Boolean(inspected.structureOnly)])} context={props}
         onExploreNeurons={matchedModule ? () => openNeuron(inspected.trigger, matchedModule) : undefined}
         graph={response.graph} diagnostics={diagnostics.getSnapshot().records} inventory={result.inventory} selected={inspected} onParameterChange={(parameterId) => setInspected((previous) => previous ? { ...previous, parameterId } : null)} onClose={() => setInspected(null)} />}
