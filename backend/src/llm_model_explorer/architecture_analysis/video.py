@@ -218,14 +218,38 @@ def build(inputs: AnalysisInput, builder: GraphBuilder) -> None:
                 convention="zero on conditioned image tokens, current timestep on noisy tokens",
             )
         velocity = denoiser(
-            g, loop, "denoiser", latent, lp["text"], timestep, profile, lp["text_mask"]
+            g,
+            loop,
+            "denoiser",
+            latent,
+            lp["text"],
+            timestep,
+            profile,
+            lp["text_mask"],
+            configuration=lp["configuration"],
         )
     else:
         high = denoiser(
-            g, loop, "high_noise", latent, lp["text"], lp["time"], profile, lp["text_mask"]
+            g,
+            loop,
+            "high_noise",
+            latent,
+            lp["text"],
+            lp["time"],
+            profile,
+            lp["text_mask"],
+            configuration=lp["configuration"],
         )
         low = denoiser(
-            g, loop, "low_noise", latent, lp["text"], lp["time"], profile, lp["text_mask"]
+            g,
+            loop,
+            "low_noise",
+            latent,
+            lp["text"],
+            lp["time"],
+            profile,
+            lp["text_mask"],
+            configuration=lp["configuration"],
         )
         velocity = g.op(
             loop + ".expert_selection",
@@ -354,7 +378,7 @@ def register_video(registry: DescriptionRegistry) -> None:
 
         registry.register(
             Description(
-                Producer(f"{family}-video-base", "1", source),
+                Producer(f"{family}-video-base", "2" if family == "ltx" else "1", source),
                 "video_generation",
                 frozenset({"video_inspection"}),
                 frozenset({architecture}),

@@ -1,6 +1,6 @@
 """Source-backed T5/UMT5 encoders and LTX/Wan denoisers; static dataflow only."""
 
-from ..video_profiles import VideoProfile
+from ..video_profiles import VideoProfile, component_configuration
 from .dense import shape
 from .video_graph import Value, VideoGraph
 
@@ -17,12 +17,15 @@ def attention(
     family: str,
     cross: bool = False,
     positions: Value | None = None,
+    frequencies: Value | None = None,
     bias: Value | None = None,
     mask: Value | None = None,
 ) -> Value:
     external = {"x": x, "context": context}
     if positions is not None:
         external["positions"] = positions
+    if frequencies is not None:
+        external["frequencies"] = frequencies
     if bias is not None:
         external["bias"] = bias
     if mask is not None:
@@ -56,6 +59,18 @@ def attention(
                 weights=(module + "." + norm + ".weight",),
                 eps=1e-5 if family == "ltx" else 1e-6,
                 formula="out = x * rsqrt(mean(x^2, -1) + eps) * weight",
+            )
+        if frequencies is not None and name != "v" and not cross:
+            # LTX rotates the full projected width before splitting heads.
+            projected = g.op(
+                key + "." + name + ".rope",
+                key,
+                "rotary_embedding_3d",
+                {"x": projected, "frequencies": ports["frequencies"]},
+                projected.dims,
+                formula="out = x * frequencies[...,0] + rotate_pairs(x) * frequencies[...,1]",
+                rotate_pairs="(a,b) -> (-b,a)",
+                axes="time,height,width",
             )
         sequence = context_axis if family == "t5" or (cross and name != "q") else "N"
         projected = g.op(
@@ -257,6 +272,82 @@ def text_encoder(
     return g.end(key, x, extra_outputs={"mask": mask}), Value(key, "mask", mask.dims)
 
 
+def ltx_rotary_frequencies(
+    g: VideoGraph, key: str, latent: Value, configuration: Value, profile: VideoProfile
+) -> Value:
+    config = component_configuration(profile, "denoiser")
+    coords = g.op(
+        key + ".positions",
+        key,
+        "latent_grid_positions",
+        {"latent": latent},
+        shape("B", 3, "N"),
+        axes="time,height,width",
+        patch_size=[1, 1, 1],
+        layout="B,3,N; top-left patch corners, flattened in time,height,width order",
+    )
+    pixels = g.op(
+        key + ".pixel_coordinates",
+        key,
+        "latent_to_pixel_coordinates",
+        {"coords": coords},
+        coords.dims,
+        formula=(
+            "out = coords * reshape(scale_factors, [1, 3, 1]); "
+            "out[:,0,:] = max(out[:,0,:] + 1 - scale_factors[0], 0) if causal_fix else out[:,0,:]"
+        ),
+        scale_factors=[8, 32, 32],  # Both checked VAE profiles: time, height, width.
+        causal_fix=config.get("causal_temporal_positioning", False),
+    )
+    frame_rate = g.op(
+        key + ".frame_rate",
+        key,
+        "configuration_field",
+        {"configuration": configuration},
+        shape(),
+        formula="out = configuration.frame_rate",
+        field="frame_rate",
+        units="frames/second",
+    )
+    seconds = g.op(
+        key + ".temporal_coordinates",
+        key,
+        "temporal_coordinates_seconds",
+        {"pixels": pixels, "frame_rate": frame_rate},
+        pixels.dims,
+        formula="out = pixels / reshape([frame_rate, 1, 1], [1, 3, 1])",
+        units="seconds,pixels,pixels",
+    )
+    positions = g.op(
+        key + ".normalized_positions",
+        key,
+        "positional_normalization",
+        {"coordinates": seconds},
+        shape("B", "N", 3),
+        formula="out = transpose(coordinates / reshape(max_pos, [1, 3, 1]), [0, 2, 1])",
+        max_pos=config["positional_embedding_max_pos"],
+        axes="time,height,width",
+    )
+    return g.op(
+        key + ".rotary_frequencies",
+        key,
+        "ltx_rotary_frequencies",
+        {"positions": positions},
+        shape("B", "N", profile.hidden, 2),
+        formula=(
+            "f = theta**linspace(0,1,frequency_count)*pi/2; "
+            "angles = flatten((2*positions-1)[...,None,:]*f[:,None], -2); "
+            "out = stack(prefix_ones(repeat_pairs(cos(angles)), identity_prefix), "
+            "prefix_zeros(repeat_pairs(sin(angles)), identity_prefix), -1)"
+        ),
+        theta=config["positional_embedding_theta"],
+        frequency_count=profile.hidden // 6,
+        identity_prefix=profile.hidden % 6,
+        layout="B,N,D,2; cosine,sine; paired time,height,width per frequency",
+        compute_dtype="float32 before casting to model dtype",
+    )
+
+
 def denoiser(
     g: VideoGraph,
     parent: str,
@@ -266,20 +357,25 @@ def denoiser(
     time: Value,
     profile: VideoProfile,
     text_mask: Value,
+    *,
+    configuration: Value,
 ) -> Value:
     key, module = parent + "." + role, "video." + role
+    ltx = profile.family == "ltx"
+    inputs = {"latent": latent, "context": context, "time": time, "text_mask": text_mask}
+    if ltx:
+        inputs["configuration"] = configuration
     ports = g.begin(
         key,
         parent,
         role.replace("_", " ") + " denoiser",
-        {"latent": latent, "context": context, "time": time, "text_mask": text_mask},
+        inputs,
         selection="t >= boundary"
         if role == "high_noise"
         else "t < boundary"
         if role == "low_noise"
         else "single denoiser",
     )
-    ltx = profile.family == "ltx"
     if ltx:
         tokens = g.op(
             key + ".patchify",
@@ -302,14 +398,18 @@ def denoiser(
             stride=[1, 2, 2],
             output_layout="flatten spatial-temporal axes to B,N,D",
         )
-    positions = g.op(
-        key + ".positions",
-        key,
-        "latent_grid_positions",
-        {"latent": ports["latent"]},
-        shape("B", "N", 3),
-        axes="time,height,width",
-        causal_temporal_positioning=ltx and profile.release == "0.9.6",
+    positions = (
+        ltx_rotary_frequencies(g, key, ports["latent"], ports["configuration"], profile)
+        if ltx
+        else g.op(
+            key + ".positions",
+            key,
+            "latent_grid_positions",
+            {"latent": ports["latent"]},
+            shape("B", "N", 3),
+            axes="time,height,width",
+            causal_temporal_positioning=False,
+        )
     )
     timestep = g.op(
         key + ".time_embedding",
@@ -363,7 +463,7 @@ def denoiser(
                 "x": x,
                 "context": ctx,
                 "modulation": modulation,
-                "positions": positions,
+                "frequencies" if ltx else "positions": positions,
                 "text_mask": ports["text_mask"],
             },
             layer_index=index,
@@ -404,7 +504,8 @@ def denoiser(
             source + (".attn1" if ltx else ".self_attn"),
             heads=profile.heads,
             family=profile.family,
-            positions=p["positions"],
+            positions=None if ltx else p["positions"],
+            frequencies=p["frequencies"] if ltx else None,
         )
         gated = g.op(
             block + ".gate_attention",

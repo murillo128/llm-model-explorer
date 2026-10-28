@@ -3,6 +3,7 @@
 import copy
 import hashlib
 
+import numpy as np
 import pytest
 
 from llm_model_explorer.architecture_analysis import AnalysisInput
@@ -184,6 +185,89 @@ def test_source_specific_vae_and_text_semantics(graph: tuple[str, r.Architecture
             assert "video.vae.decoder.upsamples.3.upsamples.2.residual.6.weight" in names
         else:
             assert "video.vae.decoder.upsamples.14.residual.6.weight" in names
+
+
+def test_source_specific_positional_dependencies(graph: tuple[str, r.ArchitectureGraph]) -> None:
+    key, document = graph
+    operations = {n.operation for n in document.nodes}
+    if not key.startswith("ltx"):
+        assert "temporal_coordinates_seconds" not in operations
+        assert "ltx_rotary_frequencies" not in operations
+        return
+
+    # Pinned LTX pipeline/vae_encode/transformer3d: frame rate is a real input,
+    # not inferable from the grid. Both releases normalize seconds/pixels by
+    # [20, 2048, 2048]; only 0.9.6 has the causal first-frame correction.
+    by_id = {n.id: n for n in document.nodes}
+    seconds_nodes = [n for n in document.nodes if n.operation == "temporal_coordinates_seconds"]
+    assert len(seconds_nodes) == 1, "LTX positional encoding must depend on frame rate"
+    seconds = seconds_nodes[0]
+    grid = next(n for n in document.nodes if n.operation == "latent_grid_positions")
+    pixels = next(n for n in document.nodes if n.operation == "latent_to_pixel_coordinates")
+    normalized = next(n for n in document.nodes if n.operation == "positional_normalization")
+    frequencies = next(n for n in document.nodes if n.operation == "ltx_rotary_frequencies")
+    rate = next(n for n in document.nodes if attributes(n).get("field") == "frame_rate")
+    denoiser = by_id[seconds.parent_id]  # type: ignore[index]
+    loop = by_id[denoiser.parent_id]  # type: ignore[index]
+    root = next(n for n in document.nodes if n.parent_id is None)
+    edges = {
+        (e.source.node_id, e.source.port_id, e.target.node_id, e.target.port_id)
+        for e in document.edges
+    }
+    assert {
+        (root.id, "configuration", loop.id, "configuration"),
+        (loop.id, "configuration", denoiser.id, "configuration"),
+        (denoiser.id, "configuration", rate.id, "configuration"),
+        (denoiser.id, "latent", grid.id, "latent"),
+        (grid.id, "out", pixels.id, "coords"),
+        (pixels.id, "out", seconds.id, "pixels"),
+        (rate.id, "out", seconds.id, "frame_rate"),
+        (seconds.id, "out", normalized.id, "coordinates"),
+        (normalized.id, "out", frequencies.id, "positions"),
+    } <= edges
+    assert attributes(pixels)["scale_factors"] == [8, 32, 32]
+    assert attributes(pixels)["causal_fix"] is (key == "ltx-0.9.6")
+    assert pixels.formula == (
+        "out = coords * reshape(scale_factors, [1, 3, 1]); "
+        "out[:,0,:] = max(out[:,0,:] + 1 - scale_factors[0], 0) if causal_fix else out[:,0,:]"
+    )
+    assert attributes(normalized)["max_pos"] == [20, 2048, 2048]
+    assert normalized.formula == (
+        "out = transpose(coordinates / reshape(max_pos, [1, 3, 1]), [0, 2, 1])"
+    )
+    assert attributes(frequencies)["theta"] == 10000
+    assert attributes(frequencies)["frequency_count"] == 341
+    assert attributes(frequencies)["identity_prefix"] == 2
+
+    # Evaluate only the explicitly bounded displayed expression, not an inference
+    # implementation. This guards division, axis/layout and unchanged spatial
+    # coordinates with independent examples: frame 8 is .32 s at 25 fps, .16 at 50.
+    assert seconds.formula == "out = pixels / reshape([frame_rate, 1, 1], [1, 3, 1])"
+    expression = seconds.formula.removeprefix("out = ")
+    for frame_rate, expected in ((25, 0.32), (50, 0.16)):
+        actual = eval(
+            expression,
+            {"__builtins__": {}, "reshape": np.reshape},
+            {"pixels": np.array([[[8.0], [32.0], [64.0]]]), "frame_rate": frame_rate},
+        )
+        np.testing.assert_allclose(actual, [[[expected], [32.0], [64.0]]], rtol=0, atol=1e-15)
+
+    rotations = [n for n in document.nodes if n.operation == "rotary_embedding_3d"]
+    assert len(rotations) == 56  # Q and K in each of 28 real blocks, including block 1.
+    for rotation in rotations:
+        attention = by_id[rotation.parent_id]  # type: ignore[index]
+        block = by_id[attention.parent_id]  # type: ignore[index]
+        assert {
+            (frequencies.id, "out", block.id, "frequencies"),
+            (block.id, "frequencies", attention.id, "frequencies"),
+            (attention.id, "frequencies", rotation.id, "frequencies"),
+        } <= edges
+        assert rotation.formula == (
+            "out = x * frequencies[...,0] + rotate_pairs(x) * frequencies[...,1]"
+        )
+        assert attributes(rotation)["rotate_pairs"] == "(a,b) -> (-b,a)"
+        heads = [by_id[e.target.node_id] for e in document.edges if e.source.node_id == rotation.id]
+        assert len(heads) == 1 and heads[0].operation == "split_heads"
 
 
 @pytest.mark.parametrize(

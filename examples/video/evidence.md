@@ -30,7 +30,9 @@ No weights, caches or complete generated graphs are repository artifacts.
 The [LTX report](evidence/ltx-0.9.8.json) and
 [Wan report](evidence/wan-ti2v-5b.json) record source sizes/hashes, graph identities,
 token IDs, selected matrix identities, complete logical-stream SHA-256 hashes and
-process high-water RSS. The matrix oracle uses bounded slices of the original
+process high-water RSS for descriptor revision 1. The LTX positional correction
+below supersedes its graph identity/count; the original numerical measurements
+are retained as recorded. The matrix oracle uses bounded slices of the original
 Safetensors files and the source loader's weight-scale rule; it does not call the
 application decoder or instantiate an upstream model.
 
@@ -78,7 +80,47 @@ The existing real importer refresh browser test also passed with regenerated IDs
 The fixture update was checked to change only analyzer-derived identifiers and
 revision, preserving its structure and navigation correspondence.
 
-## Repository checks
+## LTX positional dependency correction
+
+LTX descriptor revision 2 carries frame rate from the semantic configuration to
+temporal coordinates and the Q/K rotary path in every block. The reviewed
+[pipeline](https://github.com/Lightricks/LTX-Video/blob/4b2d053057623ddd4d0a1d3e9cd28890e9ef487f/ltx_video/pipelines/pipeline_ltx_video.py#L1143-L1149),
+[coordinate conversion](https://github.com/Lightricks/LTX-Video/blob/4b2d053057623ddd4d0a1d3e9cd28890e9ef487f/ltx_video/models/autoencoders/vae_encode.py#L176-L208)
+and [transformer](https://github.com/Lightricks/LTX-Video/blob/4b2d053057623ddd4d0a1d3e9cd28890e9ef487f/ltx_video/models/transformers/transformer3d.py#L193-L254)
+establish pixel-to-second conversion, positional normalization and the exponential
+frequency grid. LTX rotates paired channels across the full projected width
+before splitting attention heads. The 0.9.6 causal coordinate correction is
+explicit; 0.9.8 retains the reviewed default without that correction.
+
+The regression first failed for both LTX releases on the previous implementation
+(two failed, three Wan controls passed), then passed for all five profiles.
+The final focused video/graph/service suite passed 388 cases in 37.69 seconds;
+Ruff, formatting and mypy passed. A fresh installed-wheel smoke passed 18 cases
+in 58.29 seconds. Full serialized metadata graphs for all three Wan profiles
+retained their exact SHA-256 hashes, while both LTX graph identities changed.
+Only the LTX producer revision changed; unrelated analyzer identities are stable.
+
+A fresh production build and complete-package LTX browser run passed in 56.8
+seconds, including native block-1 weight inspection. The retained 25,391,240,842-byte
+package prepared graph `31cd81a8dbd5093e32c80ace653e8a1e9af9a2fac97b65c7439585d4dd9f223e`
+with 2,300 nodes and 1,160 parameters. Observed preparation was 33.396 seconds
+(29.320 seconds hashing; 2.460 seconds analysis). The LTX captures above are from
+this revision. Export and original-file numerical comparisons were not repeated
+for this descriptor-only correction; their earlier reports remain separately
+identified. No additional complete checkpoint acceptance is claimed.
+
+Focused reproduction after the correction:
+
+```sh
+cd backend
+uv run --locked pytest tests/test_video_architecture.py tests/test_video_export.py \
+  tests/test_video_fp8.py tests/test_architecture_analysis.py tests/test_architecture_service.py -q
+```
+
+The production-browser command in the example README selects `video.spec.ts`
+with `LMEX_VIDEO_REFERENCE_PACKAGE` pointing at the complete local LTX package.
+
+## Repository checks before the positional correction
 
 - API validation passed: 468 references, 130 instance cases, 296 architecture
   cases, 81 neuron cases, 8 neuron payloads and 138 reproducible wire fixtures.
@@ -110,6 +152,13 @@ inputs and evidence roots outside Git and use isolated browser ports.
 
 ## Test ownership and independent expectations
 
+- LTX positional conformance is owned by `test_video_architecture.py`. The pinned
+  pipeline, `vae_encode.py` and `transformer3d.py` provide the oracle: latent-to-pixel
+  stride `[8,32,32]`, the 0.9.6-only causal correction, frame-rate conversion,
+  normalization by `[20,2048,2048]`, and full-width rotary frequencies. The regression
+  checks the actual configuration-to-Q/K edges for both releases and the displayed
+  expression with pixel frame 8 at 25/50 fps (0.32/0.16 seconds), preserving spatial
+  coordinates. Existing profile/graph tests cover all Wan conventions separately.
 - Backend storage owns FP8 admission and numerical correctness. Hand-written
   E4M3FN bytes for `[1, -2, 0.5]`, weight scale `0.25`, and a distinct input
   scale must produce `[0.25, -0.5, 0.125]`. Exercise partial/chunk/ordered-row
