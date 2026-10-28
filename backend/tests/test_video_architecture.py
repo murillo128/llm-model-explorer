@@ -239,6 +239,30 @@ def test_source_specific_positional_dependencies(graph: tuple[str, r.Architectur
     assert attributes(frequencies)["frequency_count"] == 341
     assert attributes(frequencies)["identity_prefix"] == 2
 
+    # The pinned pipeline's unpatchify takes latent geometry, independently of
+    # its frame-rate-dependent RoPE. Its grid must describe T,H,W, not cos/sin.
+    unpatchify = next(n for n in document.nodes if n.operation == "unpatchify_latents")
+    grid_inputs = [
+        e.source
+        for e in document.edges
+        if e.target.node_id == unpatchify.id and e.target.port_id == "grid"
+    ]
+    assert len(grid_inputs) == 1
+    geometry = by_id[grid_inputs[0].node_id]
+    assert geometry.operation == "latent_grid_shape", "Unpatchify needs geometry, not RoPE"
+    assert geometry.formula == "out = shape(latent)[-3:]"
+    assert attributes(geometry)["axes"] == "time,height,width"
+    assert {p.id for p in geometry.ports if p.direction == "input"} == {"latent"}
+    assert (denoiser.id, "latent", geometry.id, "latent") in edges
+    dimensions = [r.ArchitectureConstantDimension(kind="constant", value=3)]
+    assert next(p for p in geometry.ports if p.id == "out").shape == dimensions
+    assert next(p for p in unpatchify.ports if p.id == "grid").shape == dimensions
+    assert next(p for p in unpatchify.ports if p.id == "out").shape == [
+        r.ArchitectureSymbolDimension(kind="symbol", name="B"),
+        r.ArchitectureConstantDimension(kind="constant", value=128),
+        *(r.ArchitectureSymbolDimension(kind="symbol", name=name) for name in ("T", "H", "W")),
+    ]
+
     # Evaluate only the explicitly bounded displayed expression, not an inference
     # implementation. This guards division, axis/layout and unchanged spatial
     # coordinates with independent examples: frame 8 is .32 s at 25 fps, .16 at 50.
@@ -254,9 +278,11 @@ def test_source_specific_positional_dependencies(graph: tuple[str, r.Architectur
 
     rotations = [n for n in document.nodes if n.operation == "rotary_embedding_3d"]
     assert len(rotations) == 56  # Q and K in each of 28 real blocks, including block 1.
+    rotary_blocks = set()
     for rotation in rotations:
         attention = by_id[rotation.parent_id]  # type: ignore[index]
         block = by_id[attention.parent_id]  # type: ignore[index]
+        rotary_blocks.add(block.id)
         assert {
             (frequencies.id, "out", block.id, "frequencies"),
             (block.id, "frequencies", attention.id, "frequencies"),
@@ -268,6 +294,11 @@ def test_source_specific_positional_dependencies(graph: tuple[str, r.Architectur
         assert attributes(rotation)["rotate_pairs"] == "(a,b) -> (-b,a)"
         heads = [by_id[e.target.node_id] for e in document.edges if e.source.node_id == rotation.id]
         assert len(heads) == 1 and heads[0].operation == "split_heads"
+    assert {
+        (e.target.node_id, e.target.port_id)
+        for e in document.edges
+        if e.source.node_id == frequencies.id
+    } == {(block, "frequencies") for block in rotary_blocks}
 
 
 @pytest.mark.parametrize(

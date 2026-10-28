@@ -82,7 +82,7 @@ revision, preserving its structure and navigation correspondence.
 
 ## LTX positional dependency correction
 
-LTX descriptor revision 2 carries frame rate from the semantic configuration to
+LTX descriptor revision 3 carries frame rate from the semantic configuration to
 temporal coordinates and the Q/K rotary path in every block. The reviewed
 [pipeline](https://github.com/Lightricks/LTX-Video/blob/4b2d053057623ddd4d0a1d3e9cd28890e9ef487f/ltx_video/pipelines/pipeline_ltx_video.py#L1143-L1149),
 [coordinate conversion](https://github.com/Lightricks/LTX-Video/blob/4b2d053057623ddd4d0a1d3e9cd28890e9ef487f/ltx_video/models/autoencoders/vae_encode.py#L176-L208)
@@ -92,19 +92,25 @@ frequency grid. LTX rotates paired channels across the full projected width
 before splitting attention heads. The 0.9.6 causal coordinate correction is
 explicit; 0.9.8 retains the reviewed default without that correction.
 
-The regression first failed for both LTX releases on the previous implementation
-(two failed, three Wan controls passed), then passed for all five profiles.
-The final focused video/graph/service suite passed 388 cases in 37.69 seconds;
+Unpatchification receives a separate three-element `T,H,W` value derived from the
+latent shape, following the pinned [pipeline call](https://github.com/Lightricks/LTX-Video/blob/4b2d053057623ddd4d0a1d3e9cd28890e9ef487f/ltx_video/pipelines/pipeline_ltx_video.py#L1297-L1306)
+and [patchifier](https://github.com/Lightricks/LTX-Video/blob/4b2d053057623ddd4d0a1d3e9cd28890e9ef487f/ltx_video/models/transformers/symmetric_patchifier.py#L62-L78).
+Rotary frequencies feed only the attention blocks, never the reconstruction grid.
+
+The frame-rate and geometry regressions each failed for both LTX releases before
+their respective repairs (two failed, three Wan controls passed). Both assertions
+remain in the final passing five-profile test. The focused video/graph/service
+suite passed 388 cases in 49.03 seconds;
 Ruff, formatting and mypy passed. A fresh installed-wheel smoke passed 18 cases
-in 58.29 seconds. Full serialized metadata graphs for all three Wan profiles
+in 69.34 seconds. Full serialized metadata graphs for all three Wan profiles
 retained their exact SHA-256 hashes, while both LTX graph identities changed.
 Only the LTX producer revision changed; unrelated analyzer identities are stable.
 
-A fresh production build and complete-package LTX browser run passed in 56.8
+A fresh production build and complete-package LTX browser run passed in 66.7
 seconds, including native block-1 weight inspection. The retained 25,391,240,842-byte
-package prepared graph `31cd81a8dbd5093e32c80ace653e8a1e9af9a2fac97b65c7439585d4dd9f223e`
-with 2,300 nodes and 1,160 parameters. Observed preparation was 33.396 seconds
-(29.320 seconds hashing; 2.460 seconds analysis). The LTX captures above are from
+package prepared graph `28ac3eddde9b6b2c7872b99666b31b5ba60aab0bcd879a558d1bb8551be1cc92`
+with 2,301 nodes and 1,160 parameters. Observed preparation was 40.146 seconds
+(33.592 seconds hashing; 3.602 seconds analysis). The LTX captures above are from
 this revision. Export and original-file numerical comparisons were not repeated
 for this descriptor-only correction; their earlier reports remain separately
 identified. No additional complete checkpoint acceptance is claimed.
@@ -158,7 +164,11 @@ inputs and evidence roots outside Git and use isolated browser ports.
   normalization by `[20,2048,2048]`, and full-width rotary frequencies. The regression
   checks the actual configuration-to-Q/K edges for both releases and the displayed
   expression with pixel frame 8 at 25/50 fps (0.32/0.16 seconds), preserving spatial
-  coordinates. Existing profile/graph tests cover all Wan conventions separately.
+  coordinates. The unpatchify regression additionally checks its geometry producer
+  and the three-element latent `T,H,W` shape, using the pinned pipeline's
+  `unpatchify` call as its oracle. Frequencies may feed only the attention blocks;
+  they cannot substitute for reconstruction dimensions. Existing profile/graph
+  tests cover all Wan conventions separately.
 - Backend storage owns FP8 admission and numerical correctness. Hand-written
   E4M3FN bytes for `[1, -2, 0.5]`, weight scale `0.25`, and a distinct input
   scale must produce `[0.25, -0.5, 0.125]`. Exercise partial/chunk/ordered-row

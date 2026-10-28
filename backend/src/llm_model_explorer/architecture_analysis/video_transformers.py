@@ -398,10 +398,22 @@ def denoiser(
             stride=[1, 2, 2],
             output_layout="flatten spatial-temporal axes to B,N,D",
         )
-    positions = (
-        ltx_rotary_frequencies(g, key, ports["latent"], ports["configuration"], profile)
-        if ltx
-        else g.op(
+    frequencies: Value | None = None
+    if ltx:
+        grid = g.op(
+            key + ".geometry",
+            key,
+            "latent_grid_shape",
+            {"latent": ports["latent"]},
+            shape(3),
+            formula="out = shape(latent)[-3:]",
+            axes="time,height,width",
+        )
+        frequencies = ltx_rotary_frequencies(
+            g, key, ports["latent"], ports["configuration"], profile
+        )
+    else:
+        grid = g.op(
             key + ".positions",
             key,
             "latent_grid_positions",
@@ -410,7 +422,7 @@ def denoiser(
             axes="time,height,width",
             causal_temporal_positioning=False,
         )
-    )
+    rotary_inputs = {"frequencies": frequencies} if frequencies is not None else {"positions": grid}
     timestep = g.op(
         key + ".time_embedding",
         key,
@@ -463,7 +475,7 @@ def denoiser(
                 "x": x,
                 "context": ctx,
                 "modulation": modulation,
-                "frequencies" if ltx else "positions": positions,
+                **rotary_inputs,
                 "text_mask": ports["text_mask"],
             },
             layer_index=index,
@@ -504,8 +516,8 @@ def denoiser(
             source + (".attn1" if ltx else ".self_attn"),
             heads=profile.heads,
             family=profile.family,
-            positions=None if ltx else p["positions"],
-            frequencies=p["frequencies"] if ltx else None,
+            positions=p.get("positions"),
+            frequencies=p.get("frequencies"),
         )
         gated = g.op(
             block + ".gate_attention",
@@ -583,7 +595,7 @@ def denoiser(
         key + ".unpatchify",
         key,
         "unpatchify_latents",
-        {"x": x, "grid": positions},
+        {"x": x, "grid": grid},
         shape("B", profile.channels, "T", "H", "W"),
         patch=[1, 1, 1] if ltx else [1, 2, 2],
         layout="B,C,T,H,W",

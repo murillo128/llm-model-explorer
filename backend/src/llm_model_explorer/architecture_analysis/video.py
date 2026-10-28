@@ -378,7 +378,7 @@ def register_video(registry: DescriptionRegistry) -> None:
 
         registry.register(
             Description(
-                Producer(f"{family}-video-base", "2" if family == "ltx" else "1", source),
+                Producer(f"{family}-video-base", "3" if family == "ltx" else "1", source),
                 "video_generation",
                 frozenset({"video_inspection"}),
                 frozenset({architecture}),
