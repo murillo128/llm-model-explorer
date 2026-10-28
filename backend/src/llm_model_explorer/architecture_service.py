@@ -24,6 +24,7 @@ from .architecture_analysis.model_defined import (
 from .architecture_analysis.model_defined_schema import MAX_DEFINITION_BYTES
 from .architecture_analysis.qwen35 import register_qwen35
 from .architecture_analysis.validation import MAX_BYTES, BindingContext, GraphError, model_finding
+from .architecture_analysis.video import register_video
 from .architecture_analysis.vjepa2 import register_vjepa2
 from .artifacts import ArchitectureArtifactSpec, ArtifactStore
 from .execution import BlockingWork
@@ -67,6 +68,7 @@ def packaged_registry() -> DescriptionRegistry:
     register_kev(registry)
     register_qwen35(registry)
     register_vjepa2(registry)
+    register_video(registry)
     return registry
 
 

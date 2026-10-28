@@ -65,9 +65,27 @@ The two compact Qwen checkpoints replace the exploratory requirement to use the 
 
 A complete local checkpoint means its configuration, all weight shards of the chosen variant, and the local assets required for advertised capabilities. It does not mean downloading all alternative formats, quantizations, or the V-JEPA 2 `original` weight copy. Metadata-only model directories, GGUF, remote-ID onboarding, automatic downloads, and execution of checkpoint Python code remain excluded.
 
-For Qwen, detail only the language component. Other modalities may appear as identified context blocks with verified connections. Among packaged, source-reviewed descriptions, V-JEPA 2 is the explicit exception: both its visual encoder and predictor must be expandable to the agreed mathematical level. DeepSeek-V2, GLM-4.7-Flash, and Kimi Linear add bounded language-model family descriptions covering their verified attention, routing, expert, and configured layer-pattern behavior. Do not imply executed routing, token inference, or generation. An encoder-only V-JEPA graph does not meet that reference. A text tokenizer, vocabulary embedding, decoder stack, or language head is not required for every model.
+For Qwen, detail only the language component. Other modalities may appear as identified context blocks with verified connections. The V-JEPA 2 reference expands both its visual encoder and predictor to the agreed mathematical level. DeepSeek-V2, GLM-4.7-Flash, and Kimi Linear add bounded language-model family descriptions covering their verified attention, routing, expert, and configured layer-pattern behavior. Do not imply executed routing, token inference, or generation. An encoder-only V-JEPA graph does not meet that reference. A text tokenizer, vocabulary embedding, decoder stack, or language head is not required for every model.
 
 The JEPA exception does not introduce video/image upload, playback or processing, visual inference, representation prediction, training losses, actions, planning, simulation, V-JEPA 2-AC, or generic JEPA/LeJEPA support. Do not add training or planning components absent from the selected model.
+
+## Static video references
+
+The selected video increment adds native inspection of LTX 2B Distilled 0.9.6
+and 0.9.8, Wan 2.2 TI2V-5B FP16, and Wan 2.2 T2V-A14B / I2V-A14B FP8 scaled.
+LTX and TI2V describe text-to-video and initial-image-plus-text-to-video;
+T2V-A14B describes text input and I2V-A14B requires an initial image plus text.
+The base single-scale pipeline includes text encoding, conditioning, denoising
+and VAE decoding. This is static architecture, local tokenization and tensor
+inspection through the existing explorers. It adds no video generation runtime,
+upload, player, saved video or neuron-execution eligibility.
+
+The offline package and physical representations belong to
+[model admission](backend/models.md#video-inspection-packages); the pinned
+artifacts, recipe and separate complete-checkpoint evidence are in
+[`examples/video`](../../examples/video/README.md). LTX-2/13B, unspecified LTX FP8,
+multiscale/upscalers, auxiliary prompt enhancement, LoRA, Wan Animate/S2V/Fun/Control,
+audio and arbitrary Comfy workflows remain outside this selection.
 
 ## Model-owned JSON definitions
 

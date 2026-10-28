@@ -12,6 +12,16 @@ Architecture-specific navigation, layout, routing, legends, repetition controls,
 
 ## One global navigable diagram
 
+The native `video_generation` scope uses this same graph, browser, repeated-stack
+navigation and weight modal. Show the semantic prompt/configuration and optional,
+required or absent initial-image ports declared by the model, with video frames
+distinct from latent values. Text encoder, conditioning, denoiser/expert and VAE
+groups retain their native provenance. Expert branches and symbolic prior/next
+state remain traceable; selecting a noninitial block binds to that exact expert
+and instance. Show modes and branch conditions through graph inspection, without
+a generation form, image-upload control, player or Generate action. Existing
+camera, scope, selection, search, dimension and content-change behavior applies.
+
 Use a single pannable, zoomable canvas with fit-to-window and centering on a selected component. Hierarchy organizes nested groups on the same canvas; it must not require separate level pages, drill-down routes, or stacked dialogs to understand structure.
 
 An optional isolated component may be the visible root of this same canvas, as
