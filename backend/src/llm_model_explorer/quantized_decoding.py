@@ -94,6 +94,8 @@ def decode_range(
     elif encoding == NF4_ENCODING:
         state = parse_state(snapshot, tensors["bitsandbytes__nf4"])
         outputs, inputs = state.shape
+    elif encoding == "fp8-e4m3-scaled":
+        outputs, inputs = tensors["weight"].shape
     else:
         raise ModelError("unsupported_representation", "Unsupported packed tensor encoding.")
     numel = safe_integer(outputs * inputs)
@@ -153,6 +155,10 @@ def decode_range(
             codes = ((packed >> ((column % 8) * 4)) & 15).to(torch.int64) - 8
             scales = gather("weight_scale", row * (inputs // 32) + column // 32).to(torch.float32)
             values = codes.to(torch.float32) * scales
+        elif encoding == "fp8-e4m3-scaled":
+            scale_name = "scale_weight" if "scale_weight" in tensors else "weight_scale"
+            scale = gather(scale_name, torch.zeros(1, dtype=torch.int64)).float()
+            values = gather("weight", logical).float() * scale
         else:
             packed = gather("weight", logical // 2)
             codes = torch.where(logical.remainder(2) == 0, packed >> 4, packed & 15).to(torch.int64)

@@ -2303,6 +2303,21 @@
       "context_edits": []
     },
     {
+      "name": "static-video-generation-scope",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "scope"
+          ],
+          "value": "video_generation"
+        }
+      ],
+      "context_edits": []
+    },
+    {
       "name": "visual-no-tokenizer",
       "valid": true,
       "schema_valid": true,
@@ -4710,6 +4725,2512 @@
             "name"
           ],
           "value": "other.weight"
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-complete-logical-inspection",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-complete-logical-alias",
+      "valid": true,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "alias_of"
+          ],
+          "value": "quantized"
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "logical_shape"
+          ],
+          "value": [
+            {
+              "kind": "constant",
+              "value": 2
+            },
+            {
+              "kind": "constant",
+              "value": 3
+            }
+          ]
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "storage"
+          ],
+          "value": []
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "1",
+            "inspection"
+          ],
+          "value": {
+            "status": "available",
+            "tensor_id": "tensor_packed"
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-wrong-primary-geometry",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "shape"
+          ],
+          "value": [
+            1,
+            1
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-wrong-primary-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "0",
+            "dtype"
+          ],
+          "value": "F32"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-wrong-scale-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "2",
+            "dtype"
+          ],
+          "value": "I32"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-foreign-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage",
+            "1",
+            "name"
+          ],
+          "value": "foreign.scale"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-missing-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage"
+          ],
+          "value": [
+            {
+              "name": "video.high_noise.blocks.1.q.weight",
+              "dtype": "F8_E4M3",
+              "shape": [
+                2,
+                3
+              ]
+            },
+            {
+              "name": "video.high_noise.blocks.1.q.scale_input",
+              "dtype": "F32",
+              "shape": [
+                1
+              ]
+            }
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-duplicate-companion",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "storage"
+          ],
+          "value": [
+            {
+              "name": "video.high_noise.blocks.1.q.weight",
+              "dtype": "F8_E4M3",
+              "shape": [
+                2,
+                3
+              ]
+            },
+            {
+              "name": "video.high_noise.blocks.1.q.scale_input",
+              "dtype": "F32",
+              "shape": [
+                1
+              ]
+            },
+            {
+              "name": "video.high_noise.blocks.1.q.scale_weight",
+              "dtype": "F32",
+              "shape": []
+            },
+            {
+              "name": "video.high_noise.blocks.1.q.weight",
+              "dtype": "F8_E4M3",
+              "shape": [
+                2,
+                3
+              ]
+            }
+          ]
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-wrong-logical-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "name"
+          ],
+          "value": "other.weight"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-auxiliary-logical-identity",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "name"
+          ],
+          "value": "packed.scales"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-wrong-actionable-id",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2",
+            "inspection",
+            "tensor_id"
+          ],
+          "value": "tensor_native"
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-wrong-inventory-format",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_format"
+          ],
+          "value": "unknown"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-missing-inventory-format",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_format"
+          ],
+          "delete": true
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-wrong-inventory-dtype",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "storage_dtype"
+          ],
+          "value": "F16"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-wrong-inventory-name",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "name"
+          ],
+          "value": "other.weight"
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
+        }
+      ]
+    },
+    {
+      "name": "video-fp8-wrong-inventory-shape",
+      "valid": false,
+      "schema_valid": true,
+      "edits": [
+        {
+          "path": [
+            "graph",
+            "parameters",
+            "2"
+          ],
+          "value": {
+            "id": "quantized",
+            "name": "video.high_noise.blocks.1.q.weight",
+            "logical_shape": [
+              {
+                "kind": "constant",
+                "value": 2
+              },
+              {
+                "kind": "constant",
+                "value": 3
+              }
+            ],
+            "binding": "quantized",
+            "inspection": {
+              "status": "available",
+              "tensor_id": "tensor_packed"
+            },
+            "provenance": [],
+            "storage": [
+              {
+                "name": "video.high_noise.blocks.1.q.weight",
+                "dtype": "F8_E4M3",
+                "shape": [
+                  2,
+                  3
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_input",
+                "dtype": "F32",
+                "shape": [
+                  1
+                ]
+              },
+              {
+                "name": "video.high_noise.blocks.1.q.scale_weight",
+                "dtype": "F32",
+                "shape": []
+              }
+            ]
+          }
+        }
+      ],
+      "context_edits": [
+        {
+          "path": [
+            "inventory",
+            "tensors"
+          ],
+          "value": [
+            {
+              "id": "tensor_native",
+              "name": "linear.weight",
+              "path": [
+                "linear",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F16",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_volume",
+              "name": "patch.weight",
+              "path": [
+                "patch",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3,
+                4
+              ],
+              "rank": 3,
+              "numel": 24,
+              "storage_dtype": "F32",
+              "logical_dtype": "float32"
+            },
+            {
+              "id": "tensor_packed",
+              "name": "video.high_noise.blocks.1.q.weight",
+              "path": [
+                "video",
+                "high_noise",
+                "blocks",
+                "1",
+                "q",
+                "weight"
+              ],
+              "shape": [
+                2,
+                3
+              ],
+              "rank": 2,
+              "numel": 6,
+              "storage_dtype": "F8_E4M3",
+              "storage_format": "fp8-e4m3-scaled",
+              "logical_dtype": "float32"
+            }
+          ]
+        },
+        {
+          "path": [
+            "inventory",
+            "tensors",
+            "2",
+            "shape"
+          ],
+          "value": [
+            3,
+            2
+          ]
+        }
+      ],
+      "physical_storage": [
+        {
+          "name": "video.high_noise.blocks.1.q.weight",
+          "dtype": "F8_E4M3",
+          "shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_input",
+          "dtype": "F32",
+          "shape": [
+            1
+          ]
+        },
+        {
+          "name": "video.high_noise.blocks.1.q.scale_weight",
+          "dtype": "F32",
+          "shape": []
         }
       ]
     },

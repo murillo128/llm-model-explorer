@@ -36,7 +36,18 @@ Newly discovered valid snapshots are prepared on demand without requiring restar
 
 ## Graph document and identity
 
-`ArchitectureGraph` is an object with required `graph_id`, `scope`, `coverage`, `symbols`, `nodes`, `edges`, `repetitions`, `parameters`, and `diagnostics` fields. Arrays may be empty except `nodes`, which must contain the supported scope's structure. `scope` is `language_model`, `visual_encoder_predictor`, or `model_defined`. The last denotes an author-supplied JSON graph, not source-verified semantics; its required origin context identifies that distinction and retains the author's declared scope as metadata. There is no universal text-tokenizer or language-head requirement.
+`ArchitectureGraph` is an object with required `graph_id`, `scope`, `coverage`, `symbols`, `nodes`, `edges`, `repetitions`, `parameters`, and `diagnostics` fields. Arrays may be empty except `nodes`, which must contain the supported scope's structure. `scope` is `language_model`, `visual_encoder_predictor`, `video_generation`, or `model_defined`. The last denotes an author-supplied JSON graph, not source-verified semantics; its required origin context identifies that distinction and retains the author's declared scope as metadata. There is no universal text-tokenizer or language-head requirement.
+
+`video_generation` describes a static generative pipeline. Existing group,
+operation, context and state records express semantic text/image/configuration
+inputs, conditional denoiser experts, repeated state updates and video-frame
+output. `value_type` and dimensions describe these interfaces; they authorize no
+generation, upload, player or execution endpoint. Tokenization, embedding lookup,
+architecture availability and numeric inspection remain separate capabilities.
+The selected tensor-wise FP8 bindings expose logical float32 weights through the
+existing binary tensor endpoints; marker and activation-scale records are not
+learned tensors or frontend decoders. Physical representation rules belong to
+[model admission](../backend/models.md#video-inspection-packages).
 
 `graph_id` is an opaque URL-safe analysis identity, stable for the same checkpoint content and semantic producer/schema revisions. It is not the raw internal checkpoint fingerprint. Model/session IDs, local paths, viewport settings, and timestamps are not graph-identity inputs. The public `model_id` lives in the response envelope, not in the cached graph, so relocating a checkpoint with a directory-name fallback does not corrupt reusable content.
 

@@ -29,6 +29,7 @@ Encoding = Literal[
     "nvfp4",
     "compressed-tensors-w4a16-int4",
     "bnb-nf4-dq",
+    "fp8-e4m3-scaled",
 ]
 _MODULE_NAME = re.compile(r"[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*\Z")
 
@@ -50,6 +51,11 @@ def encoding(config: dict[str, object]) -> Encoding:
         return "native"
     if not isinstance(quant, dict):
         raise unsupported()
+    if config.get("model_type") == "video_inspection":
+        from .video_fp8 import component_layouts
+
+        component_layouts(config)
+        return "fp8-e4m3-scaled"
     if config.get("model_type") == "qwen3" and quant.get("quant_method") == "gptq":
         required = {
             "bits": 4,
@@ -347,6 +353,10 @@ def logical_locations(
     config: dict[str, object], physical: tuple[PhysicalTensor, ...], snapshot: FileSnapshot
 ) -> tuple[TensorLocation, ...]:
     layout = encoding(config)
+    if layout == "fp8-e4m3-scaled":
+        from .video_fp8 import logical_locations as video_locations
+
+        return video_locations(config, physical, snapshot)
     if layout == "native":
         # Never filter/rename baseline native tensors, including scalars and buffers.
         return tuple(native_location(tensor) for tensor in physical)
