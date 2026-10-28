@@ -1,0 +1,116 @@
+{
+  "profile": "wan-ti2v-5b",
+  "sources": [
+    {
+      "artifact": "split_files/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors",
+      "license": "apache-2.0",
+      "repository": "Comfy-Org/Wan-2.2",
+      "revision": "ee6f4a40737a995bf5818954cfce6d59443b0f04",
+      "sha256": "456f901338bd9eadbded3828b819109a9b68e8a525ca5cf8d0049a69fcfeca1e",
+      "size_bytes": 9999658848
+    },
+    {
+      "artifact": "split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "license": "apache-2.0",
+      "repository": "Comfy-Org/Wan-2.2",
+      "revision": "ee6f4a40737a995bf5818954cfce6d59443b0f04",
+      "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+      "size_bytes": 6735906897
+    },
+    {
+      "artifact": "split_files/vae/wan2.2_vae.safetensors",
+      "license": "apache-2.0",
+      "repository": "Comfy-Org/Wan-2.2",
+      "revision": "ee6f4a40737a995bf5818954cfce6d59443b0f04",
+      "sha256": "e40321bd36b9709991dae2530eb4ac303dd168276980d3e9bc4b6e2b75fed156",
+      "size_bytes": 1409400960
+    },
+    {
+      "artifact": "special_tokens_map.json",
+      "license": "apache-2.0",
+      "repository": "google/umt5-xxl",
+      "revision": "66cb9e7e85526fe440a945569e42c72fb6cbc0ad",
+      "sha256": "14ef492a69e59396e918521a5f8394af1acf9f8dddd47273693b2b42570dfd12",
+      "size_bytes": 6623
+    },
+    {
+      "artifact": "spiece.model",
+      "license": "apache-2.0",
+      "repository": "google/umt5-xxl",
+      "revision": "66cb9e7e85526fe440a945569e42c72fb6cbc0ad",
+      "sha256": "e3909a67b780650b35cf529ac782ad2b6b26e6d1f849d3fbb6a872905f452458",
+      "size_bytes": 4548313
+    },
+    {
+      "artifact": "tokenizer.json",
+      "license": "apache-2.0",
+      "repository": "google/umt5-xxl",
+      "revision": "66cb9e7e85526fe440a945569e42c72fb6cbc0ad",
+      "sha256": "af904105ce1071b1202bba0059a841f4a7b85b48b6ec179c4948e3483476e0dd",
+      "size_bytes": 16853013
+    },
+    {
+      "artifact": "tokenizer_config.json",
+      "license": "apache-2.0",
+      "repository": "google/umt5-xxl",
+      "revision": "66cb9e7e85526fe440a945569e42c72fb6cbc0ad",
+      "sha256": "616015e2b6c26f9a98ae3171634518d440a46260ebc1115c2596792d33827bdc",
+      "size_bytes": 6841
+    }
+  ],
+  "package_bytes": 18162324592,
+  "numerical_oracle": "Safetensors original slices; float32(q) * weight scale only",
+  "model_id": "video/wan-2.2-ti2v-5b-fp16@fp8-e4m3-scaled",
+  "graph_id": "62492124dcf6a937a95c730d773d775e6acd69fcc219dd639129d4338dfda35d",
+  "scope": "video_generation",
+  "graph_bytes": 5665767,
+  "nodes": 2271,
+  "parameters": 1263,
+  "tensors": 1263,
+  "token_ids": [
+    320,
+    178040,
+    273,
+    106961,
+    702,
+    312,
+    7139,
+    274,
+    1
+  ],
+  "weights": [
+    {
+      "name": "video.denoiser.blocks.1.self_attn.q.weight",
+      "shape": [
+        3072,
+        3072
+      ],
+      "logical_bytes": 37748736,
+      "sha256_float32": "aedfc7d2e1b672db95be2d67e1585d5811dc9a4b59b394e5895ba0a0a8c00016",
+      "first_three": [
+        -0.076171875,
+        -0.0171356201171875,
+        -0.0413818359375
+      ],
+      "storage_format": "safetensors"
+    },
+    {
+      "name": "video.text_encoder.encoder.block.1.layer.0.SelfAttention.q.weight",
+      "shape": [
+        4096,
+        4096
+      ],
+      "logical_bytes": 67108864,
+      "sha256_float32": "d658917a192ff4e1ca8d913dee83863067e763e883d8d820c95f2f1f7c5674a6",
+      "first_three": [
+        0.0007847048109397292,
+        3.923524127458222e-05,
+        0.00014713215932715684
+      ],
+      "storage_format": "fp8-e4m3-scaled"
+    }
+  ],
+  "backend_peak_rss_kib": 764700,
+  "elapsed_seconds": 40.722,
+  "status": "passed"
+}

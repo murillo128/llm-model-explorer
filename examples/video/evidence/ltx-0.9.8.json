@@ -1,0 +1,125 @@
+{
+  "profile": "ltx-0.9.8",
+  "sources": [
+    {
+      "artifact": "ltxv-2b-0.9.8-distilled.safetensors",
+      "license": "other",
+      "repository": "Lightricks/LTX-Video",
+      "revision": "8984fa25007f376c1a299016d0957a37a2f797bb",
+      "sha256": "76aa8c4786af752fa6f951947129d5290c3c6c0b2fadcadea6b5e114ae2cad8f",
+      "size_bytes": 6340744492
+    },
+    {
+      "artifact": "text_encoder/model-00001-of-00002.safetensors",
+      "license": "openrail++",
+      "repository": "PixArt-alpha/PixArt-XL-2-1024-MS",
+      "revision": "b89adadeccd9ead2adcb9fa2825d3fabec48d404",
+      "sha256": "eb529f693f4b17773a24e787fcba29486d5e1700dadcc20bb91e4c8b00212d08",
+      "size_bytes": 9989150328
+    },
+    {
+      "artifact": "text_encoder/model-00002-of-00002.safetensors",
+      "license": "openrail++",
+      "repository": "PixArt-alpha/PixArt-XL-2-1024-MS",
+      "revision": "b89adadeccd9ead2adcb9fa2825d3fabec48d404",
+      "sha256": "58f33f4acba7a5502b6b3e4cb7863f8fd503d5012016428099bb460c98e2fe77",
+      "size_bytes": 9060119392
+    },
+    {
+      "artifact": "text_encoder/config.json",
+      "license": "openrail++",
+      "repository": "PixArt-alpha/PixArt-XL-2-1024-MS",
+      "revision": "b89adadeccd9ead2adcb9fa2825d3fabec48d404",
+      "sha256": "9a2865cce66d6dbfdc0fd185faed2394344fc5f61b2cbf9579ca2e6dc882f927",
+      "size_bytes": 788
+    },
+    {
+      "artifact": "tokenizer/added_tokens.json",
+      "license": "openrail++",
+      "repository": "PixArt-alpha/PixArt-XL-2-1024-MS",
+      "revision": "b89adadeccd9ead2adcb9fa2825d3fabec48d404",
+      "sha256": "4b1c1345a66fdd00264819c5adfc3142debfbd3b03767a04f95a39ac2277ca21",
+      "size_bytes": 2634
+    },
+    {
+      "artifact": "tokenizer/special_tokens_map.json",
+      "license": "openrail++",
+      "repository": "PixArt-alpha/PixArt-XL-2-1024-MS",
+      "revision": "b89adadeccd9ead2adcb9fa2825d3fabec48d404",
+      "sha256": "5c87151ef0f72a99d1f766a4c418bd2a1f90aaa30a8e22fe5eca9641daebb64f",
+      "size_bytes": 2201
+    },
+    {
+      "artifact": "tokenizer/spiece.model",
+      "license": "openrail++",
+      "repository": "PixArt-alpha/PixArt-XL-2-1024-MS",
+      "revision": "b89adadeccd9ead2adcb9fa2825d3fabec48d404",
+      "sha256": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86",
+      "size_bytes": 791656
+    },
+    {
+      "artifact": "tokenizer/tokenizer_config.json",
+      "license": "openrail++",
+      "repository": "PixArt-alpha/PixArt-XL-2-1024-MS",
+      "revision": "b89adadeccd9ead2adcb9fa2825d3fabec48d404",
+      "sha256": "71730771351a8f0463bd2e545fbfaadc9dc01a7a222306ff4795cc48dfe168c0",
+      "size_bytes": 20509
+    }
+  ],
+  "package_bytes": 25391240842,
+  "numerical_oracle": "Safetensors original slices; float32(q) * weight scale only",
+  "model_id": "video/ltx-0.9.8-2b-distilled-native",
+  "graph_id": "6166354c11555b7d2b8a4069972f096788154aba8118499a0053fd79efaef325",
+  "scope": "video_generation",
+  "graph_bytes": 5741164,
+  "nodes": 2295,
+  "parameters": 1160,
+  "tensors": 1163,
+  "token_ids": [
+    71,
+    5963,
+    3,
+    89,
+    4664,
+    147,
+    8,
+    2805,
+    5,
+    1
+  ],
+  "weights": [
+    {
+      "name": "video.denoiser.transformer_blocks.1.attn1.to_q.weight",
+      "shape": [
+        2048,
+        2048
+      ],
+      "logical_bytes": 16777216,
+      "sha256_float32": "f100d43dc2dca99e0634cdc47536e4d171e4f66e9139208b479608fcbb16b495",
+      "first_three": [
+        -0.004852294921875,
+        -0.00909423828125,
+        -0.0084228515625
+      ],
+      "storage_format": "safetensors"
+    },
+    {
+      "name": "video.text_encoder.encoder.block.1.layer.0.SelfAttention.q.weight",
+      "shape": [
+        4096,
+        4096
+      ],
+      "logical_bytes": 67108864,
+      "sha256_float32": "04f06885060aa6008c97c79e8547d826cb4e6cf01036036ba9c91be31500d1cc",
+      "first_three": [
+        0.003448486328125,
+        0.00141143798828125,
+        -0.00421142578125
+      ],
+      "storage_format": "safetensors"
+    }
+  ],
+  "backend_peak_rss_kib": 475248,
+  "elapsed_seconds": 85.183,
+  "status": "passed"
+}

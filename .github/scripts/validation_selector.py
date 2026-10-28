@@ -758,6 +758,7 @@ def effective_plan(plan):
             "LMEX_REFERENCE_MODEL_DIR",
             "LMEX_ARCHITECTURE_REFERENCES",
             "LMEX_LORA_REFERENCE_MODEL_ROOT",
+            "LMEX_VIDEO_REFERENCE_PACKAGE",
         )
         if os.environ.get(name)
     ]
@@ -782,9 +783,9 @@ def phase_targets(plan, gate, *, extended=False):
         # Reviewed files with no extended cases. Unknown files remain required.
         return [name for name in files if name not in {"transport.spec.ts", "scientific.spec.ts"}]
     if plan["portfolio"] == "routine":
-        # This one declared owner contains only extended cases. No other empty
+        # These declared owners contain only extended cases. No other empty
         # discovery result is accepted as successful/non-applicable execution.
-        return [name for name in files if name != "lora-reference.spec.ts"]
+        return [name for name in files if name not in {"lora-reference.spec.ts", "video.spec.ts"}]
     return files
 
 
