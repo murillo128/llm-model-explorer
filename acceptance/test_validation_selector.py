@@ -421,6 +421,20 @@ class SelectionTest(unittest.TestCase):
             selector.run_browser(plan, "integration", main=True, extended=True)
             command.assert_called_once()
 
+    def test_video_reference_is_extended_and_explicit_input_promotes_full_once(self):
+        plan = selector.select(["docs/spec/api/contract.md"])
+        self.assertNotIn("video.spec.ts", selector.phase_targets(plan, "integration"))
+        self.assertIn("video.spec.ts", selector.phase_targets(plan, "integration", extended=True))
+        with (
+            patch.dict("os.environ", {"LMEX_VIDEO_REFERENCE_PACKAGE": "/local/video"}, clear=True),
+            patch.object(selector.subprocess, "run") as command,
+        ):
+            selector.run_browser(plan, "integration", main=True)
+            self.assertIn(r"video\.spec\.ts", command.call_args.args[0])
+            self.assertEqual(command.call_args.kwargs["env"]["LMEX_TEST_PORTFOLIO"], "full")
+            selector.run_browser(plan, "integration", main=True, extended=True)
+            command.assert_called_once()
+
     def test_lora_browser_selects_its_independent_reference_tcp_owner(self):
         plan = selector.select(["ui/acceptance/lora-reference.spec.ts"])
         self.assertEqual(selector.targets(plan, "integration"), ["lora-reference.spec.ts"])

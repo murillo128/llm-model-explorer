@@ -1,0 +1,245 @@
+{
+  "evidence": "Selected immutable-URL byte ranges only; complete checkpoint acceptance pending",
+  "references": [
+    {
+      "artifact": "split_files/diffusion_models/wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
+      "revision_url": "https://huggingface.co/Comfy-Org/Wan-2.2/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/split_files/diffusion_models/wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
+      "declared_sha256": "cad711ae211c8b23455ec68cd6a190a33a3d874234a77eb57266d73f8f0e6c9f",
+      "original_shape": [
+        5120,
+        5120
+      ],
+      "sample_indices": [
+        [
+          0,
+          [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        ],
+        [
+          5119,
+          [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        ]
+      ],
+      "e4m3fn_hex": "e3e2d4e0e9da60444d666353e7e063e8",
+      "weight_scale": 0.0004336351703386754,
+      "input_scale": 1.0,
+      "logical_float32": [
+        -0.019079947844147682,
+        -0.017345406115055084,
+        -0.005203621927648783,
+        -0.013876325450837612,
+        -0.03122173249721527,
+        -0.008672703057527542,
+        0.013876325450837612,
+        0.0013009054819121957,
+        0.002818628679960966,
+        0.024283569306135178,
+        0.019079947844147682,
+        0.0047699869610369205,
+        -0.026018111035227776,
+        -0.013876325450837612,
+        0.019079947844147682,
+        -0.027752650901675224
+      ],
+      "status": "passed",
+      "tensor_name": "blocks.1.self_attn.q.weight"
+    },
+    {
+      "artifact": "split_files/diffusion_models/wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors",
+      "revision_url": "https://huggingface.co/Comfy-Org/Wan-2.2/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/split_files/diffusion_models/wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors",
+      "declared_sha256": "e71b96d7c82e638694c5e7fb98fac4bfb0e4ddc5fbbb4b1df40da8f0f1278a97",
+      "original_shape": [
+        5120,
+        5120
+      ],
+      "sample_indices": [
+        [
+          0,
+          [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        ],
+        [
+          5119,
+          [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        ]
+      ],
+      "e4m3fn_hex": "e2e7dfeddfe765de5a515b4ee6e36bec",
+      "weight_scale": 0.00033678949694149196,
+      "input_scale": 1.0,
+      "logical_float32": [
+        -0.013471580110490322,
+        -0.020207369700074196,
+        -0.010103684850037098,
+        -0.03502610698342323,
+        -0.010103684850037098,
+        -0.020207369700074196,
+        0.017513053491711617,
+        -0.009430105797946453,
+        0.006735790055245161,
+        0.003031105501577258,
+        0.007409369107335806,
+        0.0023575264494866133,
+        -0.018860211595892906,
+        -0.014818738214671612,
+        0.029637476429343224,
+        -0.032331790775060654
+      ],
+      "status": "passed",
+      "tensor_name": "blocks.1.self_attn.q.weight"
+    },
+    {
+      "artifact": "split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+      "revision_url": "https://huggingface.co/Comfy-Org/Wan-2.2/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+      "declared_sha256": "6122e79d55e0f235698d11d657f3b196c5273c830da00b2b013c5a048d5e6a42",
+      "original_shape": [
+        5120,
+        5120
+      ],
+      "sample_indices": [
+        [
+          0,
+          [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        ],
+        [
+          5119,
+          [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        ]
+      ],
+      "e4m3fn_hex": "e3d74ae2e9d562585568614de1de65e3",
+      "weight_scale": 0.00043198265484534204,
+      "input_scale": 1.0,
+      "logical_float32": [
+        -0.019007237628102303,
+        -0.006479739677160978,
+        0.0021599133033305407,
+        -0.017279306426644325,
+        -0.031102750450372696,
+        -0.005615774542093277,
+        0.017279306426644325,
+        0.006911722477525473,
+        0.005615774542093277,
+        0.02764688991010189,
+        0.015551375225186348,
+        0.0028078872710466385,
+        -0.015551375225186348,
+        -0.012095514684915543,
+        0.022463098168373108,
+        -0.019007237628102303
+      ],
+      "status": "passed",
+      "tensor_name": "blocks.1.self_attn.q.weight"
+    },
+    {
+      "artifact": "split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+      "revision_url": "https://huggingface.co/Comfy-Org/Wan-2.2/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+      "declared_sha256": "5471a457b6ac404202a5fbe6c11595a3d5641fc766b00f38763f72303fffc21e",
+      "original_shape": [
+        5120,
+        5120
+      ],
+      "sample_indices": [
+        [
+          0,
+          [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        ],
+        [
+          5119,
+          [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        ]
+      ],
+      "e4m3fn_hex": "e2e1dfe3e4e163395f526163e9e06dea",
+      "weight_scale": 0.0004228567995596677,
+      "input_scale": 1.0,
+      "logical_float32": [
+        -0.01691427268087864,
+        -0.015222844667732716,
+        -0.012685704044997692,
+        -0.018605699762701988,
+        -0.020297126844525337,
+        -0.015222844667732716,
+        0.018605699762701988,
+        0.00047571389586664736,
+        0.012685704044997692,
+        0.00422856817021966,
+        0.015222844667732716,
+        0.018605699762701988,
+        -0.03044568933546543,
+        -0.013531417585909367,
+        0.04397710785269737,
+        -0.03382854536175728
+      ],
+      "status": "passed",
+      "tensor_name": "blocks.1.self_attn.q.weight"
+    }
+  ]
+}

@@ -478,7 +478,7 @@ export interface components {
              * @description Validated backend physical format for this logical tensor.
              * @enum {string}
              */
-            storage_format?: "safetensors" | "gptq-int4" | "nvfp4" | "bnb-nf4-dq" | "compressed-tensors-w4a16-int4";
+            storage_format?: "safetensors" | "gptq-int4" | "nvfp4" | "bnb-nf4-dq" | "compressed-tensors-w4a16-int4" | "fp8-e4m3-scaled";
             /** @enum {string} */
             logical_dtype: "float32";
         };
@@ -1250,7 +1250,7 @@ export interface components {
             navigation_namespace?: string;
             graph_id: components["schemas"]["ArchitectureId"];
             /** @enum {string} */
-            scope: "language_model" | "visual_encoder_predictor" | "model_defined";
+            scope: "language_model" | "visual_encoder_predictor" | "video_generation" | "model_defined";
             /** @enum {string} */
             coverage: "complete" | "partial";
             symbols: components["schemas"]["ArchitectureSymbol"][];

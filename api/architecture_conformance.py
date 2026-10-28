@@ -165,6 +165,21 @@ def validate_packed_storage(parameter, geometry, tensor=None):
         expected = {'weight': ('U8', [output, inputs // 2]),
                     'weight_scale': ('F8_E4M3', [output, inputs // 16]),
                     'weight_scale_2': ('F32', []), 'input_scale': ('F32', [])}
+    elif representation == 'fp8-e4m3-scaled':
+        records = {s['name']: s for s in parameter['storage']}
+        require(len(records) == len(parameter['storage']), 'FP8 duplicate companion')
+        weight = records.pop(parameter['name'], None)
+        require(weight is not None and weight['dtype'] == 'F8_E4M3' and
+                weight['shape'] == geometry, 'FP8 matrix geometry')
+        scales = [name for name in records if name in
+                  (prefix + '.scale_weight', prefix + '.weight_scale')]
+        require(len(scales) == 1, 'FP8 mandatory weight scale')
+        legacy = scales[0].endswith('.scale_weight')
+        allowed = {scales[0], prefix + ('.scale_input' if legacy else '.input_scale')}
+        require(set(records) <= allowed and all(s['dtype'] in ('F16', 'BF16', 'F32') and
+                s['shape'] in ([], [1]) for s in records.values()), 'FP8 scalar companions')
+        require(tensor is None or tensor['storage_dtype'] == 'F8_E4M3', 'FP8 inventory dtype')
+        return
     elif representation == 'compressed-tensors-w4a16-int4':
         dtype = 'I32'
         scales = next((record for record in parameter['storage']
@@ -782,6 +797,7 @@ def fixtures():
     case('complete-native-alias-fused-quantized-rank-limited-symbolic', valid=True)
     case('url-safe-opaque-id', [set_('graph/graph_id', 'analysis.1~revision')], True)
     case('partial-architecture', [set_('graph/coverage', 'partial')], True)
+    case('static-video-generation-scope', [set_('graph/scope', 'video_generation')], True)
     case('visual-no-tokenizer', [set_('graph/scope', 'visual_encoder_predictor'), set_('graph/nodes/5/references', [])], True,
          context_edits=[set_('tokenizer_available', False)])
     case('model-defined-no-tokenizer', [set_('graph/scope', 'model_defined'), set_('graph/nodes/5/references', [])], True,
@@ -937,7 +953,14 @@ def fixtures():
         storage=[dict(name='packed.weight_packed', dtype='I32', shape=[8,16]),
                  dict(name='packed.weight_scale', dtype='F16', shape=[8,4]),
                  dict(name='packed.weight_shape', dtype='I64', shape=[2])])
+    fp8 = dict(id='quantized', name='video.high_noise.blocks.1.q.weight',
+        logical_shape=[dim(2), dim(3)], binding='quantized',
+        inspection=dict(status='available', tensor_id='tensor_packed'), provenance=[],
+        storage=[dict(name='video.high_noise.blocks.1.q.weight', dtype='F8_E4M3', shape=[2,3]),
+                 dict(name='video.high_noise.blocks.1.q.scale_input', dtype='F32', shape=[1]),
+                 dict(name='video.high_noise.blocks.1.q.scale_weight', dtype='F32', shape=[])])
     for label, parameter, dtype, representation, bad_scale_index, bad_scale_dtype in [
+        ('video-fp8', fp8, 'F8_E4M3', 'fp8-e4m3-scaled', 2, 'I32'),
         ('gptq', packed, 'I32', 'gptq-int4', 2, 'F32'),
         ('nvfp4', nvfp4, 'U8', 'nvfp4', 1, 'F32'),
         ('bnb-nf4-dq', bnb_nf4, 'U8', 'bnb-nf4-dq', 2, 'F16'),

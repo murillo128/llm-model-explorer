@@ -904,6 +904,7 @@ components:
           - nvfp4
           - bnb-nf4-dq
           - compressed-tensors-w4a16-int4
+          - fp8-e4m3-scaled
           description: Validated backend physical format for this logical tensor.
         logical_dtype:
           type: string
@@ -3143,6 +3144,7 @@ components:
           enum:
           - language_model
           - visual_encoder_predictor
+          - video_generation
           - model_defined
         coverage:
           type: string

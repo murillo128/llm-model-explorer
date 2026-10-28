@@ -81,6 +81,7 @@ class CiEntrypointsTest(unittest.TestCase):
             "LMEX_REFERENCE_MODEL_DIR",
             "LMEX_ARCHITECTURE_REFERENCES",
             "LMEX_LORA_REFERENCE_MODEL_ROOT",
+            "LMEX_VIDEO_REFERENCE_PACKAGE",
             "LMEX_REQUIRE_ARCHITECTURE_REFERENCES",
         ):
             self.env.pop(key, None)
@@ -331,6 +332,7 @@ class CiEntrypointsTest(unittest.TestCase):
                 r"lora\-reference\.spec\.ts",
                 r"native\.spec\.ts",
                 r"tokenizer\-layout\.spec\.ts",
+                r"video\.spec\.ts",
                 "--project=dpr1",
             ],
             commands,

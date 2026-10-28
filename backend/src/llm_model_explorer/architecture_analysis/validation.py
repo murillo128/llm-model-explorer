@@ -247,6 +247,39 @@ def validate_packed_binding(
             "weight_scale": (scale.dtype, (output, inputs // 32)),
             "weight_shape": ("I64", (2,)),
         }
+    elif tensor.storage_format == "fp8-e4m3-scaled":
+        require(tensor.dtype == "F8_E4M3", "Unsupported video FP8 representation.")
+        companions = {s.name: s for s in parameter.storage}
+        require(len(companions) == len(parameter.storage), "Duplicate FP8 graph storage.")
+        scale_names = [
+            prefix + suffix
+            for suffix in (".scale_weight", ".weight_scale")
+            if prefix + suffix in companions
+        ]
+        require(len(scale_names) == 1, "FP8 requires one unambiguous weight scale.")
+        scale_name = scale_names[0]
+        input_name = prefix + (
+            ".scale_input" if scale_name.endswith(".scale_weight") else ".input_scale"
+        )
+        require(
+            set(companions)
+            in ({parameter.name, scale_name}, {parameter.name, scale_name, input_name}),
+            "Orphan FP8 graph storage.",
+        )
+        require(
+            companions[parameter.name].dtype == "F8_E4M3"
+            and companions[parameter.name].shape == list(geometry),
+            "Invalid FP8 graph weight geometry.",
+        )
+        require(
+            all(
+                s.dtype in ("F32", "F16", "BF16") and s.shape in ([], [1])
+                for n, s in companions.items()
+                if n != parameter.name
+            ),
+            "Invalid FP8 graph scale geometry.",
+        )
+        return
     else:
         raise GraphError("invalid_graph", "Unsupported packed numeric representation.")
     actual = {storage.name: (storage.dtype, tuple(storage.shape)) for storage in parameter.storage}

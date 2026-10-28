@@ -30,6 +30,31 @@ def resolve_input_table(source: ModelSource) -> TensorDescriptor:
     config = source.configuration()
     if config.get("auto_map"):
         raise unsupported()
+    if config.get("model_type") == "video_inspection":
+        from .video_profiles import PROFILES, component_declaration
+
+        metadata = config.get("video_inspection")
+        if not isinstance(metadata, dict) or not isinstance(metadata.get("profile"), str):
+            raise unsupported()
+        profile = PROFILES.get(metadata["profile"])
+        components = metadata.get("components")
+        if (
+            profile is None
+            or config.get("architectures") != [profile.architecture]
+            or not isinstance(components, dict)
+            or components.get("text_encoder") != component_declaration(profile, "text_encoder")
+        ):
+            raise unsupported()
+        names = [t for t in source.tensors() if t.name == "video.text_encoder.shared.weight"]
+        video_vocab = 32128 if profile.text == "t5" else 256384
+        if (
+            len(names) != 1
+            or names[0].shape != (video_vocab, 4096)
+            or names[0].logical_dtype != "float32"
+        ):
+            raise unsupported()
+        source.check_unchanged()
+        return names[0]
     mappings = (
         ("llama", "LlamaForCausalLM", "model.embed_tokens.weight", None),
         ("qwen3", "Qwen3ForCausalLM", "model.embed_tokens.weight", None),

@@ -31,8 +31,8 @@ from .validation import (
 if TYPE_CHECKING:
     from ..tensor_source import PeftLoraComposition, PhysicalTensor, TensorDescriptor
 
-ANALYZER_REVISION = "static-graph-core-10"
-Scope = Literal["language_model", "visual_encoder_predictor", "model_defined"]
+ANALYZER_REVISION = "static-graph-core-11"
+Scope = Literal["language_model", "visual_encoder_predictor", "video_generation", "model_defined"]
 
 
 class MetadataSource(Protocol):

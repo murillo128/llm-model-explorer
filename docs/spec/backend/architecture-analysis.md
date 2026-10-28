@@ -27,6 +27,40 @@ A result is complete only within its declared scope and mathematical abstraction
 
 A valid partial graph is a complete serialized artifact with explicitly incomplete semantic coverage. Interrupted generation is not a partial graph. These distinctions drive the API states and cache publication rules.
 
+## Native video pipelines
+
+The selected LTX/Wan inspection packages use registered native descriptions and
+the `video_generation` scope. Select only validated package configurations and
+complete component inventories under [model admission](models.md#video-inspection-packages).
+Source interpretations and artifact revisions are recorded in the video example;
+configuration names alone do not establish verified family or expert identity.
+
+The outer boundary exposes prompt, semantic generation configuration and initial
+image according to the selected modality, and RGB video frames as output. Inside,
+represent local tokenization, T5/UMT5 encoding, image normalization/causal VAE
+conditioning, latent noise, schedule, a symbolic denoising iteration and VAE
+decode. Prior/next latent, solver history and iteration state express recurrence;
+termination selects the final latents. These records do not execute a scheduler
+or produce a timeline. Conditional image paths and guidance must reflect the
+profile; distilled LTX has no forced CFG/STG branch.
+
+Expand every denoiser block, text encoder and used VAE component to the ordinary
+mathematical abstraction, including projections, masks, position/time embeddings,
+normalization, attention, MLP, gates, residuals, convolutions and spatial/temporal
+resampling. Preserve actual layouts, per-instance parameters and higher ranks.
+Operation-only steps have no fabricated weights; encoding scales remain physical
+binding companions. No CLIP, LM head, training losses or unselected auxiliary
+models are inferred from loader terminology.
+
+A14B has independent high-noise and low-noise stacks. Selection is
+`t >= boundary * num_train_timesteps`, with 1,000 training timesteps and boundary
+0.875 (T2V) or 0.900 (I2V); this is a timestep threshold, not a percentage of
+inference steps. Both conditional branches consume the same state and only the
+selected output feeds the sampler. TI2V has a single stack. Every instance's
+weight resolves to its own component/expert namespace. Keep the existing graph
+budget and validation, and identify unmodeled required regions as partial rather
+than claiming complete coverage of an opaque component.
+
 ## Mathematical abstraction
 
 Represent linear and patch projections, normalizations, positional encoding, attention products, softmax, activations, multiplication between branches, residual addition, selection, and meaningful reshape/split/concat/transpose operations. Preserve biases and gates where relevant. Treat recognizable normalization/activation/state-update algorithms as operations with explanatory attributes/formulas rather than expanding every arithmetic instruction, cast, or allocation.

@@ -49,6 +49,55 @@ Preparation and validated reference limits belong to
 [`examples/kev`](../../../examples/kev/README.md); the runtime uses the existing
 local, confined, lazy, read-only admission and mutation/cache rules.
 
+## Video inspection packages
+
+The bounded local video exception is an offline export with
+`model_type: video_inspection`, architecture `LTXVideoInspection` or
+`WanVideoInspection`, and a data-only `video_inspection` declaration at
+`format_version: 1`. The declaration identifies the selected profile, release,
+modalities, base single-scale pipeline, component roles, representations,
+source artifact identities and checked configurations. It contains no graph IR.
+Only the pinned profiles in [`examples/video`](../../../examples/video/README.md)
+are selected natively; incomplete/mixed experts or unsupported configuration and
+geometry leave architecture unavailable without a language-model fallback.
+
+The exporter accepts explicitly selected local files by role. It validates their
+reference hashes and LTX embedded configuration, then rewrites Safetensors
+headers/indexes while copying bounded original byte intervals into independent
+`video.denoiser`, `video.high_noise`, `video.low_noise`, `video.text_encoder` and
+`video.vae` namespaces. No dtype conversion, weight fusion, checkpoint Python,
+pickle loading, network access or model execution occurs. A14B expert identity
+requires content provenance as well as geometry. Copy tokenizer assets and
+license/provenance records so the output has no external-file dependencies.
+No new `architecture.json` is emitted; existing valid sidecar precedence remains.
+
+Reject unsafe paths, escaping symlinks, namespace collisions, destinations inside
+inputs, existing destinations and insufficient additional copy space. Stage on
+the output filesystem outside catalogue selection, validate all storage/profile
+bindings, recheck source snapshots and hashes, then atomically rename without
+replacement. Failure removes staging and preserves every original. Ordinary
+catalogue, fingerprint, preparation, session and cache rules apply to the output:
+all selected configs, tokenizer, provenance, weights and scales affect content
+identity. A pinned source never incorporates a replacement expert silently.
+
+Wan's selected tensor-wise E4M3FN representation is `fp8-e4m3-scaled`, including
+UMT5 when the denoiser itself is FP16. Explicit versioned component declarations
+disambiguate legacy `scale_weight` / `scale_input` with `scaled_fp8` marker and
+normalized `weight_scale` / `input_scale`. A logical matrix is
+`float32(q) * float32(weight_scale)` in its original shape. The activation scale
+and global marker never multiply a static weight. Require exact E4M3FN matrix
+geometry, a unique finite scalar native weight scale, compatible optional
+activation scale, and no orphan or mixed-name companions. Companions are
+storage metadata, not additional learned parameters. Preserve native tensors
+alongside these groups. CPU bounded chunks and ordered rows use the existing
+logical float32 stream path; E5M2, blockwise/MXFP8 and undeclared formats fail.
+
+T5/UMT5 use their conventional local tokenizer assets. Input embedding lookup
+binds only to the verified `video.text_encoder.shared.weight` table with exact
+profile vocabulary and hidden dimensions. Contextual text features and a
+language head must not be substituted. These capabilities remain independent
+of native denoiser description availability.
+
 ## Model identity
 
 Public identity derives from HF metadata when suitable, with immediate directory-name fallback. Filesystem paths remain backend-private.

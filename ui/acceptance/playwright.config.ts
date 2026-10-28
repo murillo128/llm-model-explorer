@@ -6,6 +6,7 @@ const requestedPortfolio = process.env.LMEX_TEST_PORTFOLIO ?? 'routine';
 // disappear behind routine filtering. Full/reference commands validate them.
 const referencesRequested = Boolean(process.env.LMEX_REFERENCE_MODEL_DIR ||
   process.env.LMEX_ARCHITECTURE_REFERENCES || process.env.LMEX_LORA_REFERENCE_MODEL_ROOT ||
+  process.env.LMEX_VIDEO_REFERENCE_PACKAGE ||
   process.env.LMEX_REQUIRE_ARCHITECTURE_REFERENCES === '1');
 const portfolio = requestedPortfolio === 'routine' && referencesRequested ? 'full' : requestedPortfolio;
 if (!['routine', 'extended', 'full'].includes(portfolio)) throw new Error(`Invalid portfolio: ${portfolio}`);
