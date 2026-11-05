@@ -152,6 +152,11 @@ def _factor_module(name: str) -> tuple[str, str, str | None]:
 
 
 def _supported_linear_module(config: dict[str, object], module: str) -> bool:
+    if config.get("model_type") == "qwen3_tts":
+        from .qwen3_tts_config import checked, linear_dimensions
+
+        tts = checked(config)
+        return tts is not None and module in linear_dimensions(tts)
     architectures = config.get("architectures")
     if (
         not isinstance(architectures, list)
@@ -303,6 +308,14 @@ def bind_adapter(
     """Bind all saved factors to exactly the configured, actionable base weights."""
     from dataclasses import replace
 
+    tts_dimensions = None
+    if base_config.get("model_type") == "qwen3_tts":
+        from .qwen3_tts_config import checked, linear_dimensions
+
+        tts = checked(base_config)
+        if tts is None:
+            raise _unsupported("Unsupported Qwen3-TTS Base configuration.")
+        tts_dimensions = linear_dimensions(tts)
     weights = {
         location.descriptor.name.removesuffix(".weight"): location
         for location in base_locations
@@ -335,7 +348,8 @@ def bind_adapter(
         base = matched[module].descriptor
         a, b = spec.factors[module]
         if (
-            base.shape[0] <= 0
+            (tts_dimensions is not None and base.shape != tts_dimensions[module])
+            or base.shape[0] <= 0
             or base.shape[1] <= 0
             or len(a.shape) != 2
             or len(b.shape) != 2

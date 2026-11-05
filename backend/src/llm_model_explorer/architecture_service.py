@@ -22,6 +22,7 @@ from .architecture_analysis.model_defined import (
     producer_for,
 )
 from .architecture_analysis.model_defined_schema import MAX_DEFINITION_BYTES
+from .architecture_analysis.qwen3_tts import register as register_qwen3_tts
 from .architecture_analysis.qwen35 import register_qwen35
 from .architecture_analysis.validation import MAX_BYTES, BindingContext, GraphError, model_finding
 from .architecture_analysis.video import register_video
@@ -61,6 +62,7 @@ class PreparationStopped(Exception):
 def packaged_registry() -> DescriptionRegistry:
     registry = DescriptionRegistry()
     register_dense_descriptions(registry)
+    register_qwen3_tts(registry)
     register_clm(registry)
     register_deepseek_v2(registry)
     register_glm4_moe_lite(registry)

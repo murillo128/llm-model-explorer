@@ -47,6 +47,34 @@ class DenseGraph:
         self.lora = inputs.lora_composition
         self.lora_targets = self._validate_lora()
 
+    layer_prefix = "model"
+
+    def linear_dimensions(self) -> dict[str, tuple[int, int]]:
+        expected: dict[str, tuple[int, int]] = {"lm_head": (self.c.vocab, self.c.hidden)}
+        for index in range(self.c.layers):
+            prefix = f"model.layers.{index}."
+            expected.update(
+                {
+                    prefix + "self_attn.q_proj": (self.c.heads * self.c.head_dim, self.c.hidden),
+                    prefix + "self_attn.k_proj": (
+                        self.c.kv_heads * self.c.head_dim,
+                        self.c.hidden,
+                    ),
+                    prefix + "self_attn.v_proj": (
+                        self.c.kv_heads * self.c.head_dim,
+                        self.c.hidden,
+                    ),
+                    prefix + "self_attn.o_proj": (
+                        self.c.hidden,
+                        self.c.heads * self.c.head_dim,
+                    ),
+                    prefix + "mlp.gate_proj": (self.c.intermediate, self.c.hidden),
+                    prefix + "mlp.up_proj": (self.c.intermediate, self.c.hidden),
+                    prefix + "mlp.down_proj": (self.c.hidden, self.c.intermediate),
+                }
+            )
+        return expected
+
     def _lora_error(self, code: str, message: str) -> NoReturn:
         raise GraphError(code, message)
 
@@ -76,29 +104,7 @@ class DenseGraph:
             self._lora_error(
                 "lora_scale", "LoRA scale must equal the configured alpha divided by rank."
             )
-        expected: dict[str, tuple[int, int]] = {"lm_head": (self.c.vocab, self.c.hidden)}
-        for index in range(self.c.layers):
-            prefix = f"model.layers.{index}."
-            expected.update(
-                {
-                    prefix + "self_attn.q_proj": (self.c.heads * self.c.head_dim, self.c.hidden),
-                    prefix + "self_attn.k_proj": (
-                        self.c.kv_heads * self.c.head_dim,
-                        self.c.hidden,
-                    ),
-                    prefix + "self_attn.v_proj": (
-                        self.c.kv_heads * self.c.head_dim,
-                        self.c.hidden,
-                    ),
-                    prefix + "self_attn.o_proj": (
-                        self.c.hidden,
-                        self.c.heads * self.c.head_dim,
-                    ),
-                    prefix + "mlp.gate_proj": (self.c.intermediate, self.c.hidden),
-                    prefix + "mlp.up_proj": (self.c.intermediate, self.c.hidden),
-                    prefix + "mlp.down_proj": (self.c.hidden, self.c.intermediate),
-                }
-            )
+        expected = self.linear_dimensions()
         targets: dict[str, PeftLoraTarget] = {}
         logical_names: set[str] = set()
         storage_names: set[str] = set()
@@ -538,7 +544,7 @@ class DenseGraph:
 
     def layer(self, index: int) -> str:
         c = self.c
-        key = f"model.layers.{index}"
+        key = f"{self.layer_prefix}.layers.{index}"
         hidden, rotary = shape("B", "S", c.hidden), shape("B", "S", c.head_dim)
         mask, scores = shape("B", 1, "S", "S"), shape("B", c.heads, "S", "S")
         norm = self.norm(key + ".input_layernorm", key, hidden, c.hidden)
@@ -740,7 +746,7 @@ class DenseGraph:
         self.edge(final, key, "out")
         self.group(
             key,
-            "model",
+            self.layer_prefix,
             [
                 self.port("x", hidden),
                 self.port("cos", rotary),

@@ -59,6 +59,12 @@ def resolve_input_table(source: ModelSource) -> TensorDescriptor:
         ("llama", "LlamaForCausalLM", "model.embed_tokens.weight", None),
         ("qwen3", "Qwen3ForCausalLM", "model.embed_tokens.weight", None),
         (
+            "qwen3_tts",
+            "Qwen3TTSForConditionalGeneration",
+            "talker.model.text_embedding.weight",
+            "talker_config",
+        ),
+        (
             "qwen3_5",
             "Qwen3_5ForConditionalGeneration",
             "model.language_model.embed_tokens.weight",
@@ -77,6 +83,8 @@ def resolve_input_table(source: ModelSource) -> TensorDescriptor:
     if not isinstance(dimensions, dict) or dimensions.get("auto_map"):
         raise unsupported()
     vocab, hidden = dimensions.get("vocab_size"), dimensions.get("hidden_size")
+    if config.get("model_type") == "qwen3_tts":
+        vocab, hidden = dimensions.get("text_vocab_size"), dimensions.get("text_hidden_size")
     if (
         type(vocab) is not int
         or type(hidden) is not int
