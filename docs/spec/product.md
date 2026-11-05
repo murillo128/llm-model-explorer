@@ -69,6 +69,18 @@ For Qwen, detail only the language component. Other modalities may appear as ide
 
 The JEPA exception does not introduce video/image upload, playback or processing, visual inference, representation prediction, training losses, actions, planning, simulation, V-JEPA 2-AC, or generic JEPA/LeJEPA support. Do not add training or planning components absent from the selected model.
 
+## Native speech inspection reference
+
+The additional native speech inspection reference is
+`Qwen/Qwen3-TTS-12Hz-1.7B-Base` at
+`fd4b254389122332181a7c3db7f27e918eec64e3`, separately selectable with the
+`adapters/hindi_female` LoRA from
+`aguken-ai/Qwen-3-TTS-12Hz-1.7B-Base-hi-LoRA-Finetuned` at
+`b84766274af71506758ccf45a9965bd1d934297b`. It adds tensor/text-tokenizer
+inspection and an explicitly partial speech-language architecture; audio synthesis
+and voice cloning are outside this increment. Backend documents own admission,
+bindings and coverage details.
+
 ## Static video references
 
 The selected video increment adds native inspection of LTX 2B Distilled 0.9.6

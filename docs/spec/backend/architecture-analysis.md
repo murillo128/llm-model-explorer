@@ -160,6 +160,23 @@ entries; numeric artifact keys and logical tensor identities are unchanged.
 
 ## Dense language reference coverage
 
+The selected Qwen3-TTS Base producer describes a bounded speech-language view
+under the existing `language_model` scope. Preserve separate concrete Talker and
+code-predictor stacks, their Q/K norms, grouped attention, gated MLPs, residuals,
+final norms, text projection biases, codec tables and heads, and the predictor's
+width projection. Each validated LoRA target has its own additive scaled A/B
+branch. Text positions are derived internally; equal text axes reduce the
+reviewed Talker MRoPE to split-half rotation. Predictor sequence positions have
+their own axis. Its residual-codebook heads are selected sequentially, not
+parallel vocabulary outputs or separate decoder instances.
+
+This increment is explicitly partial: prompt/reference conditioning, speaker
+encoder interior, generation/embedding feedback, and the separately loaded speech
+tokenizer/waveform decoder remain contextual. Preserve higher-rank speaker storage
+without matrix flattening. No generic text-generation wrapper, audio execution or
+voice cloning is implied. Unknown structural options cannot select a complete
+Qwen3 interpretation. Model-supplied sidecar precedence remains unchanged.
+
 Qwen3 must preserve its actual embedding/output relationships, decoder order, Q/K normalization, grouped-query attention, positional encoding, attention projection, gated MLP branches, and residual paths. SmolLM2 Base provides the corresponding small Llama-family regression path; do not apply Qwen-specific normalization or gate assumptions to it. Tied parameters must be represented as aliases where supported by configuration and inventory, not reported missing or duplicated as independent weights.
 
 The tokenizer is a context node outside the neural model when one exists. Its presence is a capability reference, not a tokenization operation performed by analysis. No general requirement for text tokenization or vocabulary logits is imposed on the graph core.

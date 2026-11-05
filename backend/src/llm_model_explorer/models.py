@@ -334,6 +334,10 @@ class ModelCatalogue:
 
     @staticmethod
     def _is_causal_lm(config: dict[str, object]) -> bool:
+        if config.get("model_type") == "qwen3_tts":
+            from .qwen3_tts_config import checked
+
+            return checked(config) is not None
         architectures = config.get("architectures")
         return (
             isinstance(architectures, list)

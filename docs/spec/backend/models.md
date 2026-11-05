@@ -140,6 +140,17 @@ For each admitted quantized variant, expose one complete logical tensor per vali
 
 ### Local PEFT adapter composition
 
+The selected Qwen3-TTS-12Hz-1.7B Base configuration additionally supports this
+same unmerged PEFT subset over its Talker and code-predictor attention/MLP linear
+modules. Require `qwen3_tts` / `Qwen3TTSForConditionalGeneration`, the reviewed
+Base configuration, and exact configured target geometry. `CAUSAL_LM` is the
+adapter's declared PEFT task; it does not turn speech-code heads into text heads.
+Speaker embeddings and reference audio are conditioning assets, not LoRA factors.
+The text input table is exclusively `talker.model.text_embedding.weight`, checked
+against `talker_config.text_vocab_size` and `text_hidden_size`; audio-code tables
+are never a fallback. Reference revisions and supported limits are recorded in
+[`Qwen3-TTS evidence`](../../../backend/evidence/qwen3-tts-description.md).
+
 Accept exactly one local complete base checkpoint plus one local adapter with `peft_type="LORA"` and `task_type="CAUSAL_LM"`. Require `adapter_config.json` and a validated Safetensors inventory. Treat `base_model_name_or_path` only as upstream provenance and a local matching constraint; never as a path to open or an instruction to contact a remote provider. Match candidates by the eligible upstream identity metadata described above and by the base architecture/configuration required by the adapter targets. When the base omits an organization-qualified identity, a directory-basename match is eligible only when it equals the final segment of the adapter's upstream name and the supported architecture, dimensions, targets and tensor shapes all validate. Ambiguous, absent or structurally incompatible matches do not form a composition. Each compatible validated physical base variant yields a separate selectable composition.
 
 The initial subset uses one global positive integer `r` and one finite positive `lora_alpha`, with `scale = lora_alpha / r`. Require empty or absent `rank_pattern` and `alpha_pattern`; `bias="none"`, `fan_in_fan_out=false`, `use_dora=false`, `use_rslora=false`, `layer_replication=null`, `modules_to_save` absent/null, and no QALoRA, LoRA bias, target-parameter, trainable-token, or invocation-token extension. `target_modules` is a nonempty list of literal module suffixes or one documented PEFT regex string: each list entry matches the exact module name or a fully qualified name ending in `.<entry>`, while a string is applied as a full-name regular expression. Resolve matches only against actual supported base linear modules and require every saved adapter target to match exactly one such module. A target or config feature that cannot be validated against the accepted base architecture is unsupported, not guessed. Unknown fields that change inference behavior are unsupported; unrelated training/provenance metadata may be ignored.

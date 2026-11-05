@@ -26,6 +26,12 @@ Future work will extend the same architecture to general step-by-step execution 
 
 ## Model-owned architecture definitions
 
+Qwen3-TTS-12Hz-1.7B Base is also supported for native tensor/text-tokenizer
+inspection, with a separate selectable Base + LoRA composition. Its packaged
+architecture expands Talker and code-predictor layers and adapter branches;
+the speech pipeline is explicitly partial and does not synthesize audio.
+See [reference setup, validation and limits](backend/evidence/qwen3-tts-description.md).
+
 A local checkpoint can include an optional `architecture.json` to describe its
 own static graph without an Explorer family adapter. See the
 [format and trust boundary](docs/spec/backend/model-owned-architecture.md) and
